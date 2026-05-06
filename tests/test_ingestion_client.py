@@ -7,7 +7,7 @@ class TestReliefWebClient:
     def test_init_uses_config(self):
         client = ReliefWebClient()
         assert client.base_url == "https://api.reliefweb.int/v1"
-        assert "Authorization" in client.headers or "appname" in client.headers
+        assert "Authorization" in client.headers
 
     def test_fetch_reports_pagination(self):
         client = ReliefWebClient()

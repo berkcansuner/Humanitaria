@@ -2,6 +2,7 @@ import logging
 from typing import Dict, Any, Optional
 from langchain.chains import ConversationalRetrievalChain
 from langchain_community.chat_models import ChatOllama
+from langchain_core.prompts import PromptTemplate
 from config import get_settings
 from rag.retriever import build_retriever
 from rag.memory import build_memory
@@ -21,16 +22,19 @@ def build_chain(filter: Optional[Dict[str, Any]] = None):
     llm = ChatOllama(
         model=settings.OLLAMA_LLM_MODEL,
         base_url=settings.OLLAMA_CLOUD_BASE_URL,
-        api_key=settings.OLLAMA_CLOUD_API_KEY,
         temperature=0.3,
     )
     retriever = build_retriever(filter=filter)
     memory = build_memory()
+    prompt = PromptTemplate(
+        template=_SYSTEM_PROMPT + "\n\n{context}\n\nQuestion: {question}\nHelpful Answer:",
+        input_variables=["context", "question"],
+    )
     chain = ConversationalRetrievalChain.from_llm(
         llm=llm,
         retriever=retriever,
         memory=memory,
         return_source_documents=True,
-        combine_docs_chain_kwargs={"prompt": _SYSTEM_PROMPT},
+        combine_docs_chain_kwargs={"prompt": prompt},
     )
     return chain
