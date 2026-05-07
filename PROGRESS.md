@@ -47,7 +47,7 @@
 - `test_config.py` — Settings cache + env override testleri
 - `test_api_chat_stream.py` — SSE endpoint + session_id integration testleri
 
-**Toplam: 15 test dosyası, 71 test PASSED, 4 deprecation warning**
+**Toplam: 15 test dosyası, 83 test PASSED, 4 deprecation warning**
 
 ### 6. FastAPI Backend (`api/`)
 - `api/main.py` — FastAPI uygulaması, CORS middleware (`allow_origins=["*"]`), health ve chat router'ları, frontend `dist/` statik mount
@@ -87,6 +87,14 @@
 - Chainlit dosyaları (`chainlit_app.py`, `.chainlit/`, `chainlit.md`, `tests/test_chainlit_app.py`) git'ten kaldırıldı
 - Orphan `__pycache__/chainlit_app.cpython-312.pyc` temizlendi
 
+### 14. Pipeline Error Handling (2026-05-08 - Oturum 4)
+- **`pipeline.py`** — `IngestionStats` dataclass (endpoint, total, succeeded, failed, skipped, errors); per-document try/except isolation; `run_pipeline` artık `Dict[str, IngestionStats]` döndürüyor
+- **`parser.py`** — `parse()` fonksiyonu artık `Optional[Dict]` döndürüyor; `_sanitize()`, `_safe_get()`, `_safe_list_get()` helper'ları ile None değer koruması; parse hatası → `logger.warning` + `None` dönüşü
+- **`store.py`** — `clear_collection` sessiz `except: pass` → `logger.warning` ile hata loglama
+- **`scripts/ingest.py`** — `_print_summary()` tablo formatında özet raporu; exit codes: 0 (tümü başarılı), 1 (kısmi başarısız), 2 (tümü başarısız)
+- **`ingestion/__init__.py`** — `IngestionStats` export'a eklendi
+- **Testler** → 12 yeni test eklendi (toplam 83 test PASSED)
+
 ### 9. Çoklu Endpoint Ingestion (2026-05-07 - Oturum 2)
 - **API keşfi:** `/updates` endpoint'i ReliefWeb API'sinde yok (404) — `/reports` zaten güncellemeleri içeriyor
 - **`client.py`** → `ENDPOINT_CONFIG` dict ile reports, disasters, countries tanımlandı; generic `fetch(endpoint)` metodu eklendi
@@ -124,6 +132,7 @@ Komut: `python scripts/ingest.py --limit 500 --endpoints reports disasters count
 | 3 | ~~`build_chain` her mesajda yeni memory~~ | ~~Konuşma geçmişi kaybolabilir~~ | **ÇÖZÜLDÜ** — FastAPI'de history client'tan geliyor |
 | 4 | ~~Query processor rule-based~~ | ~~Karmaşık sorguları kaçırabilir~~ | **ÇÖZÜLDÜ** — LLM-first extraction + rule-based fallback |
 | 5 | Tarih filtresi `$gte` ChromaDB syntax | Metadata date string karşılaştırması güvenilirliği | ISO format garanti, ama ChromaDB date range test edilmeli |
+| ~~8~~ | ~~Commit bekleyen değişiklikler~~ | ~~Kayıp riski~~ | **ÇÖZÜLDÜ** — commit'lendi |
 | 6 | ~~Embedding model adı tutarsızlığı~~ | ~~Belirsizlik~~ | **ÇÖZÜLDÜ** — tüm dosyalar `8b` / `2560` olarak senkronize |
 | 7 | ~~`force` parametresi no-op~~ | ~~Kullanıcı beklentisini karşılamaz~~ | **ÇÖZÜLDÜ** — `ChromaStore.clear_collection()` eklendi |
 | 8 | ~~Commit bekleyen değişiklikler~~ | ~~Kayıp riski~~ | **ÇÖZÜLDÜ** — commit'lendi |
@@ -148,7 +157,7 @@ Komut: `python scripts/ingest.py --limit 500 --endpoints reports disasters count
 - [x] ~~Streaming response~~ — SSE `/chat/stream` endpoint + Vue frontend
 - [x] ~~Session tabanlı memory~~ — WindowedChatMessageHistory + session_id
 - [ ] CORS origin kısıtlaması: production için spesifik origin'ler
-- [ ] Pipeline error handling: per-report hata takibi ve log
+- [x] Pipeline error handling: per-report hata takibi ve log — IngestionStats dataclass, try/except isolation, CLI summary table, exit codes
 - [ ] Daha fazla veri çekme: disasters 3705 kaydın tamamı, reports daha fazla
 
 ### Düşük Öncelik
