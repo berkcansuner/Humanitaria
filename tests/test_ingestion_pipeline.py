@@ -90,3 +90,108 @@ class TestIngestionStats:
         assert stats.total == 100
         assert stats.succeeded == 90
         assert len(stats.errors) == 1
+
+
+class TestPipelineErrorIsolation:
+    def test_single_doc_failure_continues_pipeline(self):
+        with patch("ingestion.pipeline.ReliefWebClient") as MockClient, \
+             patch("ingestion.pipeline.parse") as mock_parse, \
+             patch("ingestion.pipeline.chunk_document") as mock_chunk, \
+             patch("ingestion.pipeline.OllamaEmbedder") as MockEmbedder, \
+             patch("ingestion.pipeline.ChromaStore") as MockStore:
+            mock_client = MagicMock()
+            mock_client.fetch.return_value = [{"id": "1"}, {"id": "2"}, {"id": "3"}]
+            MockClient.return_value = mock_client
+            good_doc = {"id": "abc", "url": "u", "title": "t", "body": "b", "date": "", "country": "", "theme": "", "source": "", "format": "", "doctype": "report"}
+            mock_parse.side_effect = [good_doc, Exception("parse error"), good_doc]
+            mock_chunk.return_value = [{"id": "abc_0", "content": "b", "metadata": {"url": "u", "title": "t", "country": "", "theme": "", "date": "", "source": "", "format": "", "doctype": "report"}}]
+            mock_embedder = MagicMock()
+            mock_embedder.embed_batch.return_value = [[0.1] * 2560]
+            MockEmbedder.return_value = mock_embedder
+            mock_store = MagicMock()
+            MockStore.return_value = mock_store
+            stats = run_pipeline(limit=3)
+            assert stats["reports"].succeeded == 2
+            assert stats["reports"].failed == 1
+            assert mock_store.upsert_chunks.call_count == 2
+
+    def test_empty_body_counted_as_skipped(self):
+        with patch("ingestion.pipeline.ReliefWebClient") as MockClient, \
+             patch("ingestion.pipeline.parse") as mock_parse, \
+             patch("ingestion.pipeline.chunk_document") as mock_chunk, \
+             patch("ingestion.pipeline.OllamaEmbedder") as MockEmbedder, \
+             patch("ingestion.pipeline.ChromaStore") as MockStore:
+            mock_client = MagicMock()
+            mock_client.fetch.return_value = [{"id": "1"}, {"id": "2"}]
+            MockClient.return_value = mock_client
+            mock_parse.side_effect = [
+                {"id": "abc", "url": "u", "title": "t", "body": "b", "date": "", "country": "", "theme": "", "source": "", "format": "", "doctype": "report"},
+                {"id": "def", "url": "u2", "title": "t2", "body": "", "date": "", "country": "", "theme": "", "source": "", "format": "", "doctype": "report"},
+            ]
+            mock_chunk.return_value = [{"id": "abc_0", "content": "b", "metadata": {"url": "u", "title": "t", "country": "", "theme": "", "date": "", "source": "", "format": "", "doctype": "report"}}]
+            mock_embedder = MagicMock()
+            mock_embedder.embed_batch.return_value = [[0.1] * 2560]
+            MockEmbedder.return_value = mock_embedder
+            mock_store = MagicMock()
+            MockStore.return_value = mock_store
+            stats = run_pipeline(limit=2)
+            assert stats["reports"].succeeded == 1
+            assert stats["reports"].skipped == 1
+
+    def test_parse_returns_none_counted_as_skipped(self):
+        with patch("ingestion.pipeline.ReliefWebClient") as MockClient, \
+             patch("ingestion.pipeline.parse") as mock_parse, \
+             patch("ingestion.pipeline.chunk_document") as mock_chunk, \
+             patch("ingestion.pipeline.OllamaEmbedder") as MockEmbedder, \
+             patch("ingestion.pipeline.ChromaStore") as MockStore:
+            mock_client = MagicMock()
+            mock_client.fetch.return_value = [{"id": "1"}]
+            MockClient.return_value = mock_client
+            mock_parse.return_value = None
+            mock_embedder = MagicMock()
+            MockEmbedder.return_value = mock_embedder
+            mock_store = MagicMock()
+            MockStore.return_value = mock_store
+            stats = run_pipeline(limit=1)
+            assert stats["reports"].skipped == 1
+            assert stats["reports"].succeeded == 0
+            mock_embedder.embed_batch.assert_not_called()
+
+    def test_run_pipeline_returns_stats_dict(self):
+        with patch("ingestion.pipeline.ReliefWebClient") as MockClient, \
+             patch("ingestion.pipeline.parse") as mock_parse, \
+             patch("ingestion.pipeline.chunk_document") as mock_chunk, \
+             patch("ingestion.pipeline.OllamaEmbedder") as MockEmbedder, \
+             patch("ingestion.pipeline.ChromaStore") as MockStore:
+            mock_client = MagicMock()
+            mock_client.fetch.return_value = [{"id": "1"}]
+            MockClient.return_value = mock_client
+            mock_parse.return_value = {"id": "abc", "url": "u", "title": "t", "body": "b", "date": "", "country": "", "theme": "", "source": "", "format": "", "doctype": "report"}
+            mock_chunk.return_value = [{"id": "abc_0", "content": "b", "metadata": {"url": "u", "title": "t", "country": "", "theme": "", "date": "", "source": "", "format": "", "doctype": "report"}}]
+            mock_embedder = MagicMock()
+            mock_embedder.embed_batch.return_value = [[0.1] * 2560]
+            MockEmbedder.return_value = mock_embedder
+            mock_store = MagicMock()
+            MockStore.return_value = mock_store
+            stats = run_pipeline(limit=1, endpoints=["reports", "disasters"])
+            assert isinstance(stats, dict)
+            assert "reports" in stats
+            assert "disasters" in stats
+            assert isinstance(stats["reports"], IngestionStats)
+
+    def test_errors_capped_at_10(self):
+        with patch("ingestion.pipeline.ReliefWebClient") as MockClient, \
+             patch("ingestion.pipeline.parse") as mock_parse, \
+             patch("ingestion.pipeline.OllamaEmbedder") as MockEmbedder, \
+             patch("ingestion.pipeline.ChromaStore") as MockStore:
+            mock_client = MagicMock()
+            mock_client.fetch.return_value = [{"id": str(i)} for i in range(15)]
+            MockClient.return_value = mock_client
+            mock_parse.side_effect = Exception("fail")
+            mock_embedder = MagicMock()
+            MockEmbedder.return_value = mock_embedder
+            mock_store = MagicMock()
+            MockStore.return_value = mock_store
+            stats = run_pipeline(limit=15)
+            assert stats["reports"].failed == 15
+            assert len(stats["reports"].errors) == 10

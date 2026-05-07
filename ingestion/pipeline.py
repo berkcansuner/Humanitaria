@@ -24,7 +24,7 @@ def run_pipeline(
     limit: int = 100,
     force: bool = False,
     endpoints: Optional[List[str]] = None,
-) -> None:
+) -> Dict[str, IngestionStats]:
     if endpoints is None:
         endpoints = ["reports"]
     logger.info("Starting ingestion pipeline (limit=%d, force=%s, endpoints=%s)", limit, force, endpoints)
@@ -33,26 +33,43 @@ def run_pipeline(
     store = ChromaStore()
     if force:
         store.clear_collection()
+    all_stats: Dict[str, IngestionStats] = {}
     for endpoint in endpoints:
+        stats = IngestionStats(endpoint=endpoint)
         offset = 0
-        total_processed = 0
         logger.info("Ingesting endpoint '%s' (limit=%d)", endpoint, limit)
-        while total_processed < limit:
-            batch_limit = min(100, limit - total_processed)
+        while stats.succeeded + stats.failed + stats.skipped < limit:
+            batch_limit = min(100, limit - stats.total)
             items = client.fetch(endpoint, limit=batch_limit, offset=offset)
             if not items:
                 break
             for raw in items:
-                doc = parse(raw, endpoint)
-                if not doc.get("body"):
+                stats.total += 1
+                try:
+                    doc = parse(raw, endpoint)
+                    if not doc or not doc.get("body"):
+                        stats.skipped += 1
+                        continue
+                    chunks = chunk_document(doc)
+                    if not chunks:
+                        stats.skipped += 1
+                        continue
+                    texts = [c["content"] for c in chunks]
+                    embeddings = embedder.embed_batch(texts)
+                    store.upsert_chunks(chunks, embeddings)
+                    stats.succeeded += 1
+                except Exception as e:
+                    stats.failed += 1
+                    url = raw.get("fields", {}).get("url", "unknown") if isinstance(raw.get("fields"), dict) else "unknown"
+                    if len(stats.errors) < 10:
+                        stats.errors.append({"url": url, "error": str(e)})
+                    logger.warning("Failed to process doc from %s: %s", endpoint, e)
                     continue
-                chunks = chunk_document(doc)
-                if not chunks:
-                    continue
-                texts = [c["content"] for c in chunks]
-                embeddings = embedder.embed_batch(texts)
-                store.upsert_chunks(chunks, embeddings)
-                total_processed += 1
             offset += batch_limit
-        logger.info("Endpoint '%s' complete. Processed %d documents.", endpoint, total_processed)
+        logger.info(
+            "Endpoint '%s' complete: %d succeeded, %d failed, %d skipped",
+            endpoint, stats.succeeded, stats.failed, stats.skipped,
+        )
+        all_stats[endpoint] = stats
     logger.info("Ingestion pipeline complete.")
+    return all_stats
