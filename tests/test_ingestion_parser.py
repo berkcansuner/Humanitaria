@@ -1,3 +1,4 @@
+import logging
 import pytest
 from ingestion.parser import parse_report, parse_disaster, parse_country, parse
 
@@ -148,3 +149,44 @@ class TestParseDispatcher:
     def test_dispatch_unknown_raises(self):
         with pytest.raises(ValueError, match="Unknown endpoint"):
             parse({}, "nonexistent")
+
+
+class TestParseErrorHandling:
+    def test_parse_returns_none_on_exception(self):
+        result = parse(None, "reports")
+        assert result is None
+
+    def test_parse_logs_warning_on_error(self, caplog):
+        with caplog.at_level(logging.WARNING):
+            parse(None, "reports")
+        assert "Parse error" in caplog.text
+
+    def test_parse_report_none_file_field(self):
+        raw = {
+            "id": "999",
+            "fields": {
+                "title": "Test",
+                "body": "Body",
+                "file": None,
+            }
+        }
+        doc = parse_report(raw)
+        assert doc is not None
+        assert isinstance(doc["url"], str)
+
+    def test_parse_report_sanitizes_none_metadata(self):
+        raw = {
+            "id": "999",
+            "fields": {
+                "title": "Test",
+                "body": "Body",
+                "date": None,
+                "primary_country": None,
+                "source": None,
+            }
+        }
+        doc = parse_report(raw)
+        assert doc is not None
+        assert doc["date"] == ""
+        assert doc["country"] == ""
+        assert doc["source"] == ""
