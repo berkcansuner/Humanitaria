@@ -24,7 +24,7 @@ Kullanıcı → Chainlit UI (localhost:8000) → RAG Engine (LangChain) → Olla
 | Katman        | Teknoloji                       | Notlar                                     |
 |---------------|---------------------------------|--------------------------------------------|
 | LLM           | Ollama Cloud API                | https://ollama.com/v1 — `qwen3.5:397b-cloud` |
-| Embedding     | Yerel Ollama — qwen3-embedding:8b | localhost:11434, 4096 dim, MTEB çok dilli #1 |
+| Embedding     | Yerel Ollama — qwen3-embedding:8b | localhost:11434, 2560 dim, MTEB çok dilli #1 |
 | Vector DB     | ChromaDB                        | Gömülü, dosya tabanlı — `./chroma_db/`     |
 | Backend       | Python 3.12                     | Chainlit doğrudan RAG chain'i çağırır      |
 | RAG Framework | LangChain                       | ConversationalRetrievalChain + MMR, agent-ready |
@@ -62,7 +62,7 @@ RELIEFWEB_BASE_URL=https://api.reliefweb.int/v1
 # ChromaDB
 CHROMA_DB_PATH=./chroma_db
 CHROMA_COLLECTION=reliefweb_docs
-EMBED_DIM=4096                  # qwen3-embedding:8b — Ollama ve ChromaDB aynı değeri kullanır
+EMBED_DIM=2560                  # qwen3-embedding:8b — Ollama ve ChromaDB aynı değeri kullanır
 
 # Chainlit
 CHAINLIT_AUTH_SECRET=change_this_secret

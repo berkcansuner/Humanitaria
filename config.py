@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     # ChromaDB
     CHROMA_DB_PATH: str = "./chroma_db"
     CHROMA_COLLECTION: str = "reliefweb_docs"
-    EMBED_DIM: int = 4096
+    EMBED_DIM: int = 2560
 
     # Chainlit
     CHAINLIT_AUTH_SECRET: str = "change_this_secret"

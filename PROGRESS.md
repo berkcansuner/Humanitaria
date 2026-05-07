@@ -101,13 +101,10 @@
 **Sonuç:** `ChromaStore.clear_collection()` eklendi; `run_pipeline(force=True)` çağrıldığında koleksiyon silinip yeniden oluşturuluyor.
 **Test:** `test_ingestion_store.py::test_clear_collection` + `test_ingestion_pipeline.py::test_run_pipeline_with_force` eklendi — PASS.
 
-### Aşama 4: Gerçek Veri İle Ingestion
-**Durum:** Pipeline kodu tam ama ChromaDB'de henüz veri yok.
-**Aksiyon:**
-```powershell
-python -m scripts.ingest --limit 50
-```
-**Önkoşul:** Yerel Ollama `ollama serve` ayakta olmalı, `qwen3-embedding:4b` (veya `8b`) modeli yüklü olmalı.
+### ~~Aşama 4: Gerçek Veri İle Ingestion~~ ✅
+**Sonuç:** 50 rapor başarıyla ChromaDB'ye yüklendi (`--force` ile).
+**Keşif:** `qwen3-embedding:8b` aslında **2560 boyutlu** embedding üretiyor. `EMBED_DIM` 4096 → 2560 olarak düzeltildi (`config.py`, `.env.example`, `.env`, `CLAUDE.md`).
+**ChromaDB koleksiyonu:** `reliefweb_docs`, toplam ~60 chunk (bazı raporlar 1 chunk, bazıları 2-4 chunk).
 
 ### Aşama 5: Chainlit'i Başlat
 **Durum:** UI kodu tam ama henüz çalıştırılmadı.
@@ -144,7 +141,7 @@ cd .. && uvicorn api.main:app --reload
 | 3 | ~~`build_chain` her mesajda yeni memory oluşturuyor~~ | ~~Konuşma geçmişi kaybolabilir~~ | **ÇÖZÜLDÜ** — `cl.user_session` ile memory oturum bazlı cache'lendi |
 | 4 | Query processor rule-based | Karmaşık sorguları kaçırabilir | LLM tabanlı query processor'a upgrade edilecek |
 | 5 | Tarih filtresi `$gte` ChromaDB syntax | Metadata date string karşılaştırması güvenilirliği | ISO format garanti, ama ChromaDB date range test edilmeli |
-| 6 | ~~Embedding model adı tutarsızlığı (`4b` vs `8b`)~~ | ~~Belirsizlik, deployment'ta yanlış model çağrılabilir~~ | **ÇÖZÜLDÜ** — `config.py` `8b` olarak güncellendi. `.env.example` senkronize edilmeli |
+| 6 | ~~Embedding model adı tutarsızlığı (`4b` vs `8b`)~~ | ~~Belirsizlik, deployment'ta yanlış model çağrılabilir~~ | **ÇÖZÜLDÜ** — `config.py`, `.env`, `.env.example` hepsi `8b` olarak senkronize edildi |
 | 7 | ~~`force` parametresi no-op~~ | ~~Kullanıcı beklentisini karşılamaz, kafa karıştırıcı~~ | **ÇÖZÜLDÜ** — `ChromaStore.clear_collection()` eklendi, `run_pipeline(force=True)` aktif |
 | 8 | Commit bekleyen 17 dosya + yeni dizinler | Kayıp riski, branch düzeni bozuk | Aşama 0'da commit'lenecek |
 
@@ -166,3 +163,5 @@ c5e2ce8 fix: correct retriever to use LangChain Chroma, fix chain prompt templat
 - Test coverage: ingestion (6 modül), rag (7 modül), config, chainlit, smoke = toplam 14 test dosyası.
 - `venv/` mevcut; `pytest` yüklü ama henüz çalıştırılmadı.
 - Yeni bileşenler: FastAPI backend (`api/`), Vue frontend (`frontend/`), Chainlit yapılandırması (`.chainlit/`).
+- **Keşif:** `qwen3-embedding:8b` 2560 dim embedding üretiyor (beklenen 4096 değil). `EMBED_DIM` buna göre ayarlandı.
+- `chroma_db/` oluşturuldu ve 50 rapor içeriyor.
