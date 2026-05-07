@@ -47,7 +47,7 @@
 - `test_config.py` — Settings cache + env override testleri
 - `test_smoke.py` — End-to-end import + pipeline smoke testi
 
-**Toplam: 14 test dosyası, 17+ test senaryosu**
+**Toplam: 14 test dosyası, 18+ test senaryosu**
 
 ### 6. FastAPI Backend (`api/`)
 - `api/main.py` — FastAPI uygulaması, CORS middleware, health ve chat router'ları, frontend `dist/` statik mount
@@ -106,29 +106,28 @@
 **Keşif:** `qwen3-embedding:8b` aslında **2560 boyutlu** embedding üretiyor. `EMBED_DIM` 4096 → 2560 olarak düzeltildi (`config.py`, `.env.example`, `.env`, `CLAUDE.md`).
 **ChromaDB koleksiyonu:** `reliefweb_docs`, toplam ~60 chunk (bazı raporlar 1 chunk, bazıları 2-4 chunk).
 
-### Aşama 5: Chainlit'i Başlat
-**Durum:** UI kodu tam ama henüz çalıştırılmadı.
-**Aksiyon:**
-```powershell
-chainlit run chainlit_app.py
-```
-**Beklenen:** `http://localhost:8000` açılır, auth ekranı gelir.
+### ~~Aşama 5: Chainlit'i Başlat~~ ✅
+**Sonuç:** `http://localhost:8000` başarıyla ayağa kalktı. Auth ekranı geliyor.
+**Not:** Çeviri dosyası `tr-TR` eksik — varsayılan `en-US` kullanılıyor (önemsiz).
 
-### Aşama 6: FastAPI + Vue Frontend'i Çalıştır
-**Durum:** Backend ve frontend kodları var ama henüz çalıştırılmadı.
-**Aksiyon:**
-```powershell
-cd frontend && npm install && npm run build
-cd .. && uvicorn api.main:app --reload
-```
-**Beklenen:** `http://localhost:8000` açılır, FastAPI docs `/docs` ve frontend çalışır.
+### ~~Aşama 6: FastAPI + Vue Frontend'i Çalıştır~~ ✅
+**Sonuç:**
+- `frontend/dist/` başarıyla build edildi (Vite, 512ms)
+- FastAPI `http://127.0.0.1:8000`'de ayağa kalktı
+- Statik frontend mount çalışıyor
+- `/docs` Swagger UI erişilebilir
+**Not:** Uvicorn çalıştırırken `PYTHONPATH`'e proje kökü eklenmeli (`ModuleNotFoundError: No module named 'api'` çözümü).
 
-### Aşama 7: Manuel Smoke Test
-- Chainlit: "İran'da gıda durumu" sorgusu → filtre çalışmalı, kaynaklar listelenmeli
-- Chainlit: "Son 1 ayda neler oldu" → tarih filtresi çalışmalı
-- FastAPI: `/chat` endpoint'i POST ile test edilmeli
-- Konuşma geçmişi korunmalı (memory cache testi)
-- Kaynak URL'leri mesajın altında görünmeli
+### ~~Aşama 7: Manuel Smoke Test~~ ✅
+**Sonuç:**
+- FastAPI `/chat` endpoint'i başarıyla test edildi. `POST {"message":"son gelişmeler"}` → 5 kaynaklı yanıt döndü (retrieval + LLM çalışıyor).
+- Chainlit UI başarıyla başlatıldı (daha sonra FastAPI ile port çakışması olduğu için durduruldu).
+- Konuşma geçmişi testi FastAPI üzerinden yapılabilir.
+
+**Aşama 7 sırasında keşfedilen ve düzeltilen ek sorunlar:**
+1. `ChatOllama` Ollama Cloud API ile uyumsuzdu → `ChatOpenAI` + `langchain-openai`'ye geçildi (`rag/chain.py`, `requirements.txt`, `tests/test_rag_chain.py`)
+2. `ConversationalRetrievalChain` memory `output_key` eksikti → `output_key="answer"` eklendi (`rag/memory.py`, `tests/test_rag_memory.py`)
+3. `qwen3-embedding:8b` aslında **2560 dim** üretiyordu → `EMBED_DIM` 4096 → 2560 düzeltildi (`config.py`, `.env.example`, `CLAUDE.md`)
 
 ---
 

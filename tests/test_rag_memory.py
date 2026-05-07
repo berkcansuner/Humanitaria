@@ -19,3 +19,7 @@ class TestMemory:
     def test_build_memory_key(self):
         mem = build_memory()
         assert mem.memory_key == "chat_history"
+
+    def test_build_memory_output_key(self):
+        mem = build_memory()
+        assert mem.output_key == "answer"

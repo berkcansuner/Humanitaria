@@ -1,7 +1,7 @@
 import logging
 from typing import Dict, Any, Optional
 from langchain.chains import ConversationalRetrievalChain
-from langchain_community.chat_models import ChatOllama
+from langchain_openai import ChatOpenAI
 from langchain.memory import ConversationBufferWindowMemory
 from langchain_core.prompts import PromptTemplate
 from config import get_settings
@@ -20,11 +20,11 @@ _SYSTEM_PROMPT = (
 
 def build_chain(filter: Optional[Dict[str, Any]] = None, memory: Optional[ConversationBufferWindowMemory] = None):
     settings = get_settings()
-    llm = ChatOllama(
+    llm = ChatOpenAI(
         model=settings.OLLAMA_LLM_MODEL,
         base_url=settings.OLLAMA_CLOUD_BASE_URL,
         temperature=0.3,
-        headers={"Authorization": f"Bearer {settings.OLLAMA_CLOUD_API_KEY}"},
+        api_key=settings.OLLAMA_CLOUD_API_KEY,
     )
     retriever = build_retriever(filter=filter)
     if memory is None:
