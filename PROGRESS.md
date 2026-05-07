@@ -23,10 +23,10 @@
 
 ### 3. RAG Engine (`rag/`)
 - `embeddings.py` — LangChain `Embeddings` wrapper (Ollama local)
-- `query_processor.py` — Rule-based filter extractor: ülke, tema, göreceli tarih, **doctype** (rapor/afet/ülke)
+- `query_processor.py` — **LLM-first** filter extractor (json_mode) + rule-based fallback; ülke, tema, tarih, doctype, kaynak, format; İngilizce tarih pattern'leri; LRU cache (256)
 - `retriever.py` — ChromaDB MMR retriever + metadata filtering, `@lru_cache(maxsize=1)` singleton
-- `memory.py` — `ConversationBufferWindowMemory(k=5)` *(deprecated — LangGraph migration planlanıyor)*
-- `chain.py` — `ConversationalRetrievalChain` + `ChatOpenAI` (Ollama Cloud API) + Türkçe system prompt
+- `history.py` — `WindowedChatMessageHistory(k=5)` session-based memory + `InMemoryChatMessageHistory`
+- `chain.py` — LCEL zinciri: `ChatPromptTemplate | ChatOpenAI | StrOutputParser` + `RunnableWithMessageHistory`; `streaming=True`
 
 ### 4. ~~Chainlit UI~~ (Kaldırıldı)
 - `chainlit_app.py`, `.chainlit/`, `chainlit.md` silindi ve git'ten kaldırıldı
@@ -40,28 +40,47 @@
 - `test_ingestion_store.py` — ChromaDB upsert + clear_collection mock testleri
 - `test_ingestion_pipeline.py` — Pipeline orchestrator (limit, force, multi-endpoint) mock testleri
 - `test_rag_embeddings.py` — LangChain wrapper testleri
-- `test_rag_query_processor.py` — Filter extraction (country, theme, date, doctype) testleri
+- `test_rag_query_processor.py` — Filter extraction (country, theme, date, doctype) + LLM mock testleri + rule-based fallback + complex query testleri
 - `test_rag_retriever.py` — Retriever + Chroma cache testleri
-- `test_rag_memory.py` — Memory yapılandırma testleri
-- `test_rag_chain.py` — ChatOpenAI + chain build testleri
+- `test_rag_history.py` — Windowed history, session store, populate from messages testleri
+- `test_rag_chain.py` — LCEL chain + singleton + streaming testleri
 - `test_config.py` — Settings cache + env override testleri
-- `test_smoke.py` — End-to-end import + pipeline smoke testi
+- `test_api_chat_stream.py` — SSE endpoint + session_id integration testleri
 
-**Toplam: 13 test dosyası, 57 test PASSED, 1 deprecation warning**
+**Toplam: 15 test dosyası, 71 test PASSED, 4 deprecation warning**
 
 ### 6. FastAPI Backend (`api/`)
 - `api/main.py` — FastAPI uygulaması, CORS middleware (`allow_origins=["*"]`), health ve chat router'ları, frontend `dist/` statik mount
 - `api/routes/health.py` — `GET /health` endpoint'i
-- `api/routes/chat.py` — `POST /chat` endpoint'i; `ChatRequest` (message + history) alır, filter extraction + memory rebuild + chain invoke yapar, `ChatResponse` (answer + sources) döner
+- `api/routes/chat.py` — `POST /chat` (non-streaming, session_id + ayrık retrieval) + `POST /chat/stream` (SSE, token-by-token, sources + session_id event)
 
 ### 7. Vue 3 Frontend (`frontend/`)
 - `frontend/package.json` — Vue 3.4 + Vite 5
 - `frontend/src/App.vue` — Ana sayfa, `Chat` bileşeni mount'u
-- `frontend/src/components/Chat.vue` — Chat UI, `v-text` ile güvenli render (XSS koruması)
+- `frontend/src/components/Chat.vue` — Chat UI, SSE streaming (`fetch + ReadableStream`), `v-text` ile güvenli render, session_id desteği
 - `frontend/src/components/SourceList.vue` — Kaynak listesi bileşeni
 - `frontend/dist/` — Build edilmiş production bundle
 
-### 8. Kod Düzeltmeleri (2026-05-07 - Oturum 1)
+### 11. LCEL Migration (2026-05-07 - Oturum 3)
+- **`rag/chain.py`** — ConversationalRetrievalChain → LCEL (`ChatPromptTemplate | ChatOpenAI | StrOutputParser` + `RunnableWithMessageHistory`); singleton pattern; `streaming=True`
+- **`rag/history.py`** — Yeni: `WindowedChatMessageHistory(k=5)` session-based memory; `get_session_history()`, `clear_session()`, `populate_history_from_messages()`
+- **`rag/memory.py`** — Silindi (deprecated ConversationBufferWindowMemory kaldırıldı)
+- **`api/routes/chat.py`** — `POST /chat`: ayrık retrieval + session_id; `POST /chat/stream`: SSE endpoint (`EventSourceResponse`)
+- **`rag/__init__.py`** — Export'lar güncellendi (build_memory → get_session_history, clear_session, populate_history_from_messages)
+- **`config.py`** — Chainlit ayarları kaldırıldı (CHAINLIT_AUTH_SECRET, CHAINLIT_USERS)
+- **`requirements.txt`** — chainlit kaldırıldı; sse-starlette eklendi; dependency conflict çözüldü
+
+### 12. LLM Query Processor (2026-05-07 - Oturum 3)
+- **`rag/query_processor.py`** — LLM-first filter extraction (`ChatOpenAI.with_structured_output(json_mode)` + `QueryFilters` Pydantic modeli)
+- Rule-based fallback korunuyor (`_extract_filters_rule_based`); İngilizce tarih pattern'leri eklendi
+- `_normalize_llm_filters()` — LLM çıktısını canonical değerlerle doğrulama
+- `@lru_cache(maxsize=256)` ile tekrarlanan sorgular cache'leniyor
+- "irak" → "Iraq" mapping eklendi (Türkçe/İngilizce normalize farkı)
+- `request_timeout=5` ile LLM timeout limiti
+
+### 13. Streaming SSE (2026-05-07 - Oturum 3)
+- **`api/routes/chat.py`** — `POST /chat/stream`: SSE endpoint; token event, sources event, session event, done event
+- **`frontend/src/components/Chat.vue`** — `fetch + ReadableStream` ile SSE parse; `streaming` ref; loading indicator `loading && !streaming`; connection drop handling; session_id desteği
 - `.env` → `EMBED_DIM=2560` olarak düzeltildi (önceden yanlışlıkla 4096 yazılıydı)
 - `.env.example` → `OLLAMA_EMBED_MODEL=qwen3-embedding:8b` ve `EMBED_DIM=2560` senkronize
 - `Chat.vue` → `v-html` XSS riski giderildi, `v-text` + `white-space: pre-wrap` kullanılıyor
@@ -103,16 +122,16 @@ Komut: `python scripts/ingest.py --limit 500 --endpoints reports disasters count
 | 1 | ~~`ChatOllama` cloud API key desteği~~ | ~~LLM bağlantısı kopabilir~~ | **ÇÖZÜLDÜ** — `ChatOpenAI`'ye geçildi |
 | 2 | ~~`build_retriever` her çağrıda yeni Chroma instance~~ | ~~Performans etkisi~~ | **ÇÖZÜLDÜ** — `@lru_cache(maxsize=1)` |
 | 3 | ~~`build_chain` her mesajda yeni memory~~ | ~~Konuşma geçmişi kaybolabilir~~ | **ÇÖZÜLDÜ** — FastAPI'de history client'tan geliyor |
-| 4 | Query processor rule-based | Karmaşık sorguları kaçırabilir | LLM tabanlı query processor'a upgrade edilecek |
+| 4 | ~~Query processor rule-based~~ | ~~Karmaşık sorguları kaçırabilir~~ | **ÇÖZÜLDÜ** — LLM-first extraction + rule-based fallback |
 | 5 | Tarih filtresi `$gte` ChromaDB syntax | Metadata date string karşılaştırması güvenilirliği | ISO format garanti, ama ChromaDB date range test edilmeli |
 | 6 | ~~Embedding model adı tutarsızlığı~~ | ~~Belirsizlik~~ | **ÇÖZÜLDÜ** — tüm dosyalar `8b` / `2560` olarak senkronize |
 | 7 | ~~`force` parametresi no-op~~ | ~~Kullanıcı beklentisini karşılamaz~~ | **ÇÖZÜLDÜ** — `ChromaStore.clear_collection()` eklendi |
 | 8 | ~~Commit bekleyen değişiklikler~~ | ~~Kayıp riski~~ | **ÇÖZÜLDÜ** — commit'lendi |
-| 9 | `ConversationalRetrievalChain` deprecated | Gelecek LangChain versiyonlarında kırılabilir | LangGraph / `RunnableWithMessageHistory` migration planlanıyor |
+| 9 | ~~`ConversationalRetrievalChain` deprecated~~ | ~~Gelecek LangChain versiyonlarında kırılabilir~~ | **ÇÖZÜLDÜ** — LCEL `RunnableWithMessageHistory` + singleton pattern |
 | 10 | CORS `allow_origins=["*"]` | Production'da güvenlik riski | Spesifik origin'ler belirlenmeli |
-| 11 | Streaming response yok | Uzun LLM yanıtlarında UX kötü | SSE veya WebSocket eklenebilir |
+| 11 | ~~Streaming response yok~~ | ~~Uzun LLM yanıtlarında UX kötü~~ | **ÇÖZÜLDÜ** — SSE `/chat/stream` + Vue streaming |
 | 12 | ~~ReliefWeb sadece `/reports` endpoint'i~~ | ~~Zengin içerik kaçırılıyor~~ | **ÇÖZÜLDÜ** — `/disasters` + `/countries` eklendi |
-| 13 | Session tabanlı memory yok (FastAPI) | Her istekte yeni memory | Redis veya in-memory dict ile session store |
+| 13 | ~~Session tabanlı memory yok (FastAPI)~~ | ~~Her istekte yeni memory~~ | **ÇÖZÜLDÜ** — `WindowedChatMessageHistory` + session_id |
 | 14 | ~~`v-html` XSS riski~~ | ~~LLM injection ile XSS~~ | **ÇÖZÜLDÜ** — `v-text` + `white-space: pre-wrap` |
 | 15 | `/updates` endpoint'i yok | ReliefWeb API'de 404 | N/A — `/reports` zaten güncellemeleri içeriyor |
 | 16 | Disaster `type` → `theme` mapping | Semantik olarak farklı (afet türü vs. sektör) | Gelecekte `disaster_type` metadata alanı eklenebilir |
@@ -122,12 +141,12 @@ Komut: `python scripts/ingest.py --limit 500 --endpoints reports disasters count
 ## Bekleyen İşler (Sıradaki Adımlar)
 
 ### Yüksek Öncelik
-- [ ] LangGraph / LCEL migration: `ConversationalRetrievalChain` → modern LangChain zinciri
-- [ ] LLM tabanlı query processor: karmaşık sorgular için filtre çıkarma
+- [x] ~~LangGraph / LCEL migration~~ — ConversationalRetrievalChain → LCEL RunnableWithMessageHistory
+- [x] ~~LLM tabanlı query processor~~ — ChatOpenAI json_mode + QueryFilters Pydantic modeli
 
 ### Orta Öncelik
-- [ ] Streaming response: SSE veya WebSocket ile token-by-token yanıt
-- [ ] Session tabanlı memory: oturum kimliği ile konuşma state'i
+- [x] ~~Streaming response~~ — SSE `/chat/stream` endpoint + Vue frontend
+- [x] ~~Session tabanlı memory~~ — WindowedChatMessageHistory + session_id
 - [ ] CORS origin kısıtlaması: production için spesifik origin'ler
 - [ ] Pipeline error handling: per-report hata takibi ve log
 - [ ] Daha fazla veri çekme: disasters 3705 kaydın tamamı, reports daha fazla

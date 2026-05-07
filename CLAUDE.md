@@ -27,7 +27,7 @@ Kullanıcı → Vue 3 Frontend → FastAPI (localhost:8000) → RAG Engine (Lang
 | Embedding     | Yerel Ollama — qwen3-embedding:8b | localhost:11434, 2560 dim, MTEB çok dilli #1 |
 | Vector DB     | ChromaDB                        | Gömülü, dosya tabanlı — `./chroma_db/`     |
 | Backend       | Python 3.12 / FastAPI           | REST API + Vue statik dosya sunumu          |
-| RAG Framework | LangChain                       | ConversationalRetrievalChain + MMR (deprecated — LangGraph migration planlanıyor) |
+| RAG Framework | LangChain LCEL                   | RunnableWithMessageHistory + MMR retriever (session-based) |
 | Web UI        | Vue 3 + Vite                    | Chat arayüzü, kaynak gösterimi              |
 
 ---
@@ -140,9 +140,23 @@ retriever = chroma.as_retriever(
 
 **LLM ve sistem promptu:**
 ```python
-llm = ChatOpenAI(model="qwen3.5:397b-cloud", base_url="https://ollama.com/v1")
+llm = ChatOpenAI(model="qwen3.5:397b-cloud", base_url="https://ollama.com/v1", streaming=True)
+chain = prompt | llm | StrOutputParser()  # LCEL zinciri
+wrapped = RunnableWithMessageHistory(chain, get_session_history, ...)
 # Türkçe system prompt: sadece sağlanan belgeleri kullan, kullanıcının dilinde yanıt ver
 ```
+
+**Sorgu önişleme (LLM-first, rule-based fallback):**
+```python
+# 1. LLM (json_mode) ile filtre çıkarma → QueryFilters Pydantic modeli
+# 2. LLM başarısız → rule-based fallback (_COUNTRY_MAP, _THEME_MAP, _DOCTYPE_MAP, regex)
+# 3. Sonuçlar LRU cache (256 giriş) ile cache'lenir
+```
+
+**Streaming:**
+- `POST /chat/stream` — SSE endpoint, token-by-token yanıt
+- Frontend `fetch + ReadableStream` ile SSE parse eder
+- `POST /chat` — backward-compatible non-streaming endpoint
 
 ---
 
@@ -163,7 +177,8 @@ llm = ChatOpenAI(model="qwen3.5:397b-cloud", base_url="https://ollama.com/v1")
 - qwen3-embedding:8b → ~4.7GB RAM; yetersizse `qwen3-embedding:4b` (2.5GB) kullan
 - Görseller/infografikler doğrudan sorgulanamaz; başlık + açıklama metadata'sı index'lenir
 - "Son 1 ay" gibi göreceli tarihler sorgu önişleme adımında mutlak tarihe çevrilmeli
-- `ConversationalRetrievalChain` deprecated — LangGraph migration planlanıyor
-- ReliefWeb sadece `/reports` endpoint'i kullanılıyor; `/updates`, `/disasters`, `/countries` eklenebilir
-- CORS `allow_origins=["*"]` — production'da kısıtlanmalı
-- Streaming response yok — uzun LLM yanıtlarında UX kötü olabilir
+- Session history in-memory only — server restart tüm oturumları temizler
+- `RunnableWithMessageHistory` deprecated (LangGraph migration gelecekte planlanıyor)
+- Query processor LLM-first (rule-based fallback) — LLM timeout → 5 saniye limit
+- `/updates` endpoint'i ReliefWeb API'de mevcut değil — `/reports` zaten güncellemeleri kapsıyor
+- Streaming SSE mevcut (`POST /chat/stream`) — frontend token-by-token render eder

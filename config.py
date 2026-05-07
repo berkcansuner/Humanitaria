@@ -30,10 +30,6 @@ class Settings(BaseSettings):
     CHROMA_COLLECTION: str = "reliefweb_docs"
     EMBED_DIM: int = 2560
 
-    # Chainlit
-    CHAINLIT_AUTH_SECRET: str = "change_this_secret"
-    CHAINLIT_USERS: str = "user1:pass1,user2:pass2"
-
     # RAG
     CHUNK_SIZE: int = 800
     CHUNK_OVERLAP: int = 100

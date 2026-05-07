@@ -1,6 +1,11 @@
 import pytest
+from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta
-from rag.query_processor import extract_filters
+from rag.query_processor import (
+    extract_filters,
+    _extract_filters_rule_based,
+    QueryFilters,
+)
 
 
 class TestQueryProcessor:
@@ -38,3 +43,86 @@ class TestQueryProcessor:
     def test_extract_doctype_english(self):
         f = extract_filters("show me disasters in Yemen")
         assert f.get("doctype") == "disaster"
+
+
+class TestRuleBasedFallback:
+    def test_rule_based_country(self):
+        f = _extract_filters_rule_based("Irak'taki durum")
+        assert f.get("country") is not None  # depends on İ normalization
+
+    def test_rule_based_theme_health(self):
+        f = _extract_filters_rule_based("sağlık raporları")
+        assert f.get("theme") == "Health"
+
+    def test_rule_based_date_english(self):
+        f = _extract_filters_rule_based("last 30 days")
+        assert "date" in f
+
+    def test_rule_based_date_weeks_english(self):
+        f = _extract_filters_rule_based("last 2 weeks in Syria")
+        assert "date" in f
+        # Rule-based only matches Turkish country names, "Syria" → needs LLM
+
+    def test_rule_based_no_filters(self):
+        f = _extract_filters_rule_based("general overview")
+        assert f == {}
+
+
+class TestLLMFilterExtraction:
+    @patch("rag.query_processor._get_llm_extractor")
+    def test_llm_extracts_country_and_theme(self, mock_get_llm):
+        mock_chain = MagicMock()
+        mock_result = QueryFilters(country="Syria", theme="Food and Nutrition")
+        mock_chain.invoke.return_value = mock_result
+        mock_get_llm.return_value = mock_chain
+        # Clear LRU cache
+        from rag.query_processor import _cached_llm_extract
+        _cached_llm_extract.cache_clear()
+        f = extract_filters("WFP's food security reports in Syria last 3 months")
+        assert f.get("country") == "Syria"
+        assert f.get("theme") == "Food and Nutrition"
+        _cached_llm_extract.cache_clear()
+
+    @patch("rag.query_processor._get_llm_extractor")
+    def test_llm_extracts_date_as_iso(self, mock_get_llm):
+        mock_chain = MagicMock()
+        mock_result = QueryFilters(country="Syria", date_from="2026-04-07", source="WFP")
+        mock_chain.invoke.return_value = mock_result
+        mock_get_llm.return_value = mock_chain
+        from rag.query_processor import _cached_llm_extract
+        _cached_llm_extract.cache_clear()
+        f = extract_filters("WFP's food security reports in Syria last 3 months")
+        assert f["date"] == {"$gte": "2026-04-07"}
+        assert f["source"] == "WFP"
+        _cached_llm_extract.cache_clear()
+
+    @patch("rag.query_processor._get_llm_extractor")
+    def test_llm_failure_falls_back_to_rules(self, mock_get_llm):
+        mock_chain = MagicMock()
+        mock_chain.invoke.side_effect = Exception("timeout")
+        mock_get_llm.return_value = mock_chain
+        from rag.query_processor import _cached_llm_extract
+        _cached_llm_extract.cache_clear()
+        f = extract_filters("İran'daki gıda durumu")
+        assert f.get("country") == "Iran"
+        _cached_llm_extract.cache_clear()
+
+    @patch("rag.query_processor._get_llm_extractor")
+    def test_llm_multi_field_extraction(self, mock_get_llm):
+        mock_chain = MagicMock()
+        mock_result = QueryFilters(
+            country="State of Palestine", theme="Health", doctype="report",
+            date_from="2026-02-07", source="WHO", format="Situation Report",
+        )
+        mock_chain.invoke.return_value = mock_result
+        mock_get_llm.return_value = mock_chain
+        from rag.query_processor import _cached_llm_extract
+        _cached_llm_extract.cache_clear()
+        f = extract_filters("WHO situation reports on health in Gaza last 3 months")
+        assert f["country"] == "State of Palestine"
+        assert f["theme"] == "Health"
+        assert f["doctype"] == "report"
+        assert f["date"] == {"$gte": "2026-02-07"}
+        assert f["source"] == "WHO"
+        assert f["format"] == "Situation Report"
+        _cached_llm_extract.cache_clear()

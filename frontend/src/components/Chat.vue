@@ -11,7 +11,7 @@
           <SourceList v-if="msg.sources" :sources="msg.sources" />
         </div>
       </div>
-      <div v-if="loading" class="message assistant loading">
+      <div v-if="loading && !streaming" class="message assistant loading">
         <div class="message-bubble">
           <div class="typing-indicator">
             <span></span>
@@ -43,7 +43,25 @@ import SourceList from './SourceList.vue'
 const messages = ref([])
 const input = ref('')
 const loading = ref(false)
+const streaming = ref(false)
+const sessionId = ref(null)
 const messagesContainer = ref(null)
+
+function parseSSE(chunk) {
+  let event = null
+  let data = null
+  for (const line of chunk.split(/\r?\n/)) {
+    if (line.startsWith('event:')) {
+      event = line.slice(6).trim()
+    } else if (line.startsWith('data:')) {
+      data = line.slice(5).trim()
+    }
+  }
+  if (data !== null) {
+    return { event: event || 'message', data }
+  }
+  return null
+}
 
 async function sendMessage() {
   const text = input.value.trim()
@@ -52,24 +70,72 @@ async function sendMessage() {
   messages.value.push({ role: 'user', content: text })
   input.value = ''
   loading.value = true
+  streaming.value = false
+
+  const assistantMsg = { role: 'assistant', content: '', sources: null }
+  messages.value.push(assistantMsg)
+  const msgIndex = messages.value.length - 1
   scrollToBottom()
 
   try {
-    const res = await fetch('/chat', {
+    const res = await fetch('/chat/stream', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         message: text,
-        history: messages.value.slice(0, -1).map(m => ({ role: m.role, content: m.content }))
+        history: messages.value.slice(0, -1).map(m => ({ role: m.role, content: m.content })),
+        session_id: sessionId.value,
       })
     })
     if (!res.ok) throw new Error('API hatası')
-    const data = await res.json()
-    messages.value.push({ role: 'assistant', content: data.answer, sources: data.sources })
+
+    streaming.value = true
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      buffer += decoder.decode(value, { stream: true })
+      const parts = buffer.split(/\r?\n\r?\n/)
+      buffer = parts.pop()
+
+      for (const part of parts) {
+        if (!part.trim()) continue
+        const sse = parseSSE(part)
+        if (!sse) continue
+
+        if (sse.event === 'token') {
+          const data = JSON.parse(sse.data)
+          assistantMsg.content += data.content
+          messages.value[msgIndex] = { ...assistantMsg }
+          scrollToBottom()
+        } else if (sse.event === 'sources') {
+          const data = JSON.parse(sse.data)
+          assistantMsg.sources = data.sources
+          messages.value[msgIndex] = { ...assistantMsg }
+        } else if (sse.event === 'session') {
+          const data = JSON.parse(sse.data)
+          sessionId.value = data.session_id
+        } else if (sse.event === 'error') {
+          const data = JSON.parse(sse.data)
+          assistantMsg.content += '\n\n[Hata: ' + data.message + ']'
+          messages.value[msgIndex] = { ...assistantMsg }
+        }
+      }
+    }
   } catch (err) {
-    messages.value.push({ role: 'assistant', content: 'Bir hata oluştu: ' + err.message })
+    if (!assistantMsg.content) {
+      assistantMsg.content = 'Bir hata oluştu: ' + err.message
+    } else {
+      assistantMsg.content += '\n\n[Bağlantı kesildi]'
+    }
+    messages.value[msgIndex] = { ...assistantMsg }
   } finally {
     loading.value = false
+    streaming.value = false
     scrollToBottom()
   }
 }

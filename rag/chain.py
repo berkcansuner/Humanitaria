@@ -1,12 +1,10 @@
 import logging
-from typing import Dict, Any, Optional
-from langchain.chains import ConversationalRetrievalChain
 from langchain_openai import ChatOpenAI
-from langchain.memory import ConversationBufferWindowMemory
-from langchain_core.prompts import PromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables.history import RunnableWithMessageHistory
 from config import get_settings
-from rag.retriever import build_retriever
-from rag.memory import build_memory
+from rag.history import get_session_history
 
 logger = logging.getLogger(__name__)
 
@@ -18,26 +16,35 @@ _SYSTEM_PROMPT = (
     "Her yanıtın sonunda kullandığın kaynak URL ve tarihlerini listele."
 )
 
-def build_chain(filter: Optional[Dict[str, Any]] = None, memory: Optional[ConversationBufferWindowMemory] = None):
+_chain: RunnableWithMessageHistory | None = None
+
+
+def build_chain() -> RunnableWithMessageHistory:
+    global _chain
+    if _chain is not None:
+        return _chain
+
     settings = get_settings()
     llm = ChatOpenAI(
         model=settings.OLLAMA_LLM_MODEL,
         base_url=settings.OLLAMA_CLOUD_BASE_URL,
         temperature=0.3,
         api_key=settings.OLLAMA_CLOUD_API_KEY,
+        streaming=True,
     )
-    retriever = build_retriever(filter=filter)
-    if memory is None:
-        memory = build_memory()
-    prompt = PromptTemplate(
-        template=_SYSTEM_PROMPT + "\n\n{context}\n\nQuestion: {question}\nHelpful Answer:",
-        input_variables=["context", "question"],
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", _SYSTEM_PROMPT + "\n\nContext:\n{context}"),
+        MessagesPlaceholder("chat_history"),
+        ("human", "{question}"),
+    ])
+
+    chain = prompt | llm | StrOutputParser()
+
+    _chain = RunnableWithMessageHistory(
+        chain,
+        get_session_history,
+        input_messages_key="question",
+        history_messages_key="chat_history",
     )
-    chain = ConversationalRetrievalChain.from_llm(
-        llm=llm,
-        retriever=retriever,
-        memory=memory,
-        return_source_documents=True,
-        combine_docs_chain_kwargs={"prompt": prompt},
-    )
-    return chain
+    return _chain
