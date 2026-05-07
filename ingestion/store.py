@@ -19,8 +19,8 @@ class ChromaStore:
         try:
             self.client.delete_collection(name=self.settings.CHROMA_COLLECTION)
             logger.info("Deleted collection %s", self.settings.CHROMA_COLLECTION)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Failed to clear collection %s: %s", self.settings.CHROMA_COLLECTION, e)
         self.collection = self.client.get_or_create_collection(
             name=self.settings.CHROMA_COLLECTION,
             metadata={"hnsw:space": "cosine"}
