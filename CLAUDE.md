@@ -12,9 +12,9 @@ Türkçe/İngilizce çok dilli sohbet yapılabilen RAG sistemi.
 ```
 ReliefWeb API → Ingestion Pipeline → ChromaDB (yerel dosya)
                                             ↓
-Kullanıcı → Chainlit UI (localhost:8000) → RAG Engine (LangChain) → Ollama Cloud LLM
-                                                   ↑
-                               Yerel Ollama (embedding, localhost:11434)
+Kullanıcı → Vue 3 Frontend → FastAPI (localhost:8000) → RAG Engine (LangChain) → Ollama Cloud LLM
+                                                              ↑
+                                          Yerel Ollama (embedding, localhost:11434)
 ```
 
 ---
@@ -26,20 +26,22 @@ Kullanıcı → Chainlit UI (localhost:8000) → RAG Engine (LangChain) → Olla
 | LLM           | Ollama Cloud API                | https://ollama.com/v1 — `qwen3.5:397b-cloud` |
 | Embedding     | Yerel Ollama — qwen3-embedding:8b | localhost:11434, 2560 dim, MTEB çok dilli #1 |
 | Vector DB     | ChromaDB                        | Gömülü, dosya tabanlı — `./chroma_db/`     |
-| Backend       | Python 3.12                     | Chainlit doğrudan RAG chain'i çağırır      |
-| RAG Framework | LangChain                       | ConversationalRetrievalChain + MMR, agent-ready |
-| Web UI        | Chainlit                        | Chat arayüzü, basit auth, kaynak gösterimi |
+| Backend       | Python 3.12 / FastAPI           | REST API + Vue statik dosya sunumu          |
+| RAG Framework | LangChain                       | ConversationalRetrievalChain + MMR (deprecated — LangGraph migration planlanıyor) |
+| Web UI        | Vue 3 + Vite                    | Chat arayüzü, kaynak gösterimi              |
 
 ---
 
 ## Dosya Yerleşim İlkeleri
 
-- **Kök dizin:** Giriş noktaları — `chainlit_app.py`, `config.py`, `requirements.txt`
+- **Kök dizin:** Giriş noktaları — `config.py`, `requirements.txt`
+- **`api/`** — FastAPI uygulaması, route'lar (`chat.py`, `health.py`)
+- **`frontend/`** — Vue 3 SPA (`src/`), Vite build (`dist/`)
 - **`ingestion/`** — ReliefWeb'den veri çekme, parse etme, güncelleme mantığı
-- **`rag/`** — embedding, retriever, LangChain zinciri
-- **`tests/`** — pytest testleri, modül yapısını yansıtır (`test_ingestion.py` vb.)
+- **`rag/`** — embedding, retriever, LangChain zinciri, query processor
+- **`tests/`** — pytest testleri, modül yapısını yansıtır
 - **`scripts/`** — CLI komutları (`ingest.py` vb.)
-- **`chroma_db/`** — ChromaDB verileri, `.gitignore`'da olmalı
+- **`chroma_db/`** — ChromaDB verileri, `.gitignore`'da
 
 ---
 
@@ -57,16 +59,12 @@ OLLAMA_EMBED_MODEL=qwen3-embedding:8b
 
 # ReliefWeb
 RELIEFWEB_APPNAME=berk_sitrep-u6dANX1qkKQivDDN   # URL param olarak gönderilir: ?appname=...
-RELIEFWEB_BASE_URL=https://api.reliefweb.int/v1
+RELIEFWEB_BASE_URL=https://api.reliefweb.int/v2
 
 # ChromaDB
 CHROMA_DB_PATH=./chroma_db
 CHROMA_COLLECTION=reliefweb_docs
 EMBED_DIM=2560                  # qwen3-embedding:8b — Ollama ve ChromaDB aynı değeri kullanır
-
-# Chainlit
-CHAINLIT_AUTH_SECRET=change_this_secret
-CHAINLIT_USERS=user1:pass1,user2:pass2
 
 # RAG
 CHUNK_SIZE=800
@@ -81,7 +79,7 @@ INGEST_SCHEDULE_HOURS=12
 
 ```python
 ENDPOINTS = {
-    "reports":   "/reports",   # PDF/HTML — ana kaynak
+    "reports":   "/reports",   # PDF/HTML — ana kaynak (şu an sadece bu kullanılıyor)
     "updates":   "/updates",   # Haberler, durum güncellemeleri
     "disasters": "/disasters", # Afet profilleri
     "countries": "/countries", # Ülke profilleri
@@ -109,9 +107,9 @@ THEMES = ["Food and Nutrition", "Health", "Shelter and NFI",
 Sistem üç sorgu tipini ayırt etmeli ve buna göre retrieval yapmalı:
 
 ```python
-# Aşama 1 — Sorgu önişleme (LLM ile)
+# Aşama 1 — Sorgu önişleme (rule-based, LLM upgrade planlanıyor)
 # Kullanıcı sorgusundan yapısal filtreler çıkarılır:
-# "İran'da son 1 ay" → {country: "Iran", date_from: "30 gün önce"}
+# "İran'da son 1 ay" → {country: "Iran", date: {"$gte": "2026-04-07"}}
 # "gıda sektörü"     → {theme: "Food and Nutrition"}
 # "başa çıkma stratejileri" → {} (semantik arama yeterli)
 
@@ -140,16 +138,10 @@ retriever = chroma.as_retriever(
 }
 ```
 
-**Bellek ve sistem promptu:**
+**LLM ve sistem promptu:**
 ```python
-memory = ConversationBufferWindowMemory(k=5, return_messages=True)
-```
-```
-Sen ReliefWeb veritabanındaki insani yardım belgelerini analiz eden asistansın.
-YALNIZCA sağlanan belgelerden yararlan. Belgede olmayan bilgileri uydurma.
-Kullanıcının dilinde yanıt ver (Türkçe veya İngilizce).
-Tarih veya ülke filtresi uygulandıysa bunu yanıtın başında belirt.
-Her yanıtın sonunda kullandığın kaynak URL ve tarihlerini listele.
+llm = ChatOpenAI(model="qwen3.5:397b-cloud", base_url="https://ollama.com/v1")
+# Türkçe system prompt: sadece sağlanan belgeleri kullan, kullanıcının dilinde yanıt ver
 ```
 
 ---
@@ -157,7 +149,7 @@ Her yanıtın sonunda kullandığın kaynak URL ve tarihlerini listele.
 ## Geliştirme Kuralları
 
 1. **API anahtarları** yalnızca `.env` içinde — asla kod veya commit'te
-2. **`chroma_db/`** `.gitignore`'a ekle — vektör verisi repoya girmesin
+2. **`chroma_db/`** `.gitignore`'da — vektör verisi repoya girmesin
 3. **Ingestion idempotent**: `doc_id = sha256(url)` — aynı belge iki kez işlenmez
 4. **Rate limiting**: ReliefWeb 429 → exponential backoff; Ollama timeout → retry x3
 5. **Loglama**: Her modülde `logger = logging.getLogger(__name__)`
@@ -171,3 +163,7 @@ Her yanıtın sonunda kullandığın kaynak URL ve tarihlerini listele.
 - qwen3-embedding:8b → ~4.7GB RAM; yetersizse `qwen3-embedding:4b` (2.5GB) kullan
 - Görseller/infografikler doğrudan sorgulanamaz; başlık + açıklama metadata'sı index'lenir
 - "Son 1 ay" gibi göreceli tarihler sorgu önişleme adımında mutlak tarihe çevrilmeli
+- `ConversationalRetrievalChain` deprecated — LangGraph migration planlanıyor
+- ReliefWeb sadece `/reports` endpoint'i kullanılıyor; `/updates`, `/disasters`, `/countries` eklenebilir
+- CORS `allow_origins=["*"]` — production'da kısıtlanmalı
+- Streaming response yok — uzun LLM yanıtlarında UX kötü olabilir

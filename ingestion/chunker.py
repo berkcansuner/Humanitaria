@@ -31,6 +31,7 @@ def chunk_document(
                 "date": doc.get("date", ""),
                 "source": doc.get("source", ""),
                 "format": doc.get("format", ""),
+                "doctype": doc.get("doctype", ""),
             }
         })
         if end >= len(words):

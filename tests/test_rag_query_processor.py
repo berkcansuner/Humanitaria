@@ -22,3 +22,19 @@ class TestQueryProcessor:
     def test_no_filters(self):
         f = extract_filters("başa çıkma stratejileri")
         assert f == {}
+
+    def test_extract_doctype_report(self):
+        f = extract_filters("raporlar hakkında bilgi")
+        assert f.get("doctype") == "report"
+
+    def test_extract_doctype_disaster(self):
+        f = extract_filters("afet profillerini göster")
+        assert f.get("doctype") == "disaster"
+
+    def test_extract_doctype_country(self):
+        f = extract_filters("ülke bilgileri")
+        assert f.get("doctype") == "country"
+
+    def test_extract_doctype_english(self):
+        f = extract_filters("show me disasters in Yemen")
+        assert f.get("doctype") == "disaster"

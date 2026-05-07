@@ -7,7 +7,7 @@
         :class="['message', msg.role]"
       >
         <div class="message-bubble">
-          <div class="message-content" v-html="formatContent(msg.content)"></div>
+          <div class="message-content" v-text="msg.content"></div>
           <SourceList v-if="msg.sources" :sources="msg.sources" />
         </div>
       </div>
@@ -44,10 +44,6 @@ const messages = ref([])
 const input = ref('')
 const loading = ref(false)
 const messagesContainer = ref(null)
-
-function formatContent(text) {
-  return text.replace(/\n/g, '<br>')
-}
 
 async function sendMessage() {
   const text = input.value.trim()
@@ -135,6 +131,7 @@ function scrollToBottom() {
 .message-content {
   font-size: 1.05rem;
   line-height: 1.7;
+  white-space: pre-wrap;
 }
 
 .typing-indicator {

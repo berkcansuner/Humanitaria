@@ -8,126 +8,91 @@
 
 ### 1. Mimari ve Altyapı
 - `config.py` — Pydantic `BaseSettings` ile tüm ortam değişkenleri yönetimi
-- `.env.example` — Şablon dosyası tamamlandı
+- `.env.example` — Şablon dosyası tamamlandı (senkronize: `qwen3-embedding:8b`, `EMBED_DIM=2560`)
 - `.gitignore` — Python, ChromaDB, IDE kuralları aktif
-- `requirements.txt` — Chainlit, LangChain, ChromaDB, Ollama, pytest
+- `requirements.txt` — LangChain, ChromaDB, Ollama, FastAPI, pytest
 
-### 2. Ingestion Pipeline (`ingestion/`)
-- `client.py` — ReliefWeb API client (`/reports`), pagination, 429 exponential backoff
-- `parser.py` — API yanıt parse'ı: title, body, date, source, country, theme, format, file
-- `chunker.py` — Body chunking (CHUNK_SIZE=800, CHUNK_OVERLAP=100), metadata propagation
+### 2. Ingestion Pipeline (`ingestion/`) — Çoklu Endpoint Desteği
+- `client.py` — `ENDPOINT_CONFIG` ile 3 endpoint tanımı (reports, disasters, countries); generic `fetch()` metodu; `fetch_reports()` backward-compatible wrapper; 429 exponential backoff; pagination
+- `parser.py` — `parse_report()`, `parse_disaster()`, `parse_country()` endpoint'e özel parser'lar; `parse()` dispatcher fonksiyonu; tüm parser'lar `doctype` alanı üretir
+- `chunker.py` — Body chunking (CHUNK_SIZE=800, CHUNK_OVERLAP=100), metadata + `doctype` propagation
 - `embedder.py` — Yerel Ollama embedding (`qwen3-embedding:8b`), retry x3
-- `store.py` — ChromaDB idempotent upsert, `sha256(url)` bazlı doc_id
-- `pipeline.py` — Full orchestrator: client → parse → chunk → embed → store
-- `scripts/ingest.py` — CLI giriş noktası (`--limit`, `--force`)
+- `store.py` — ChromaDB idempotent upsert, `sha256(url)` bazlı doc_id, `clear_collection()` desteği
+- `pipeline.py` — Multi-endpoint orchestrator: `endpoints` parametresi ile reports + disasters + countries sırayla işlenir
+- `scripts/ingest.py` — CLI: `--limit`, `--force`, `--endpoints` (reports/disasters/countries)
 
 ### 3. RAG Engine (`rag/`)
 - `embeddings.py` — LangChain `Embeddings` wrapper (Ollama local)
-- `query_processor.py` — Rule-based filter extractor: ülke, tema, göreceli tarih
-- `retriever.py` — ChromaDB MMR retriever + metadata filtering
-- `memory.py` — `ConversationBufferWindowMemory(k=5)`
-- `chain.py` — `ConversationalRetrievalChain` + Ollama Cloud LLM (`qwen3.5:397b-cloud`) + Türkçe system prompt
+- `query_processor.py` — Rule-based filter extractor: ülke, tema, göreceli tarih, **doctype** (rapor/afet/ülke)
+- `retriever.py` — ChromaDB MMR retriever + metadata filtering, `@lru_cache(maxsize=1)` singleton
+- `memory.py` — `ConversationBufferWindowMemory(k=5)` *(deprecated — LangGraph migration planlanıyor)*
+- `chain.py` — `ConversationalRetrievalChain` + `ChatOpenAI` (Ollama Cloud API) + Türkçe system prompt
 
-### 4. Chainlit UI
-- `chainlit_app.py` — Password auth (`CHAINLIT_USERS`), chat start, message handler, kaynak gösterimi
+### 4. ~~Chainlit UI~~ (Kaldırıldı)
+- `chainlit_app.py`, `.chainlit/`, `chainlit.md` silindi ve git'ten kaldırıldı
+- Yerine FastAPI + Vue 3 frontend kullanılıyor
 
 ### 5. Testler (`tests/`)
-- `test_ingestion_client.py` — API client mock testleri
-- `test_ingestion_parser.py` — Parser doğrulama
-- `test_ingestion_chunker.py` — Chunking + metadata koruma
+- `test_ingestion_client.py` — API client mock testleri + `fetch()` generic metod testleri + ENDPOINT_CONFIG doğrulama
+- `test_ingestion_parser.py` — `parse_report`, `parse_disaster`, `parse_country`, `parse()` dispatcher testleri
+- `test_ingestion_chunker.py` — Chunking + metadata + `doctype` koruma testleri
 - `test_ingestion_embedder.py` — Embedding retry mock testleri
-- `test_ingestion_store.py` — ChromaDB upsert mock testleri
-- `test_ingestion_pipeline.py` — Pipeline orchestrator mock testi
+- `test_ingestion_store.py` — ChromaDB upsert + clear_collection mock testleri
+- `test_ingestion_pipeline.py` — Pipeline orchestrator (limit, force, multi-endpoint) mock testleri
 - `test_rag_embeddings.py` — LangChain wrapper testleri
-- `test_rag_query_processor.py` — Filter extraction testleri
-- `test_rag_retriever.py` — Retriever + Chroma cache testleri *(yeni)*
-- `test_rag_memory.py` — Memory yapılandırma testleri *(yeni)*
-- `test_rag_chain.py` — Retriever + memory + chain build testleri *(güncellendi)*
-- `test_chainlit_app.py` — Chainlit handler mock testi *(güncellendi)*
+- `test_rag_query_processor.py` — Filter extraction (country, theme, date, doctype) testleri
+- `test_rag_retriever.py` — Retriever + Chroma cache testleri
+- `test_rag_memory.py` — Memory yapılandırma testleri
+- `test_rag_chain.py` — ChatOpenAI + chain build testleri
 - `test_config.py` — Settings cache + env override testleri
 - `test_smoke.py` — End-to-end import + pipeline smoke testi
 
-**Toplam: 14 test dosyası, 18+ test senaryosu**
+**Toplam: 13 test dosyası, 57 test PASSED, 1 deprecation warning**
 
 ### 6. FastAPI Backend (`api/`)
-- `api/main.py` — FastAPI uygulaması, CORS middleware, health ve chat router'ları, frontend `dist/` statik mount
-- `api/routes/health.py` — Health check endpoint'i
-- `api/routes/chat.py` — `/chat` POST endpoint'i; `ChatRequest` (message + history) alır, filter extraction + memory rebuild + chain invoke yapar, `ChatResponse` (answer + sources) döner
+- `api/main.py` — FastAPI uygulaması, CORS middleware (`allow_origins=["*"]`), health ve chat router'ları, frontend `dist/` statik mount
+- `api/routes/health.py` — `GET /health` endpoint'i
+- `api/routes/chat.py` — `POST /chat` endpoint'i; `ChatRequest` (message + history) alır, filter extraction + memory rebuild + chain invoke yapar, `ChatResponse` (answer + sources) döner
 
 ### 7. Vue 3 Frontend (`frontend/`)
 - `frontend/package.json` — Vue 3.4 + Vite 5
 - `frontend/src/App.vue` — Ana sayfa, `Chat` bileşeni mount'u
-- **Not:** Henüz `npm run build` yapılmadığı için `dist/` klasörü yok; FastAPI statik mount şu an çalışmıyor
+- `frontend/src/components/Chat.vue` — Chat UI, `v-text` ile güvenli render (XSS koruması)
+- `frontend/src/components/SourceList.vue` — Kaynak listesi bileşeni
+- `frontend/dist/` — Build edilmiş production bundle
 
-### 8. Chainlit Yapılandırması
-- `.chainlit/config.toml` — Chainlit 2.4.400, session timeout, MCP SSE/stdio desteği
-- `chainlit.md` — Chat karşılama/bilgi metni
+### 8. Kod Düzeltmeleri (2026-05-07 - Oturum 1)
+- `.env` → `EMBED_DIM=2560` olarak düzeltildi (önceden yanlışlıkla 4096 yazılıydı)
+- `.env.example` → `OLLAMA_EMBED_MODEL=qwen3-embedding:8b` ve `EMBED_DIM=2560` senkronize
+- `Chat.vue` → `v-html` XSS riski giderildi, `v-text` + `white-space: pre-wrap` kullanılıyor
+- Chainlit dosyaları (`chainlit_app.py`, `.chainlit/`, `chainlit.md`, `tests/test_chainlit_app.py`) git'ten kaldırıldı
+- Orphan `__pycache__/chainlit_app.cpython-312.pyc` temizlendi
 
-### 9. Kod Düzeltmeleri ve Eksik Testler (2026-05-06)
-- **`chainlit_app.py`** — `chain.invoke(...)` kullanımı (LangChain 0.3.x uyumluluğu). Bellek `cl.user_session` ile oturum bazlı cache'lendi.
-- **`rag/chain.py`** — `ChatOllama`'ya `headers={"Authorization": "Bearer ..."}` eklendi. `build_chain` dışarıdan `memory` alabiliyor.
-- **`rag/retriever.py`** — `_get_vectorstore()` fonksiyonuna `@lru_cache(maxsize=1)` eklendi.
-- **Eksik testler yazıldı:** `test_rag_retriever.py` (cache + MMR testleri), `test_rag_memory.py` (yapılandırma testleri)
-- **Mevcut testler güncellendi:** `test_rag_chain.py`, `test_chainlit_app.py`, `test_ingestion_client.py`, `test_ingestion_embedder.py`, `test_rag_embeddings.py`
+### 9. Çoklu Endpoint Ingestion (2026-05-07 - Oturum 2)
+- **API keşfi:** `/updates` endpoint'i ReliefWeb API'sinde yok (404) — `/reports` zaten güncellemeleri içeriyor
+- **`client.py`** → `ENDPOINT_CONFIG` dict ile reports, disasters, countries tanımlandı; generic `fetch(endpoint)` metodu eklendi
+- **`parser.py`** → `parse_disaster()` (name→title, description→body, primary_type.name→theme, status→format), `parse_country()` (name→title+country, description→body), `parse()` dispatcher eklendi
+- **`chunker.py`** → `doctype` metadata alanı eklendi
+- **`pipeline.py`** → `endpoints` parametresi eklendi (varsayılan `["reports"]`)
+- **`scripts/ingest.py`** → `--endpoints` CLI argümanı eklendi
+- **`query_processor.py`** → `_DOCTYPE_MAP` ile doctype filtre çıkarma (rapor/afet/ülke/report/disaster/country)
+- **`ingestion/__init__.py`** → Yeni export'lar eklendi
+- **Testler** → 9 yeni test eklendi (toplam 57 test PASSED)
 
-### 10. Git
-- İlk commit: `d8d4cb0` — Full implementasyon
-- Fix commit: `c5e2ce8` — Retriever LangChain Chroma'ya çevrildi, chain prompt template düzeltildi, client test fix
-- **Yeni düzeltmeler + testler hâlâ commit'lenmedi** — 17 dosya değişikliği bekliyor
+### 10. Canlı Ingestion (2026-05-07)
+Komut: `python scripts/ingest.py --limit 500 --endpoints reports disasters countries --force`
 
----
+| Endpoint | Doküman | Chunk | Süre |
+|----------|---------|-------|------|
+| Reports | 500 | 584 | ~65 dk |
+| Disasters | 500 | 622 | ~70 dk |
+| Countries | 160 | 160 | ~11 dk |
+| **Toplam** | **1,160** | **1,366** | **~146 dk** |
 
-## Bekleyen İşler (Sıradaki Adımlar)
-
-### ~~Aşama 0: Commit Bekleyen Değişiklikler~~ ✅
-**Durum:** 49 dosya değişikliği commit'lendi (`73a9c8d`).
-**Not:** `.gitignore`'a `node_modules/` ve `.claude/` eklendi.
-
-### ~~Aşama 1: Testleri Çalıştır ve Doğrula~~ ✅
-**Sonuç:** 35 PASSED, 1 SKIPPED, 3 warnings (2.74s)
-**Detaylar:**
-- `test_chainlit_app.py::test_on_message_calls_chain_invoke` — **SKIPPED** (async test ama `pytest-asyncio` eksik; `anyio` yüklü ama `@pytest.mark.asyncio` tanınmıyor)
-- `test_rag_chain.py::test_build_memory` — LangChainDeprecationWarning: `ConversationBufferWindowMemory` deprecated
-
-**Düzeltilmesi Gerekenler:**
-1. `pytest-asyncio` eklenmeli veya `anyio` mark'ı kullanılmalı
-2. `ConversationBufferWindowMemory` yerine LangGraph migration guide takip edilmeli
-
-### ~~Aşama 2: Embedding Model Adı Tutarsızlığını Düzelt~~ ✅
-**Durum:** `config.py` satır 21 `qwen3-embedding:8b` olarak düzeltildi.
-**Not:** `.env.example` satır 8 ve mevcut `.env` dosyası hâlâ `4b` yazıyor; bunlar da senkronize edilmeli.
-
-### ~~Aşama 3: `force` Parametresini Düzelt veya Kaldır~~ ✅
-**Sonuç:** `ChromaStore.clear_collection()` eklendi; `run_pipeline(force=True)` çağrıldığında koleksiyon silinip yeniden oluşturuluyor.
-**Test:** `test_ingestion_store.py::test_clear_collection` + `test_ingestion_pipeline.py::test_run_pipeline_with_force` eklendi — PASS.
-
-### ~~Aşama 4: Gerçek Veri İle Ingestion~~ ✅
-**Sonuç:** 50 rapor başarıyla ChromaDB'ye yüklendi (`--force` ile).
-**Keşif:** `qwen3-embedding:8b` aslında **2560 boyutlu** embedding üretiyor. `EMBED_DIM` 4096 → 2560 olarak düzeltildi (`config.py`, `.env.example`, `.env`, `CLAUDE.md`).
-**ChromaDB koleksiyonu:** `reliefweb_docs`, toplam ~60 chunk (bazı raporlar 1 chunk, bazıları 2-4 chunk).
-
-### ~~Aşama 5: Chainlit'i Başlat~~ ✅
-**Sonuç:** `http://localhost:8000` başarıyla ayağa kalktı. Auth ekranı geliyor.
-**Not:** Çeviri dosyası `tr-TR` eksik — varsayılan `en-US` kullanılıyor (önemsiz).
-
-### ~~Aşama 6: FastAPI + Vue Frontend'i Çalıştır~~ ✅
-**Sonuç:**
-- `frontend/dist/` başarıyla build edildi (Vite, 512ms)
-- FastAPI `http://127.0.0.1:8000`'de ayağa kalktı
-- Statik frontend mount çalışıyor
-- `/docs` Swagger UI erişilebilir
-**Not:** Uvicorn çalıştırırken `PYTHONPATH`'e proje kökü eklenmeli (`ModuleNotFoundError: No module named 'api'` çözümü).
-
-### ~~Aşama 7: Manuel Smoke Test~~ ✅
-**Sonuç:**
-- FastAPI `/chat` endpoint'i başarıyla test edildi. `POST {"message":"son gelişmeler"}` → 5 kaynaklı yanıt döndü (retrieval + LLM çalışıyor).
-- Chainlit UI başarıyla başlatıldı (daha sonra FastAPI ile port çakışması olduğu için durduruldu).
-- Konuşma geçmişi testi FastAPI üzerinden yapılabilir.
-
-**Aşama 7 sırasında keşfedilen ve düzeltilen ek sorunlar:**
-1. `ChatOllama` Ollama Cloud API ile uyumsuzdu → `ChatOpenAI` + `langchain-openai`'ye geçildi (`rag/chain.py`, `requirements.txt`, `tests/test_rag_chain.py`)
-2. `ConversationalRetrievalChain` memory `output_key` eksikti → `output_key="answer"` eklendi (`rag/memory.py`, `tests/test_rag_memory.py`)
-3. `qwen3-embedding:8b` aslında **2560 dim** üretiyordu → `EMBED_DIM` 4096 → 2560 düzeltildi (`config.py`, `.env.example`, `CLAUDE.md`)
+- Sıralama: `date.created:desc` — en güncel veriler önce
+- Countries'ta 249 ülkenin 160'ında description mevcut — sadece bunlar yüklendi
+- Disaster type'lar (Flood, Earthquake vb.) `theme` metadata alanına map edildi
+- Country kayıtlarında `country` = `name` (self-referencing)
 
 ---
 
@@ -135,14 +100,43 @@
 
 | # | Konu | Etki | Plan |
 |---|------|------|------|
-| 1 | ~~`ChatOllama` cloud API key desteği~~ | ~~LLM bağlantısı kopabilir~~ | **ÇÖZÜLDÜ** — `headers={"Authorization": "Bearer ..."}` eklendi |
-| 2 | ~~`build_retriever` her çağrıda yeni `Chroma` instance oluşturuyor~~ | ~~Performans etkisi (disk I/O)~~ | **ÇÖZÜLDÜ** — `@lru_cache(maxsize=1)` ile singleton Chroma instance |
-| 3 | ~~`build_chain` her mesajda yeni memory oluşturuyor~~ | ~~Konuşma geçmişi kaybolabilir~~ | **ÇÖZÜLDÜ** — `cl.user_session` ile memory oturum bazlı cache'lendi |
+| 1 | ~~`ChatOllama` cloud API key desteği~~ | ~~LLM bağlantısı kopabilir~~ | **ÇÖZÜLDÜ** — `ChatOpenAI`'ye geçildi |
+| 2 | ~~`build_retriever` her çağrıda yeni Chroma instance~~ | ~~Performans etkisi~~ | **ÇÖZÜLDÜ** — `@lru_cache(maxsize=1)` |
+| 3 | ~~`build_chain` her mesajda yeni memory~~ | ~~Konuşma geçmişi kaybolabilir~~ | **ÇÖZÜLDÜ** — FastAPI'de history client'tan geliyor |
 | 4 | Query processor rule-based | Karmaşık sorguları kaçırabilir | LLM tabanlı query processor'a upgrade edilecek |
 | 5 | Tarih filtresi `$gte` ChromaDB syntax | Metadata date string karşılaştırması güvenilirliği | ISO format garanti, ama ChromaDB date range test edilmeli |
-| 6 | ~~Embedding model adı tutarsızlığı (`4b` vs `8b`)~~ | ~~Belirsizlik, deployment'ta yanlış model çağrılabilir~~ | **ÇÖZÜLDÜ** — `config.py`, `.env`, `.env.example` hepsi `8b` olarak senkronize edildi |
-| 7 | ~~`force` parametresi no-op~~ | ~~Kullanıcı beklentisini karşılamaz, kafa karıştırıcı~~ | **ÇÖZÜLDÜ** — `ChromaStore.clear_collection()` eklendi, `run_pipeline(force=True)` aktif |
-| 8 | Commit bekleyen 17 dosya + yeni dizinler | Kayıp riski, branch düzeni bozuk | Aşama 0'da commit'lenecek |
+| 6 | ~~Embedding model adı tutarsızlığı~~ | ~~Belirsizlik~~ | **ÇÖZÜLDÜ** — tüm dosyalar `8b` / `2560` olarak senkronize |
+| 7 | ~~`force` parametresi no-op~~ | ~~Kullanıcı beklentisini karşılamaz~~ | **ÇÖZÜLDÜ** — `ChromaStore.clear_collection()` eklendi |
+| 8 | ~~Commit bekleyen değişiklikler~~ | ~~Kayıp riski~~ | **ÇÖZÜLDÜ** — commit'lendi |
+| 9 | `ConversationalRetrievalChain` deprecated | Gelecek LangChain versiyonlarında kırılabilir | LangGraph / `RunnableWithMessageHistory` migration planlanıyor |
+| 10 | CORS `allow_origins=["*"]` | Production'da güvenlik riski | Spesifik origin'ler belirlenmeli |
+| 11 | Streaming response yok | Uzun LLM yanıtlarında UX kötü | SSE veya WebSocket eklenebilir |
+| 12 | ~~ReliefWeb sadece `/reports` endpoint'i~~ | ~~Zengin içerik kaçırılıyor~~ | **ÇÖZÜLDÜ** — `/disasters` + `/countries` eklendi |
+| 13 | Session tabanlı memory yok (FastAPI) | Her istekte yeni memory | Redis veya in-memory dict ile session store |
+| 14 | ~~`v-html` XSS riski~~ | ~~LLM injection ile XSS~~ | **ÇÖZÜLDÜ** — `v-text` + `white-space: pre-wrap` |
+| 15 | `/updates` endpoint'i yok | ReliefWeb API'de 404 | N/A — `/reports` zaten güncellemeleri içeriyor |
+| 16 | Disaster `type` → `theme` mapping | Semantik olarak farklı (afet türü vs. sektör) | Gelecekte `disaster_type` metadata alanı eklenebilir |
+
+---
+
+## Bekleyen İşler (Sıradaki Adımlar)
+
+### Yüksek Öncelik
+- [ ] LangGraph / LCEL migration: `ConversationalRetrievalChain` → modern LangChain zinciri
+- [ ] LLM tabanlı query processor: karmaşık sorgular için filtre çıkarma
+
+### Orta Öncelik
+- [ ] Streaming response: SSE veya WebSocket ile token-by-token yanıt
+- [ ] Session tabanlı memory: oturum kimliği ile konuşma state'i
+- [ ] CORS origin kısıtlaması: production için spesifik origin'ler
+- [ ] Pipeline error handling: per-report hata takibi ve log
+- [ ] Daha fazla veri çekme: disasters 3705 kaydın tamamı, reports daha fazla
+
+### Düşük Öncelik
+- [ ] Frontend: Markdown render, mobil iyileştirme, hata state'leri
+- [ ] Frontend test'leri (Vitest + Vue Test Utils)
+- [ ] CI/CD pipeline (GitHub Actions)
+- [ ] README.md güncelleme (FastAPI + Vue talimatları)
 
 ---
 
@@ -151,16 +145,24 @@
 ```
 d8d4cb0 feat: implement full ReliefWeb RAG system
 c5e2ce8 fix: correct retriever to use LangChain Chroma, fix chain prompt template, fix client test
-# TODO: yeni düzeltmeler + FastAPI + Vue + testler commit'lenmeli
+73a9c8d feat: add FastAPI backend and Vue frontend scaffold; fix chain, retriever, embed_dim, force param; add tests
+ef65378 fix: migrate LLM from ChatOllama to ChatOpenAI for Ollama Cloud compatibility
+d0ccd03 fix: correct EMBED_DIM to 2560 for qwen3-embedding:8b
+41ce6cd fix: wire force parameter in ingestion pipeline
+# TODO: multi-endpoint ingestion + canlı ingestion commit'lenmeli
 ```
 
 ---
 
 ## Notlar
-- `.env` dosyası yüklendi; `RELIEFWEB_APPNAME` güncellendi.
-- `chroma_db/` henüz oluşturulmadı (ilk ingestion'da otomatik oluşacak).
-- Test coverage: ingestion (6 modül), rag (7 modül), config, chainlit, smoke = toplam 14 test dosyası.
-- `venv/` mevcut; `pytest` yüklü ama henüz çalıştırılmadı.
-- Yeni bileşenler: FastAPI backend (`api/`), Vue frontend (`frontend/`), Chainlit yapılandırması (`.chainlit/`).
-- **Keşif:** `qwen3-embedding:8b` 2560 dim embedding üretiyor (beklenen 4096 değil). `EMBED_DIM` buna göre ayarlandı.
-- `chroma_db/` oluşturuldu ve 50 rapor içeriyor.
+- `.env` dosyası `.gitignore`'da; canlı API anahtarları commit edilmiyor
+- `chroma_db/` 1,160 doküman (1,366 chunk) içeriyor, `.gitignore`'da
+  - Reports: 500 doküman, 584 chunk
+  - Disasters: 500 doküman, 622 chunk
+  - Countries: 160 doküman, 160 chunk
+- Test coverage: 13 test dosyası, 57 test PASSED
+- Chainlit bağımlılığı kaldırıldı; FastAPI + Vue 3 mimarisine geçildi
+- `qwen3-embedding:8b` 2560 dim embedding üretiyor (4096 değil)
+- Vue frontend `dist/` build edilmiş ve FastAPI tarafından statik olarak sunuluyor
+- `/updates` endpoint'i ReliefWeb API'sinde mevcut değil — `/reports` zaten güncellemeleri kapsıyor
+- ChromaDB metadata şemasına `doctype` alanı eklendi ("report", "disaster", "country")

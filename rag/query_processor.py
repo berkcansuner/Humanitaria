@@ -21,6 +21,14 @@ _THEME_MAP = {
     "koordinasyon": "Coordination", "coordination": "Coordination",
 }
 
+_DOCTYPE_MAP = {
+    "rapor": "report", "report": "report", "raporlar": "report", "reports": "report",
+    "afet": "disaster", "disaster": "disaster", "afetler": "disaster", "disasters": "disaster",
+    "ülke": "country", "country": "country", "ülkeler": "country", "countries": "country",
+    "ulke": "country", "ulkeler": "country",
+}
+
+
 def extract_filters(query: str) -> Dict[str, Any]:
     query_lower = query.replace('İ', 'i').lower()
     filters: Dict[str, Any] = {}
@@ -33,6 +41,11 @@ def extract_filters(query: str) -> Dict[str, Any]:
     for key, val in _THEME_MAP.items():
         if key in query_lower:
             filters["theme"] = val
+            break
+    # Doctype extraction
+    for key, val in _DOCTYPE_MAP.items():
+        if key in query_lower:
+            filters["doctype"] = val
             break
     # Date extraction (relative only)
     relative_month = re.search(r"son\s+(\d+)\s+ay", query_lower)

@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from ingestion.client import ReliefWebClient
+from ingestion.client import ReliefWebClient, ENDPOINT_CONFIG
 from config import get_settings
 
 
@@ -44,3 +44,38 @@ class TestReliefWebClient:
                 with pytest.raises(Exception):
                     client.fetch_reports(limit=1)
                 assert mock_sleep.call_count >= 2
+
+    def test_fetch_generic_endpoint(self):
+        client = ReliefWebClient()
+        mock_data = {"data": [{"id": "1", "fields": {"name": "Test Disaster"}}], "totalCount": 1}
+        with patch("requests.post") as mock_post:
+            mock_response = MagicMock()
+            mock_response.json.return_value = mock_data
+            mock_response.status_code = 200
+            mock_post.return_value = mock_response
+            result = client.fetch("disasters", limit=1)
+            assert len(result) == 1
+            call_args = mock_post.call_args
+            assert "/disasters" in call_args[0][0]
+
+    def test_fetch_unknown_endpoint_raises(self):
+        client = ReliefWebClient()
+        with pytest.raises(ValueError, match="Unknown endpoint"):
+            client.fetch("nonexistent")
+
+    def test_fetch_reports_delegates_to_fetch(self):
+        client = ReliefWebClient()
+        mock_data = {"data": [{"id": "1"}], "totalCount": 1}
+        with patch("requests.post") as mock_post:
+            mock_response = MagicMock()
+            mock_response.json.return_value = mock_data
+            mock_response.status_code = 200
+            mock_post.return_value = mock_response
+            client.fetch_reports(limit=1)
+            call_url = mock_post.call_args[0][0]
+            assert call_url.endswith("/reports")
+
+    def test_endpoint_config_has_all_endpoints(self):
+        assert "reports" in ENDPOINT_CONFIG
+        assert "disasters" in ENDPOINT_CONFIG
+        assert "countries" in ENDPOINT_CONFIG

@@ -1,10 +1,37 @@
 import logging
 import time
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import requests
 from config import get_settings
 
 logger = logging.getLogger(__name__)
+
+ENDPOINT_CONFIG = {
+    "reports": {
+        "path": "/reports",
+        "fields": [
+            "title", "body", "date.created", "source.name",
+            "primary_country.name", "theme.name", "format.name", "file",
+        ],
+        "sort": "date.created:desc",
+    },
+    "disasters": {
+        "path": "/disasters",
+        "fields": [
+            "name", "description", "date.created", "primary_country.name",
+            "country.name", "type.name", "primary_type.name", "status", "glide", "url",
+        ],
+        "sort": "date.created:desc",
+    },
+    "countries": {
+        "path": "/countries",
+        "fields": [
+            "name", "description", "date.created", "iso3", "shortname", "status", "url",
+        ],
+        "sort": "date.created:desc",
+    },
+}
+
 
 class ReliefWebClient:
     def __init__(self):
@@ -17,25 +44,27 @@ class ReliefWebClient:
         if self.api_key:
             self.headers["Authorization"] = f"Bearer {self.api_key}"
 
-    def fetch_reports(
+    def fetch(
         self,
+        endpoint: str,
         limit: int = 100,
         offset: int = 0,
-        sort: str = "date.created:desc",
-        fields: List[str] = None,
+        sort: Optional[str] = None,
+        fields: Optional[List[str]] = None,
     ) -> List[Dict[str, Any]]:
-        if fields is None:
-            fields = ["title", "body", "date.created", "source.name",
-                      "primary_country.name", "theme.name", "format.name", "file"]
-        url = f"{self.base_url}/reports"
+        config = ENDPOINT_CONFIG.get(endpoint)
+        if config is None:
+            raise ValueError(f"Unknown endpoint: {endpoint}. Must be one of: {list(ENDPOINT_CONFIG)}")
+
+        url = f"{self.base_url}{config['path']}"
         params = {}
         if self.settings.RELIEFWEB_APPNAME:
             params["appname"] = self.settings.RELIEFWEB_APPNAME
         payload = {
             "limit": min(limit, 1000),
             "offset": offset,
-            "sort": [sort],
-            "fields": {"include": fields},
+            "sort": [sort or config["sort"]],
+            "fields": {"include": fields or config["fields"]},
         }
         max_retries = 5
         backoff = 1.0
@@ -61,3 +90,12 @@ class ReliefWebClient:
                 else:
                     raise
         return []
+
+    def fetch_reports(
+        self,
+        limit: int = 100,
+        offset: int = 0,
+        sort: str = "date.created:desc",
+        fields: List[str] = None,
+    ) -> List[Dict[str, Any]]:
+        return self.fetch("reports", limit=limit, offset=offset, sort=sort, fields=fields)
