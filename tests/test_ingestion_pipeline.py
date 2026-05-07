@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from ingestion.pipeline import run_pipeline
+from ingestion.pipeline import run_pipeline, IngestionStats
 
 
 class TestPipeline:
@@ -66,3 +66,27 @@ class TestPipeline:
             endpoint_names = [c[0][0] for c in calls]
             assert "reports" in endpoint_names
             assert "disasters" in endpoint_names
+
+
+class TestIngestionStats:
+    def test_default_values(self):
+        stats = IngestionStats(endpoint="reports")
+        assert stats.endpoint == "reports"
+        assert stats.total == 0
+        assert stats.succeeded == 0
+        assert stats.failed == 0
+        assert stats.skipped == 0
+        assert stats.errors == []
+
+    def test_custom_values(self):
+        stats = IngestionStats(
+            endpoint="disasters",
+            total=100,
+            succeeded=90,
+            failed=5,
+            skipped=5,
+            errors=[{"url": "https://x", "error": "parse failed"}],
+        )
+        assert stats.total == 100
+        assert stats.succeeded == 90
+        assert len(stats.errors) == 1

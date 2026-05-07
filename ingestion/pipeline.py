@@ -1,5 +1,6 @@
 import logging
-from typing import List, Optional
+from dataclasses import dataclass, field
+from typing import List, Optional, Dict
 from ingestion.client import ReliefWebClient, ENDPOINT_CONFIG
 from ingestion.parser import parse
 from ingestion.chunker import chunk_document
@@ -7,6 +8,16 @@ from ingestion.embedder import OllamaEmbedder
 from ingestion.store import ChromaStore
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class IngestionStats:
+    endpoint: str
+    total: int = 0
+    succeeded: int = 0
+    failed: int = 0
+    skipped: int = 0
+    errors: list = field(default_factory=list)
 
 
 def run_pipeline(
