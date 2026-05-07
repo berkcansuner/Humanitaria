@@ -19,6 +19,19 @@ class TestChromaStore:
         assert args["ids"] == ["id1", "id2"]
         assert len(args["embeddings"]) == 2
 
+    def test_clear_collection(self):
+        store = ChromaStore()
+        mock_client = MagicMock()
+        store.client = mock_client
+        mock_collection = MagicMock()
+        store.collection = mock_collection
+        store.clear_collection()
+        mock_client.delete_collection.assert_called_once_with(name=store.settings.CHROMA_COLLECTION)
+        mock_client.get_or_create_collection.assert_called_once_with(
+            name=store.settings.CHROMA_COLLECTION,
+            metadata={"hnsw:space": "cosine"}
+        )
+
     def test_idempotent_upsert(self):
         store = ChromaStore()
         mock_collection = MagicMock()

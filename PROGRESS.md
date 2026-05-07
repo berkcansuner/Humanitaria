@@ -47,7 +47,7 @@
 - `test_config.py` — Settings cache + env override testleri
 - `test_smoke.py` — End-to-end import + pipeline smoke testi
 
-**Toplam: 14 test dosyası, 15+ test senaryosu**
+**Toplam: 14 test dosyası, 17+ test senaryosu**
 
 ### 6. FastAPI Backend (`api/`)
 - `api/main.py` — FastAPI uygulaması, CORS middleware, health ve chat router'ları, frontend `dist/` statik mount
@@ -79,31 +79,27 @@
 
 ## Bekleyen İşler (Sıradaki Adımlar)
 
-### Aşama 0: Commit Bekleyen Değişiklikler
-**Durum:** 17 dosya değişikliği ve yeni untracked dosyalar/dizinler var.
-**Aksiyon:**
-```powershell
-git add -A
-git commit -m "fix: chain.invoke migration, lru_cache on vectorstore, session memory cache, add FastAPI + Vue scaffold, add missing tests"
-```
+### ~~Aşama 0: Commit Bekleyen Değişiklikler~~ ✅
+**Durum:** 49 dosya değişikliği commit'lendi (`73a9c8d`).
+**Not:** `.gitignore`'a `node_modules/` ve `.claude/` eklendi.
 
-### Aşama 1: Testleri Çalıştır ve Doğrula
-**Durum:** Testler yazıldı ve güncellendi ama henüz çalıştırılmadı.
-**Blok:** Önceki oturumda Python WindowsApps stub sorunu vardı; şimdi `venv/` mevcut.
-**Aksiyon:** Yerel ortamda şu komut çalıştırılmalı:
-```powershell
-venv\Scripts\activate
-python -m pytest tests/ -v
-```
-**Beklenen:** Tüm testler PASS. FAIL varsa "Düzeltilmesi Gerekenler" bölümüne eklenecek.
+### ~~Aşama 1: Testleri Çalıştır ve Doğrula~~ ✅
+**Sonuç:** 35 PASSED, 1 SKIPPED, 3 warnings (2.74s)
+**Detaylar:**
+- `test_chainlit_app.py::test_on_message_calls_chain_invoke` — **SKIPPED** (async test ama `pytest-asyncio` eksik; `anyio` yüklü ama `@pytest.mark.asyncio` tanınmıyor)
+- `test_rag_chain.py::test_build_memory` — LangChainDeprecationWarning: `ConversationBufferWindowMemory` deprecated
+
+**Düzeltilmesi Gerekenler:**
+1. `pytest-asyncio` eklenmeli veya `anyio` mark'ı kullanılmalı
+2. `ConversationBufferWindowMemory` yerine LangGraph migration guide takip edilmeli
 
 ### ~~Aşama 2: Embedding Model Adı Tutarsızlığını Düzelt~~ ✅
 **Durum:** `config.py` satır 21 `qwen3-embedding:8b` olarak düzeltildi.
 **Not:** `.env.example` satır 8 ve mevcut `.env` dosyası hâlâ `4b` yazıyor; bunlar da senkronize edilmeli.
 
-### Aşama 3: `force` Parametresini Düzelt veya Kaldır
-**Durum:** `ingestion/pipeline.py`'de `run_pipeline(force=False)` parametresi var ama hiç kullanılmıyor.
-**Aksiyon:** Ya koleksiyon temizleme mantığı eklenmeli ya da parametre kaldırılmalı.
+### ~~Aşama 3: `force` Parametresini Düzelt veya Kaldır~~ ✅
+**Sonuç:** `ChromaStore.clear_collection()` eklendi; `run_pipeline(force=True)` çağrıldığında koleksiyon silinip yeniden oluşturuluyor.
+**Test:** `test_ingestion_store.py::test_clear_collection` + `test_ingestion_pipeline.py::test_run_pipeline_with_force` eklendi — PASS.
 
 ### Aşama 4: Gerçek Veri İle Ingestion
 **Durum:** Pipeline kodu tam ama ChromaDB'de henüz veri yok.
@@ -149,7 +145,7 @@ cd .. && uvicorn api.main:app --reload
 | 4 | Query processor rule-based | Karmaşık sorguları kaçırabilir | LLM tabanlı query processor'a upgrade edilecek |
 | 5 | Tarih filtresi `$gte` ChromaDB syntax | Metadata date string karşılaştırması güvenilirliği | ISO format garanti, ama ChromaDB date range test edilmeli |
 | 6 | ~~Embedding model adı tutarsızlığı (`4b` vs `8b`)~~ | ~~Belirsizlik, deployment'ta yanlış model çağrılabilir~~ | **ÇÖZÜLDÜ** — `config.py` `8b` olarak güncellendi. `.env.example` senkronize edilmeli |
-| 7 | `force` parametresi no-op | Kullanıcı beklentisini karşılamaz, kafa karıştırıcı | Aşama 3'te düzeltilecek |
+| 7 | ~~`force` parametresi no-op~~ | ~~Kullanıcı beklentisini karşılamaz, kafa karıştırıcı~~ | **ÇÖZÜLDÜ** — `ChromaStore.clear_collection()` eklendi, `run_pipeline(force=True)` aktif |
 | 8 | Commit bekleyen 17 dosya + yeni dizinler | Kayıp riski, branch düzeni bozuk | Aşama 0'da commit'lenecek |
 
 ---

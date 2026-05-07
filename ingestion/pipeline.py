@@ -13,6 +13,8 @@ def run_pipeline(limit: int = 100, force: bool = False) -> None:
     client = ReliefWebClient()
     embedder = OllamaEmbedder()
     store = ChromaStore()
+    if force:
+        store.clear_collection()
     offset = 0
     total_processed = 0
     while total_processed < limit:
