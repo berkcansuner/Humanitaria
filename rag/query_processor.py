@@ -22,7 +22,7 @@ _THEME_MAP = {
 }
 
 def extract_filters(query: str) -> Dict[str, Any]:
-    query_lower = query.lower()
+    query_lower = query.replace('İ', 'i').lower()
     filters: Dict[str, Any] = {}
     # Country extraction
     for key, val in _COUNTRY_MAP.items():

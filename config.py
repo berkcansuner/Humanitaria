@@ -21,8 +21,9 @@ class Settings(BaseSettings):
     OLLAMA_EMBED_MODEL: str = "qwen3-embedding:8b"
 
     # ReliefWeb
-    RELIEFWEB_API_KEY: str
-    RELIEFWEB_BASE_URL: str = "https://api.reliefweb.int/v1"
+    RELIEFWEB_API_KEY: str = ""
+    RELIEFWEB_APPNAME: str = ""
+    RELIEFWEB_BASE_URL: str = "https://api.reliefweb.int/v2"
 
     # ChromaDB
     CHROMA_DB_PATH: str = "./chroma_db"

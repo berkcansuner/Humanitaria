@@ -1,0 +1,29 @@
+:root {
+  --color-bg: #faf9f6;
+  --color-text: #1a1a1a;
+  --color-accent: #8b0000;
+  --color-muted: #6b6b6b;
+  --color-border: #d1d1d1;
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body: 'Source Serif 4', 'Georgia', serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}

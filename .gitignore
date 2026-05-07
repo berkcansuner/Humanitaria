@@ -28,6 +28,12 @@ chroma_db/
 htmlcov/
 .coverage
 
+# Node
+node_modules/
+
+# Claude
+.claude/
+
 # OS
 .DS_Store
 Thumbs.db

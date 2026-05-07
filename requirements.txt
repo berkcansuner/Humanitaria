@@ -1,9 +1,14 @@
 chainlit==2.4.400
 langchain==0.3.24
 langchain-community==0.3.22
+# NOTE (Windows): chromadb 1.0.5 requires chroma-hnswlib==0.7.6 but a prebuilt
+# wheel for cp312-win_amd64 may be missing. If build fails, install
+# chroma-hnswlib==0.7.5 first, then run: pip install chromadb==1.0.5 --no-deps
 chromadb==1.0.5
 pydantic-settings==2.9.1
 python-dotenv==1.1.0
 requests==2.32.3
 pytest==8.3.5
 ollama==0.4.8
+fastapi==0.115.0
+uvicorn[standard]==0.34.0

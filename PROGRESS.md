@@ -1,6 +1,6 @@
 # ReliefWeb RAG — Proje İlerleme Durumu
 
-## Son Güncelleme: 2026-05-06
+## Son Güncelleme: 2026-05-07
 
 ---
 
@@ -40,38 +40,80 @@
 - `test_ingestion_pipeline.py` — Pipeline orchestrator mock testi
 - `test_rag_embeddings.py` — LangChain wrapper testleri
 - `test_rag_query_processor.py` — Filter extraction testleri
-- `test_rag_chain.py` — Retriever + memory + chain build testleri
-- `test_chainlit_app.py` — Chainlit handler mock testi
+- `test_rag_retriever.py` — Retriever + Chroma cache testleri *(yeni)*
+- `test_rag_memory.py` — Memory yapılandırma testleri *(yeni)*
+- `test_rag_chain.py` — Retriever + memory + chain build testleri *(güncellendi)*
+- `test_chainlit_app.py` — Chainlit handler mock testi *(güncellendi)*
 - `test_config.py` — Settings cache + env override testleri
 - `test_smoke.py` — End-to-end import + pipeline smoke testi
 
-### 6. Git
+**Toplam: 14 test dosyası, 15+ test senaryosu**
+
+### 6. FastAPI Backend (`api/`)
+- `api/main.py` — FastAPI uygulaması, CORS middleware, health ve chat router'ları, frontend `dist/` statik mount
+- `api/routes/health.py` — Health check endpoint'i
+- `api/routes/chat.py` — `/chat` POST endpoint'i; `ChatRequest` (message + history) alır, filter extraction + memory rebuild + chain invoke yapar, `ChatResponse` (answer + sources) döner
+
+### 7. Vue 3 Frontend (`frontend/`)
+- `frontend/package.json` — Vue 3.4 + Vite 5
+- `frontend/src/App.vue` — Ana sayfa, `Chat` bileşeni mount'u
+- **Not:** Henüz `npm run build` yapılmadığı için `dist/` klasörü yok; FastAPI statik mount şu an çalışmıyor
+
+### 8. Chainlit Yapılandırması
+- `.chainlit/config.toml` — Chainlit 2.4.400, session timeout, MCP SSE/stdio desteği
+- `chainlit.md` — Chat karşılama/bilgi metni
+
+### 9. Kod Düzeltmeleri ve Eksik Testler (2026-05-06)
+- **`chainlit_app.py`** — `chain.invoke(...)` kullanımı (LangChain 0.3.x uyumluluğu). Bellek `cl.user_session` ile oturum bazlı cache'lendi.
+- **`rag/chain.py`** — `ChatOllama`'ya `headers={"Authorization": "Bearer ..."}` eklendi. `build_chain` dışarıdan `memory` alabiliyor.
+- **`rag/retriever.py`** — `_get_vectorstore()` fonksiyonuna `@lru_cache(maxsize=1)` eklendi.
+- **Eksik testler yazıldı:** `test_rag_retriever.py` (cache + MMR testleri), `test_rag_memory.py` (yapılandırma testleri)
+- **Mevcut testler güncellendi:** `test_rag_chain.py`, `test_chainlit_app.py`, `test_ingestion_client.py`, `test_ingestion_embedder.py`, `test_rag_embeddings.py`
+
+### 10. Git
 - İlk commit: `d8d4cb0` — Full implementasyon
 - Fix commit: `c5e2ce8` — Retriever LangChain Chroma'ya çevrildi, chain prompt template düzeltildi, client test fix
+- **Yeni düzeltmeler + testler hâlâ commit'lenmedi** — 17 dosya değişikliği bekliyor
 
 ---
 
 ## Bekleyen İşler (Sıradaki Adımlar)
 
+### Aşama 0: Commit Bekleyen Değişiklikler
+**Durum:** 17 dosya değişikliği ve yeni untracked dosyalar/dizinler var.
+**Aksiyon:**
+```powershell
+git add -A
+git commit -m "fix: chain.invoke migration, lru_cache on vectorstore, session memory cache, add FastAPI + Vue scaffold, add missing tests"
+```
+
 ### Aşama 1: Testleri Çalıştır ve Doğrula
-**Durum:** Testler yazıldı ama henüz çalıştırılmadı.
-**Blok:** Bu oturumun shell'inde Python çalıştırılamıyor (WindowsApps stub eksik).
+**Durum:** Testler yazıldı ve güncellendi ama henüz çalıştırılmadı.
+**Blok:** Önceki oturumda Python WindowsApps stub sorunu vardı; şimdi `venv/` mevcut.
 **Aksiyon:** Yerel ortamda şu komut çalıştırılmalı:
 ```powershell
-cd C:\Projeler\Reliefweb_RAG_System
+venv\Scripts\activate
 python -m pytest tests/ -v
 ```
-**Beklenen:** Tüm testler PASS. FAIL varsa burada listede "Düzeltilmesi Gerekenler" bölümüne eklenecek.
+**Beklenen:** Tüm testler PASS. FAIL varsa "Düzeltilmesi Gerekenler" bölümüne eklenecek.
 
-### Aşama 2: Gerçek Veri İle Ingestion
+### ~~Aşama 2: Embedding Model Adı Tutarsızlığını Düzelt~~ ✅
+**Durum:** `config.py` satır 21 `qwen3-embedding:8b` olarak düzeltildi.
+**Not:** `.env.example` satır 8 ve mevcut `.env` dosyası hâlâ `4b` yazıyor; bunlar da senkronize edilmeli.
+
+### Aşama 3: `force` Parametresini Düzelt veya Kaldır
+**Durum:** `ingestion/pipeline.py`'de `run_pipeline(force=False)` parametresi var ama hiç kullanılmıyor.
+**Aksiyon:** Ya koleksiyon temizleme mantığı eklenmeli ya da parametre kaldırılmalı.
+
+### Aşama 4: Gerçek Veri İle Ingestion
 **Durum:** Pipeline kodu tam ama ChromaDB'de henüz veri yok.
 **Aksiyon:**
 ```powershell
 python -m scripts.ingest --limit 50
 ```
-**Önkoşul:** Yerel Ollama `ollama serve` ayakta olmalı, `qwen3-embedding:8b` modeli yüklü olmalı.
+**Önkoşul:** Yerel Ollama `ollama serve` ayakta olmalı, `qwen3-embedding:4b` (veya `8b`) modeli yüklü olmalı.
 
-### Aşama 3: Chainlit'i Başlat
+### Aşama 5: Chainlit'i Başlat
 **Durum:** UI kodu tam ama henüz çalıştırılmadı.
 **Aksiyon:**
 ```powershell
@@ -79,10 +121,20 @@ chainlit run chainlit_app.py
 ```
 **Beklenen:** `http://localhost:8000` açılır, auth ekranı gelir.
 
-### Aşama 4: Manuel Smoke Test
-- Sohbet başlat
-- "İran'da gıda durumu" sorgusu → filtre çalışmalı, kaynaklar listelenmeli
-- "Son 1 ayda neler oldu" → tarih filtresi çalışmalı
+### Aşama 6: FastAPI + Vue Frontend'i Çalıştır
+**Durum:** Backend ve frontend kodları var ama henüz çalıştırılmadı.
+**Aksiyon:**
+```powershell
+cd frontend && npm install && npm run build
+cd .. && uvicorn api.main:app --reload
+```
+**Beklenen:** `http://localhost:8000` açılır, FastAPI docs `/docs` ve frontend çalışır.
+
+### Aşama 7: Manuel Smoke Test
+- Chainlit: "İran'da gıda durumu" sorgusu → filtre çalışmalı, kaynaklar listelenmeli
+- Chainlit: "Son 1 ayda neler oldu" → tarih filtresi çalışmalı
+- FastAPI: `/chat` endpoint'i POST ile test edilmeli
+- Konuşma geçmişi korunmalı (memory cache testi)
 - Kaynak URL'leri mesajın altında görünmeli
 
 ---
@@ -91,11 +143,14 @@ chainlit run chainlit_app.py
 
 | # | Konu | Etki | Plan |
 |---|------|------|------|
-| 1 | `ChatOllama` cloud API key desteği belirsiz | LLM bağlantısı kopabilir | LangChain wrapper yerine direct Ollama REST API'ye geçiş planlanabilir |
-| 2 | `build_retriever` her çağrıda yeni `Chroma` instance oluşturuyor | Performans etkisi (disk I/O) | Singleton pattern veya session-cache eklenebilir |
-| 3 | `build_chain` her mesajda yeni memory oluşturuyor | Konuşma geçmişi kaybolabilir | Chainlit session'a memory sabitlenecek |
+| 1 | ~~`ChatOllama` cloud API key desteği~~ | ~~LLM bağlantısı kopabilir~~ | **ÇÖZÜLDÜ** — `headers={"Authorization": "Bearer ..."}` eklendi |
+| 2 | ~~`build_retriever` her çağrıda yeni `Chroma` instance oluşturuyor~~ | ~~Performans etkisi (disk I/O)~~ | **ÇÖZÜLDÜ** — `@lru_cache(maxsize=1)` ile singleton Chroma instance |
+| 3 | ~~`build_chain` her mesajda yeni memory oluşturuyor~~ | ~~Konuşma geçmişi kaybolabilir~~ | **ÇÖZÜLDÜ** — `cl.user_session` ile memory oturum bazlı cache'lendi |
 | 4 | Query processor rule-based | Karmaşık sorguları kaçırabilir | LLM tabanlı query processor'a upgrade edilecek |
 | 5 | Tarih filtresi `$gte` ChromaDB syntax | Metadata date string karşılaştırması güvenilirliği | ISO format garanti, ama ChromaDB date range test edilmeli |
+| 6 | ~~Embedding model adı tutarsızlığı (`4b` vs `8b`)~~ | ~~Belirsizlik, deployment'ta yanlış model çağrılabilir~~ | **ÇÖZÜLDÜ** — `config.py` `8b` olarak güncellendi. `.env.example` senkronize edilmeli |
+| 7 | `force` parametresi no-op | Kullanıcı beklentisini karşılamaz, kafa karıştırıcı | Aşama 3'te düzeltilecek |
+| 8 | Commit bekleyen 17 dosya + yeni dizinler | Kayıp riski, branch düzeni bozuk | Aşama 0'da commit'lenecek |
 
 ---
 
@@ -104,6 +159,7 @@ chainlit run chainlit_app.py
 ```
 d8d4cb0 feat: implement full ReliefWeb RAG system
 c5e2ce8 fix: correct retriever to use LangChain Chroma, fix chain prompt template, fix client test
+# TODO: yeni düzeltmeler + FastAPI + Vue + testler commit'lenmeli
 ```
 
 ---
@@ -111,4 +167,6 @@ c5e2ce8 fix: correct retriever to use LangChain Chroma, fix chain prompt templat
 ## Notlar
 - `.env` dosyası yüklendi; `RELIEFWEB_APPNAME` güncellendi.
 - `chroma_db/` henüz oluşturulmadı (ilk ingestion'da otomatik oluşacak).
-- Test coverage: ingestion (6 modül), rag (5 modül), config, chainlit, smoke = toplam 15 test dosyası.
+- Test coverage: ingestion (6 modül), rag (7 modül), config, chainlit, smoke = toplam 14 test dosyası.
+- `venv/` mevcut; `pytest` yüklü ama henüz çalıştırılmadı.
+- Yeni bileşenler: FastAPI backend (`api/`), Vue frontend (`frontend/`), Chainlit yapılandırması (`.chainlit/`).

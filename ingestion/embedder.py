@@ -17,7 +17,7 @@ class OllamaEmbedder:
         backoff = 1.0
         for attempt in range(max_retries):
             try:
-                resp = self.client.embed(model=self.model, input=[text])
+                resp = self.client.embed(model=self.model, input=[text], options={"num_gpu": 999})
                 embeddings = resp.get("embeddings", [])
                 if embeddings and len(embeddings) > 0:
                     return embeddings[0]
@@ -36,7 +36,7 @@ class OllamaEmbedder:
         backoff = 1.0
         for attempt in range(max_retries):
             try:
-                resp = self.client.embed(model=self.model, input=texts)
+                resp = self.client.embed(model=self.model, input=texts, options={"num_gpu": 999})
                 embeddings = resp.get("embeddings", [])
                 if embeddings and len(embeddings) == len(texts):
                     return embeddings

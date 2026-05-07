@@ -56,7 +56,7 @@ OLLAMA_LOCAL_BASE_URL=http://localhost:11434
 OLLAMA_EMBED_MODEL=qwen3-embedding:8b
 
 # ReliefWeb
-RELIEFWEB_API_KEY=xxx
+RELIEFWEB_APPNAME=berk_sitrep-u6dANX1qkKQivDDN   # URL param olarak gönderilir: ?appname=...
 RELIEFWEB_BASE_URL=https://api.reliefweb.int/v1
 
 # ChromaDB

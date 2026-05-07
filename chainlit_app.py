@@ -3,6 +3,7 @@ import chainlit as cl
 from config import get_settings
 from rag.query_processor import extract_filters
 from rag.chain import build_chain
+from rag.memory import build_memory
 
 logger = logging.getLogger(__name__)
 
@@ -24,15 +25,16 @@ def auth_callback(username: str, password: str):
 
 @cl.on_chat_start
 async def on_chat_start():
-    cl.user_session.set("chain", None)
+    cl.user_session.set("memory", build_memory())
     await cl.Message(content="Merhaba! ReliefWeb insani yardım belgeleri üzerinden sorularınızı yanıtlayabilirim.").send()
 
 @cl.on_message
 async def on_message(message: cl.Message):
     query = message.content
     filters = extract_filters(query)
-    chain = build_chain(filter=filters if filters else None)
-    result = chain({"question": query})
+    memory = cl.user_session.get("memory")
+    chain = build_chain(filter=filters if filters else None, memory=memory)
+    result = chain.invoke({"question": query})
     answer = result.get("answer", "")
     sources = result.get("source_documents", [])
     elements = []

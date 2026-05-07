@@ -22,6 +22,14 @@ def parse_report(raw: Dict[str, Any]) -> Dict[str, Any]:
         "date": date,
         "country": country,
         "theme": theme,
-        "source": fields.get("source", {}).get("name", "") if isinstance(fields.get("source"), dict) else "",
+        "source": (
+            fields.get("source", {}).get("name", "")
+            if isinstance(fields.get("source"), dict)
+            else (
+                fields.get("source", [])[0].get("name", "")
+                if isinstance(fields.get("source"), list) and fields.get("source")
+                else ""
+            )
+        ),
         "format": fmt,
     }

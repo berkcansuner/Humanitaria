@@ -28,22 +28,28 @@ class ReliefWebClient:
             fields = ["title", "body", "date.created", "source.name",
                       "primary_country.name", "theme.name", "format.name", "file"]
         url = f"{self.base_url}/reports"
-        params = {
+        params = {}
+        if self.settings.RELIEFWEB_APPNAME:
+            params["appname"] = self.settings.RELIEFWEB_APPNAME
+        payload = {
             "limit": min(limit, 1000),
             "offset": offset,
-            "sort": sort,
-            "fields": fields,
+            "sort": [sort],
+            "fields": {"include": fields},
         }
         max_retries = 5
         backoff = 1.0
         for attempt in range(max_retries):
             try:
-                resp = requests.get(url, headers=self.headers, params=params, timeout=30)
+                resp = requests.post(url, headers=self.headers, params=params, json=payload, timeout=30)
                 if resp.status_code == 429:
-                    logger.warning("Rate limited (429), backing off %.1fs", backoff)
-                    time.sleep(backoff)
-                    backoff *= 2
-                    continue
+                    if attempt < max_retries - 1:
+                        logger.warning("Rate limited (429), backing off %.1fs", backoff)
+                        time.sleep(backoff)
+                        backoff *= 2
+                        continue
+                    else:
+                        raise requests.RequestException("Max retries exceeded for 429")
                 resp.raise_for_status()
                 data = resp.json()
                 return data.get("data", [])
