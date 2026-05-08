@@ -1,4 +1,5 @@
 import logging
+import time
 from dataclasses import dataclass, field
 from typing import List, Optional, Dict
 from ingestion.client import ReliefWebClient, ENDPOINT_CONFIG
@@ -8,6 +9,8 @@ from ingestion.embedder import OllamaEmbedder
 from ingestion.store import ChromaStore
 
 logger = logging.getLogger(__name__)
+
+BATCH_SIZE = 500
 
 
 @dataclass
@@ -38,13 +41,16 @@ def run_pipeline(
         stats = IngestionStats(endpoint=endpoint)
         offset = 0
         logger.info("Ingesting endpoint '%s' (limit=%d)", endpoint, limit)
-        while stats.succeeded + stats.failed + stats.skipped < limit:
-            batch_limit = min(100, limit - stats.total)
+        processed = 0
+        start_time = time.time()
+        while processed < limit:
+            batch_limit = min(BATCH_SIZE, limit - processed)
             items = client.fetch(endpoint, limit=batch_limit, offset=offset)
             if not items:
                 break
             for raw in items:
                 stats.total += 1
+                processed += 1
                 try:
                     doc = parse(raw, endpoint)
                     if not doc or not doc.get("body"):
@@ -66,6 +72,14 @@ def run_pipeline(
                     logger.warning("Failed to process doc from %s: %s", endpoint, e)
                     continue
             offset += batch_limit
+            elapsed = time.time() - start_time
+            rate = stats.succeeded / elapsed if elapsed > 0 else 0
+            eta_min = (limit - processed) / rate / 60 if rate > 0 else 0
+            logger.info(
+                "%s: %d/%d processed (%d OK, %d failed, %d skipped) — %.1f docs/sec, ETA %.0f min",
+                endpoint, processed, limit, stats.succeeded, stats.failed, stats.skipped,
+                rate, eta_min,
+            )
         logger.info(
             "Endpoint '%s' complete: %d succeeded, %d failed, %d skipped",
             endpoint, stats.succeeded, stats.failed, stats.skipped,

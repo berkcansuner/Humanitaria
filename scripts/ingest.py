@@ -1,6 +1,10 @@
 import sys
 import argparse
 import logging
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from ingestion.pipeline import run_pipeline, IngestionStats
 from ingestion.client import ENDPOINT_CONFIG
 

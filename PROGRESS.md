@@ -1,6 +1,6 @@
 # ReliefWeb RAG — Proje İlerleme Durumu
 
-## Son Güncelleme: 2026-05-07
+## Son Güncelleme: 2026-05-08
 
 ---
 
@@ -18,8 +18,8 @@
 - `chunker.py` — Body chunking (CHUNK_SIZE=800, CHUNK_OVERLAP=100), metadata + `doctype` propagation
 - `embedder.py` — Yerel Ollama embedding (`qwen3-embedding:8b`), retry x3
 - `store.py` — ChromaDB idempotent upsert, `sha256(url)` bazlı doc_id, `clear_collection()` desteği
-- `pipeline.py` — Multi-endpoint orchestrator: `endpoints` parametresi ile reports + disasters + countries sırayla işlenir
-- `scripts/ingest.py` — CLI: `--limit`, `--force`, `--endpoints` (reports/disasters/countries)
+- `pipeline.py` — Multi-endpoint orchestrator: `endpoints` parametresi ile reports + disasters + countries sırayla işlenir; `BATCH_SIZE=500` API batch boyutu; per-batch ilerleme loglaması (docs/sec, ETA); sayaç tutarsızlığı düzeltmesi
+- `scripts/ingest.py` — CLI: `--limit`, `--force`, `--endpoints` (reports/disasters/countries); `sys.path` düzeltmesi eklendi
 
 ### 3. RAG Engine (`rag/`)
 - `embeddings.py` — LangChain `Embeddings` wrapper (Ollama local)
@@ -47,7 +47,7 @@
 - `test_config.py` — Settings cache + env override testleri
 - `test_api_chat_stream.py` — SSE endpoint + session_id integration testleri
 
-**Toplam: 15 test dosyası, 83 test PASSED, 4 deprecation warning**
+**Toplam: 15 test dosyası, 85 test PASSED, 4 deprecation warning**
 
 ### 6. FastAPI Backend (`api/`)
 - `api/main.py` — FastAPI uygulaması, CORS middleware (`allow_origins=["*"]`), health ve chat router'ları, frontend `dist/` statik mount
@@ -88,12 +88,13 @@
 - Orphan `__pycache__/chainlit_app.cpython-312.pyc` temizlendi
 
 ### 14. Pipeline Error Handling (2026-05-08 - Oturum 4)
-- **`pipeline.py`** — `IngestionStats` dataclass (endpoint, total, succeeded, failed, skipped, errors); per-document try/except isolation; `run_pipeline` artık `Dict[str, IngestionStats]` döndürüyor
+- **`pipeline.py`** — `IngestionStats` dataclass (endpoint, total, succeeded, failed, skipped, errors); per-document try/except isolation; `run_pipeline` artık `Dict[str, IngestionStats]` döndürüyor; `BATCH_SIZE=500` (önceden 100); per-batch ilerleme loglaması (işlenen/hedef, docs/sec, ETA dakika); sayaç tutarsızlığı düzeltmesi (`processed` counter)
 - **`parser.py`** — `parse()` fonksiyonu artık `Optional[Dict]` döndürüyor; `_sanitize()`, `_safe_get()`, `_safe_list_get()` helper'ları ile None değer koruması; parse hatası → `logger.warning` + `None` dönüşü
 - **`store.py`** — `clear_collection` sessiz `except: pass` → `logger.warning` ile hata loglama
 - **`scripts/ingest.py`** — `_print_summary()` tablo formatında özet raporu; exit codes: 0 (tümü başarılı), 1 (kısmi başarısız), 2 (tümü başarısız)
 - **`ingestion/__init__.py`** — `IngestionStats` export'a eklendi
 - **Testler** → 12 yeni test eklendi (toplam 83 test PASSED)
+- **`scripts/ingest.py`** — `sys.path.insert(0, ...)` ile modül import düzeltmesi
 
 ### 9. Çoklu Endpoint Ingestion (2026-05-07 - Oturum 2)
 - **API keşfi:** `/updates` endpoint'i ReliefWeb API'sinde yok (404) — `/reports` zaten güncellemeleri içeriyor
@@ -121,6 +122,23 @@ Komut: `python scripts/ingest.py --limit 500 --endpoints reports disasters count
 - Disaster type'lar (Flood, Earthquake vb.) `theme` metadata alanına map edildi
 - Country kayıtlarında `country` = `name` (self-referencing)
 
+### 15. Büyük Ölçekli Ingestion (2026-05-08 - Oturum 5)
+- **`pipeline.py`** — API batch boyutu 100'den 500'e çıkarıldı (`BATCH_SIZE = 500`); per-batch ilerleme loglaması eklendi (işlenen/hedef, başarılı/hata/skip, docs/sec, ETA dakika); sayaç tutarsızlığı düzeltildi (`processed` counter)
+- **`scripts/ingest.py`** — `sys.path` import düzeltmesi eklendi
+- **`tests/test_ingestion_pipeline.py`** — `BATCH_SIZE` sabiti testi ve multi-batch davranış testi eklendi (toplam 85 test PASSED)
+
+**Canlı ingestion sonuçları:**
+
+| Endpoint | İşlenen | Başarılı | Atlandı | Başarısız | Süre |
+|----------|---------|----------|---------|-----------|------|
+| Countries | 249 | 160 | 89 | 0 | ~12 dk |
+| Disasters | 3,705 | 2,279 | 1,426 | 0 | ~3.5 saat |
+| Reports | 7,500 | 5,712 | 1,788 | 0 | ~10 saat (durduruldu) |
+| **Toplam** | **11,454** | **8,151** | **3,303** | **0** | — |
+
+- ChromaDB toplam: **9,597 chunk** (tüm endpoint'ler dahil)
+- Reports ingestion ~7,500/10,000 belgede durduruldu, kalan 2,500 için resume mekanizması henüz yok
+
 ---
 
 ## Bilinen Riskler / Gözlem Listesi
@@ -143,6 +161,7 @@ Komut: `python scripts/ingest.py --limit 500 --endpoints reports disasters count
 | 13 | ~~Session tabanlı memory yok (FastAPI)~~ | ~~Her istekte yeni memory~~ | **ÇÖZÜLDÜ** — `WindowedChatMessageHistory` + session_id |
 | 14 | ~~`v-html` XSS riski~~ | ~~LLM injection ile XSS~~ | **ÇÖZÜLDÜ** — `v-text` + `white-space: pre-wrap` |
 | 15 | `/updates` endpoint'i yok | ReliefWeb API'de 404 | N/A — `/reports` zaten güncellemeleri içeriyor |
+| 17 | Pipeline resume mekanizması yok | Kesinti sonrası sıfırdan başlar | `--offset` veya ChromaDB dedup ile çözülebilir |
 | 16 | Disaster `type` → `theme` mapping | Semantik olarak farklı (afet türü vs. sektör) | Gelecekte `disaster_type` metadata alanı eklenebilir |
 
 ---
@@ -158,7 +177,7 @@ Komut: `python scripts/ingest.py --limit 500 --endpoints reports disasters count
 - [x] ~~Session tabanlı memory~~ — WindowedChatMessageHistory + session_id
 - [ ] CORS origin kısıtlaması: production için spesifik origin'ler
 - [x] Pipeline error handling: per-report hata takibi ve log — IngestionStats dataclass, try/except isolation, CLI summary table, exit codes
-- [ ] Daha fazla veri çekme: disasters 3705 kaydın tamamı, reports daha fazla
+- [ ] Daha fazla veri çekme: reports kalan ~2,500 belge (resume mekanizması gerekli)
 
 ### Düşük Öncelik
 - [ ] Frontend: Markdown render, mobil iyileştirme, hata state'leri
@@ -184,11 +203,11 @@ d0ccd03 fix: correct EMBED_DIM to 2560 for qwen3-embedding:8b
 
 ## Notlar
 - `.env` dosyası `.gitignore`'da; canlı API anahtarları commit edilmiyor
-- `chroma_db/` 1,160 doküman (1,366 chunk) içeriyor, `.gitignore`'da
-  - Reports: 500 doküman, 584 chunk
-  - Disasters: 500 doküman, 622 chunk
+- `chroma_db/` 8,151 doküman (9,597 chunk) içeriyor, `.gitignore`'da
+  - Reports: 5,712 doküman (kısmi, 7,500/10,000 işlendi)
+  - Disasters: 2,279 doküman, 2,279 chunk
   - Countries: 160 doküman, 160 chunk
-- Test coverage: 13 test dosyası, 57 test PASSED
+- Test coverage: 15 test dosyası, 85 test PASSED
 - Chainlit bağımlılığı kaldırıldı; FastAPI + Vue 3 mimarisine geçildi
 - `qwen3-embedding:8b` 2560 dim embedding üretiyor (4096 değil)
 - Vue frontend `dist/` build edilmiş ve FastAPI tarafından statik olarak sunuluyor

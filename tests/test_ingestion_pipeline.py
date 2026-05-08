@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from ingestion.pipeline import run_pipeline, IngestionStats
+from ingestion.pipeline import run_pipeline, IngestionStats, BATCH_SIZE
 
 
 class TestPipeline:
@@ -195,3 +195,33 @@ class TestPipelineErrorIsolation:
             stats = run_pipeline(limit=15)
             assert stats["reports"].failed == 15
             assert len(stats["reports"].errors) == 10
+
+    def test_batch_size_is_500(self):
+        assert BATCH_SIZE == 500
+
+    def test_multi_batch_fetches_in_batches(self):
+        with patch("ingestion.pipeline.ReliefWebClient") as MockClient, \
+             patch("ingestion.pipeline.parse") as mock_parse, \
+             patch("ingestion.pipeline.chunk_document") as mock_chunk, \
+             patch("ingestion.pipeline.OllamaEmbedder") as MockEmbedder, \
+             patch("ingestion.pipeline.ChromaStore") as MockStore:
+            mock_client = MagicMock()
+            # First batch returns items, second batch returns empty (end of data)
+            mock_client.fetch.side_effect = [
+                [{"id": str(i)} for i in range(3)],
+                [],
+            ]
+            MockClient.return_value = mock_client
+            mock_parse.return_value = {"id": "abc", "url": "u", "title": "t", "body": "b", "date": "", "country": "", "theme": "", "source": "", "format": "", "doctype": "report"}
+            mock_chunk.return_value = [{"id": "abc_0", "content": "b", "metadata": {"url": "u", "title": "t", "country": "", "theme": "", "date": "", "source": "", "format": "", "doctype": "report"}}]
+            mock_embedder = MagicMock()
+            mock_embedder.embed_batch.return_value = [[0.1] * 2560]
+            MockEmbedder.return_value = mock_embedder
+            mock_store = MagicMock()
+            MockStore.return_value = mock_store
+            # Request 10 docs, but only 3 available - batch_size should be min(500, 10)
+            stats = run_pipeline(limit=10)
+            assert stats["reports"].succeeded == 3
+            assert stats["reports"].total == 3
+            # First call with batch_limit=min(500, 10)=10, second with batch_limit=min(500, 10-3)=7
+            assert mock_client.fetch.call_count == 2
