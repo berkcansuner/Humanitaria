@@ -36,6 +36,7 @@ node_modules/
 
 # Superpowers skill artifacts
 docs/superpowers/
+.superpowers/
 
 # OS
 .DS_Store

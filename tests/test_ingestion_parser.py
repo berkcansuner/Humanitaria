@@ -1,6 +1,6 @@
 import logging
 import pytest
-from ingestion.parser import parse_report, parse_disaster, parse_country, parse
+from ingestion.parser import parse_report, parse_disaster, parse_country, parse, _normalize_date
 
 
 class TestParseReport:
@@ -62,6 +62,7 @@ class TestParseDisaster:
         doc = parse_disaster(raw)
         assert doc["title"] == "Benin: Floods - Sep 2021"
         assert doc["body"] == "Heavy rains caused flooding."
+        assert doc["date"] == "2021-09-06"
         assert doc["country"] == "Benin"
         assert doc["theme"] == "Flood"
         assert doc["format"] == "past"
@@ -111,6 +112,7 @@ class TestParseCountry:
         doc = parse_country(raw)
         assert doc["title"] == "Ukraine"
         assert doc["body"] == "Humanitarian overview of Ukraine."
+        assert doc["date"] == "2014-07-02"
         assert doc["country"] == "Ukraine"
         assert doc["doctype"] == "country"
         assert doc["format"] == "normal"
@@ -190,3 +192,23 @@ class TestParseErrorHandling:
         assert doc["date"] == ""
         assert doc["country"] == ""
         assert doc["source"] == ""
+
+
+class TestNormalizeDate:
+    def test_iso8601_with_timezone(self):
+        assert _normalize_date("2021-09-06T00:00:00+00:00") == "2021-09-06"
+
+    def test_iso8601_with_timezone_variant(self):
+        assert _normalize_date("2014-07-02T16:00:49+00:00") == "2014-07-02"
+
+    def test_plain_date(self):
+        assert _normalize_date("2026-04-01") == "2026-04-01"
+
+    def test_empty_string(self):
+        assert _normalize_date("") == ""
+
+    def test_none_like_empty(self):
+        assert _normalize_date("   ") == ""
+
+    def test_short_date(self):
+        assert _normalize_date("2026-01") == ""
