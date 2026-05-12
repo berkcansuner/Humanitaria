@@ -1,11 +1,69 @@
 :root {
+  /* Stitch Humanitarian Editorial Colors */
   --color-bg: #faf9f6;
-  --color-text: #1a1a1a;
-  --color-accent: #8b0000;
-  --color-muted: #6b6b6b;
-  --color-border: #d1d1d1;
-  --font-display: 'Playfair Display', Georgia, serif;
-  --font-body: 'Source Serif 4', 'Georgia', serif;
+  --color-surface: #ffffff;
+  --color-surface-container: #efeeeb;
+  --color-surface-container-low: #f4f3f1;
+  --color-surface-container-high: #e9e8e5;
+  --color-surface-variant: #e3e2e0;
+  --color-text: #1a1c1a;
+  --color-text-secondary: #5f5e5e;
+  --color-text-variant: #5a403c;
+  --color-accent: #610000;
+  --color-accent-container: #8b0000;
+  --color-on-accent: #ffffff;
+  --color-muted: #8e706b;
+  --color-border: #e3e2e0;
+  --color-border-subtle: #e5e4e1;
+  --color-outline: #8e706b;
+  --color-tertiary: #2b2d2d;
+  --color-on-tertiary: #ffffff;
+  --color-error: #ba1a1a;
+  --color-error-bg: #ffdad6;
+  --color-error-accent: #ba1a1a;
+  --color-success: #2e7d32;
+  --color-code-bg: #f4f4f5;
+  --color-primary-fixed: #ffdad4;
+
+  /* Spacing — 8px base grid */
+  --space-base: 8px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-8: 48px;
+  --space-10: 64px;
+  --space-12: 80px;
+
+  /* Radii */
+  --radius-sm: 2px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+
+  /* Shadows — low opacity, wide blur (Stitch elevation spec) */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.04);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.06);
+
+  /* Typography */
+  --font-display: 'DM Sans', system-ui, -apple-system, sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 2.5rem;
+
+  /* Layout */
+  --content-max-width: 1280px;
 }
 
 * {
@@ -14,12 +72,17 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 body {
   font-family: var(--font-body);
   background-color: var(--color-bg);
   color: var(--color-text);
   line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
+  font-size: var(--text-base);
 }
 
 #app {
