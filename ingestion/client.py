@@ -51,6 +51,7 @@ class ReliefWebClient:
         offset: int = 0,
         sort: Optional[str] = None,
         fields: Optional[List[str]] = None,
+        date_from: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         config = ENDPOINT_CONFIG.get(endpoint)
         if config is None:
@@ -66,6 +67,12 @@ class ReliefWebClient:
             "sort": [sort or config["sort"]],
             "fields": {"include": fields or config["fields"]},
         }
+        if date_from:
+            payload["filter"] = {
+                "field": "date.created",
+                "operator": "gte",
+                "value": date_from,
+            }
         max_retries = 5
         backoff = 1.0
         for attempt in range(max_retries):

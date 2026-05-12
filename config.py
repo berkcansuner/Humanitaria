@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     CHUNK_OVERLAP: int = 100
     TOP_K_RETRIEVAL: int = 5
     INGEST_SCHEDULE_HOURS: int = 12
+    RERANK_BY_DATE: bool = True
+    DATE_DECAY_FACTOR: float = 0.3
 
 
 @lru_cache

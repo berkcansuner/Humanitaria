@@ -1,7 +1,6 @@
 import logging
 import re
 from datetime import datetime, timedelta
-from functools import lru_cache
 from typing import Dict, Any, Optional
 
 from pydantic import BaseModel, Field
@@ -64,19 +63,24 @@ Rules:
 Query: {query}"""
 
 
-@lru_cache(maxsize=1)
+_llm_extractor = None
+
+
 def _get_llm_extractor():
-    from langchain_openai import ChatOpenAI
-    from config import get_settings
-    settings = get_settings()
-    llm = ChatOpenAI(
-        model=settings.OLLAMA_LLM_MODEL,
-        base_url=settings.OLLAMA_CLOUD_BASE_URL,
-        api_key=settings.OLLAMA_CLOUD_API_KEY,
-        temperature=0.0,
-        request_timeout=5,
-    )
-    return llm.with_structured_output(QueryFilters, method="json_mode")
+    global _llm_extractor
+    if _llm_extractor is None:
+        from langchain_openai import ChatOpenAI
+        from config import get_settings
+        settings = get_settings()
+        llm = ChatOpenAI(
+            model=settings.OLLAMA_LLM_MODEL,
+            base_url=settings.OLLAMA_CLOUD_BASE_URL,
+            api_key=settings.OLLAMA_CLOUD_API_KEY,
+            temperature=0.0,
+            request_timeout=15,
+        )
+        _llm_extractor = llm.with_structured_output(QueryFilters, method="json_mode")
+    return _llm_extractor
 
 
 def _normalize_llm_filters(result: QueryFilters) -> Dict[str, Any]:
@@ -124,13 +128,24 @@ def _extract_filters_llm(query: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-@lru_cache(maxsize=256)
+_llm_cache: Dict[str, Dict[str, Any]] = {}
+_MAX_LLM_CACHE = 512
+
+
 def _cached_llm_extract(query_normalized: str) -> Optional[Dict[str, Any]]:
-    return _extract_filters_llm(query_normalized)
+    if query_normalized in _llm_cache:
+        return _llm_cache[query_normalized]
+    result = _extract_filters_llm(query_normalized)
+    if result is not None:
+        if len(_llm_cache) >= _MAX_LLM_CACHE:
+            oldest_key = next(iter(_llm_cache))
+            del _llm_cache[oldest_key]
+        _llm_cache[query_normalized] = result
+    return result
 
 
 def _extract_filters_rule_based(query: str) -> Dict[str, Any]:
-    query_lower = query.replace('İ', 'i').lower()
+    query_lower = query.replace('İ', 'i').replace('Ü', 'u').replace('Ö', 'o').replace('Ş', 's').replace('Ç', 'c').replace('Ğ', 'g').lower()
     filters: Dict[str, Any] = {}
     for key, val in _COUNTRY_MAP.items():
         if key in query_lower:
@@ -144,18 +159,48 @@ def _extract_filters_rule_based(query: str) -> Dict[str, Any]:
         if key in query_lower:
             filters["doctype"] = val
             break
-    # Turkish relative dates
+
+    # --- Date extraction (ordered by specificity) ---
+
+    # "since YYYY-MM-DD" / "since M/D/YYYY" / Turkish "YYYY-MM-DD'den beri"
+    since_date = re.search(
+        r"\bsince\s+(\d{4}-\d{2}-\d{2})\b"
+        r"|\bsince\s+(\d{1,2}/\d{1,2}/\d{4})\b"
+        r"|(\d{4}-\d{2}-\d{2})\s*(?:'den|'dan|den|dan)\s*beri",
+        query_lower,
+    )
+
+    # Numbered relative dates
     relative_month = re.search(r"son\s+(\d+)\s+ay", query_lower)
-    relative_day = re.search(r"son\s+(\d+)\s+gün", query_lower)
+    relative_day = re.search(r"son\s+(\d+)\s+gun", query_lower)
     relative_week = re.search(r"son\s+(\d+)\s+hafta", query_lower)
-    # English relative dates
     if not relative_month:
         relative_month = re.search(r"last\s+(\d+)\s+months?", query_lower)
     if not relative_day:
         relative_day = re.search(r"last\s+(\d+)\s+days?", query_lower)
     if not relative_week:
         relative_week = re.search(r"last\s+(\d+)\s+weeks?", query_lower)
-    if relative_month:
+
+    # Numberless relative dates
+    relative_week_no_num = re.search(r"\b(son|gecen)\s+hafta\b", query_lower) or re.search(r"\blast\s+week\b", query_lower)
+    relative_month_no_num = re.search(r"\b(son|gecen)\s+ay\b", query_lower) or re.search(r"\blast\s+month\b", query_lower)
+
+    # Specific periods
+    yesterday_match = re.search(r"\b(yesterday|dun)\b", query_lower)
+    today_match = re.search(r"\b(today|bugun)\b", query_lower)
+    this_week = re.search(r"\b(this\s+week|bu\s+hafta)\b", query_lower)
+    this_month = re.search(r"\b(this\s+month|bu\s+ay)\b", query_lower)
+    recent = re.search(r"\b(recent|son\s+donem|guncel|son\s+zamanlar)\b", query_lower)
+
+    # Apply date filter in priority order
+    if since_date:
+        date_str = since_date.group(1) or since_date.group(2) or since_date.group(3)
+        if "/" in date_str:
+            date_from = datetime.strptime(date_str, "%m/%d/%Y")
+            filters["date"] = {"$gte": date_from.strftime("%Y-%m-%d")}
+        else:
+            filters["date"] = {"$gte": date_str}
+    elif relative_month:
         months = int(relative_month.group(1))
         date_from = datetime.now() - timedelta(days=months * 30)
         filters["date"] = {"$gte": date_from.strftime("%Y-%m-%d")}
@@ -167,6 +212,28 @@ def _extract_filters_rule_based(query: str) -> Dict[str, Any]:
         days = int(relative_day.group(1))
         date_from = datetime.now() - timedelta(days=days)
         filters["date"] = {"$gte": date_from.strftime("%Y-%m-%d")}
+    elif relative_month_no_num:
+        date_from = datetime.now() - timedelta(days=30)
+        filters["date"] = {"$gte": date_from.strftime("%Y-%m-%d")}
+    elif relative_week_no_num:
+        date_from = datetime.now() - timedelta(weeks=1)
+        filters["date"] = {"$gte": date_from.strftime("%Y-%m-%d")}
+    elif this_month:
+        date_from = datetime.now().replace(day=1)
+        filters["date"] = {"$gte": date_from.strftime("%Y-%m-%d")}
+    elif this_week:
+        days_since_monday = datetime.now().weekday()
+        date_from = datetime.now() - timedelta(days=days_since_monday)
+        filters["date"] = {"$gte": date_from.strftime("%Y-%m-%d")}
+    elif yesterday_match:
+        date_from = datetime.now() - timedelta(days=1)
+        filters["date"] = {"$gte": date_from.strftime("%Y-%m-%d")}
+    elif today_match:
+        date_from = datetime.now()
+        filters["date"] = {"$gte": date_from.strftime("%Y-%m-%d")}
+    elif recent:
+        date_from = datetime.now() - timedelta(days=30)
+        filters["date"] = {"$gte": date_from.strftime("%Y-%m-%d")}
     return filters
 
 
@@ -176,3 +243,56 @@ def extract_filters(query: str) -> Dict[str, Any]:
     if filters is not None:
         return filters
     return _extract_filters_rule_based(query)
+
+
+_SUGGESTION_COUNTRIES = [
+    "Iran", "Syria", "Yemen", "Ukraine", "Turkey",
+    "Afghanistan", "Somalia", "Sudan", "State of Palestine", "Iraq",
+]
+
+_SUGGESTION_THEMES = [
+    "Food and Nutrition", "Health", "Shelter and NFI",
+    "Water Sanitation Hygiene", "Protection", "Education",
+    "Logistics and Telecommunications", "Coordination",
+]
+
+_SUGGESTION_TIME_PERIODS = [
+    "son 1 hafta", "son 1 ay", "son 3 ay", "son 1 yıl",
+    "last week", "last month", "last 3 months", "last year",
+]
+
+
+def analyze_query(query: str) -> Dict[str, Any]:
+    """Detect whether a query is vague and provide clarification suggestions."""
+    filters = extract_filters(query)
+    has_country = "country" in filters
+    has_date = "date" in filters
+    has_theme = "theme" in filters
+    is_vague = not (has_country or has_date or has_theme)
+
+    result: Dict[str, Any] = {
+        "has_country": has_country,
+        "has_date": has_date,
+        "has_theme": has_theme,
+        "is_vague": is_vague,
+        "suggestions": {
+            "countries": _SUGGESTION_COUNTRIES if not has_country else [],
+            "time_periods": _SUGGESTION_TIME_PERIODS if not has_date else [],
+            "themes": _SUGGESTION_THEMES if not has_theme else [],
+        },
+    }
+
+    if is_vague:
+        result["message"] = "Hangi ülke, zaman aralığı veya konu hakkında bilgi almak istiyorsunuz?"
+    elif not has_country and not has_date:
+        result["message"] = "Hangi ülke ve zaman aralığı hakkında bilgi almak istiyorsunuz?"
+    elif not has_country:
+        result["message"] = "Hangi ülke hakkında bilgi almak istiyorsunuz?"
+    elif not has_date:
+        result["message"] = "Hangi zaman aralığı hakkında bilgi almak istiyorsunuz?"
+    elif not has_theme:
+        result["message"] = "Hangi konu hakkında bilgi almak istiyorsunuz?"
+    else:
+        result["message"] = ""
+
+    return result

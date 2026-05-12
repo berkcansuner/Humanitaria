@@ -24,13 +24,14 @@ class IngestionStats:
 
 
 def run_pipeline(
-    limit: int = 100,
+    limit: int = 1000,
     force: bool = False,
     endpoints: Optional[List[str]] = None,
+    date_from: Optional[str] = None,
 ) -> Dict[str, IngestionStats]:
     if endpoints is None:
         endpoints = ["reports"]
-    logger.info("Starting ingestion pipeline (limit=%d, force=%s, endpoints=%s)", limit, force, endpoints)
+    logger.info("Starting ingestion pipeline (limit=%d, force=%s, endpoints=%s, date_from=%s)", limit, force, endpoints, date_from)
     client = ReliefWebClient()
     embedder = OllamaEmbedder()
     store = ChromaStore()
@@ -45,7 +46,7 @@ def run_pipeline(
         start_time = time.time()
         while processed < limit:
             batch_limit = min(BATCH_SIZE, limit - processed)
-            items = client.fetch(endpoint, limit=batch_limit, offset=offset)
+            items = client.fetch(endpoint, limit=batch_limit, offset=offset, date_from=date_from)
             if not items:
                 break
             for raw in items:

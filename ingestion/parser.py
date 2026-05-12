@@ -29,6 +29,22 @@ def _safe_list_get(items, index=0, key="name", default=""):
     return _sanitize(item.get(key, default))
 
 
+def _normalize_date(value: str) -> str:
+    """Normalize ReliefWeb date strings to YYYY-MM-DD for reliable ChromaDB filtering.
+
+    ReliefWeb returns mixed formats like "2026-04-01" or "2021-09-06T00:00:00+00:00".
+    ChromaDB $gte is lexicographic, so all dates must use the same format.
+    """
+    if not value or not value.strip():
+        return ""
+    value = value.strip()
+    if "T" in value:
+        return value[:value.index("T")][:10]
+    if len(value) >= 10 and value[4] == "-" and value[7] == "-":
+        return value[:10]
+    return ""
+
+
 def parse_report(raw: Dict[str, Any]) -> Dict[str, Any]:
     fields = raw.get("fields") or {}
     file_objs = fields.get("file")
@@ -38,7 +54,7 @@ def parse_report(raw: Dict[str, Any]) -> Dict[str, Any]:
         url = f"https://reliefweb.int/report/{raw.get('id', '')}"
     doc_id = hashlib.sha256(url.encode()).hexdigest()
     date_field = fields.get("date")
-    date = _safe_get(date_field, "created") if isinstance(date_field, dict) else ""
+    date = _normalize_date(_safe_get(date_field, "created") if isinstance(date_field, dict) else "")
     country_field = fields.get("primary_country")
     country = _safe_get(country_field, "name") if isinstance(country_field, dict) else ""
     themes = fields.get("theme")
@@ -71,7 +87,7 @@ def parse_disaster(raw: Dict[str, Any]) -> Dict[str, Any]:
     url = _safe_get(fields, "url", f"https://reliefweb.int/disasters/{raw.get('id', '')}")
     doc_id = hashlib.sha256(url.encode()).hexdigest()
     date_field = fields.get("date")
-    date = _safe_get(date_field, "created") if isinstance(date_field, dict) else ""
+    date = _normalize_date(_safe_get(date_field, "created") if isinstance(date_field, dict) else "")
     country_field = fields.get("primary_country")
     country = _safe_get(country_field, "name") if isinstance(country_field, dict) else ""
     primary_type = fields.get("primary_type")
@@ -99,7 +115,7 @@ def parse_country(raw: Dict[str, Any]) -> Dict[str, Any]:
     url = _safe_get(fields, "url", f"https://reliefweb.int/countries/{raw.get('id', '')}")
     doc_id = hashlib.sha256(url.encode()).hexdigest()
     date_field = fields.get("date")
-    date = _safe_get(date_field, "created") if isinstance(date_field, dict) else ""
+    date = _normalize_date(_safe_get(date_field, "created") if isinstance(date_field, dict) else "")
     return {
         "id": doc_id,
         "url": url,

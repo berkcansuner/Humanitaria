@@ -36,8 +36,9 @@ def _print_summary(all_stats: dict[str, IngestionStats]) -> None:
 
 def main():
     parser = argparse.ArgumentParser(description="Ingest ReliefWeb content into ChromaDB")
-    parser.add_argument("--limit", type=int, default=100, help="Max documents per endpoint")
+    parser.add_argument("--limit", type=int, default=1000, help="Max documents per endpoint")
     parser.add_argument("--force", action="store_true", help="Force re-ingestion (clear collection first)")
+    parser.add_argument("--date-from", type=str, default=None, help="Only ingest documents created on or after this date (YYYY-MM-DD)")
     parser.add_argument(
         "--endpoints",
         nargs="+",
@@ -47,7 +48,7 @@ def main():
     )
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
-    all_stats = run_pipeline(limit=args.limit, force=args.force, endpoints=args.endpoints)
+    all_stats = run_pipeline(limit=args.limit, force=args.force, endpoints=args.endpoints, date_from=args.date_from)
     _print_summary(all_stats)
     total_failed = sum(s.failed for s in all_stats.values())
     total_succeeded = sum(s.succeeded for s in all_stats.values())
