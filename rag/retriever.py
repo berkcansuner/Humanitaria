@@ -1,9 +1,12 @@
 import logging
+import math
 from datetime import datetime
 from functools import lru_cache
 from typing import Dict, Any, List, Optional
+
 from langchain_core.documents import Document
-from langchain_community.vectorstores import Chroma
+from langchain_chroma import Chroma
+
 from config import get_settings
 from rag.embeddings import OllamaLangChainEmbeddings
 
@@ -21,23 +24,49 @@ def _get_vectorstore() -> Chroma:
     )
 
 
+def _build_chroma_filter(filters: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Convert a flat filter dict to explicit ChromaDB $and/$eq format.
+
+    Chroma 1.0+ requires an explicit $and wrapper for multi-field queries.
+    Single-field filters are passed as-is to avoid unnecessary wrapping.
+    """
+    if not filters:
+        return None
+    conditions = []
+    for key, val in filters.items():
+        if isinstance(val, dict):
+            # Already an operator dict, e.g. {"$gte": "2024-01-01"}
+            conditions.append({key: val})
+        else:
+            conditions.append({key: {"$eq": val}})
+    if len(conditions) == 1:
+        return conditions[0]
+    return {"$and": conditions}
+
+
 def build_retriever(filter: Optional[Dict[str, Any]] = None):
     vectorstore = _get_vectorstore()
     settings = get_settings()
+    chroma_filter = _build_chroma_filter(filter)
     return vectorstore.as_retriever(
         search_type="mmr",
-        search_kwargs={"k": settings.TOP_K_RETRIEVAL, "filter": filter if filter else None}
+        search_kwargs={
+            "k": settings.TOP_K_RETRIEVAL,
+            "fetch_k": settings.MMR_FETCH_K,
+            "lambda_mult": settings.MMR_LAMBDA,
+            "filter": chroma_filter,
+        },
     )
 
 
 def rerank_by_recency(docs: List[Document], decay_factor: Optional[float] = None) -> List[Document]:
     """Re-rank retrieved documents to prioritize recent ones.
 
-    Blends MMR relevance position with document recency:
+    Blends MMR relevance position with exponential document recency:
     score = (1 - decay_factor) * mmr_rank_score + decay_factor * recency_score
 
+    recency_score = exp(-days_ago / 365)  — always positive, 1.0 at 0 days, ~0.37 at 1 yr
     Documents without a date get recency_score = 0.
-    Recency is computed as days-ago relative to today, normalized by 365 days.
     """
     if not docs:
         return docs
@@ -47,11 +76,9 @@ def rerank_by_recency(docs: List[Document], decay_factor: Optional[float] = None
         return docs
 
     factor = decay_factor if decay_factor is not None else settings.DATE_DECAY_FACTOR
-    n = len(docs)
     today = datetime.now()
 
-    # Parse dates and compute recency scores
-    parsed_dates = []
+    parsed_dates: List[Optional[datetime]] = []
     for doc in docs:
         date_str = doc.metadata.get("date", "")
         if date_str and len(date_str) >= 10 and date_str[4] == "-" and date_str[7] == "-":
@@ -62,13 +89,12 @@ def rerank_by_recency(docs: List[Document], decay_factor: Optional[float] = None
         else:
             parsed_dates.append(None)
 
-    # Compute blended scores
     scored = []
     for i, (doc, doc_date) in enumerate(zip(docs, parsed_dates)):
         mmr_score = 1.0 / (1 + i)  # Position 0=1.0, 1=0.5, 2=0.33, ...
         if doc_date is not None:
             days_ago = max(0, (today - doc_date).days)
-            recency_score = max(0.0, 1.0 - (days_ago / 365.0))
+            recency_score = math.exp(-days_ago / 365.0)
         else:
             recency_score = 0.0
         blended = (1 - factor) * mmr_score + factor * recency_score

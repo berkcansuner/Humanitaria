@@ -3,7 +3,7 @@
     <div class="sources-header">Sources</div>
     <div class="source-list">
       <a v-for="(src, idx) in validSources" :key="idx"
-         :href="src.url" target="_blank" rel="noopener" class="source-item">
+         :href="safeUrl(src.url)" target="_blank" rel="noopener noreferrer" class="source-item">
         <div class="source-title-row">
           <div class="source-icon-wrapper" aria-hidden="true">
             <FileText :size="16" />
@@ -39,6 +39,16 @@ function formatDate(iso) {
     return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
   } catch {
     return iso
+  }
+}
+
+function safeUrl(url) {
+  // Only allow http(s) URLs to prevent javascript: or data: XSS vectors
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:' ? url : '#'
+  } catch {
+    return '#'
   }
 }
 

@@ -3,6 +3,7 @@ import re
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 
+from dateutil.relativedelta import relativedelta
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
@@ -77,7 +78,7 @@ def _get_llm_extractor():
             base_url=settings.OLLAMA_CLOUD_BASE_URL,
             api_key=settings.OLLAMA_CLOUD_API_KEY,
             temperature=0.0,
-            request_timeout=15,
+            timeout=15,
         )
         _llm_extractor = llm.with_structured_output(QueryFilters, method="json_mode")
     return _llm_extractor
@@ -89,16 +90,13 @@ def _normalize_llm_filters(result: QueryFilters) -> Dict[str, Any]:
         country_lower = result.country.lower()
         if country_lower in _COUNTRY_MAP:
             filters["country"] = _COUNTRY_MAP[country_lower]
-        elif result.country in _CANONICAL_COUNTRIES:
-            filters["country"] = result.country
         else:
+            # Accept canonical name or pass through for LLM output
             filters["country"] = result.country
     if result.theme:
         theme_lower = result.theme.lower()
         if theme_lower in _THEME_MAP:
             filters["theme"] = _THEME_MAP[theme_lower]
-        elif result.theme in _CANONICAL_THEMES:
-            filters["theme"] = result.theme
         else:
             filters["theme"] = result.theme
     if result.doctype:
@@ -123,8 +121,8 @@ def _extract_filters_llm(query: str) -> Optional[Dict[str, Any]]:
         prompt = _FILTER_EXTRACTION_PROMPT.format(today=today, query=query)
         result: QueryFilters = chain.invoke(prompt)
         return _normalize_llm_filters(result)
-    except Exception:
-        logger.warning("LLM filter extraction failed, falling back to rule-based")
+    except Exception as e:
+        logger.warning("LLM filter extraction failed, falling back to rule-based: %s", e)
         return None
 
 
@@ -144,19 +142,35 @@ def _cached_llm_extract(query_normalized: str) -> Optional[Dict[str, Any]]:
     return result
 
 
+def _turkish_lower(text: str) -> str:
+    """Lowercase with Turkish-aware character mapping for consistent matching."""
+    return (
+        text
+        .replace("İ", "i").replace("Ü", "u").replace("Ö", "o")
+        .replace("Ş", "s").replace("Ç", "c").replace("Ğ", "g")
+        .lower()
+    )
+
+
+def _match_word(keyword: str, text: str) -> bool:
+    """Return True if keyword appears as a whole word in text (word-boundary safe)."""
+    return bool(re.search(r"\b" + re.escape(keyword) + r"\b", text))
+
+
 def _extract_filters_rule_based(query: str) -> Dict[str, Any]:
-    query_lower = query.replace('İ', 'i').replace('Ü', 'u').replace('Ö', 'o').replace('Ş', 's').replace('Ç', 'c').replace('Ğ', 'g').lower()
+    query_lower = _turkish_lower(query)
     filters: Dict[str, Any] = {}
+
     for key, val in _COUNTRY_MAP.items():
-        if key in query_lower:
+        if _match_word(key, query_lower):
             filters["country"] = val
             break
     for key, val in _THEME_MAP.items():
-        if key in query_lower:
+        if _match_word(key, query_lower):
             filters["theme"] = val
             break
     for key, val in _DOCTYPE_MAP.items():
-        if key in query_lower:
+        if _match_word(key, query_lower):
             filters["doctype"] = val
             break
 
@@ -192,7 +206,8 @@ def _extract_filters_rule_based(query: str) -> Dict[str, Any]:
     this_month = re.search(r"\b(this\s+month|bu\s+ay)\b", query_lower)
     recent = re.search(r"\b(recent|son\s+donem|guncel|son\s+zamanlar)\b", query_lower)
 
-    # Apply date filter in priority order
+    # Apply date filter in priority order (use relativedelta for accurate month arithmetic)
+    now = datetime.now()
     if since_date:
         date_str = since_date.group(1) or since_date.group(2) or since_date.group(3)
         if "/" in date_str:
@@ -202,43 +217,43 @@ def _extract_filters_rule_based(query: str) -> Dict[str, Any]:
             filters["date"] = {"$gte": date_str}
     elif relative_month:
         months = int(relative_month.group(1))
-        date_from = datetime.now() - timedelta(days=months * 30)
+        date_from = now - relativedelta(months=months)
         filters["date"] = {"$gte": date_from.strftime("%Y-%m-%d")}
     elif relative_week:
         weeks = int(relative_week.group(1))
-        date_from = datetime.now() - timedelta(weeks=weeks)
+        date_from = now - timedelta(weeks=weeks)
         filters["date"] = {"$gte": date_from.strftime("%Y-%m-%d")}
     elif relative_day:
         days = int(relative_day.group(1))
-        date_from = datetime.now() - timedelta(days=days)
+        date_from = now - timedelta(days=days)
         filters["date"] = {"$gte": date_from.strftime("%Y-%m-%d")}
     elif relative_month_no_num:
-        date_from = datetime.now() - timedelta(days=30)
+        date_from = now - relativedelta(months=1)
         filters["date"] = {"$gte": date_from.strftime("%Y-%m-%d")}
     elif relative_week_no_num:
-        date_from = datetime.now() - timedelta(weeks=1)
+        date_from = now - timedelta(weeks=1)
         filters["date"] = {"$gte": date_from.strftime("%Y-%m-%d")}
     elif this_month:
-        date_from = datetime.now().replace(day=1)
+        date_from = now.replace(day=1)
         filters["date"] = {"$gte": date_from.strftime("%Y-%m-%d")}
     elif this_week:
-        days_since_monday = datetime.now().weekday()
-        date_from = datetime.now() - timedelta(days=days_since_monday)
+        days_since_monday = now.weekday()
+        date_from = now - timedelta(days=days_since_monday)
         filters["date"] = {"$gte": date_from.strftime("%Y-%m-%d")}
     elif yesterday_match:
-        date_from = datetime.now() - timedelta(days=1)
+        date_from = now - timedelta(days=1)
         filters["date"] = {"$gte": date_from.strftime("%Y-%m-%d")}
     elif today_match:
-        date_from = datetime.now()
+        date_from = now
         filters["date"] = {"$gte": date_from.strftime("%Y-%m-%d")}
     elif recent:
-        date_from = datetime.now() - timedelta(days=30)
+        date_from = now - relativedelta(months=1)
         filters["date"] = {"$gte": date_from.strftime("%Y-%m-%d")}
     return filters
 
 
 def extract_filters(query: str) -> Dict[str, Any]:
-    query_normalized = query.strip().lower()
+    query_normalized = _turkish_lower(query.strip())
     filters = _cached_llm_extract(query_normalized)
     if filters is not None:
         return filters
@@ -262,9 +277,10 @@ _SUGGESTION_TIME_PERIODS = [
 ]
 
 
-def analyze_query(query: str) -> Dict[str, Any]:
+def analyze_query(query: str, filters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Detect whether a query is vague and provide clarification suggestions."""
-    filters = extract_filters(query)
+    if filters is None:
+        filters = extract_filters(query)
     has_country = "country" in filters
     has_date = "date" in filters
     has_theme = "theme" in filters

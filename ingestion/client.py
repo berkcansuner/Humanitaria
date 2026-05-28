@@ -86,9 +86,16 @@ class ReliefWebClient:
                         continue
                     else:
                         raise requests.RequestException("Max retries exceeded for 429")
+                # 4xx errors (except 429) are not retryable — fail immediately
+                if 400 <= resp.status_code < 500:
+                    resp.raise_for_status()
                 resp.raise_for_status()
                 data = resp.json()
                 return data.get("data", [])
+            except requests.HTTPError as e:
+                # Re-raise non-retryable HTTP errors without sleeping
+                logger.error("Non-retryable HTTP error: %s", e)
+                raise
             except requests.RequestException as e:
                 logger.error("Request failed (attempt %d): %s", attempt + 1, e)
                 if attempt < max_retries - 1:
@@ -103,6 +110,6 @@ class ReliefWebClient:
         limit: int = 100,
         offset: int = 0,
         sort: str = "date.created:desc",
-        fields: List[str] = None,
+        fields: Optional[List[str]] = None,
     ) -> List[Dict[str, Any]]:
         return self.fetch("reports", limit=limit, offset=offset, sort=sort, fields=fields)

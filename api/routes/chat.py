@@ -2,9 +2,10 @@ import json
 import logging
 import re
 from uuid import uuid4
-from fastapi import APIRouter
-from pydantic import BaseModel
-from typing import List, Optional
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field, field_validator
+from typing import List, Literal, Optional
 from langchain_core.messages import HumanMessage, AIMessage
 from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 
@@ -22,20 +23,31 @@ _GREETING_PATTERN = re.compile(
     re.IGNORECASE | re.UNICODE,
 )
 
+_GREETING_REPLY = "Merhaba! Size insani yardım raporları hakkında nasıl yardımcı olabilirim?"
+
 
 def _is_greeting(text: str) -> bool:
     return bool(_GREETING_PATTERN.match(text.strip()))
 
 
 class ChatMessage(BaseModel):
-    role: str
+    role: Literal["user", "assistant"]
     content: str
 
 
 class ChatRequest(BaseModel):
-    message: str
-    history: Optional[List[ChatMessage]] = []
+    message: str = Field(..., min_length=1, max_length=4000)
+    # history is accepted for backward compatibility but ignored —
+    # server-side session history is the single source of truth.
+    history: Optional[List[ChatMessage]] = Field(default_factory=list)
     session_id: Optional[str] = None
+
+    @field_validator("message")
+    @classmethod
+    def message_not_blank(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("message must not be blank")
+        return v.strip()
 
 
 class SourceDocument(BaseModel):
@@ -57,21 +69,10 @@ class ChatResponse(BaseModel):
 async def chat(req: ChatRequest):
     session_id = req.session_id or str(uuid4())
 
-    if not req.session_id and req.history:
-        msgs = []
-        for m in req.history:
-            if m.role == "user":
-                msgs.append(HumanMessage(content=m.content))
-            elif m.role == "assistant":
-                msgs.append(AIMessage(content=m.content))
-        populate_history_from_messages(session_id, msgs)
+    if _is_greeting(req.message):
+        return ChatResponse(answer=_GREETING_REPLY, sources=[], session_id=session_id)
 
-    greeting = _is_greeting(req.message)
-
-    if greeting:
-        context = ""
-        sources = []
-    else:
+    try:
         filters = extract_filters(req.message)
         retriever = build_retriever(filter=filters if filters else None)
         docs = await retriever.ainvoke(req.message)
@@ -91,60 +92,59 @@ async def chat(req: ChatRequest):
             if doc.metadata.get("url") and doc.metadata.get("title")
         ]
 
-    chain = build_chain()
-    answer = await chain.ainvoke(
-        {"question": req.message, "context": context},
-        config={"configurable": {"session_id": session_id}},
-    )
+        chain = build_chain()
+        answer = await chain.ainvoke(
+            {"question": req.message, "context": context},
+            config={"configurable": {"session_id": session_id}},
+        )
+        return ChatResponse(answer=answer, sources=sources, session_id=session_id)
 
-    return ChatResponse(answer=answer, sources=sources, session_id=session_id)
+    except Exception as e:
+        logger.error("Chat error: %s", e)
+        raise HTTPException(status_code=503, detail="Service temporarily unavailable")
 
 
 @router.post("/chat/stream")
 async def chat_stream(req: ChatRequest):
     session_id = req.session_id or str(uuid4())
 
-    if not req.session_id and req.history:
-        msgs = []
-        for m in req.history:
-            if m.role == "user":
-                msgs.append(HumanMessage(content=m.content))
-            elif m.role == "assistant":
-                msgs.append(AIMessage(content=m.content))
-        populate_history_from_messages(session_id, msgs)
-
-    greeting = _is_greeting(req.message)
-
-    if greeting:
-        sources = []
-        context = ""
-        analysis = None
-    else:
-        filters = extract_filters(req.message)
-        retriever = build_retriever(filter=filters if filters else None)
-        docs = await retriever.ainvoke(req.message)
-        docs = rerank_by_recency(docs)
-
-        analysis = analyze_query(req.message)
-
-        sources = [
-            {
-                "title": doc.metadata.get("title", "Belirsiz"),
-                "url": doc.metadata.get("url", ""),
-                "date": doc.metadata.get("date"),
-                "country": doc.metadata.get("country"),
-                "source": doc.metadata.get("source"),
-                "doctype": doc.metadata.get("doctype", ""),
-            }
-            for doc in docs
-            if doc.metadata.get("url") and doc.metadata.get("title")
-        ]
-        context = "\n\n---\n\n".join(doc.page_content for doc in docs)
-
-    chain = build_chain()
+    if _is_greeting(req.message):
+        async def greeting_generator():
+            yield ServerSentEvent(
+                event="token",
+                data=json.dumps({"content": _GREETING_REPLY}, ensure_ascii=False),
+            )
+            yield ServerSentEvent(event="session", data=json.dumps({"session_id": session_id}))
+            yield ServerSentEvent(event="done", data="{}")
+        return EventSourceResponse(greeting_generator())
 
     async def event_generator():
         try:
+            # Retrieval and analysis now inside the try block so any failure
+            # is surfaced as an SSE 'error' event instead of a raw 500.
+            filters = extract_filters(req.message)
+            retriever = build_retriever(filter=filters if filters else None)
+            docs = await retriever.ainvoke(req.message)
+            docs = rerank_by_recency(docs)
+
+            analysis = analyze_query(req.message, filters=filters)
+
+            sources = [
+                {
+                    "title": doc.metadata.get("title", "Belirsiz"),
+                    "url": doc.metadata.get("url", ""),
+                    "date": doc.metadata.get("date"),
+                    "country": doc.metadata.get("country"),
+                    "source": doc.metadata.get("source"),
+                    "doctype": doc.metadata.get("doctype"),
+                }
+                for doc in docs
+                if doc.metadata.get("url") and doc.metadata.get("title")
+            ]
+            context = "\n\n---\n\n".join(doc.page_content for doc in docs)
+
+            chain = build_chain()
+
             if analysis and analysis.get("is_vague"):
                 yield ServerSentEvent(
                     event="clarification",
@@ -175,14 +175,11 @@ async def chat_stream(req: ChatRequest):
                     data=json.dumps({"sources": sources}, ensure_ascii=False),
                 )
 
-            yield ServerSentEvent(
-                event="session",
-                data=json.dumps({"session_id": session_id}),
-            )
+            yield ServerSentEvent(event="session", data=json.dumps({"session_id": session_id}))
             yield ServerSentEvent(event="done", data="{}")
 
         except Exception as e:
-            logger.error(f"Streaming error: {e}")
+            logger.error("Streaming error: %s", e)
             yield ServerSentEvent(
                 event="error",
                 data=json.dumps({"message": str(e)}, ensure_ascii=False),

@@ -21,7 +21,7 @@ class TestPipeline:
             mock_store = MagicMock()
             MockStore.return_value = mock_store
             run_pipeline(limit=1)
-            mock_client.fetch.assert_called_once_with("reports", limit=1, offset=0)
+            mock_client.fetch.assert_called_once_with("reports", limit=1, offset=0, date_from=None)
             mock_store.upsert_chunks.assert_called_once()
             mock_store.clear_collection.assert_not_called()
 

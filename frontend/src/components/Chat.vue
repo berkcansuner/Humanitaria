@@ -12,7 +12,7 @@
             <Bot :size="20" />
           </div>
           <div class="message-bubble">
-            <template v-if="msg.role === 'assistant' && !msg.content && !msg.error">
+            <template v-if="msg.role === 'assistant' && !msg.content && !msg.error && !msg.clarification">
               <div class="typing-indicator">
                 <span></span>
                 <span></span>
@@ -84,22 +84,22 @@ const ERROR_MESSAGES = {
 const messages = ref([])
 const input = ref('')
 const loading = ref(false)
-const streaming = ref(false)
 const sessionId = ref(null)
 const messagesContainer = ref(null)
 
 function parseSSE(chunk) {
   let event = null
-  let data = null
+  const dataLines = []
   for (const line of chunk.split(/\r?\n/)) {
     if (line.startsWith('event:')) {
       event = line.slice(6).trim()
     } else if (line.startsWith('data:')) {
-      data = line.slice(5).trim()
+      // Accumulate all data: lines — multi-line data fields are joined with \n per SSE spec
+      dataLines.push(line.slice(5).trim())
     }
   }
-  if (data !== null) {
-    return { event: event || 'message', data }
+  if (dataLines.length > 0) {
+    return { event: event || 'message', data: dataLines.join('\n') }
   }
   return null
 }
@@ -111,7 +111,6 @@ async function sendMessage() {
   messages.value.push({ role: 'user', content: text, error: null })
   input.value = ''
   loading.value = true
-  streaming.value = false
 
   const assistantMsg = { role: 'assistant', content: '', sources: null, error: null, clarification: null }
   messages.value.push(assistantMsg)
@@ -135,8 +134,12 @@ async function sendMessage() {
       return
     }
 
-    streaming.value = true
-    const reader = res.body.getReader()
+    const reader = res.body?.getReader()
+    if (!reader) {
+      assistantMsg.error = ERROR_MESSAGES.connection
+      messages.value[msgIndex] = { ...assistantMsg }
+      return
+    }
     const decoder = new TextDecoder()
     let buffer = ''
 
@@ -200,7 +203,7 @@ async function sendMessage() {
       }
     }
 
-    if (!assistantMsg.content.trim()) {
+    if (!assistantMsg.content.trim() && !assistantMsg.clarification) {
       console.error('Empty response received from stream')
       assistantMsg.error = ERROR_MESSAGES.empty_response
       messages.value[msgIndex] = { ...assistantMsg }
@@ -216,7 +219,6 @@ async function sendMessage() {
     messages.value[msgIndex] = { ...assistantMsg }
   } finally {
     loading.value = false
-    streaming.value = false
     scrollToBottom()
   }
 }
@@ -234,7 +236,9 @@ function applySuggestion(msg, type, value) {
   messages.value[messages.value.indexOf(msg)] = { ...msg }
   const lastUserMsg = [...messages.value].reverse().find(m => m.role === 'user')
   const originalQuery = lastUserMsg ? lastUserMsg.content : ''
-  input.value = originalQuery + ' ' + value
+  const prefixByType = { country: '', date: '', theme: '' }
+  const prefix = prefixByType[type] || ''
+  input.value = originalQuery + ' ' + prefix + value
   sendMessage()
 }
 </script>
@@ -243,22 +247,17 @@ function applySuggestion(msg, type, value) {
 .chat {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 180px);
-}
-
-@media (max-width: 640px) {
-  .chat {
-    height: calc(100vh - 140px);
-  }
+  height: 100%;
+  overflow: hidden;
 }
 
 .messages {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-5) 0;
+  padding: var(--space-3) 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--space-3);
   scroll-behavior: smooth;
 }
 

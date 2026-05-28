@@ -24,7 +24,7 @@ Kullanıcı → Vue 3 Frontend → FastAPI (localhost:8000) → RAG Engine (Lang
 | Katman        | Teknoloji                       | Notlar                                     |
 |---------------|---------------------------------|--------------------------------------------|
 | LLM           | Ollama Cloud API                | https://ollama.com/v1 — `qwen3.5:397b-cloud` |
-| Embedding     | Yerel Ollama — qwen3-embedding:8b | localhost:11434, 2560 dim, MTEB çok dilli #1 |
+| Embedding     | Yerel Ollama — qwen3-embedding:8b | localhost:11434, **4096 dim**, MTEB çok dilli #1 |
 | Vector DB     | ChromaDB                        | Gömülü, dosya tabanlı — `./chroma_db/`     |
 | Backend       | Python 3.12 / FastAPI           | REST API + Vue statik dosya sunumu          |
 | RAG Framework | LangChain LCEL                   | RunnableWithMessageHistory + MMR retriever (session-based) |
@@ -64,7 +64,7 @@ RELIEFWEB_BASE_URL=https://api.reliefweb.int/v2
 # ChromaDB
 CHROMA_DB_PATH=./chroma_db
 CHROMA_COLLECTION=reliefweb_docs
-EMBED_DIM=2560                  # qwen3-embedding:8b — Ollama ve ChromaDB aynı değeri kullanır
+EMBED_DIM=4096                  # qwen3-embedding:8b → 4096 dim; 4b varyantı → 2560
 
 # RAG
 CHUNK_SIZE=800
