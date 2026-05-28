@@ -24,6 +24,7 @@
 <script setup>
 import { computed } from 'vue'
 import { ExternalLink, FileText } from 'lucide-vue-next'
+import { safeUrl } from '../utils/parseSSE.js'
 
 const props = defineProps({
   sources: {
@@ -39,16 +40,6 @@ function formatDate(iso) {
     return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
   } catch {
     return iso
-  }
-}
-
-function safeUrl(url) {
-  // Only allow http(s) URLs to prevent javascript: or data: XSS vectors
-  try {
-    const parsed = new URL(url)
-    return parsed.protocol === 'https:' || parsed.protocol === 'http:' ? url : '#'
-  } catch {
-    return '#'
   }
 }
 

@@ -1,10 +1,17 @@
 import logging
+from collections import OrderedDict
+from typing import Union
+
 from langchain_core.chat_history import InMemoryChatMessageHistory
 from langchain_core.messages import BaseMessage
 
+from config import get_settings
+
 logger = logging.getLogger(__name__)
 
-_session_histories: dict[str, "WindowedChatMessageHistory"] = {}
+# Bounded in-memory session store with LRU eviction.
+# OrderedDict preserves insertion order; move_to_end marks recent access.
+_session_histories: OrderedDict[str, "WindowedChatMessageHistory"] = OrderedDict()
 
 
 class WindowedChatMessageHistory(InMemoryChatMessageHistory):
@@ -19,18 +26,48 @@ class WindowedChatMessageHistory(InMemoryChatMessageHistory):
             self.messages = self.messages[-max_messages:]
 
 
-def get_session_history(session_id: str) -> WindowedChatMessageHistory:
-    if session_id not in _session_histories:
-        _session_histories[session_id] = WindowedChatMessageHistory(k=5)
-    return _session_histories[session_id]
+def _get_memory_history(session_id: str, k: int, max_sessions: int) -> WindowedChatMessageHistory:
+    """Return (or create) an in-memory session, evicting the LRU entry if at capacity."""
+    if session_id in _session_histories:
+        _session_histories.move_to_end(session_id)
+        return _session_histories[session_id]
+    if len(_session_histories) >= max_sessions:
+        oldest_key, _ = _session_histories.popitem(last=False)
+        logger.debug("Evicted in-memory session %s (max=%d)", oldest_key, max_sessions)
+    history = WindowedChatMessageHistory(k=k)
+    _session_histories[session_id] = history
+    return history
+
+
+def get_session_history(session_id: str) -> Union[WindowedChatMessageHistory, "RedisChatMessageHistory"]:
+    settings = get_settings()
+    k = settings.HISTORY_WINDOW_K
+    max_sessions = settings.SESSION_MAX_MEMORY
+
+    if settings.REDIS_URL:
+        try:
+            from langchain_community.chat_message_histories import RedisChatMessageHistory
+            return RedisChatMessageHistory(
+                session_id,
+                url=settings.REDIS_URL,
+                ttl=settings.SESSION_TTL_HOURS * 3600,
+            )
+        except Exception as e:
+            logger.warning("Redis session unavailable, falling back to in-memory: %s", e)
+
+    return _get_memory_history(session_id, k, max_sessions)
 
 
 def clear_session(session_id: str) -> None:
     _session_histories.pop(session_id, None)
 
 
-def populate_history_from_messages(session_id: str, messages: list[BaseMessage]) -> None:
-    history = WindowedChatMessageHistory(k=5)
+def populate_history_from_messages(session_id: str, messages: list) -> None:
+    settings = get_settings()
+    history = WindowedChatMessageHistory(k=settings.HISTORY_WINDOW_K)
     for msg in messages:
         history.add_message(msg)
     _session_histories[session_id] = history
+    # Keep under the memory cap
+    while len(_session_histories) > settings.SESSION_MAX_MEMORY:
+        _session_histories.popitem(last=False)

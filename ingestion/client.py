@@ -38,11 +38,9 @@ class ReliefWebClient:
         self.settings = get_settings()
         self.base_url = self.settings.RELIEFWEB_BASE_URL
         self.api_key = self.settings.RELIEFWEB_API_KEY
-        self.headers = {
-            "Content-Type": "application/json",
-        }
-        if self.api_key:
-            self.headers["Authorization"] = f"Bearer {self.api_key}"
+        # ReliefWeb v2 identifies callers via the `appname` query param — not Bearer auth.
+        # RELIEFWEB_API_KEY is reserved for any future official key scheme.
+        self.headers = {"Content-Type": "application/json"}
 
     def fetch(
         self,

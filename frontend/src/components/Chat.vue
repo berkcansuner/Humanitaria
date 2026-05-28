@@ -73,6 +73,7 @@ import { ref } from 'vue'
 import { Send, Loader2, Bot, AlertCircle } from 'lucide-vue-next'
 import SourceList from './SourceList.vue'
 import { renderMarkdown } from '../utils/renderMarkdown.js'
+import { parseSSE } from '../utils/parseSSE.js'
 
 const ERROR_MESSAGES = {
   connection: 'Connection lost. Please try again.',
@@ -87,22 +88,7 @@ const loading = ref(false)
 const sessionId = ref(null)
 const messagesContainer = ref(null)
 
-function parseSSE(chunk) {
-  let event = null
-  const dataLines = []
-  for (const line of chunk.split(/\r?\n/)) {
-    if (line.startsWith('event:')) {
-      event = line.slice(6).trim()
-    } else if (line.startsWith('data:')) {
-      // Accumulate all data: lines — multi-line data fields are joined with \n per SSE spec
-      dataLines.push(line.slice(5).trim())
-    }
-  }
-  if (dataLines.length > 0) {
-    return { event: event || 'message', data: dataLines.join('\n') }
-  }
-  return null
-}
+
 
 async function sendMessage() {
   const text = input.value.trim()

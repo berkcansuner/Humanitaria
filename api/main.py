@@ -14,8 +14,10 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Warm up RAG components at startup so the first request doesn't pay cold-start cost."""
+    """Warm up RAG components and start the ingestion scheduler at startup."""
     settings = get_settings()
+
+    # Warm up vectorstore and LLM chain so the first request is not slow
     try:
         from rag.retriever import _get_vectorstore
         from rag.chain import build_chain
@@ -24,7 +26,21 @@ async def lifespan(app: FastAPI):
         logger.info("RAG components warmed up (vectorstore + chain)")
     except Exception as exc:
         logger.warning("Startup warmup failed (non-fatal, will retry on first request): %s", exc)
+
+    # Start background ingestion scheduler
+    scheduler = None
+    if settings.INGEST_SCHEDULE_HOURS > 0:
+        try:
+            from ingestion.scheduler import start_scheduler
+            scheduler = start_scheduler()
+        except Exception as exc:
+            logger.warning("Ingestion scheduler failed to start (non-fatal): %s", exc)
+
     yield
+
+    if scheduler is not None:
+        scheduler.shutdown(wait=False)
+        logger.info("Ingestion scheduler stopped")
 
 
 app = FastAPI(title="ReliefWeb RAG API", lifespan=lifespan)

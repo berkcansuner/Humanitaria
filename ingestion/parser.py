@@ -2,6 +2,8 @@ import hashlib
 import logging
 from typing import Dict, Any, Optional
 
+from ingestion.file_loader import strip_html
+
 logger = logging.getLogger(__name__)
 
 
@@ -73,11 +75,14 @@ def parse_report(raw: Dict[str, Any]) -> Dict[str, Any]:
         source = _safe_list_get(source_field, 0, "name")
     else:
         source = ""
+    # pdf_url is stored so the pipeline can optionally fetch richer PDF text
+    pdf_url = _safe_get(file_objs[0], "url", "") if file_objs else ""
     return {
         "id": doc_id,
         "url": url,
+        "pdf_url": pdf_url,
         "title": _sanitize(fields.get("title", "")),
-        "body": _sanitize(fields.get("body", "")),
+        "body": strip_html(_sanitize(fields.get("body", ""))),
         "date": date,
         "country": country,
         "theme": theme,

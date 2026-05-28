@@ -106,14 +106,41 @@ class TestPipelineErrorIsolation:
             mock_parse.side_effect = [good_doc, Exception("parse error"), good_doc]
             mock_chunk.return_value = [{"id": "abc_0", "content": "b", "metadata": {"url": "u", "title": "t", "country": "", "theme": "", "date": "", "source": "", "format": "", "doctype": "report"}}]
             mock_embedder = MagicMock()
-            mock_embedder.embed_batch.return_value = [[0.1] * 2560]
+            # 2 successful docs × 1 chunk each = 2 embeddings needed
+            mock_embedder.embed_batch.return_value = [[0.1] * 2560, [0.2] * 2560]
             MockEmbedder.return_value = mock_embedder
             mock_store = MagicMock()
             MockStore.return_value = mock_store
             stats = run_pipeline(limit=3)
             assert stats["reports"].succeeded == 2
             assert stats["reports"].failed == 1
-            assert mock_store.upsert_chunks.call_count == 2
+            # New batch pipeline: 2 successful docs upserted together in 1 call
+            assert mock_store.upsert_chunks.call_count == 1
+
+    def test_orphan_chunks_deleted_before_upsert(self):
+        """delete_document_chunks is called for each document before upserting new chunks."""
+        with patch("ingestion.pipeline.ReliefWebClient") as MockClient, \
+             patch("ingestion.pipeline.parse") as mock_parse, \
+             patch("ingestion.pipeline.chunk_document") as mock_chunk, \
+             patch("ingestion.pipeline.OllamaEmbedder") as MockEmbedder, \
+             patch("ingestion.pipeline.ChromaStore") as MockStore:
+            mock_client = MagicMock()
+            mock_client.fetch.return_value = [{"id": "1"}, {"id": "2"}]
+            MockClient.return_value = mock_client
+            doc1 = {"id": "id1", "url": "u1", "title": "t1", "body": "b1", "date": "", "country": "", "theme": "", "source": "", "format": "", "doctype": "report"}
+            doc2 = {"id": "id2", "url": "u2", "title": "t2", "body": "b2", "date": "", "country": "", "theme": "", "source": "", "format": "", "doctype": "report"}
+            mock_parse.side_effect = [doc1, doc2]
+            mock_chunk.return_value = [{"id": "c_0", "content": "b", "metadata": {}}]
+            mock_embedder = MagicMock()
+            mock_embedder.embed_batch.return_value = [[0.1] * 2560, [0.2] * 2560]
+            MockEmbedder.return_value = mock_embedder
+            mock_store = MagicMock()
+            MockStore.return_value = mock_store
+            run_pipeline(limit=2)
+            # delete_document_chunks called once per doc (2 docs)
+            assert mock_store.delete_document_chunks.call_count == 2
+            called_ids = {c[0][0] for c in mock_store.delete_document_chunks.call_args_list}
+            assert called_ids == {"id1", "id2"}
 
     def test_empty_body_counted_as_skipped(self):
         with patch("ingestion.pipeline.ReliefWebClient") as MockClient, \

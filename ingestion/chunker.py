@@ -24,6 +24,7 @@ def chunk_document(
             "id": f"{doc['id']}_{start}",
             "content": chunk_text,
             "metadata": {
+                "doc_id": doc["id"],   # used by store.delete_document_chunks for orphan cleanup
                 "url": doc.get("url", ""),
                 "title": doc.get("title", ""),
                 "country": doc.get("country", ""),

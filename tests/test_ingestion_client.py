@@ -9,12 +9,14 @@ class TestReliefWebClient:
         get_settings.cache_clear()
         with patch.dict(
             "os.environ",
-            {"RELIEFWEB_API_KEY": "test_key", "RELIEFWEB_BASE_URL": "https://api.reliefweb.int/v2"},
+            {"RELIEFWEB_BASE_URL": "https://api.reliefweb.int/v2"},
             clear=False,
         ):
             client = ReliefWebClient()
         assert client.base_url == "https://api.reliefweb.int/v2"
-        assert "Authorization" in client.headers
+        # ReliefWeb uses appname query param — no Authorization header
+        assert "Authorization" not in client.headers
+        assert client.headers["Content-Type"] == "application/json"
 
     def test_fetch_reports_pagination(self):
         client = ReliefWebClient()
