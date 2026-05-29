@@ -47,13 +47,25 @@ def build_chain() -> Runnable:
         return _chain
 
     settings = get_settings()
-    llm = ChatOpenAI(
-        model=settings.OLLAMA_LLM_MODEL,
-        base_url=settings.OLLAMA_CLOUD_BASE_URL,
-        temperature=0.3,
-        api_key=settings.OLLAMA_CLOUD_API_KEY,
-        streaming=True,
-    )
+    if settings.CHAT_LLM_PROVIDER == "gemini":
+        # Gemini via OpenAI-compatible endpoint — same ChatOpenAI interface
+        llm = ChatOpenAI(
+            model=settings.GEMINI_LLM_MODEL,
+            base_url=settings.GEMINI_BASE_URL,
+            api_key=settings.GEMINI_API_KEY,
+            temperature=0.3,
+            streaming=True,
+        )
+        logger.info("Chat LLM provider: gemini (%s)", settings.GEMINI_LLM_MODEL)
+    else:
+        llm = ChatOpenAI(
+            model=settings.OLLAMA_LLM_MODEL,
+            base_url=settings.OLLAMA_CLOUD_BASE_URL,
+            api_key=settings.OLLAMA_CLOUD_API_KEY,
+            temperature=0.3,
+            streaming=True,
+        )
+        logger.info("Chat LLM provider: ollama (%s)", settings.OLLAMA_LLM_MODEL)
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", _SYSTEM_PROMPT + "\n\nContext:\n{context}"),
