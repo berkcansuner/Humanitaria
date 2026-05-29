@@ -254,3 +254,59 @@ class TestLLMFilterExtraction:
         assert f["date"] == {"$gte": "2026-02-07"}
         assert f["source"] == "WHO"
         assert f["format"] == "Situation Report"
+
+
+class TestVagueTemporalWords:
+    """Tests that vague temporal qualifiers ('şu anda', 'en güncel', etc.) do not
+    trigger a date filter.  Root cause: LLM was mapping these to date_from=today."""
+
+    @patch("rag.query_processor._extract_filters_llm", return_value=None)
+    def test_su_anda_no_date_filter(self, _mock):
+        _llm_cache.clear()
+        f = extract_filters("şu anda iran ile ilgili en güncel insani yardım bilgileri nelerdir")
+        assert "date" not in f
+        assert f.get("country") == "Iran"
+
+    @patch("rag.query_processor._extract_filters_llm", return_value=None)
+    def test_en_guncel_no_date_filter(self, _mock):
+        _llm_cache.clear()
+        f = extract_filters("en güncel Yemen raporları")
+        assert "date" not in f
+
+    @patch("rag.query_processor._extract_filters_llm", return_value=None)
+    def test_mevcut_no_date_filter(self, _mock):
+        _llm_cache.clear()
+        f = extract_filters("mevcut insani yardım durumu Sudan")
+        assert "date" not in f
+
+    @patch("rag.query_processor._extract_filters_llm", return_value=None)
+    def test_currently_no_date_filter(self, _mock):
+        _llm_cache.clear()
+        f = extract_filters("currently what is the humanitarian situation in Yemen")
+        assert "date" not in f
+
+
+class TestNormalizeLlmFilters:
+    """Tests for _normalize_llm_filters safety checks."""
+
+    def test_rejects_date_from_today(self):
+        from rag.query_processor import _normalize_llm_filters
+        today = datetime.now().strftime("%Y-%m-%d")
+        result = QueryFilters(country="Iran", date_from=today)
+        f = _normalize_llm_filters(result)
+        assert "date" not in f, "date_from = today should be rejected (no docs are created today)"
+
+    def test_rejects_date_from_future(self):
+        from rag.query_processor import _normalize_llm_filters
+        future = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
+        result = QueryFilters(country="Iran", date_from=future)
+        f = _normalize_llm_filters(result)
+        assert "date" not in f, "date_from in the future should be rejected"
+
+    def test_accepts_date_from_past(self):
+        from rag.query_processor import _normalize_llm_filters
+        past = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+        result = QueryFilters(country="Iran", date_from=past)
+        f = _normalize_llm_filters(result)
+        assert "date" in f, "date_from in the past should be accepted"
+        assert f["date"]["$gte"] == past

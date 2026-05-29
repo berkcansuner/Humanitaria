@@ -71,10 +71,14 @@ Rules:
 - Convert relative dates to absolute ISO format ONLY when an explicit time unit is given.
   Today is {today}. Examples: "son 3 ay"/"last 3 months" -> 3 months before today;
   "last week"/"son hafta" -> 7 days before today; "last year"/"son yil" -> 1 year before today.
-- "son" / "latest" / "recent" / "guncel" / "gelismeler" / "durum" / "son durum" WITHOUT a
-  specific number+unit do NOT set date_from. Set date_from to null for these.
+- The following words mean "current/latest" in a vague, non-temporal way and must NOT set
+  date_from (set to null):
+    Turkish: şu anda, en güncel, güncel, güncel bilgi, mevcut, şimdiki, bugünkü, günümüz,
+             hali hazırda, son durum, son gelişmeler, gelişmeler, durum, kriz
+    English: currently, right now, at the moment, at this time, most recent, latest, recent,
+             up to date, current situation, now, today's, nowadays
 - Only set date_from when the query contains explicit patterns like "son X gun/hafta/ay/yil"
-  or "last X days/weeks/months/years" or "since DATE".
+  or "last X days/weeks/months/years" or "since DATE" (number + unit required).
 - Only set a field if explicitly mentioned in the query. If unclear, set to null.
 - Respond ONLY with valid JSON matching the schema.
 
@@ -123,7 +127,21 @@ def _normalize_llm_filters(result: QueryFilters) -> Dict[str, Any]:
         else:
             filters["doctype"] = result.doctype
     if result.date_from:
-        filters["date"] = {"$gte": result.date_from}
+        try:
+            from_date = datetime.strptime(result.date_from[:10], "%Y-%m-%d").date()
+            today = datetime.now().date()
+            if from_date >= today:
+                # date_from = today or future is meaningless (ingested docs are always a few
+                # days old). LLM interpreted vague words like "şu anda"/"currently" as today.
+                logger.debug(
+                    "LLM returned date_from=%s (today or future) — ignoring to avoid "
+                    "filtering out all documents",
+                    result.date_from,
+                )
+            else:
+                filters["date"] = {"$gte": result.date_from[:10]}
+        except ValueError:
+            pass  # malformed date → ignore
     if result.source:
         filters["source"] = result.source
     if result.format:
