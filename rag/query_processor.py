@@ -51,14 +51,26 @@ _FILTER_EXTRACTION_PROMPT = """You are a filter extraction system for a ReliefWe
 Given a user query in Turkish or English, extract structured search filters.
 
 Rules:
-- Map country mentions to canonical ReliefWeb names. Examples: gazze/Gaza->State of Palestine, suriye/Syria->Syria, irak/Iraq->Iraq, turkiye/Turkiye->Turkey, somali/Somalia->Somalia, afganistan/Afghanistan->Afghanistan, ukraine/Ukrayna->Ukraine, yemen->Yemen, sudan->Sudan, iran->Iran.
-- Map theme mentions to canonical theme names: Food and Nutrition (gida/food/nutrition), Health (saglik/health), Shelter and NFI (barinma/shelter), Water Sanitation Hygiene (su/wash), Protection (koruma/protection), Education (egitim/education), Logistics and Telecommunications (lojistik), Coordination (koordinasyon/coordination).
-- Map document type mentions: rapor/report/raporlar/reports -> report, afet/disaster/afetler/disasters -> disaster, ulke/country/ulkeler/countries -> country.
+- Map country mentions to canonical ReliefWeb names. Turkish agglutinative suffixes may be attached
+  directly (e.g. "Iranda"/"İran'da" = Iran, "Suriyede" = Syria, "Afganistanda" = Afghanistan).
+  Mappings: gazze/Gaza/Gazze -> State of Palestine, suriye/Syria/Suriye/Suriyede -> Syria,
+  irak/Iraq/Irak/Irakta -> Iraq, turkiye/Türkiye/Turkey -> Turkey, somali/Somalia/Somali -> Somalia,
+  afganistan/Afghanistan -> Afghanistan, ukraine/Ukrayna/Ukraine -> Ukraine,
+  yemen/Yemen -> Yemen, sudan/Sudan -> Sudan, iran/Iran/Iranda/Irandaki -> Iran.
+- Map SPECIFIC sector keywords to themes. "insani yardım / insani yardim" means "humanitarian aid"
+  in general — do NOT assign it to any theme. "gelişmeler/gelismeler", "durum", "kriz", "rapor"
+  are also general words — do NOT map them to themes either.
+  Theme mappings: Food and Nutrition (gida/food/nutrition), Health (saglik/health),
+  Shelter and NFI (barinma/shelter), Water Sanitation Hygiene (su/wash),
+  Protection (koruma/protection), Education (egitim/education),
+  Logistics and Telecommunications (lojistik), Coordination (koordinasyon/coordination).
+- Map document type mentions: rapor/report/raporlar/reports -> report,
+  afet/disaster/afetler/disasters -> disaster, ulke/country/ulkeler/countries -> country.
 - For source organizations, extract the name as-is (e.g., WFP, UNHCR, OCHA, WHO).
 - For format, extract as-is (e.g., Situation Report, Assessment, Map).
-- Convert relative dates to absolute ISO format. Today is {today}. Examples: "son 3 ay" / "last 3 months" -> date_from 3 months before today; "last 30 days" / "son 30 gun" -> date_from 30 days before today.
-- Only set date_from if the user explicitly mentions a time period or date. If no time reference exists, set date_from to null.
-- If a filter type is not mentioned in the query, set it to null.
+- Convert relative dates to absolute ISO format. Today is {today}.
+  Examples: "son 3 ay"/"last 3 months" -> date_from 3 months before today.
+- Only set a field if explicitly mentioned in the query. If unclear, set to null.
 - Respond ONLY with valid JSON matching the schema.
 
 Query: {query}"""
