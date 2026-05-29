@@ -160,6 +160,15 @@ wrapped = RunnableWithMessageHistory(chain, get_session_history, ...)
 
 ---
 
+## Oturum Sürekliliği
+
+- **Her oturum başında `MEMORY.md` dosyasını oku.** Projenin güncel durumu, veri durumu ve
+  sıradaki adımlar oradadır. "Nerede kalmıştık?" sorusunun cevabı bu dosyadır.
+- **Önemli ilerlemeden sonra `MEMORY.md`'yi güncel tut.** Tarihçe biriktirme — güncel durumu
+  yansıt (eskiyen satırları değiştir/sil), son güncelleme tarihini güncelle.
+
+---
+
 ## Geliştirme Kuralları
 
 1. **API anahtarları** yalnızca `.env` içinde — asla kod veya commit'te
