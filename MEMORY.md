@@ -60,4 +60,5 @@ Bu oturumda yapılanlar (tümü commit'li): kapsamlı kod incelemesi + düzeltme
 güvenlik, RAG kalitesi, ingestion), RunnableWithMessageHistory → düz LCEL, Gemini chat
 entegrasyonu, tarih-filtresi yanlış pozitif düzeltmeleri, country adı normalizasyonu,
 boş-sonuç mesajı, embedding warmup, LLM timeout 15s→5s. PROGRESS.md kaldırıldı, bu dosya
-oturum sürekliliği için tek doğruluk kaynağı oldu.
+oturum sürekliliği için tek doğruluk kaynağı oldu. CLAUDE.md gerçek kodla senkronlanıp
+sadeleştirildi (182 satır, operating-manual formatı).
