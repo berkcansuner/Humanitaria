@@ -68,8 +68,13 @@ Rules:
   afet/disaster/afetler/disasters -> disaster, ulke/country/ulkeler/countries -> country.
 - For source organizations, extract the name as-is (e.g., WFP, UNHCR, OCHA, WHO).
 - For format, extract as-is (e.g., Situation Report, Assessment, Map).
-- Convert relative dates to absolute ISO format. Today is {today}.
-  Examples: "son 3 ay"/"last 3 months" -> date_from 3 months before today.
+- Convert relative dates to absolute ISO format ONLY when an explicit time unit is given.
+  Today is {today}. Examples: "son 3 ay"/"last 3 months" -> 3 months before today;
+  "last week"/"son hafta" -> 7 days before today; "last year"/"son yil" -> 1 year before today.
+- "son" / "latest" / "recent" / "guncel" / "gelismeler" / "durum" / "son durum" WITHOUT a
+  specific number+unit do NOT set date_from. Set date_from to null for these.
+- Only set date_from when the query contains explicit patterns like "son X gun/hafta/ay/yil"
+  or "last X days/weeks/months/years" or "since DATE".
 - Only set a field if explicitly mentioned in the query. If unclear, set to null.
 - Respond ONLY with valid JSON matching the schema.
 
