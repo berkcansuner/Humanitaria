@@ -17,13 +17,19 @@ async def lifespan(app: FastAPI):
     """Warm up RAG components and start the ingestion scheduler at startup."""
     settings = get_settings()
 
-    # Warm up vectorstore and LLM chain so the first request is not slow
+    # Warm up RAG components so the first request is not slow.
+    # Embedding warmup runs a dummy query to load the model into memory.
     try:
         from rag.retriever import _get_vectorstore
         from rag.chain import build_chain
+        from rag.embeddings import OllamaLangChainEmbeddings
         _get_vectorstore()
         build_chain()
-        logger.info("RAG components warmed up (vectorstore + chain)")
+        logger.info("RAG vectorstore + chain warmed up")
+        # Embed a short dummy text to load the model into GPU/CPU memory
+        embedder = OllamaLangChainEmbeddings()
+        embedder.embed_query("warmup")
+        logger.info("Embedding model warmed up")
     except Exception as exc:
         logger.warning("Startup warmup failed (non-fatal, will retry on first request): %s", exc)
 

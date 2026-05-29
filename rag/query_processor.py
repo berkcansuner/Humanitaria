@@ -99,7 +99,7 @@ def _get_llm_extractor():
             base_url=settings.OLLAMA_CLOUD_BASE_URL,
             api_key=settings.OLLAMA_CLOUD_API_KEY,
             temperature=0.0,
-            timeout=15,
+            timeout=5,
         )
         _llm_extractor = llm.with_structured_output(QueryFilters, method="json_mode")
     return _llm_extractor
