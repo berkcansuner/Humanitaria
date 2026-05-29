@@ -30,6 +30,23 @@ def _is_greeting(text: str) -> bool:
     return bool(_GREETING_PATTERN.match(text.strip()))
 
 
+def _no_docs_message(filters: dict) -> str:
+    """Return a clear Turkish/English message when the retriever finds nothing."""
+    parts = []
+    if filters.get("country"):
+        parts.append(f"**{filters['country']}**")
+    if filters.get("theme"):
+        parts.append(f"**{filters['theme']}**")
+    if filters.get("date"):
+        parts.append("belirtilen tarih aralığı")
+    scope = " + ".join(parts) if parts else "bu sorgu"
+    return (
+        f"Veritabanımızda {scope} için eşleşen belge bulunamadı.\n\n"
+        "Daha fazla belge eklemek için ingestion çalıştırın:\n"
+        "```\npython scripts/ingest.py --limit 500\n```"
+    )
+
+
 class ChatMessage(BaseModel):
     role: Literal["user", "assistant"]
     content: str
@@ -77,6 +94,10 @@ async def chat(req: ChatRequest):
         retriever = build_retriever(filter=filters if filters else None)
         docs = await retriever.ainvoke(req.message)
         docs = rerank_by_recency(docs)
+
+        if not docs:
+            msg = _no_docs_message(filters)
+            return ChatResponse(answer=msg, sources=[], session_id=session_id)
 
         context = "\n\n---\n\n".join(doc.page_content for doc in docs)
         sources = [
@@ -132,6 +153,16 @@ async def chat_stream(req: ChatRequest):
             retriever = build_retriever(filter=filters if filters else None)
             docs = await retriever.ainvoke(req.message)
             docs = rerank_by_recency(docs)
+
+            if not docs:
+                msg = _no_docs_message(filters)
+                yield ServerSentEvent(
+                    event="token",
+                    data=json.dumps({"content": msg}, ensure_ascii=False),
+                )
+                yield ServerSentEvent(event="session", data=json.dumps({"session_id": session_id}))
+                yield ServerSentEvent(event="done", data="{}")
+                return
 
             analysis = analyze_query(req.message, filters=filters)
 
