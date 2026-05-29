@@ -25,10 +25,14 @@ def _get_vectorstore() -> Chroma:
 
 
 def _build_chroma_filter(filters: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    """Convert a flat filter dict to explicit ChromaDB $and/$eq format.
+    """Convert a flat filter dict to explicit ChromaDB operator format.
 
     Chroma 1.0+ requires an explicit $and wrapper for multi-field queries.
     Single-field filters are passed as-is to avoid unnecessary wrapping.
+
+    Country uses $contains instead of $eq because ReliefWeb stores full
+    official names like "Iran (Islamic Republic of)" while our canonical
+    map uses shorter forms like "Iran".
     """
     if not filters:
         return None
@@ -37,6 +41,9 @@ def _build_chroma_filter(filters: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         if isinstance(val, dict):
             # Already an operator dict, e.g. {"$gte": "2024-01-01"}
             conditions.append({key: val})
+        elif key == "country":
+            # Substring match handles "Iran" ⊂ "Iran (Islamic Republic of)"
+            conditions.append({key: {"$contains": val}})
         else:
             conditions.append({key: {"$eq": val}})
     if len(conditions) == 1:

@@ -9,9 +9,10 @@ class TestChromaFilter:
         assert _build_chroma_filter({}) is None
         assert _build_chroma_filter(None) is None
 
-    def test_single_field_no_and_wrapping(self):
+    def test_single_field_country_uses_contains(self):
+        # Country uses $contains to match "Iran (Islamic Republic of)" etc.
         result = _build_chroma_filter({"country": "Iran"})
-        assert result == {"country": {"$eq": "Iran"}}
+        assert result == {"country": {"$contains": "Iran"}}
 
     def test_operator_field_passed_through(self):
         result = _build_chroma_filter({"date": {"$gte": "2024-01-01"}})
@@ -20,14 +21,14 @@ class TestChromaFilter:
     def test_multi_field_uses_and(self):
         result = _build_chroma_filter({"country": "Iran", "theme": "Health"})
         assert result == {"$and": [
-            {"country": {"$eq": "Iran"}},
+            {"country": {"$contains": "Iran"}},
             {"theme": {"$eq": "Health"}},
         ]}
 
     def test_multi_field_with_operator(self):
         result = _build_chroma_filter({"country": "Iran", "date": {"$gte": "2024-01-01"}})
         assert result == {"$and": [
-            {"country": {"$eq": "Iran"}},
+            {"country": {"$contains": "Iran"}},
             {"date": {"$gte": "2024-01-01"}},
         ]}
 
@@ -51,7 +52,7 @@ class TestRetriever:
                     "k": settings.TOP_K_RETRIEVAL,
                     "fetch_k": settings.MMR_FETCH_K,
                     "lambda_mult": settings.MMR_LAMBDA,
-                    "filter": {"country": {"$eq": "Iran"}},
+                    "filter": {"country": {"$contains": "Iran"}},
                 },
             )
 

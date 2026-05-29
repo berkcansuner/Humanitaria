@@ -1,10 +1,22 @@
 import hashlib
 import logging
+import re
 from typing import Dict, Any, Optional
 
 from ingestion.file_loader import strip_html
 
 logger = logging.getLogger(__name__)
+
+
+def _normalize_country_name(name: str) -> str:
+    """Shorten official country names by removing parenthetical suffixes.
+
+    Examples:
+      "Iran (Islamic Republic of)"  → "Iran"
+      "Bolivia (Plurinational State of)" → "Bolivia"
+      "occupied Palestinian territory"  → unchanged (no parens)
+    """
+    return re.sub(r'\s*\([^)]+\)\s*$', '', name).strip()
 
 
 def _sanitize(value) -> str:
@@ -63,7 +75,7 @@ def parse_report(raw: Dict[str, Any]) -> Dict[str, Any]:
     date_field = fields.get("date")
     date = _normalize_date(_safe_get(date_field, "created") if isinstance(date_field, dict) else "")
     country_field = fields.get("primary_country")
-    country = _safe_get(country_field, "name") if isinstance(country_field, dict) else ""
+    country = _normalize_country_name(_safe_get(country_field, "name")) if isinstance(country_field, dict) else ""
     themes = fields.get("theme")
     theme = _safe_list_get(themes, 0, "name")
     formats = fields.get("format")
@@ -99,7 +111,7 @@ def parse_disaster(raw: Dict[str, Any]) -> Dict[str, Any]:
     date_field = fields.get("date")
     date = _normalize_date(_safe_get(date_field, "created") if isinstance(date_field, dict) else "")
     country_field = fields.get("primary_country")
-    country = _safe_get(country_field, "name") if isinstance(country_field, dict) else ""
+    country = _normalize_country_name(_safe_get(country_field, "name")) if isinstance(country_field, dict) else ""
     primary_type = fields.get("primary_type")
     theme = _safe_get(primary_type, "name") if isinstance(primary_type, dict) else ""
     if not theme:
@@ -121,7 +133,7 @@ def parse_disaster(raw: Dict[str, Any]) -> Dict[str, Any]:
 
 def parse_country(raw: Dict[str, Any]) -> Dict[str, Any]:
     fields = raw.get("fields") or {}
-    name = _sanitize(fields.get("name", ""))
+    name = _normalize_country_name(_sanitize(fields.get("name", "")))
     url = _safe_get(fields, "url", f"https://reliefweb.int/countries/{raw.get('id', '')}")
     doc_id = hashlib.sha256(url.encode()).hexdigest()
     date_field = fields.get("date")
