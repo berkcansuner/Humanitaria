@@ -1,10 +1,11 @@
 import logging
-from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.runnables import Runnable
+from langchain_openai import ChatOpenAI
+
 from config import get_settings
-from rag.history import get_session_history
 
 logger = logging.getLogger(__name__)
 
@@ -21,10 +22,22 @@ _SYSTEM_PROMPT = (
     "kullanıcının hangi detayları belirtebileceğini (ülke, zaman aralığı, konu) kısaça belirt."
 )
 
-_chain: RunnableWithMessageHistory | None = None
+_chain: Runnable | None = None
 
 
-def build_chain() -> RunnableWithMessageHistory:
+def build_chain() -> Runnable:
+    """Return the cached LCEL chain (prompt | llm | StrOutputParser).
+
+    History management is intentionally external: callers retrieve
+    the session history, pass it as chat_history, and persist the
+    new exchange after the chain returns.  This replaces the now-
+    deprecated RunnableWithMessageHistory wrapper.
+
+    Input keys expected by the chain:
+      - question:     str   — the user's message
+      - context:      str   — retrieved document text
+      - chat_history: list  — list of BaseMessage from rag.history
+    """
     global _chain
     if _chain is not None:
         return _chain
@@ -44,12 +57,5 @@ def build_chain() -> RunnableWithMessageHistory:
         ("human", "{question}"),
     ])
 
-    chain = prompt | llm | StrOutputParser()
-
-    _chain = RunnableWithMessageHistory(
-        chain,
-        get_session_history,
-        input_messages_key="question",
-        history_messages_key="chat_history",
-    )
+    _chain = prompt | llm | StrOutputParser()
     return _chain

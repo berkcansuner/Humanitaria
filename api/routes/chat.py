@@ -12,7 +12,7 @@ from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 from rag.query_processor import extract_filters, analyze_query
 from rag.retriever import build_retriever, rerank_by_recency
 from rag.chain import build_chain
-from rag.history import get_session_history, populate_history_from_messages
+from rag.history import get_session_history
 
 logger = logging.getLogger(__name__)
 
@@ -92,11 +92,19 @@ async def chat(req: ChatRequest):
             if doc.metadata.get("url") and doc.metadata.get("title")
         ]
 
+        history = get_session_history(session_id)
+        chat_history = list(history.messages)
+
         chain = build_chain()
-        answer = await chain.ainvoke(
-            {"question": req.message, "context": context},
-            config={"configurable": {"session_id": session_id}},
-        )
+        answer = await chain.ainvoke({
+            "question": req.message,
+            "context": context,
+            "chat_history": chat_history,
+        })
+
+        history.add_message(HumanMessage(content=req.message))
+        history.add_message(AIMessage(content=answer))
+
         return ChatResponse(answer=answer, sources=sources, session_id=session_id)
 
     except Exception as e:
@@ -120,8 +128,6 @@ async def chat_stream(req: ChatRequest):
 
     async def event_generator():
         try:
-            # Retrieval and analysis now inside the try block so any failure
-            # is surfaced as an SSE 'error' event instead of a raw 500.
             filters = extract_filters(req.message)
             retriever = build_retriever(filter=filters if filters else None)
             docs = await retriever.ainvoke(req.message)
@@ -143,6 +149,9 @@ async def chat_stream(req: ChatRequest):
             ]
             context = "\n\n---\n\n".join(doc.page_content for doc in docs)
 
+            history = get_session_history(session_id)
+            chat_history = list(history.messages)
+
             chain = build_chain()
 
             if analysis and analysis.get("is_vague"):
@@ -159,15 +168,22 @@ async def chat_stream(req: ChatRequest):
                     }, ensure_ascii=False),
                 )
 
-            async for chunk in chain.astream(
-                {"question": req.message, "context": context},
-                config={"configurable": {"session_id": session_id}},
-            ):
+            full_response = ""
+            async for chunk in chain.astream({
+                "question": req.message,
+                "context": context,
+                "chat_history": chat_history,
+            }):
                 if chunk:
+                    full_response += chunk
                     yield ServerSentEvent(
                         event="token",
                         data=json.dumps({"content": chunk}, ensure_ascii=False),
                     )
+
+            # Persist the completed exchange to session history
+            history.add_message(HumanMessage(content=req.message))
+            history.add_message(AIMessage(content=full_response))
 
             if sources:
                 yield ServerSentEvent(
