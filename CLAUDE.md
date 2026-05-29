@@ -2,74 +2,102 @@
 
 ## Proje Amacı
 İnsani yardım izleme-değerlendirme (M&E) ekibi için ReliefWeb içerikleri üzerinden
-Türkçe/İngilizce çok dilli sohbet yapılabilen RAG sistemi.
-Şu an yerel geliştirme aşamasındadır; deployment kararı proje olgunlaştıktan sonra verilecektir.
+Türkçe/İngilizce çok dilli sohbet yapılabilen RAG sistemi. Şu an yerel geliştirme aşamasında;
+deployment kararı proje olgunlaştıktan sonra verilecek.
 
 ---
 
 ## Mimari
 
 ```
-ReliefWeb API → Ingestion Pipeline → ChromaDB (yerel dosya)
+ReliefWeb API → Ingestion Pipeline → ChromaDB (yerel dosya, ./chroma_db/)
                                             ↓
-Kullanıcı → Vue 3 Frontend → FastAPI (localhost:8000) → RAG Engine (LangChain) → Ollama Cloud LLM
-                                                              ↑
-                                          Yerel Ollama (embedding, localhost:11434)
+Kullanıcı → Vue 3 Frontend → FastAPI (localhost:8001) → RAG Engine (LangChain LCEL)
+                                          ↓                        ↓              ↓
+                          Yerel Ollama (embedding +        Gemini (chat yanıtı)
+                          query processor, :11434)
 ```
+
+- **Chat yanıtı:** Google Gemini (OpenAI-uyumlu endpoint).
+- **Query processor + embedding:** yerel Ollama (`localhost:11434`).
 
 ---
 
 ## Tech Stack
 
-| Katman        | Teknoloji                       | Notlar                                     |
-|---------------|---------------------------------|--------------------------------------------|
-| LLM           | Ollama Cloud API                | https://ollama.com/v1 — `qwen3.5:397b-cloud` |
-| Embedding     | Yerel Ollama — qwen3-embedding:8b | localhost:11434, **4096 dim**, MTEB çok dilli #1 |
-| Vector DB     | ChromaDB                        | Gömülü, dosya tabanlı — `./chroma_db/`     |
-| Backend       | Python 3.12 / FastAPI           | REST API + Vue statik dosya sunumu          |
-| RAG Framework | LangChain LCEL                   | RunnableWithMessageHistory + MMR retriever (session-based) |
-| Web UI        | Vue 3 + Vite                    | Chat arayüzü, kaynak gösterimi              |
+| Katman | Teknoloji | Notlar |
+|--------|-----------|--------|
+| Chat LLM | Google Gemini `gemini-2.5-flash` | OpenAI-uyumlu endpoint; `CHAT_LLM_PROVIDER` ile ollama'ya geçilebilir |
+| Query processor LLM | Yerel Ollama `qwen2.5:0.5b` | Filtre çıkarma (json_mode) + rule-based fallback |
+| Embedding | Yerel Ollama `qwen3-embedding:8b` | `localhost:11434`, **4096 dim** |
+| Vector DB | ChromaDB | Gömülü, dosya tabanlı — `./chroma_db/` |
+| Backend | Python 3.12 / FastAPI | REST + SSE; Vue statik sunumu; port **8001** |
+| RAG Framework | LangChain LCEL | Düz `prompt \| llm \| StrOutputParser`; history route'da manuel beslenir |
+| Web UI | Vue 3 + Vite | Chat arayüzü, SSE streaming, kaynak gösterimi |
 
 ---
 
 ## Dosya Yerleşim İlkeleri
 
-- **Kök dizin:** Giriş noktaları — `config.py`, `requirements.txt`
-- **`api/`** — FastAPI uygulaması, route'lar (`chat.py`, `health.py`)
-- **`frontend/`** — Vue 3 SPA (`src/`), Vite build (`dist/`)
-- **`ingestion/`** — ReliefWeb'den veri çekme, parse etme, güncelleme mantığı
-- **`rag/`** — embedding, retriever, LangChain zinciri, query processor
-- **`tests/`** — pytest testleri, modül yapısını yansıtır
-- **`scripts/`** — CLI komutları (`ingest.py` vb.)
-- **`chroma_db/`** — ChromaDB verileri, `.gitignore`'da
+- **Kök:** giriş noktaları — `config.py`, `requirements.txt`, `MEMORY.md`
+- **`api/`** — FastAPI app + route'lar (`chat.py`, `health.py`)
+- **`frontend/`** — Vue 3 SPA (`src/`), Vite build (`dist/`), `src/utils/parseSSE.js`
+- **`ingestion/`** — `client.py`, `parser.py`, `chunker.py`, `embedder.py`, `store.py`,
+  `pipeline.py`, `file_loader.py` (HTML strip + PDF), `scheduler.py` (APScheduler)
+- **`rag/`** — `embeddings.py`, `retriever.py`, `chain.py`, `query_processor.py`, `history.py`
+- **`tests/`** — pytest, modül yapısını yansıtır
+- **`scripts/`** — CLI (`ingest.py`)
+- **`chroma_db/`** — ChromaDB verisi, `.gitignore`'da
 
 ---
 
 ## Ortam Değişkenleri (.env)
 
 ```env
-# Ollama Cloud (LLM)
-OLLAMA_CLOUD_API_KEY=xxx
-OLLAMA_CLOUD_BASE_URL=https://ollama.com/v1
-OLLAMA_LLM_MODEL=qwen3.5:397b-cloud
+# Chat LLM provider: "gemini" veya "ollama"
+CHAT_LLM_PROVIDER=gemini
 
-# Ollama Local (Embedding)
+# Google Gemini (chat — OpenAI uyumlu endpoint)
+GEMINI_API_KEY=xxx
+GEMINI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+GEMINI_LLM_MODEL=gemini-2.5-flash
+
+# Ollama Cloud/Local (query processor LLM) — şu an yerele işaret ediyor
+OLLAMA_CLOUD_API_KEY=ollama
+OLLAMA_CLOUD_BASE_URL=http://localhost:11434/v1
+OLLAMA_LLM_MODEL=qwen2.5:0.5b
+
+# Ollama Local (embedding)
 OLLAMA_LOCAL_BASE_URL=http://localhost:11434
 OLLAMA_EMBED_MODEL=qwen3-embedding:8b
 
 # ReliefWeb
-RELIEFWEB_APPNAME=berk_sitrep-u6dANX1qkKQivDDN   # URL param olarak gönderilir: ?appname=...
+RELIEFWEB_APPNAME=xxx           # URL param: ?appname=...  (Bearer auth YOK)
 RELIEFWEB_BASE_URL=https://api.reliefweb.int/v2
 
-# ChromaDB
+# ChromaDB / Embedding
 CHROMA_DB_PATH=./chroma_db
 CHROMA_COLLECTION=reliefweb_docs
-EMBED_DIM=4096                  # qwen3-embedding:8b → 4096 dim; 4b varyantı → 2560
+EMBED_DIM=4096                  # qwen3-embedding:8b → 4096 (4b varyantı → 2560)
+EMBED_BATCH_SIZE=32
 
-# RAG
+# RAG retrieval
 CHUNK_SIZE=800
 CHUNK_OVERLAP=100
 TOP_K_RETRIEVAL=5
+MMR_FETCH_K=20
+MMR_LAMBDA=0.5
+RERANK_BY_DATE=True
+DATE_DECAY_FACTOR=0.3
+
+# Session / API / Ingestion
+HISTORY_WINDOW_K=5
+SESSION_MAX_MEMORY=1000
+REDIS_URL=                      # boşsa in-memory (LRU eviction)
+CORS_ORIGINS=http://localhost:5173,http://localhost:8001
+API_HOST=127.0.0.1
+API_PORT=8001
+FETCH_PDF_CONTENT=False         # PDF eklerini indir+parse et (yavaş, opsiyonel)
 INGEST_SCHEDULE_HOURS=12
 ```
 
@@ -77,86 +105,48 @@ INGEST_SCHEDULE_HOURS=12
 
 ## ReliefWeb API
 
-```python
-ENDPOINTS = {
-    "reports":   "/reports",   # PDF/HTML — ana kaynak (şu an sadece bu kullanılıyor)
-    "updates":   "/updates",   # Haberler, durum güncellemeleri
-    "disasters": "/disasters", # Afet profilleri
-    "countries": "/countries", # Ülke profilleri
-}
+`ingestion/client.py` → `ENDPOINT_CONFIG` 3 endpoint tanımlar: `reports` (ana kaynak),
+`disasters`, `countries`. (`/updates` ReliefWeb'de yok; `/reports` güncellemeleri kapsar.)
 
-# Çekilecek alanlar — bunlar ChromaDB'ye metadata olarak kaydedilir
-FIELDS = ["title", "body", "date.created", "source.name",
-          "primary_country.name", "theme.name", "format.name", "file"]
-
-# Yaygın tema değerleri (ReliefWeb taksonomisi — referans, zorunlu filtre değil)
-THEMES = ["Food and Nutrition", "Health", "Shelter and NFI",
-          "Water Sanitation Hygiene", "Protection", "Education",
-          "Logistics and Telecommunications", "Coordination"]
-```
+Çekilen alanlar metadata olur: `title, body, date.created, source.name,
+primary_country.name, theme.name, format.name, file`. Sıralama `date.created:desc`.
 
 **Ingestion kuralları:**
-- `date.created`, `primary_country.name`, `theme.name` her chunk'a metadata olarak eklenir
-- Sıralama: `date.created:desc` — en yeni belgeler önce işlenir
-- Sayfalama: `offset + limit` döngüsü, limit max 1000
+- `doc_id = sha256(kanonik reliefweb.int/report/{id})` — dosya URL'si değişse bile sabit kalır
+- Upsert öncesi eski chunk'lar silinir (`delete_document_chunks`) → yetim chunk kalmaz
+- Embedding'ler dokümanlar arası toplu (`EMBED_BATCH_SIZE`), upsert tek seferde
+- 429/5xx → exponential backoff; 4xx → hemen başarısız (retry yok)
+- Ülke adları normalize edilir ("Iran (Islamic Republic of)" → retriever `$in` ile eşler)
+- `scheduler.py` — APScheduler + watermark (`chroma_db/.last_ingest.json`) ile incremental
 
 ---
 
-## RAG Zinciri
+## RAG Pipeline
 
-Sistem üç sorgu tipini ayırt etmeli ve buna göre retrieval yapmalı:
+**Query processor** (`rag/query_processor.py`): LLM-first filtre çıkarma (`json_mode` +
+`QueryFilters` Pydantic) → başarısızsa rule-based fallback (`_COUNTRY_MAP`/`_THEME_MAP`/
+`_DOCTYPE_MAP` + regex). dict-based cache (512 giriş, `None` cache'lenmez), LLM timeout 5s.
+"şu anda / güncel / latest" gibi belirsiz ifadeler date filtresi ÜRETMEZ; `date_from`
+bugün/gelecek ise reddedilir.
 
+**Retriever** (`rag/retriever.py`): ChromaDB MMR (`k=TOP_K_RETRIEVAL`, `fetch_k=MMR_FETCH_K`,
+`lambda_mult=MMR_LAMBDA`). `_build_chroma_filter` → `$and`/`$eq`; country `$in` (kısa+tam ad).
+**Tarih filtresi ChromaDB'de DEĞİL** — `apply_date_filter` ile Python'da post-retrieval
+(ChromaDB string `$gte` desteklemez). `rerank_by_recency` → MMR + üstel recency blend.
+
+**Chain** (`rag/chain.py`): düz LCEL `prompt | llm | StrOutputParser`. Provider'a göre
+Gemini veya Ollama `ChatOpenAI`. History route'da `get_session_history` ile alınır,
+`chat_history` olarak geçilir, yanıt sonrası kaydedilir (RunnableWithMessageHistory YOK).
+
+**ChromaDB metadata şeması (her chunk):**
 ```python
-# Aşama 1 — Sorgu önişleme (rule-based, LLM upgrade planlanıyor)
-# Kullanıcı sorgusundan yapısal filtreler çıkarılır:
-# "İran'da son 1 ay" → {country: "Iran", date: {"$gte": "2026-04-07"}}
-# "gıda sektörü"     → {theme: "Food and Nutrition"}
-# "başa çıkma stratejileri" → {} (semantik arama yeterli)
-
-# Aşama 2 — Filtrelenmiş retrieval
-retriever = chroma.as_retriever(
-    search_type="mmr",
-    search_kwargs={
-        "k": 5,
-        "filter": extracted_filters  # boşsa saf semantik arama
-    }
-)
+{"doc_id", "url", "title", "country", "theme", "date" (YYYY-MM-DD),
+ "source", "format", "doctype"}  # doc_id orphan cleanup için kullanılır
 ```
 
-**ChromaDB metadata şeması** (her chunk için):
-```python
-# ChromaDB doküman ID'si (tekrar işlemeyi önler): sha256(url)
-# Metadata alanları (filtrelenebilir):
-{
-    "url":     "https://...",
-    "title":   "...",
-    "country": "Iran",
-    "theme":   "Food and Nutrition",
-    "date":    "2026-04-01",   # ISO format
-    "source":  "WFP",
-    "format":  "Situation Report",
-}
-```
-
-**LLM ve sistem promptu:**
-```python
-llm = ChatOpenAI(model="qwen3.5:397b-cloud", base_url="https://ollama.com/v1", streaming=True)
-chain = prompt | llm | StrOutputParser()  # LCEL zinciri
-wrapped = RunnableWithMessageHistory(chain, get_session_history, ...)
-# Türkçe system prompt: sadece sağlanan belgeleri kullan, kullanıcının dilinde yanıt ver
-```
-
-**Sorgu önişleme (LLM-first, rule-based fallback):**
-```python
-# 1. LLM (json_mode) ile filtre çıkarma → QueryFilters Pydantic modeli
-# 2. LLM başarısız → rule-based fallback (_COUNTRY_MAP, _THEME_MAP, _DOCTYPE_MAP, regex)
-# 3. Sonuçlar LRU cache (256 giriş) ile cache'lenir
-```
-
-**Streaming:**
-- `POST /chat/stream` — SSE endpoint, token-by-token yanıt
-- Frontend `fetch + ReadableStream` ile SSE parse eder
-- `POST /chat` — backward-compatible non-streaming endpoint
+**Endpoint'ler** (`api/routes/chat.py`): `POST /chat/stream` (SSE, token-by-token) +
+`POST /chat` (non-streaming). Boş retrieval → LLM'e gitmeden net "belge bulunamadı" mesajı.
+Selamlaşma → retrieval atlanır. Mesaj doğrulama: boş/4000+ karakter reddedilir.
 
 ---
 
@@ -171,23 +161,22 @@ wrapped = RunnableWithMessageHistory(chain, get_session_history, ...)
 
 ## Geliştirme Kuralları
 
-1. **API anahtarları** yalnızca `.env` içinde — asla kod veya commit'te
-2. **`chroma_db/`** `.gitignore`'da — vektör verisi repoya girmesin
-3. **Ingestion idempotent**: `doc_id = sha256(url)` — aynı belge iki kez işlenmez
-4. **Rate limiting**: ReliefWeb 429 → exponential backoff; Ollama timeout → retry x3
-5. **Loglama**: Her modülde `logger = logging.getLogger(__name__)`
-6. **Testler**: `tests/` altında `pytest`; ingestion, retriever ve chain için test yaz
+1. **API anahtarları** yalnızca `.env` içinde — asla kod veya commit'te.
+2. **`chroma_db/`** `.gitignore`'da — vektör verisi repoya girmesin.
+3. **Ingestion idempotent**: kanonik URL `doc_id` + upsert öncesi orphan temizliği.
+4. **Rate limiting**: ReliefWeb 429/5xx → backoff; 4xx → retry yok; Ollama → retry x3.
+5. **Loglama**: her modülde `logger = logging.getLogger(__name__)`.
+6. **Testler**: `tests/` altında pytest; değişiklikten sonra `python -m pytest tests/ -q`.
 
 ---
 
 ## Bilinen Kısıtlamalar
 
-- Embedding yerel çalışır — ingestion sırasında `ollama serve` ayakta olmalı
-- qwen3-embedding:8b → ~4.7GB RAM; yetersizse `qwen3-embedding:4b` (2.5GB) kullan
-- Görseller/infografikler doğrudan sorgulanamaz; başlık + açıklama metadata'sı index'lenir
-- "Son 1 ay" gibi göreceli tarihler sorgu önişleme adımında mutlak tarihe çevrilmeli
-- Session history in-memory only — server restart tüm oturumları temizler
-- `RunnableWithMessageHistory` deprecated (LangGraph migration gelecekte planlanıyor)
-- Query processor LLM-first (rule-based fallback) — LLM timeout → 5 saniye limit
-- `/updates` endpoint'i ReliefWeb API'de mevcut değil — `/reports` zaten güncellemeleri kapsıyor
-- Streaming SSE mevcut (`POST /chat/stream`) — frontend token-by-token render eder
+- Embedding yerel çalışır — ingestion sırasında `ollama serve` ayakta olmalı; yavaştır.
+- `qwen3-embedding:8b` ~4.7GB RAM; yetersizse `qwen3-embedding:4b` (2560 dim, `EMBED_DIM` güncelle).
+- Görseller/infografikler doğrudan sorgulanamaz; başlık + açıklama metadata'sı index'lenir.
+- Session history varsayılan in-memory (restart'ta silinir); `REDIS_URL` ile kalıcı yapılabilir.
+- Query processor modeli küçük (`qwen2.5:0.5b`) — filtre kalitesi sınırlı, rule-based fallback var.
+- Pipeline resume kısmi (watermark var, uzun kesinti tam test edilmedi).
+- CORS şu an localhost origin'leri — production'da `CORS_ORIGINS` daraltılmalı.
+- PDF içerik ingestion opsiyonel (`FETCH_PDF_CONTENT=False`); varsayılan sadece HTML `body`.
