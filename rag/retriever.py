@@ -64,6 +64,10 @@ def _build_chroma_filter(filters: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                 conditions.append({key: {"$in": [val, full_name]}})
             else:
                 conditions.append({key: {"$eq": val}})
+        elif key == "date":
+            # ChromaDB 1.5.9 only supports $gte/$lte for numeric values, not strings.
+            # Date filtering is handled in Python after retrieval (see routes/chat.py).
+            pass
         else:
             conditions.append({key: {"$eq": val}})
     if len(conditions) == 1:
@@ -75,15 +79,33 @@ def build_retriever(filter: Optional[Dict[str, Any]] = None):
     vectorstore = _get_vectorstore()
     settings = get_settings()
     chroma_filter = _build_chroma_filter(filter)
+    # When a date filter is present, fetch more candidates so post-filtering
+    # in Python has enough docs to work with after the date cut.
+    has_date_filter = isinstance(filter, dict) and "date" in filter
+    fetch_k = settings.MMR_FETCH_K * 4 if has_date_filter else settings.MMR_FETCH_K
     return vectorstore.as_retriever(
         search_type="mmr",
         search_kwargs={
             "k": settings.TOP_K_RETRIEVAL,
-            "fetch_k": settings.MMR_FETCH_K,
+            "fetch_k": max(fetch_k, settings.TOP_K_RETRIEVAL),
             "lambda_mult": settings.MMR_LAMBDA,
             "filter": chroma_filter,
         },
     )
+
+
+def apply_date_filter(docs: List[Document], date_filter: Optional[Dict[str, Any]]) -> List[Document]:
+    """Post-retrieval date filter using Python string comparison (YYYY-MM-DD is lexicographic).
+
+    ChromaDB 1.5.9 does not support $gte/$lte on string metadata fields,
+    so date filtering is done here after retrieval.
+    """
+    if not date_filter or not isinstance(date_filter, dict):
+        return docs
+    date_from = date_filter.get("$gte", "")
+    if not date_from:
+        return docs
+    return [d for d in docs if d.metadata.get("date", "0000-00-00") >= date_from]
 
 
 def rerank_by_recency(docs: List[Document], decay_factor: Optional[float] = None) -> List[Document]:

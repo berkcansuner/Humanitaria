@@ -10,7 +10,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 
 from rag.query_processor import extract_filters, analyze_query
-from rag.retriever import build_retriever, rerank_by_recency
+from rag.retriever import build_retriever, rerank_by_recency, apply_date_filter
 from rag.chain import build_chain
 from rag.history import get_session_history
 
@@ -93,6 +93,7 @@ async def chat(req: ChatRequest):
         filters = extract_filters(req.message)
         retriever = build_retriever(filter=filters if filters else None)
         docs = await retriever.ainvoke(req.message)
+        docs = apply_date_filter(docs, filters.get("date"))
         docs = rerank_by_recency(docs)
 
         if not docs:
@@ -152,6 +153,7 @@ async def chat_stream(req: ChatRequest):
             filters = extract_filters(req.message)
             retriever = build_retriever(filter=filters if filters else None)
             docs = await retriever.ainvoke(req.message)
+            docs = apply_date_filter(docs, filters.get("date"))
             docs = rerank_by_recency(docs)
 
             if not docs:
