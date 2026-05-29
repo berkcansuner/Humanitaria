@@ -19,9 +19,10 @@ class TestChromaFilter:
         result = _build_chroma_filter({"country": "Yemen"})
         assert result == {"country": {"$eq": "Yemen"}}
 
-    def test_operator_field_passed_through(self):
+    def test_date_field_excluded(self):
+        # Date is excluded from Chroma (applied in Python post-retrieval)
         result = _build_chroma_filter({"date": {"$gte": "2024-01-01"}})
-        assert result == {"date": {"$gte": "2024-01-01"}}
+        assert result is None
 
     def test_multi_field_uses_and(self):
         result = _build_chroma_filter({"country": "Iran", "theme": "Health"})
@@ -30,12 +31,11 @@ class TestChromaFilter:
             {"theme": {"$eq": "Health"}},
         ]}
 
-    def test_multi_field_with_operator(self):
+    def test_date_excluded_from_chroma_filter(self):
+        # Date filtering is done in Python post-retrieval; ChromaDB $gte only supports numbers
         result = _build_chroma_filter({"country": "Iran", "date": {"$gte": "2024-01-01"}})
-        assert result == {"$and": [
-            {"country": {"$in": ["Iran", "Iran (Islamic Republic of)"]}},
-            {"date": {"$gte": "2024-01-01"}},
-        ]}
+        # date key is stripped, only country remains
+        assert result == {"country": {"$in": ["Iran", "Iran (Islamic Republic of)"]}}
 
 
 class TestRetriever:
@@ -79,17 +79,16 @@ class TestRetriever:
                 },
             )
 
-    def test_build_retriever_multi_field_filter_uses_and(self):
+    def test_build_retriever_date_excluded_from_chroma(self):
         with patch("rag.retriever._get_vectorstore") as mock_get_vs:
-            settings = get_settings()
             mock_vs = MagicMock()
             mock_vs.as_retriever.return_value = MagicMock()
             mock_get_vs.return_value = mock_vs
             build_retriever(filter={"country": "Iran", "date": {"$gte": "2024-01-01"}})
             call_kwargs = mock_vs.as_retriever.call_args[1]
             chroma_filter = call_kwargs["search_kwargs"]["filter"]
-            assert "$and" in chroma_filter
-            assert len(chroma_filter["$and"]) == 2
+            # Only country remains; date is applied in Python post-retrieval
+            assert chroma_filter == {"country": {"$in": ["Iran", "Iran (Islamic Republic of)"]}}
 
     def test_get_vectorstore_caches_chroma(self):
         with patch("rag.retriever.Chroma") as MockChroma:

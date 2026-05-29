@@ -55,21 +55,23 @@ def _build_chroma_filter(filters: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         return None
     conditions = []
     for key, val in filters.items():
-        if isinstance(val, dict):
-            # Already an operator dict, e.g. {"$gte": "2024-01-01"}
-            conditions.append({key: val})
+        if key == "date":
+            # ChromaDB 1.5.9 only supports $gte/$lte for numeric values, not strings.
+            # Date filtering is handled in Python after retrieval (see routes/chat.py).
+            pass
         elif key == "country":
             full_name = _COUNTRY_RELIEFWEB_ALIASES.get(val)
             if full_name:
                 conditions.append({key: {"$in": [val, full_name]}})
             else:
                 conditions.append({key: {"$eq": val}})
-        elif key == "date":
-            # ChromaDB 1.5.9 only supports $gte/$lte for numeric values, not strings.
-            # Date filtering is handled in Python after retrieval (see routes/chat.py).
-            pass
+        elif isinstance(val, dict):
+            # Other operator dicts (e.g. {"$in": [...]}) passed through as-is
+            conditions.append({key: val})
         else:
             conditions.append({key: {"$eq": val}})
+    if not conditions:
+        return None
     if len(conditions) == 1:
         return conditions[0]
     return {"$and": conditions}
