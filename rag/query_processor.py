@@ -153,8 +153,15 @@ def _turkish_lower(text: str) -> str:
 
 
 def _match_word(keyword: str, text: str) -> bool:
-    """Return True if keyword appears as a whole word in text (word-boundary safe)."""
-    return bool(re.search(r"\b" + re.escape(keyword) + r"\b", text))
+    """Return True if keyword appears as a word (or word-prefix for long keywords) in text.
+
+    Short keywords (≤3 chars, e.g. 'su') use exact word boundaries to avoid false
+    positives. Longer keywords use only a START boundary so Turkish agglutinative
+    suffixes are accepted: 'iran' matches 'iranda' (İran'da), 'irandan' (from Iran).
+    """
+    if len(keyword) <= 3:
+        return bool(re.search(r"\b" + re.escape(keyword) + r"\b", text))
+    return bool(re.search(r"\b" + re.escape(keyword), text))
 
 
 def _extract_filters_rule_based(query: str) -> Dict[str, Any]:

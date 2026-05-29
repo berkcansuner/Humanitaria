@@ -9,10 +9,15 @@ class TestChromaFilter:
         assert _build_chroma_filter({}) is None
         assert _build_chroma_filter(None) is None
 
-    def test_single_field_country_uses_contains(self):
-        # Country uses $contains to match "Iran (Islamic Republic of)" etc.
+    def test_single_field_country_uses_in_for_aliased(self):
+        # Countries with full ReliefWeb names get $in with both forms
         result = _build_chroma_filter({"country": "Iran"})
-        assert result == {"country": {"$contains": "Iran"}}
+        assert result == {"country": {"$in": ["Iran", "Iran (Islamic Republic of)"]}}
+
+    def test_single_field_country_eq_for_non_aliased(self):
+        # Countries without a known alias get $eq
+        result = _build_chroma_filter({"country": "Yemen"})
+        assert result == {"country": {"$eq": "Yemen"}}
 
     def test_operator_field_passed_through(self):
         result = _build_chroma_filter({"date": {"$gte": "2024-01-01"}})
@@ -21,14 +26,14 @@ class TestChromaFilter:
     def test_multi_field_uses_and(self):
         result = _build_chroma_filter({"country": "Iran", "theme": "Health"})
         assert result == {"$and": [
-            {"country": {"$contains": "Iran"}},
+            {"country": {"$in": ["Iran", "Iran (Islamic Republic of)"]}},
             {"theme": {"$eq": "Health"}},
         ]}
 
     def test_multi_field_with_operator(self):
         result = _build_chroma_filter({"country": "Iran", "date": {"$gte": "2024-01-01"}})
         assert result == {"$and": [
-            {"country": {"$contains": "Iran"}},
+            {"country": {"$in": ["Iran", "Iran (Islamic Republic of)"]}},
             {"date": {"$gte": "2024-01-01"}},
         ]}
 
@@ -52,7 +57,7 @@ class TestRetriever:
                     "k": settings.TOP_K_RETRIEVAL,
                     "fetch_k": settings.MMR_FETCH_K,
                     "lambda_mult": settings.MMR_LAMBDA,
-                    "filter": {"country": {"$contains": "Iran"}},
+                    "filter": {"country": {"$in": ["Iran", "Iran (Islamic Republic of)"]}},
                 },
             )
 

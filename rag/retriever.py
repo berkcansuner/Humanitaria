@@ -24,15 +24,32 @@ def _get_vectorstore() -> Chroma:
     )
 
 
+# ReliefWeb stores some countries under their full official UN names.
+# ingestion/parser._normalize_country_name strips these for new ingests,
+# but existing data uses the full forms. $in covers both.
+_COUNTRY_RELIEFWEB_ALIASES: Dict[str, str] = {
+    "Iran":               "Iran (Islamic Republic of)",
+    "Syria":              "Syrian Arab Republic",
+    "Turkey":             "Türkiye",
+    "State of Palestine": "occupied Palestinian territory",
+    "Bolivia":            "Bolivia (Plurinational State of)",
+    "Venezuela":          "Venezuela (Bolivarian Republic of)",
+    "Moldova":            "Republic of Moldova",
+    "Tanzania":           "United Republic of Tanzania",
+    "South Korea":        "Republic of Korea",
+    "North Korea":        "Democratic People's Republic of Korea",
+}
+
+
 def _build_chroma_filter(filters: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Convert a flat filter dict to explicit ChromaDB operator format.
 
     Chroma 1.0+ requires an explicit $and wrapper for multi-field queries.
     Single-field filters are passed as-is to avoid unnecessary wrapping.
 
-    Country uses $contains instead of $eq because ReliefWeb stores full
-    official names like "Iran (Islamic Republic of)" while our canonical
-    map uses shorter forms like "Iran".
+    Country uses $in with both the canonical short name and the full ReliefWeb
+    official name so queries work on both current data (full names) and
+    future re-ingested data (normalized short names via parser).
     """
     if not filters:
         return None
@@ -42,8 +59,11 @@ def _build_chroma_filter(filters: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             # Already an operator dict, e.g. {"$gte": "2024-01-01"}
             conditions.append({key: val})
         elif key == "country":
-            # Substring match handles "Iran" ⊂ "Iran (Islamic Republic of)"
-            conditions.append({key: {"$contains": val}})
+            full_name = _COUNTRY_RELIEFWEB_ALIASES.get(val)
+            if full_name:
+                conditions.append({key: {"$in": [val, full_name]}})
+            else:
+                conditions.append({key: {"$eq": val}})
         else:
             conditions.append({key: {"$eq": val}})
     if len(conditions) == 1:
