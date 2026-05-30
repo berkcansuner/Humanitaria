@@ -5,6 +5,7 @@ from functools import lru_cache
 from typing import Dict, Any, List, Optional
 
 from langchain_core.documents import Document
+from langchain_core.vectorstores import VectorStore
 from langchain_chroma import Chroma
 from langchain_pinecone import PineconeVectorStore
 from pinecone import Pinecone
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 @lru_cache(maxsize=1)
-def _get_vectorstore():
+def _get_vectorstore() -> VectorStore:
     settings = get_settings()
     embeddings = get_embeddings()
     if settings.VECTOR_STORE_PROVIDER == "pinecone":
