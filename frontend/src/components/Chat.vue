@@ -500,16 +500,14 @@ function applySuggestion(msg, type, value) {
 
 .clarification-card {
   margin-top: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  background-color: var(--color-primary-fixed);
-  border: 1px solid var(--color-primary-fixed);
-  border-radius: var(--radius-md);
+  padding-top: var(--space-3);
+  border-top: 1px dashed var(--color-border);
 }
 
 .clarification-message {
   margin: 0 0 var(--space-2) 0;
-  font-size: var(--text-sm);
-  color: var(--color-accent);
+  font-size: var(--text-xs);
+  color: var(--color-muted);
   font-weight: 600;
 }
 
