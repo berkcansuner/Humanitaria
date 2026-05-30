@@ -6,7 +6,7 @@ import './SuggestionCard.css'
 // `chips: false` -> free-text only (with autocomplete); `true` -> chips + text.
 const STEP_DEFS = [
   { key: 'country', src: 'countries', chips: false, title: 'Hangi ülke hakkında bilgi almak istiyorsunuz?', placeholder: 'Ülke yazın…' },
-  { key: 'date', src: 'time_periods', chips: true, title: 'Hangi zaman aralığı?', placeholder: 'veya zaman aralığı yazın…' },
+  { key: 'date', src: 'time_periods', chips: false, title: 'Hangi zaman aralığı?', placeholder: 'Zaman aralığı yazın…' },
   { key: 'theme', src: 'themes', chips: true, title: 'Hangi konu?', placeholder: 'veya bir konu yazın…' },
 ]
 

@@ -159,9 +159,9 @@
   position: absolute;
   left: var(--space-4);
   right: var(--space-4);
-  /* open upward so the list never overlaps the answer/sources below the card */
-  bottom: 100%;
-  margin-bottom: 4px;
+  /* open downward, just below the input */
+  top: 100%;
+  margin-top: 4px;
   z-index: 30;
   list-style: none;
   margin-block: 0;
