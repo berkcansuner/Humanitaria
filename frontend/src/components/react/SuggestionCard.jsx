@@ -4,14 +4,15 @@ import './SuggestionCard.css'
 
 // Each missing query dimension becomes one step (only those with suggestions).
 const STEP_DEFS = [
-  { key: 'country', src: 'countries', title: 'Hangi ülke hakkında bilgi almak istiyorsunuz?' },
-  { key: 'date', src: 'time_periods', title: 'Hangi zaman aralığı?' },
-  { key: 'theme', src: 'themes', title: 'Hangi konu?' },
+  { key: 'country', src: 'countries', title: 'Hangi ülke hakkında bilgi almak istiyorsunuz?', placeholder: 'veya bir ülke yazın…' },
+  { key: 'date', src: 'time_periods', title: 'Hangi zaman aralığı?', placeholder: 'veya zaman aralığı yazın…' },
+  { key: 'theme', src: 'themes', title: 'Hangi konu?', placeholder: 'veya bir konu yazın…' },
 ]
 
 /**
  * Multi-step suggestion card (React island).
- * Props:
+ * Options are shown as side-by-side wrapping chips; the user can also type a
+ * custom answer for the current step. Props:
  *   clarification: { suggestions: { countries, time_periods, themes } }
  *   onApply: (values: string[]) => void   // chosen values in step order
  *   onDismiss: () => void
@@ -21,18 +22,18 @@ export default function SuggestionCard({ clarification, onApply, onDismiss }) {
     const s = clarification?.suggestions || {}
     return STEP_DEFS
       .filter((d) => Array.isArray(s[d.src]) && s[d.src].length)
-      .map((d) => ({ key: d.key, title: d.title, options: s[d.src] }))
+      .map((d) => ({ key: d.key, title: d.title, placeholder: d.placeholder, options: s[d.src] }))
   }, [clarification])
 
   const [current, setCurrent] = useState(0)
   const [selections, setSelections] = useState({})
-  const [focused, setFocused] = useState(0)
-  const cardRef = useRef(null)
+  const [custom, setCustom] = useState('')
+  const firstOptRef = useRef(null)
 
-  // Move keyboard focus to the card on mount and whenever the step changes.
+  // On each step, clear the typed value and move focus to the first chip.
   useEffect(() => {
-    setFocused(0)
-    cardRef.current?.focus()
+    setCustom('')
+    firstOptRef.current?.focus({ preventScroll: true })
   }, [current])
 
   if (!steps.length) return null
@@ -49,30 +50,23 @@ export default function SuggestionCard({ clarification, onApply, onDismiss }) {
     else finalize(next)
   }
   function select(opt) {
-    if (opt == null) return
-    const next = { ...selections, [step.key]: opt }
+    const v = (opt || '').trim()
+    if (!v) return
+    const next = { ...selections, [step.key]: v }
     setSelections(next)
     advance(next)
   }
-  function skip() {
-    advance(selections)
-  }
-  function prev() {
-    if (current > 0) setCurrent((c) => c - 1)
-  }
+  function skip() { advance(selections) }
+  function prev() { if (current > 0) setCurrent((c) => c - 1) }
 
+  function submitCustom(e) {
+    e.preventDefault()
+    select(custom)
+  }
   function onKeyDown(e) {
-    const opts = step.options
-    if (e.key === 'Escape') { e.preventDefault(); onDismiss(); return }
-    if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); return }
-    if (e.key === 'ArrowRight') { e.preventDefault(); skip(); return }
-    if (e.key === 'ArrowDown') { e.preventDefault(); setFocused((f) => Math.min(f + 1, opts.length - 1)); return }
-    if (e.key === 'ArrowUp') { e.preventDefault(); setFocused((f) => Math.max(f - 1, 0)); return }
-    if (e.key === 'Enter') { e.preventDefault(); select(opts[focused]); return }
-    if (/^[1-9]$/.test(e.key)) {
-      const idx = parseInt(e.key, 10) - 1
-      if (idx < opts.length) { e.preventDefault(); select(opts[idx]) }
-    }
+    // Keep it simple and conflict-free with the text input: Esc dismisses;
+    // chips are native buttons (Enter/Space/click) and the input owns its keys.
+    if (e.key === 'Escape') { e.preventDefault(); onDismiss() }
   }
 
   const chosen = steps.map((s) => selections[s.key]).filter(Boolean)
@@ -80,8 +74,6 @@ export default function SuggestionCard({ clarification, onApply, onDismiss }) {
   return (
     <div
       className="sc-card"
-      ref={cardRef}
-      tabIndex={0}
       role="group"
       aria-label="Sorgunuzu detaylandırma önerileri"
       onKeyDown={onKeyDown}
@@ -115,30 +107,39 @@ export default function SuggestionCard({ clarification, onApply, onDismiss }) {
         </div>
       )}
 
-      <ul className="sc-options" role="radiogroup" aria-label={step.title} key={current}>
+      <div className="sc-options" role="radiogroup" aria-label={step.title} key={current}>
         {step.options.map((opt, i) => (
-          <li key={opt}>
-            <button
-              type="button"
-              className={'sc-option' + (i === focused ? ' focused' : '')}
-              style={{ '--i': i }}
-              role="radio"
-              aria-checked={selections[step.key] === opt}
-              tabIndex={-1}
-              onClick={() => select(opt)}
-              onMouseEnter={() => setFocused(i)}
-            >
-              <span className="sc-num" aria-hidden="true">{i + 1}</span>
-              <span className="sc-label">{opt}</span>
-              <ArrowRight className="sc-arrow" size={16} />
-            </button>
-          </li>
+          <button
+            key={opt}
+            ref={i === 0 ? firstOptRef : undefined}
+            type="button"
+            className="sc-opt"
+            style={{ '--i': i }}
+            role="radio"
+            aria-checked={selections[step.key] === opt}
+            onClick={() => select(opt)}
+          >
+            {opt}
+          </button>
         ))}
-      </ul>
+      </div>
+
+      <form className="sc-input-row" onSubmit={submitCustom}>
+        <input
+          className="sc-input"
+          type="text"
+          value={custom}
+          onChange={(e) => setCustom(e.target.value)}
+          placeholder={step.placeholder}
+          aria-label={step.placeholder}
+        />
+        <button className="sc-input-go" type="submit" disabled={!custom.trim()} aria-label="Yazdığını kullan">
+          <ArrowRight size={16} />
+        </button>
+      </form>
 
       <div className="sc-footer">
         <button className="sc-skip" onClick={skip}>{isLast ? 'Bitir' : 'Atla'}</button>
-        <button className="sc-reply" onClick={onDismiss}>veya doğrudan yazın</button>
       </div>
     </div>
   )
