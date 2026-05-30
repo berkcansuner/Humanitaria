@@ -10,12 +10,12 @@ deployment kararı proje olgunlaştıktan sonra verilecek.
 ## Mimari
 
 ```
-ReliefWeb API → Ingestion Pipeline → ChromaDB (yerel dosya, ./chroma_db/)
+ReliefWeb API → Ingestion Pipeline → ChromaDB (yerel) | Pinecone (bulut)  ← VECTOR_STORE_PROVIDER
                                             ↓
 Kullanıcı → Vue 3 Frontend → FastAPI (localhost:8001) → RAG Engine (LangChain LCEL)
                                           ↓                        ↓              ↓
-                          Yerel Ollama (embedding +        Gemini (chat yanıtı)
-                          query processor, :11434)
+                  Embedding: yerel Ollama | Gemini      Gemini (chat yanıtı)
+                  (EMBED_PROVIDER) + query processor Ollama (:11434)
 ```
 
 - **Chat yanıtı:** Google Gemini (OpenAI-uyumlu endpoint).
@@ -43,11 +43,11 @@ Kullanıcı → Vue 3 Frontend → FastAPI (localhost:8001) → RAG Engine (Lang
 - **Kök:** giriş noktaları — `config.py`, `requirements.txt`, `MEMORY.md`
 - **`api/`** — FastAPI app + route'lar (`chat.py`, `health.py`)
 - **`frontend/`** — Vue 3 SPA (`src/`), Vite build (`dist/`), `src/utils/parseSSE.js`
-- **`ingestion/`** — `client.py`, `parser.py`, `chunker.py`, `embedder.py`, `store.py`,
+- **`ingestion/`** — `client.py`, `parser.py`, `chunker.py`, `store.py`,
   `pipeline.py`, `file_loader.py` (HTML strip + PDF), `scheduler.py` (APScheduler)
 - **`rag/`** — `embeddings.py`, `retriever.py`, `chain.py`, `query_processor.py`, `history.py`
 - **`tests/`** — pytest, modül yapısını yansıtır
-- **`scripts/`** — CLI (`ingest.py`)
+- **`scripts/`** — CLI (`ingest.py`, `setup_pinecone.py`)
 - **`chroma_db/`** — ChromaDB verisi, `.gitignore`'da
 
 ---
@@ -143,19 +143,22 @@ primary_country.name, theme.name, format.name, file`. Sıralama `date.created:de
 "şu anda / güncel / latest" gibi belirsiz ifadeler date filtresi ÜRETMEZ; `date_from`
 bugün/gelecek ise reddedilir.
 
-**Retriever** (`rag/retriever.py`): ChromaDB MMR (`k=TOP_K_RETRIEVAL`, `fetch_k=MMR_FETCH_K`,
-`lambda_mult=MMR_LAMBDA`). `_build_chroma_filter` → `$and`/`$eq`; country `$in` (kısa+tam ad).
-**Tarih filtresi ChromaDB'de DEĞİL** — `apply_date_filter` ile Python'da post-retrieval
-(ChromaDB string `$gte` desteklemez). `rerank_by_recency` → MMR + üstel recency blend.
+**Retriever** (`rag/retriever.py`): provider'a göre ChromaDB veya Pinecone MMR
+(`k=TOP_K_RETRIEVAL`, `fetch_k=MMR_FETCH_K`, `lambda_mult=MMR_LAMBDA`). `_build_chroma_filter`
+/ `_build_pinecone_filter` → `$eq`/`$in`; country `$in` (kısa+tam ad).
+**Tarih filtresi:** ChromaDB'de `apply_date_filter` ile Python'da post-retrieval (string `$gte`
+desteklenmez); Pinecone'da sunucu tarafında sayısal `date_ts` `$gte` ile DB'de.
+`rerank_by_recency` → MMR + üstel recency blend.
 
 **Chain** (`rag/chain.py`): düz LCEL `prompt | llm | StrOutputParser`. Provider'a göre
 Gemini veya Ollama `ChatOpenAI`. History route'da `get_session_history` ile alınır,
 `chat_history` olarak geçilir, yanıt sonrası kaydedilir (RunnableWithMessageHistory YOK).
 
-**ChromaDB metadata şeması (her chunk):**
+**Metadata şeması (her chunk, her iki store):**
 ```python
 {"doc_id", "url", "title", "country", "theme", "date" (YYYY-MM-DD),
- "source", "format", "doctype"}  # doc_id orphan cleanup için kullanılır
+ "date_ts" (sayısal YYYYMMDD, Pinecone $gte için), "source", "format",
+ "doctype"}  # doc_id orphan cleanup için kullanılır
 ```
 
 **Endpoint'ler** (`api/routes/chat.py`): `POST /chat/stream` (SSE, token-by-token) +
@@ -186,7 +189,7 @@ Selamlaşma → retrieval atlanır. Mesaj doğrulama: boş/4000+ karakter redded
 
 ## Bilinen Kısıtlamalar
 
-- Embedding yerel çalışır — ingestion sırasında `ollama serve` ayakta olmalı; yavaştır.
+- `EMBED_PROVIDER=ollama` (varsayılan) ise embedding yerel çalışır — ingestion sırasında `ollama serve` ayakta olmalı; yavaştır. `EMBED_PROVIDER=gemini` ise bulut (Ollama gerekmez).
 - `qwen3-embedding:8b` ~4.7GB RAM; yetersizse `qwen3-embedding:4b` (2560 dim, `EMBED_DIM` güncelle).
 - Görseller/infografikler doğrudan sorgulanamaz; başlık + açıklama metadata'sı index'lenir.
 - Session history varsayılan in-memory (restart'ta silinir); `REDIS_URL` ile kalıcı yapılabilir.
