@@ -23,7 +23,7 @@ sohbet sistemi. Şu an yerel geliştirme aşamasında.
 - **Backend:** FastAPI, **port 8000** (.env'de `API_PORT` yok → config default 8000; bu oturumda 8000'de sorunsuz çalıştı). SSE streaming. Başlangıçta lifespan warmup + ingestion scheduler.
 - **Frontend:** Vue 3, `frontend/dist/` build edilmiş, FastAPI statik serve ediyor.
 - **Kaynaklar (citation-grounded):** Yanıt context belgelerine satır içi `[n]` atıfı verir; `sources` event'i yalnızca atıf verilen belgeleri döndürür (atıf yoksa fallback: tümü). Prompt artık kaynakları metin içinde isimlendirmiyor — sadece altta `SOURCES (N)` kompakt liste (`[n]` numaralı).
-- **Öneriler:** Belirsiz sorgularda yanıttan SONRA **React island** öneri kartı (Claude tarzı, 1/N: ülke→zaman→konu, numaralı seçenekler, ilerleme noktaları, tam klavye [1-9/ok/Enter/Esc], CSS animasyon+reduced-motion, ARIA radiogroup, "Atla"/"veya doğrudan yazın"). `react/SuggestionCard.jsx` + `SuggestionCardIsland.vue` (Vue↔React köprüsü); seçimler birikir, son adımda sorgu zenginleşip yeniden gönderilir. SSE sırası: token → sources → clarification.
+- **Öneriler:** Belirsiz sorgularda yanıttan SONRA **React island** öneri kartı (Claude tarzı, 1/N: ülke→zaman→konu). Seçenekler **yan yana sarmalanan çipler** (uzun dikey liste yok) + **serbest metin girişi** (kullanıcı kendi cevabını yazıp Enter/→ ile gönderebilir). İlerleme noktaları, klavye (Tab/Enter, Esc kapatır), CSS animasyon+reduced-motion, ARIA radiogroup, "Atla". `react/SuggestionCard.jsx`(+`.css`) + `SuggestionCardIsland.vue` (Vue↔React köprüsü); seçimler birikir, son adımda sorgu zenginleşip yeniden gönderilir. SSE sırası: token → sources → clarification.
 - **Test:** **212 backend (pytest) + 11 frontend (vitest), hepsi yeşil.**
 
 ## Veri Durumu
