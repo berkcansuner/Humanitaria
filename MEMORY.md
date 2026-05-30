@@ -28,6 +28,7 @@ sohbet sistemi. Şu an yerel geliştirme aşamasında.
 
 ## Veri Durumu
 - **Pinecone `reliefweb-docs`: 866 vektör (3072-dim).** Uçtan uca retrieval + tarih filtresi doğrulandı (Sudan sorguları 5 kaynak dönüyor).
+- **Kaynak linkleri rapor web sayfası** (`reliefweb.int/report/{id}`) — PDF değil (tıklayınca tarayıcıda açılır). 2026-05-31 re-ingest (`ingest.py`, 1000 limit → 720 OK) ile mevcut docs'un `url` metadata'sı güncellendi; doc_id stabil olduğu için sayı 866'da kaldı (yerinde overwrite). Tema uyuşmazlığı (öneri temaları ↔ gerçek ReliefWeb temaları) hâlâ açık — bkz. aşağı.
 - Veri hâlâ az — kapsamlı sohbet için daha fazlası faydalı olur (opsiyonel, kritik değil).
 - Daha fazla veri çek: `python scripts/ingest.py --limit N` (`--force` KULLANMA; idempotent upsert tekrarı önler).
 - (Eski yerel ChromaDB `./chroma_db/` artık aktif store değil; provider chroma'ya dönülürse kullanılır.)
