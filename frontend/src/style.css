@@ -75,6 +75,7 @@
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  height: 100%;
 }
 
 body {
@@ -83,10 +84,12 @@ body {
   color: var(--color-text);
   line-height: 1.6;
   font-size: var(--text-base);
+  height: 100%;
+  overflow: hidden;
 }
 
 #app {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
 }
