@@ -51,8 +51,14 @@ export default function SuggestionCard({ clarification, onApply, onDismiss }) {
   const step = steps[current]
   const isLast = current >= steps.length - 1
 
-  const matches = custom.trim()
-    ? step.options.filter((o) => o.toLowerCase().includes(custom.trim().toLowerCase()))
+  // Prefix match (whole label or any word starts with the query) so "s" yields
+  // Sudan/Syria/Somalia — not Afghanistan (which only *contains* an "s").
+  const q = custom.trim().toLowerCase()
+  const matches = q
+    ? step.options.filter((o) => {
+      const lo = o.toLowerCase()
+      return lo.startsWith(q) || lo.split(/\s+/).some((w) => w.startsWith(q))
+    })
     : []
 
   function finalize(next) {
