@@ -47,6 +47,48 @@ def _no_docs_message(filters: dict) -> str:
     )
 
 
+_CITATION_PATTERN = re.compile(r"\[(\d+)\]")
+
+
+def _build_context_and_sources(docs):
+    """Number retrieved docs [1..N] for the prompt and build matching source dicts.
+
+    The index is the doc's 1-based position so an inline [n] marker in the answer
+    maps back to the same source. Docs without a url/title still consume an index
+    (keeping numbering aligned) but are not surfaced as sources.
+    """
+    context = "\n\n---\n\n".join(
+        f"[{i}] {doc.page_content}" for i, doc in enumerate(docs, 1)
+    )
+    sources = [
+        {
+            "index": i,
+            "title": doc.metadata.get("title", "Belirsiz"),
+            "url": doc.metadata.get("url", ""),
+            "date": doc.metadata.get("date"),
+            "country": doc.metadata.get("country"),
+            "source": doc.metadata.get("source"),
+            "doctype": doc.metadata.get("doctype"),
+        }
+        for i, doc in enumerate(docs, 1)
+        if doc.metadata.get("url") and doc.metadata.get("title")
+    ]
+    return context, sources
+
+
+def _filter_cited_sources(answer_text: str, sources: list) -> list:
+    """Keep only sources whose [n] marker appears in the answer.
+
+    Falls back to all sources when the model emitted no (or no matching)
+    citation markers, so the user never sees an empty source list.
+    """
+    cited = {int(n) for n in _CITATION_PATTERN.findall(answer_text)}
+    if not cited:
+        return sources
+    filtered = [s for s in sources if s.get("index") in cited]
+    return filtered or sources
+
+
 class ChatMessage(BaseModel):
     role: Literal["user", "assistant"]
     content: str
@@ -68,6 +110,7 @@ class ChatRequest(BaseModel):
 
 
 class SourceDocument(BaseModel):
+    index: Optional[int] = None
     title: str
     url: str
     date: Optional[str] = None
@@ -100,19 +143,7 @@ async def chat(req: ChatRequest):
             msg = _no_docs_message(filters)
             return ChatResponse(answer=msg, sources=[], session_id=session_id)
 
-        context = "\n\n---\n\n".join(doc.page_content for doc in docs)
-        sources = [
-            SourceDocument(
-                title=doc.metadata.get("title", "Belirsiz"),
-                url=doc.metadata.get("url", ""),
-                date=doc.metadata.get("date"),
-                country=doc.metadata.get("country"),
-                source=doc.metadata.get("source"),
-                doctype=doc.metadata.get("doctype"),
-            )
-            for doc in docs
-            if doc.metadata.get("url") and doc.metadata.get("title")
-        ]
+        context, source_dicts = _build_context_and_sources(docs)
 
         history = get_session_history(session_id)
         chat_history = list(history.messages)
@@ -127,6 +158,7 @@ async def chat(req: ChatRequest):
         history.add_message(HumanMessage(content=req.message))
         history.add_message(AIMessage(content=answer))
 
+        sources = [SourceDocument(**d) for d in _filter_cited_sources(answer, source_dicts)]
         return ChatResponse(answer=answer, sources=sources, session_id=session_id)
 
     except Exception as e:
@@ -167,39 +199,12 @@ async def chat_stream(req: ChatRequest):
                 return
 
             analysis = analyze_query(req.message, filters=filters)
-
-            sources = [
-                {
-                    "title": doc.metadata.get("title", "Belirsiz"),
-                    "url": doc.metadata.get("url", ""),
-                    "date": doc.metadata.get("date"),
-                    "country": doc.metadata.get("country"),
-                    "source": doc.metadata.get("source"),
-                    "doctype": doc.metadata.get("doctype"),
-                }
-                for doc in docs
-                if doc.metadata.get("url") and doc.metadata.get("title")
-            ]
-            context = "\n\n---\n\n".join(doc.page_content for doc in docs)
+            context, source_dicts = _build_context_and_sources(docs)
 
             history = get_session_history(session_id)
             chat_history = list(history.messages)
 
             chain = build_chain()
-
-            if analysis and analysis.get("is_vague"):
-                yield ServerSentEvent(
-                    event="clarification",
-                    data=json.dumps({
-                        "message": analysis["message"],
-                        "filters": {
-                            "country": analysis["has_country"],
-                            "date": analysis["has_date"],
-                            "theme": analysis["has_theme"],
-                        },
-                        "suggestions": analysis["suggestions"],
-                    }, ensure_ascii=False),
-                )
 
             full_response = ""
             async for chunk in chain.astream({
@@ -218,10 +223,27 @@ async def chat_stream(req: ChatRequest):
             history.add_message(HumanMessage(content=req.message))
             history.add_message(AIMessage(content=full_response))
 
+            # Surface only the sources the answer actually cited ([n] markers).
+            sources = _filter_cited_sources(full_response, source_dicts)
             if sources:
                 yield ServerSentEvent(
                     event="sources",
                     data=json.dumps({"sources": sources}, ensure_ascii=False),
+                )
+
+            # Follow-up suggestion chips come AFTER the answer (Claude-web-app style).
+            if analysis and analysis.get("is_vague"):
+                yield ServerSentEvent(
+                    event="clarification",
+                    data=json.dumps({
+                        "message": analysis["message"],
+                        "filters": {
+                            "country": analysis["has_country"],
+                            "date": analysis["has_date"],
+                            "theme": analysis["has_theme"],
+                        },
+                        "suggestions": analysis["suggestions"],
+                    }, ensure_ascii=False),
                 )
 
             yield ServerSentEvent(event="session", data=json.dumps({"session_id": session_id}))

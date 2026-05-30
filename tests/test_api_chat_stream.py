@@ -86,6 +86,38 @@ class TestChatStreamEndpoint:
             assert data["answer"] == "Test answer"
 
 
+class TestFilterCitedSources:
+    """Unit tests for the citation-grounding helper."""
+
+    def _sources(self):
+        return [
+            {"index": 1, "title": "A", "url": "u1"},
+            {"index": 2, "title": "B", "url": "u2"},
+            {"index": 3, "title": "C", "url": "u3"},
+        ]
+
+    def test_keeps_only_cited(self):
+        from api.routes.chat import _filter_cited_sources
+        out = _filter_cited_sources("foo [1] bar [3].", self._sources())
+        assert [s["index"] for s in out] == [1, 3]
+
+    def test_no_citation_returns_all(self):
+        from api.routes.chat import _filter_cited_sources
+        out = _filter_cited_sources("hiç atıf yok", self._sources())
+        assert len(out) == 3
+
+    def test_citation_to_missing_index_falls_back_to_all(self):
+        from api.routes.chat import _filter_cited_sources
+        # [9] does not exist among sources → avoid empty list, return all
+        out = _filter_cited_sources("bkz [9]", self._sources())
+        assert len(out) == 3
+
+    def test_duplicate_citations_deduped(self):
+        from api.routes.chat import _filter_cited_sources
+        out = _filter_cited_sources("[2] ve yine [2]", self._sources())
+        assert [s["index"] for s in out] == [2]
+
+
 class TestSSEEventBody:
     """Tests that verify the SSE event sequence and payload structure."""
 
@@ -102,6 +134,13 @@ class TestSSEEventBody:
         }
         return mock_doc
 
+    @staticmethod
+    def _make_doc(title, url, **meta):
+        doc = MagicMock()
+        doc.page_content = f"{title} content"
+        doc.metadata = {"title": title, "url": url, **meta}
+        return doc
+
     def test_non_greeting_stream_emits_token_sources_session_done(self):
         mock_doc = self._make_mock_setup()
         with patch("api.routes.chat.build_chain") as mock_chain_builder, \
@@ -114,7 +153,7 @@ class TestSSEEventBody:
 
             async def mock_astream(*args, **kwargs):
                 yield "Hello "
-                yield "World"
+                yield "World [1]"
 
             mock_chain = MagicMock()
             mock_chain.astream = mock_astream
@@ -136,20 +175,112 @@ class TestSSEEventBody:
 
             # Tokens should reconstruct the full answer
             tokens = [e["data"]["content"] for e in events if e["event"] == "token"]
-            assert "".join(tokens) == "Hello World"
+            assert "".join(tokens) == "Hello World [1]"
 
-            # Sources should contain the mocked doc
+            # Sources should contain the mocked doc, numbered to match the [1] marker
             src_events = [e for e in events if e["event"] == "sources"]
             assert len(src_events) == 1
             sources = src_events[0]["data"]["sources"]
             assert len(sources) == 1
             assert sources[0]["title"] == "WFP Report"
             assert sources[0]["country"] == "Yemen"
+            assert sources[0]["index"] == 1
 
             # Session event should echo the session_id
             sess_events = [e for e in events if e["event"] == "session"]
             assert len(sess_events) == 1
             assert sess_events[0]["data"]["session_id"] == "evt-test"
+
+    def test_sources_filtered_to_only_cited(self):
+        doc1 = self._make_doc("Doc One", "https://reliefweb.int/report/1")
+        doc2 = self._make_doc("Doc Two", "https://reliefweb.int/report/2")
+        with patch("api.routes.chat.build_chain") as mock_chain_builder, \
+             patch("api.routes.chat.build_retriever") as mock_retriever_builder, \
+             patch("api.routes.chat.extract_filters", return_value={}), \
+             patch("api.routes.chat.analyze_query", return_value={"is_vague": False, "has_country": True, "has_date": False, "has_theme": False, "message": "", "suggestions": {}}):
+            mock_retriever = MagicMock()
+            mock_retriever.ainvoke = AsyncMock(return_value=[doc1, doc2])
+            mock_retriever_builder.return_value = mock_retriever
+
+            async def mock_astream(*args, **kwargs):
+                yield "Sadece ilk belgeden bilgi [1]."
+
+            mock_chain = MagicMock()
+            mock_chain.astream = mock_astream
+            mock_chain_builder.return_value = mock_chain
+
+            from api.main import app
+            from fastapi.testclient import TestClient
+            client = TestClient(app)
+            response = client.post("/chat/stream", json={"message": "soru"})
+            events = _parse_sse_events(response.text)
+            sources = [e for e in events if e["event"] == "sources"][0]["data"]["sources"]
+            assert len(sources) == 1
+            assert sources[0]["title"] == "Doc One"
+            assert sources[0]["index"] == 1
+
+    def test_sources_fallback_when_no_citation(self):
+        doc1 = self._make_doc("Doc One", "https://reliefweb.int/report/1")
+        doc2 = self._make_doc("Doc Two", "https://reliefweb.int/report/2")
+        with patch("api.routes.chat.build_chain") as mock_chain_builder, \
+             patch("api.routes.chat.build_retriever") as mock_retriever_builder, \
+             patch("api.routes.chat.extract_filters", return_value={}), \
+             patch("api.routes.chat.analyze_query", return_value={"is_vague": False, "has_country": True, "has_date": False, "has_theme": False, "message": "", "suggestions": {}}):
+            mock_retriever = MagicMock()
+            mock_retriever.ainvoke = AsyncMock(return_value=[doc1, doc2])
+            mock_retriever_builder.return_value = mock_retriever
+
+            async def mock_astream(*args, **kwargs):
+                yield "Atıf içermeyen bir özet."
+
+            mock_chain = MagicMock()
+            mock_chain.astream = mock_astream
+            mock_chain_builder.return_value = mock_chain
+
+            from api.main import app
+            from fastapi.testclient import TestClient
+            client = TestClient(app)
+            response = client.post("/chat/stream", json={"message": "soru"})
+            events = _parse_sse_events(response.text)
+            sources = [e for e in events if e["event"] == "sources"][0]["data"]["sources"]
+            # No [n] markers → fall back to all retrieved sources
+            assert len(sources) == 2
+
+    def test_clarification_emitted_after_sources(self):
+        doc1 = self._make_doc("Doc One", "https://reliefweb.int/report/1")
+        vague_analysis = {
+            "is_vague": True,
+            "has_country": False, "has_date": False, "has_theme": False,
+            "message": "Hangi ülke, zaman aralığı veya konu?",
+            "suggestions": {"countries": ["Sudan"], "time_periods": ["son 1 ay"], "themes": ["Health"]},
+        }
+        with patch("api.routes.chat.build_chain") as mock_chain_builder, \
+             patch("api.routes.chat.build_retriever") as mock_retriever_builder, \
+             patch("api.routes.chat.extract_filters", return_value={}), \
+             patch("api.routes.chat.analyze_query", return_value=vague_analysis):
+            mock_retriever = MagicMock()
+            mock_retriever.ainvoke = AsyncMock(return_value=[doc1])
+            mock_retriever_builder.return_value = mock_retriever
+
+            async def mock_astream(*args, **kwargs):
+                yield "Bir yanıt [1]."
+
+            mock_chain = MagicMock()
+            mock_chain.astream = mock_astream
+            mock_chain_builder.return_value = mock_chain
+
+            from api.main import app
+            from fastapi.testclient import TestClient
+            client = TestClient(app)
+            response = client.post("/chat/stream", json={"message": "insani durum nedir"})
+            events = _parse_sse_events(response.text)
+            event_types = [e["event"] for e in events]
+            assert "clarification" in event_types
+            # The answer (tokens) and sources must precede the suggestion chips
+            assert event_types.index("clarification") > event_types.index("sources")
+            assert event_types.index("clarification") > max(
+                i for i, t in enumerate(event_types) if t == "token"
+            )
 
     def test_stream_error_emits_error_then_done(self):
         with patch("api.routes.chat.build_retriever") as mock_retriever_builder, \
