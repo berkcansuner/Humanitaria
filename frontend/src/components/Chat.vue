@@ -21,7 +21,7 @@
                 <AlertCircle :size="16" class="error-icon" />
                 {{ msg.error }}
               </div>
-              <SuggestionCard
+              <SuggestionCardIsland
                 v-if="msg.clarification && !msg.clarification.resolved"
                 :clarification="msg.clarification"
                 @apply="onSuggestionApply(msg, $event)"
@@ -54,7 +54,7 @@
 import { ref, nextTick } from 'vue'
 import { Send, Loader2, AlertCircle } from 'lucide-vue-next'
 import SourceList from './SourceList.vue'
-import SuggestionCard from './SuggestionCard.vue'
+import SuggestionCardIsland from './SuggestionCardIsland.vue'
 import { renderMarkdown } from '../utils/renderMarkdown.js'
 import { parseSSE } from '../utils/parseSSE.js'
 
