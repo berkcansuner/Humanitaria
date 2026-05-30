@@ -44,10 +44,23 @@ sohbet sistemi. Şu an yerel geliştirme aşamasında.
 ## Remote / Push
 - Remote: **https://github.com/berkcansuner/reliefweb-rag** (private). `origin/master` güncel — her tur push ediliyor. (NOT: `RState_ai` farklı bir proje, ona dokunulmadı.)
 
-## Sıradaki Adımlar
-1. [ ] (Opsiyonel) Stale warmup düzeltmesi: `api/main.py` lifespan warmup'ı `OllamaLangChainEmbeddings`'i hardcode ediyor → `rag.embeddings.get_embeddings()` factory'sine çevir (yanıltıcı 4096≠3072 log'unu ve gereksiz Ollama bağımlılığını giderir).
-3. [ ] (Opsiyonel) Daha fazla veri toplama — `ingest.py --limit` artır; çoklu endpoint (`--endpoints reports disasters countries`).
-4. [ ] (Opsiyonel) `RunnableWithMessageHistory` → LangGraph migrasyonu (4 deprecation uyarısı).
+## Sıradaki Adımlar (2026-05-31'de planlandı — bir sonraki oturumda buradan devam)
+**Öneri kartı (SuggestionCard) iyileştirmeleri — en olası sıradaki iş:**
+1. [ ] **Metin girişine autocomplete:** kullanıcı yazarken mevcut çipleri filtrele/öner (örn. "ır" → Iraq/Iran). `react/SuggestionCard.jsx` içinde `custom` state'ine göre `options` filtrelemesi.
+2. [ ] **Çip sayısını sınırla + "daha fazla":** çok seçenek olduğunda ilk ~6 çip + "daha fazla" toggle (uzunlukta denge).
+3. [ ] **Mobil/responsive kontrol:** kartı 375px'te CDP ile test et; çip sarması ve dokunma hedefleri (≥44px) doğrula.
+
+**Performans / kalite:**
+4. [ ] **React island'ı lazy-load:** `defineAsyncComponent` ile `SuggestionCardIsland`'ı yalnız clarification gelince yükle → React+lucide ilk bundle'dan çıkar (~47KB gz initial tasarruf). `Chat.vue`'de async import.
+5. [ ] **Frontend bileşen testleri:** vitest + `@vue/test-utils` (ve React island için ayrı) — şu an yalnız `parseSSE` test ediliyor; SuggestionCard akışı/SourceList test edilmiyor.
+
+**Backend / RAG:**
+6. [ ] **Stale warmup fix:** `api/main.py` lifespan warmup `OllamaLangChainEmbeddings` hardcode → `rag.embeddings.get_embeddings()` factory (yanıltıcı 4096≠3072 log + gereksiz Ollama bağımlılığını giderir).
+7. [ ] (Opsiyonel) Daha fazla veri ingestion — `ingest.py --limit` artır; çoklu endpoint (`reports disasters countries`).
+8. [ ] (Opsiyonel) `RunnableWithMessageHistory` → LangGraph migrasyonu (4 deprecation uyarısı).
+
+**Güvenlik:**
+9. [ ] **Gemini API anahtarını rotate et** (geçmişte sohbete yazıldı) — Google AI Studio.
 
 ## Bilinen Sorunlar / Açık İşler
 - **`requirements.txt` çakışması:** `pip install -r requirements.txt` başarısız (chromadb 1.0.5 → fastapi==0.115.9 ister, ama pin 0.115.0). Tüm requirements'ı kurma; eksik paketleri tek tek kur. Bu oturumda venv'e eksik paketler kuruldu: `langchain-chroma==0.2.4`, `langchain-pinecone==0.2.13`, `apscheduler==3.10.4` (chromadb otomatik 1.5.9 oldu).
