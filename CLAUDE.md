@@ -19,7 +19,8 @@ Kullanıcı → Vue 3 Frontend → FastAPI (localhost:8001) → RAG Engine (Lang
 ```
 
 - **Chat yanıtı:** Google Gemini (OpenAI-uyumlu endpoint).
-- **Query processor + embedding:** yerel Ollama (`localhost:11434`).
+- **Query processor + embedding:** yerel Ollama (`localhost:11434`) — varsayılan; `EMBED_PROVIDER=gemini` ile Gemini'ye geçilebilir.
+- **Vector DB:** ChromaDB (yerel dosya) — varsayılan; `VECTOR_STORE_PROVIDER=pinecone` ile Pinecone serverless'a geçilebilir.
 
 ---
 
@@ -29,8 +30,8 @@ Kullanıcı → Vue 3 Frontend → FastAPI (localhost:8001) → RAG Engine (Lang
 |--------|-----------|--------|
 | Chat LLM | Google Gemini `gemini-2.5-flash` | OpenAI-uyumlu endpoint; `CHAT_LLM_PROVIDER` ile ollama'ya geçilebilir |
 | Query processor LLM | Yerel Ollama `qwen2.5:0.5b` | Filtre çıkarma (json_mode) + rule-based fallback |
-| Embedding | Yerel Ollama `qwen3-embedding:8b` | `localhost:11434`, **4096 dim** |
-| Vector DB | ChromaDB | Gömülü, dosya tabanlı — `./chroma_db/` |
+| Embedding | Yerel Ollama `qwen3-embedding:8b` (varsayılan) veya Gemini `gemini-embedding-001` | `EMBED_PROVIDER` flag'i; ollama→4096 dim, gemini→3072 dim |
+| Vector DB | ChromaDB (varsayılan) veya Pinecone serverless | `VECTOR_STORE_PROVIDER` flag'i; ChromaDB gömülü dosya tabanlı, Pinecone bulut |
 | Backend | Python 3.12 / FastAPI | REST + SSE; Vue statik sunumu; port **8001** |
 | RAG Framework | LangChain LCEL | Düz `prompt \| llm \| StrOutputParser`; history route'da manuel beslenir |
 | Web UI | Vue 3 + Vite | Chat arayüzü, SSE streaming, kaynak gösterimi |
@@ -54,6 +55,19 @@ Kullanıcı → Vue 3 Frontend → FastAPI (localhost:8001) → RAG Engine (Lang
 ## Ortam Değişkenleri (.env)
 
 ```env
+# Vector store provider: "chroma" veya "pinecone"
+VECTOR_STORE_PROVIDER=chroma
+# Embedding provider: "ollama" veya "gemini"
+EMBED_PROVIDER=ollama
+GEMINI_EMBED_MODEL=gemini-embedding-001
+
+# Pinecone (serverless) — VECTOR_STORE_PROVIDER=pinecone ile aktif
+PINECONE_API_KEY=xxx
+PINECONE_INDEX=reliefweb-docs
+PINECONE_CLOUD=aws
+PINECONE_REGION=us-east-1
+PINECONE_NAMESPACE=
+
 # Chat LLM provider: "gemini" veya "ollama"
 CHAT_LLM_PROVIDER=gemini
 
@@ -78,7 +92,7 @@ RELIEFWEB_BASE_URL=https://api.reliefweb.int/v2
 # ChromaDB / Embedding
 CHROMA_DB_PATH=./chroma_db
 CHROMA_COLLECTION=reliefweb_docs
-EMBED_DIM=4096                  # qwen3-embedding:8b → 4096 (4b varyantı → 2560)
+EMBED_DIM=4096                  # provider'a bağlı: ollama qwen3-embedding:8b → 4096, gemini gemini-embedding-001 → 3072
 EMBED_BATCH_SIZE=32
 
 # RAG retrieval
@@ -180,3 +194,5 @@ Selamlaşma → retrieval atlanır. Mesaj doğrulama: boş/4000+ karakter redded
 - Pipeline resume kısmi (watermark var, uzun kesinti tam test edilmedi).
 - CORS şu an localhost origin'leri — production'da `CORS_ORIGINS` daraltılmalı.
 - PDF içerik ingestion opsiyonel (`FETCH_PDF_CONTENT=False`); varsayılan sadece HTML `body`.
+- Pinecone serverless metadata-filtreli silme desteklemez; orphan temizliği chunk-id prefix (`{doc_id}_`) list+delete ile yapılır.
+- Gemini embedding OpenAI-uyumlu endpoint üzerinden çalışır; `task_type` (`RETRIEVAL_DOCUMENT`/`QUERY`) ayrımı yok (küçük kalite ödünü).
