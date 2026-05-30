@@ -20,7 +20,7 @@ sohbet sistemi. Şu an yerel geliştirme aşamasında.
 - **Query processor** (filtre çıkarma): Ollama `qwen2.5:0.5b` + rule-based fallback. **Artık merge ediliyor** (aşağıya bak).
 - **Embedding:** Gemini `gemini-embedding-001` (3072-dim). (`EMBED_PROVIDER=ollama` ile yerel `qwen3-embedding:8b` 4096-dim'e dönülebilir; o zaman `EMBED_DIM=4096` yap.)
 - **Vector DB:** Pinecone serverless, index `reliefweb-docs` (3072, cosine, aws/us-east-1). (`VECTOR_STORE_PROVIDER=chroma` ile yerel ChromaDB'ye dönülebilir.)
-- **Backend:** FastAPI, **port 8000** (.env'de `API_PORT` yok → config default 8000; bu oturumda 8000'de sorunsuz çalıştı). SSE streaming. Başlangıçta lifespan warmup + ingestion scheduler.
+- **Backend:** FastAPI, config default port 8000. **Ama 8000'i başka bir uygulama (RState_ai emlak app) tutuyor** → RAG şu an **port 8010**'da çalışıyor (`http://localhost:8010`). Frontend relative `fetch('/chat/...')` kullandığı için hangi portta serve edilirse orada çalışır. SSE streaming. Başlangıçta lifespan warmup + ingestion scheduler.
 - **Frontend:** Vue 3, `frontend/dist/` build edilmiş, FastAPI statik serve ediyor.
 - **Kaynaklar (citation-grounded):** Yanıt context belgelerine satır içi `[n]` atıfı verir; `sources` event'i yalnızca atıf verilen belgeleri döndürür (atıf yoksa fallback: tümü). Prompt artık kaynakları metin içinde isimlendirmiyor — sadece altta `SOURCES (N)` kompakt liste (`[n]` numaralı).
 - **Öneriler:** Belirsiz sorgularda yanıttan SONRA **React island** öneri kartı (Claude tarzı, 1/N: ülke→zaman→konu). **Ülke ve zaman aralığı adımları: çip YOK, sadece metin girişi + autocomplete** (yazarken eşleşen öneriler açılır listede). Yalnız **konu adımı çipli** (yan yana çipler, tıklamada "seçildi" flash animasyonu) + metin girişi. Autocomplete: yazılanı filtreler; ok tuşları + Enter / tık seçer. İlerleme noktaları (mobilde gizli), **mobil/responsive (375px doğrulandı)**, klavye, CSS animasyon+reduced-motion, ARIA. `react/SuggestionCard.jsx`(+`.css`) + `SuggestionCardIsland.vue` (Vue↔React köprüsü); seçimler birikir, son adımda sorgu zenginleşir ve **sessiz** gönderilir (`sendMessage({text, silent:true})` → ekstra ham kullanıcı balonu YOK, sadece yeni yanıt gelir). Autocomplete açılır listesi input'un **altında (aşağı doğru)** açılır. SSE sırası: token → sources → clarification.
@@ -36,7 +36,7 @@ sohbet sistemi. Şu an yerel geliştirme aşamasında.
 ## Önemli Komutlar
 | İş | Komut |
 |----|-------|
-| Sunucu başlat | `./venv/Scripts/python.exe -m uvicorn api.main:app --host 127.0.0.1 --port 8000` |
+| Sunucu başlat | `./venv/Scripts/python.exe -m uvicorn api.main:app --host 127.0.0.1 --port 8010` (8000 başka app'te) |
 | Veri çek | `python scripts/ingest.py --limit N` |
 | Backend testleri | `./venv/Scripts/python.exe -m pytest tests/ -q` |
 | Frontend build | `cd frontend && npm run build` |
@@ -45,7 +45,15 @@ sohbet sistemi. Şu an yerel geliştirme aşamasında.
 ## Remote / Push
 - Remote: **https://github.com/berkcansuner/reliefweb-rag** (private). `origin/master` güncel — her tur push ediliyor. (NOT: `RState_ai` farklı bir proje, ona dokunulmadı.)
 
-## Sıradaki Adımlar (2026-05-31'de planlandı — bir sonraki oturumda buradan devam)
+## Sıradaki Adımlar (bir sonraki oturumda buradan devam)
+### ⭐ SONRAKI SEANS ODAĞI: VERİ INGESTION
+Kullanıcı bir dahaki seansta **veri ingestion** üzerinde duracak. İlgili bağlam:
+- Şu an Pinecone'da ~720 rapor / 866 vektör var (yalnız `reports` endpoint, `--limit 1000`).
+- Genişletme yolları: `ingest.py --limit` artır; çoklu endpoint (`--endpoints reports disasters countries`); `--date-from` ile aralık.
+- **Tema uyuşmazlığı (önemli):** öneri çiplerindeki/`_THEME_MAP`'teki tema adları veride saklı gerçek ReliefWeb temalarıyla eşleşmiyor (ör. öneri "Protection"/"Shelter and NFI" ↔ veri "Protection and Human Rights"; "Shelter and NFI" veride YOK). Tema filtresi `$eq` olduğundan bu temalar hep boş döner. Ingestion sırasında veya `query_processor`'da hizalanmalı.
+- Scheduler (APScheduler) watermark ile incremental ingestion yapıyor; uzun kesinti resume tam test edilmedi.
+- PDF içerik ingestion opsiyonel (`FETCH_PDF_CONTENT=False`); açılırsa `pdf_url`'den tam metin çekilir (yavaş).
+
 **Öneri kartı (SuggestionCard) iyileştirmeleri:**
 1. [x] ~~Metin girişine autocomplete~~ — TAMAM (2026-05-31, tüm adımlarda).
 2. [ ] **Çip sayısını sınırla + "daha fazla":** zaman/konu adımlarında çok seçenek olursa ilk ~6 çip + "daha fazla" toggle.
@@ -73,6 +81,16 @@ sohbet sistemi. Şu an yerel geliştirme aşamasında.
 - Pipeline resume kısmi: scheduler watermark (`chroma_db/.last_ingest.json`) var ama uzun kesinti tam test edilmedi.
 
 ## Son Oturum Özeti (2026-05-31)
+Bu seansta öneri kartı (React island) ince ayarları + iki UX/veri düzeltmesi yapıldı (hepsi commit+push'lu):
+- **Öneri kartı:** ülke + zaman aralığı çipsiz (yazı+autocomplete), konu çipli; autocomplete prefix/kelime-başı eşleşme ("s"→Sudan/Syria, Afghanistan değil); çip seçince "seçildi" flash; seçim **sessiz** uygulanıyor (ham birleşik sorgu balonu YOK); dropdown aşağı açılır; mobil/responsive.
+- **Boş-sonuç mesajı** kullanıcı dostu yapıldı (geliştirici `ingest.py` komutu kaldırıldı).
+- **Kaynak linkleri rapor web sayfası** oldu (PDF→indirme yerine tarayıcıda açılır): `parser.py` `url=canonical_url`; re-ingest (720 OK) ile mevcut veri güncellendi; canlı 8010'da doğrulandı.
+- **Server 8010'da** (8000 başka app'te). 212 backend + 11 frontend test yeşil.
+- **Sonraki seans: VERİ INGESTION** (bkz. Sıradaki Adımlar ⭐). Açık iş: tema uyuşmazlığı.
+
+---
+
+### Daha önce (2026-05-31, aynı gün): React island tasarımı
 Öneri kartı **React island** olarak yeniden tasarlandı (kullanıcı tercihi). `ui-ux-pro-max` skill
 tasarım yönü için kullanıldı; **Magic MCP `[object Object]` döndürdü (bu ortamda bozuk)** → React
 bileşeni spec'e göre elle yazıldı. Eklenenler: `frontend/src/components/react/SuggestionCard.jsx`
