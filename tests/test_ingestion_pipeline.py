@@ -8,18 +8,18 @@ class TestPipeline:
         with patch("ingestion.pipeline.ReliefWebClient") as MockClient, \
              patch("ingestion.pipeline.parse") as mock_parse, \
              patch("ingestion.pipeline.chunk_document") as mock_chunk, \
-             patch("ingestion.pipeline.OllamaEmbedder") as MockEmbedder, \
-             patch("ingestion.pipeline.ChromaStore") as MockStore:
+             patch("ingestion.pipeline.get_embeddings") as mock_get_emb, \
+             patch("ingestion.pipeline.get_store") as mock_get_store:
             mock_client = MagicMock()
             mock_client.fetch.return_value = [{"id": "1"}]
             MockClient.return_value = mock_client
             mock_parse.return_value = {"id": "abc", "url": "u", "title": "t", "body": "b", "date": "", "country": "", "theme": "", "source": "", "format": "", "doctype": "report"}
             mock_chunk.return_value = [{"id": "abc_0", "content": "b", "metadata": {"url": "u", "title": "t", "country": "", "theme": "", "date": "", "source": "", "format": "", "doctype": "report"}}]
-            mock_embedder = MagicMock()
-            mock_embedder.embed_batch.return_value = [[0.1] * 2560]
-            MockEmbedder.return_value = mock_embedder
+            mock_emb = MagicMock()
+            mock_emb.embed_documents.side_effect = lambda texts: [[0.1] * 4096 for _ in texts]
+            mock_get_emb.return_value = mock_emb
             mock_store = MagicMock()
-            MockStore.return_value = mock_store
+            mock_get_store.return_value = mock_store
             run_pipeline(limit=1)
             mock_client.fetch.assert_called_once_with("reports", limit=1, offset=0, date_from=None)
             mock_store.upsert_chunks.assert_called_once()
@@ -29,18 +29,18 @@ class TestPipeline:
         with patch("ingestion.pipeline.ReliefWebClient") as MockClient, \
              patch("ingestion.pipeline.parse") as mock_parse, \
              patch("ingestion.pipeline.chunk_document") as mock_chunk, \
-             patch("ingestion.pipeline.OllamaEmbedder") as MockEmbedder, \
-             patch("ingestion.pipeline.ChromaStore") as MockStore:
+             patch("ingestion.pipeline.get_embeddings") as mock_get_emb, \
+             patch("ingestion.pipeline.get_store") as mock_get_store:
             mock_client = MagicMock()
             mock_client.fetch.return_value = [{"id": "1"}]
             MockClient.return_value = mock_client
             mock_parse.return_value = {"id": "abc", "url": "u", "title": "t", "body": "b", "date": "", "country": "", "theme": "", "source": "", "format": "", "doctype": "report"}
             mock_chunk.return_value = [{"id": "abc_0", "content": "b", "metadata": {"url": "u", "title": "t", "country": "", "theme": "", "date": "", "source": "", "format": "", "doctype": "report"}}]
-            mock_embedder = MagicMock()
-            mock_embedder.embed_batch.return_value = [[0.1] * 2560]
-            MockEmbedder.return_value = mock_embedder
+            mock_emb = MagicMock()
+            mock_emb.embed_documents.side_effect = lambda texts: [[0.1] * 4096 for _ in texts]
+            mock_get_emb.return_value = mock_emb
             mock_store = MagicMock()
-            MockStore.return_value = mock_store
+            mock_get_store.return_value = mock_store
             run_pipeline(limit=1, force=True)
             mock_store.clear_collection.assert_called_once()
 
@@ -48,18 +48,18 @@ class TestPipeline:
         with patch("ingestion.pipeline.ReliefWebClient") as MockClient, \
              patch("ingestion.pipeline.parse") as mock_parse, \
              patch("ingestion.pipeline.chunk_document") as mock_chunk, \
-             patch("ingestion.pipeline.OllamaEmbedder") as MockEmbedder, \
-             patch("ingestion.pipeline.ChromaStore") as MockStore:
+             patch("ingestion.pipeline.get_embeddings") as mock_get_emb, \
+             patch("ingestion.pipeline.get_store") as mock_get_store:
             mock_client = MagicMock()
             mock_client.fetch.return_value = [{"id": "1"}]
             MockClient.return_value = mock_client
             mock_parse.return_value = {"id": "abc", "url": "u", "title": "t", "body": "b", "date": "", "country": "", "theme": "", "source": "", "format": "", "doctype": "report"}
             mock_chunk.return_value = [{"id": "abc_0", "content": "b", "metadata": {"url": "u", "title": "t", "country": "", "theme": "", "date": "", "source": "", "format": "", "doctype": "report"}}]
-            mock_embedder = MagicMock()
-            mock_embedder.embed_batch.return_value = [[0.1] * 2560]
-            MockEmbedder.return_value = mock_embedder
+            mock_emb = MagicMock()
+            mock_emb.embed_documents.side_effect = lambda texts: [[0.1] * 4096 for _ in texts]
+            mock_get_emb.return_value = mock_emb
             mock_store = MagicMock()
-            MockStore.return_value = mock_store
+            mock_get_store.return_value = mock_store
             run_pipeline(limit=1, endpoints=["reports", "disasters"])
             assert mock_client.fetch.call_count == 2
             calls = mock_client.fetch.call_args_list
@@ -97,20 +97,20 @@ class TestPipelineErrorIsolation:
         with patch("ingestion.pipeline.ReliefWebClient") as MockClient, \
              patch("ingestion.pipeline.parse") as mock_parse, \
              patch("ingestion.pipeline.chunk_document") as mock_chunk, \
-             patch("ingestion.pipeline.OllamaEmbedder") as MockEmbedder, \
-             patch("ingestion.pipeline.ChromaStore") as MockStore:
+             patch("ingestion.pipeline.get_embeddings") as mock_get_emb, \
+             patch("ingestion.pipeline.get_store") as mock_get_store:
             mock_client = MagicMock()
             mock_client.fetch.return_value = [{"id": "1"}, {"id": "2"}, {"id": "3"}]
             MockClient.return_value = mock_client
             good_doc = {"id": "abc", "url": "u", "title": "t", "body": "b", "date": "", "country": "", "theme": "", "source": "", "format": "", "doctype": "report"}
             mock_parse.side_effect = [good_doc, Exception("parse error"), good_doc]
             mock_chunk.return_value = [{"id": "abc_0", "content": "b", "metadata": {"url": "u", "title": "t", "country": "", "theme": "", "date": "", "source": "", "format": "", "doctype": "report"}}]
-            mock_embedder = MagicMock()
+            mock_emb = MagicMock()
             # 2 successful docs × 1 chunk each = 2 embeddings needed
-            mock_embedder.embed_batch.return_value = [[0.1] * 2560, [0.2] * 2560]
-            MockEmbedder.return_value = mock_embedder
+            mock_emb.embed_documents.side_effect = lambda texts: [[0.1] * 4096 for _ in texts]
+            mock_get_emb.return_value = mock_emb
             mock_store = MagicMock()
-            MockStore.return_value = mock_store
+            mock_get_store.return_value = mock_store
             stats = run_pipeline(limit=3)
             assert stats["reports"].succeeded == 2
             assert stats["reports"].failed == 1
@@ -122,8 +122,8 @@ class TestPipelineErrorIsolation:
         with patch("ingestion.pipeline.ReliefWebClient") as MockClient, \
              patch("ingestion.pipeline.parse") as mock_parse, \
              patch("ingestion.pipeline.chunk_document") as mock_chunk, \
-             patch("ingestion.pipeline.OllamaEmbedder") as MockEmbedder, \
-             patch("ingestion.pipeline.ChromaStore") as MockStore:
+             patch("ingestion.pipeline.get_embeddings") as mock_get_emb, \
+             patch("ingestion.pipeline.get_store") as mock_get_store:
             mock_client = MagicMock()
             mock_client.fetch.return_value = [{"id": "1"}, {"id": "2"}]
             MockClient.return_value = mock_client
@@ -131,11 +131,11 @@ class TestPipelineErrorIsolation:
             doc2 = {"id": "id2", "url": "u2", "title": "t2", "body": "b2", "date": "", "country": "", "theme": "", "source": "", "format": "", "doctype": "report"}
             mock_parse.side_effect = [doc1, doc2]
             mock_chunk.return_value = [{"id": "c_0", "content": "b", "metadata": {}}]
-            mock_embedder = MagicMock()
-            mock_embedder.embed_batch.return_value = [[0.1] * 2560, [0.2] * 2560]
-            MockEmbedder.return_value = mock_embedder
+            mock_emb = MagicMock()
+            mock_emb.embed_documents.side_effect = lambda texts: [[0.1] * 4096 for _ in texts]
+            mock_get_emb.return_value = mock_emb
             mock_store = MagicMock()
-            MockStore.return_value = mock_store
+            mock_get_store.return_value = mock_store
             run_pipeline(limit=2)
             # delete_document_chunks called once per doc (2 docs)
             assert mock_store.delete_document_chunks.call_count == 2
@@ -146,8 +146,8 @@ class TestPipelineErrorIsolation:
         with patch("ingestion.pipeline.ReliefWebClient") as MockClient, \
              patch("ingestion.pipeline.parse") as mock_parse, \
              patch("ingestion.pipeline.chunk_document") as mock_chunk, \
-             patch("ingestion.pipeline.OllamaEmbedder") as MockEmbedder, \
-             patch("ingestion.pipeline.ChromaStore") as MockStore:
+             patch("ingestion.pipeline.get_embeddings") as mock_get_emb, \
+             patch("ingestion.pipeline.get_store") as mock_get_store:
             mock_client = MagicMock()
             mock_client.fetch.return_value = [{"id": "1"}, {"id": "2"}]
             MockClient.return_value = mock_client
@@ -156,11 +156,11 @@ class TestPipelineErrorIsolation:
                 {"id": "def", "url": "u2", "title": "t2", "body": "", "date": "", "country": "", "theme": "", "source": "", "format": "", "doctype": "report"},
             ]
             mock_chunk.return_value = [{"id": "abc_0", "content": "b", "metadata": {"url": "u", "title": "t", "country": "", "theme": "", "date": "", "source": "", "format": "", "doctype": "report"}}]
-            mock_embedder = MagicMock()
-            mock_embedder.embed_batch.return_value = [[0.1] * 2560]
-            MockEmbedder.return_value = mock_embedder
+            mock_emb = MagicMock()
+            mock_emb.embed_documents.side_effect = lambda texts: [[0.1] * 4096 for _ in texts]
+            mock_get_emb.return_value = mock_emb
             mock_store = MagicMock()
-            MockStore.return_value = mock_store
+            mock_get_store.return_value = mock_store
             stats = run_pipeline(limit=2)
             assert stats["reports"].succeeded == 1
             assert stats["reports"].skipped == 1
@@ -169,37 +169,37 @@ class TestPipelineErrorIsolation:
         with patch("ingestion.pipeline.ReliefWebClient") as MockClient, \
              patch("ingestion.pipeline.parse") as mock_parse, \
              patch("ingestion.pipeline.chunk_document") as mock_chunk, \
-             patch("ingestion.pipeline.OllamaEmbedder") as MockEmbedder, \
-             patch("ingestion.pipeline.ChromaStore") as MockStore:
+             patch("ingestion.pipeline.get_embeddings") as mock_get_emb, \
+             patch("ingestion.pipeline.get_store") as mock_get_store:
             mock_client = MagicMock()
             mock_client.fetch.return_value = [{"id": "1"}]
             MockClient.return_value = mock_client
             mock_parse.return_value = None
-            mock_embedder = MagicMock()
-            MockEmbedder.return_value = mock_embedder
+            mock_emb = MagicMock()
+            mock_get_emb.return_value = mock_emb
             mock_store = MagicMock()
-            MockStore.return_value = mock_store
+            mock_get_store.return_value = mock_store
             stats = run_pipeline(limit=1)
             assert stats["reports"].skipped == 1
             assert stats["reports"].succeeded == 0
-            mock_embedder.embed_batch.assert_not_called()
+            mock_emb.embed_documents.assert_not_called()
 
     def test_run_pipeline_returns_stats_dict(self):
         with patch("ingestion.pipeline.ReliefWebClient") as MockClient, \
              patch("ingestion.pipeline.parse") as mock_parse, \
              patch("ingestion.pipeline.chunk_document") as mock_chunk, \
-             patch("ingestion.pipeline.OllamaEmbedder") as MockEmbedder, \
-             patch("ingestion.pipeline.ChromaStore") as MockStore:
+             patch("ingestion.pipeline.get_embeddings") as mock_get_emb, \
+             patch("ingestion.pipeline.get_store") as mock_get_store:
             mock_client = MagicMock()
             mock_client.fetch.return_value = [{"id": "1"}]
             MockClient.return_value = mock_client
             mock_parse.return_value = {"id": "abc", "url": "u", "title": "t", "body": "b", "date": "", "country": "", "theme": "", "source": "", "format": "", "doctype": "report"}
             mock_chunk.return_value = [{"id": "abc_0", "content": "b", "metadata": {"url": "u", "title": "t", "country": "", "theme": "", "date": "", "source": "", "format": "", "doctype": "report"}}]
-            mock_embedder = MagicMock()
-            mock_embedder.embed_batch.return_value = [[0.1] * 2560]
-            MockEmbedder.return_value = mock_embedder
+            mock_emb = MagicMock()
+            mock_emb.embed_documents.side_effect = lambda texts: [[0.1] * 4096 for _ in texts]
+            mock_get_emb.return_value = mock_emb
             mock_store = MagicMock()
-            MockStore.return_value = mock_store
+            mock_get_store.return_value = mock_store
             stats = run_pipeline(limit=1, endpoints=["reports", "disasters"])
             assert isinstance(stats, dict)
             assert "reports" in stats
@@ -209,16 +209,16 @@ class TestPipelineErrorIsolation:
     def test_errors_capped_at_10(self):
         with patch("ingestion.pipeline.ReliefWebClient") as MockClient, \
              patch("ingestion.pipeline.parse") as mock_parse, \
-             patch("ingestion.pipeline.OllamaEmbedder") as MockEmbedder, \
-             patch("ingestion.pipeline.ChromaStore") as MockStore:
+             patch("ingestion.pipeline.get_embeddings") as mock_get_emb, \
+             patch("ingestion.pipeline.get_store") as mock_get_store:
             mock_client = MagicMock()
             mock_client.fetch.return_value = [{"id": str(i)} for i in range(15)]
             MockClient.return_value = mock_client
             mock_parse.side_effect = Exception("fail")
-            mock_embedder = MagicMock()
-            MockEmbedder.return_value = mock_embedder
+            mock_emb = MagicMock()
+            mock_get_emb.return_value = mock_emb
             mock_store = MagicMock()
-            MockStore.return_value = mock_store
+            mock_get_store.return_value = mock_store
             stats = run_pipeline(limit=15)
             assert stats["reports"].failed == 15
             assert len(stats["reports"].errors) == 10
@@ -230,8 +230,8 @@ class TestPipelineErrorIsolation:
         with patch("ingestion.pipeline.ReliefWebClient") as MockClient, \
              patch("ingestion.pipeline.parse") as mock_parse, \
              patch("ingestion.pipeline.chunk_document") as mock_chunk, \
-             patch("ingestion.pipeline.OllamaEmbedder") as MockEmbedder, \
-             patch("ingestion.pipeline.ChromaStore") as MockStore:
+             patch("ingestion.pipeline.get_embeddings") as mock_get_emb, \
+             patch("ingestion.pipeline.get_store") as mock_get_store:
             mock_client = MagicMock()
             # First batch returns items, second batch returns empty (end of data)
             mock_client.fetch.side_effect = [
@@ -241,11 +241,11 @@ class TestPipelineErrorIsolation:
             MockClient.return_value = mock_client
             mock_parse.return_value = {"id": "abc", "url": "u", "title": "t", "body": "b", "date": "", "country": "", "theme": "", "source": "", "format": "", "doctype": "report"}
             mock_chunk.return_value = [{"id": "abc_0", "content": "b", "metadata": {"url": "u", "title": "t", "country": "", "theme": "", "date": "", "source": "", "format": "", "doctype": "report"}}]
-            mock_embedder = MagicMock()
-            mock_embedder.embed_batch.return_value = [[0.1] * 2560]
-            MockEmbedder.return_value = mock_embedder
+            mock_emb = MagicMock()
+            mock_emb.embed_documents.side_effect = lambda texts: [[0.1] * 4096 for _ in texts]
+            mock_get_emb.return_value = mock_emb
             mock_store = MagicMock()
-            MockStore.return_value = mock_store
+            mock_get_store.return_value = mock_store
             # Request 10 docs, but only 3 available - batch_size should be min(500, 10)
             stats = run_pipeline(limit=10)
             assert stats["reports"].succeeded == 3

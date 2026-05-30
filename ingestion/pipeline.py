@@ -7,8 +7,8 @@ from config import get_settings
 from ingestion.client import ReliefWebClient, ENDPOINT_CONFIG
 from ingestion.parser import parse
 from ingestion.chunker import chunk_document
-from ingestion.embedder import OllamaEmbedder
-from ingestion.store import ChromaStore
+from ingestion.store import get_store
+from rag.embeddings import get_embeddings
 
 logger = logging.getLogger(__name__)
 
@@ -39,8 +39,8 @@ def run_pipeline(
         limit, force, endpoints, date_from,
     )
     client = ReliefWebClient()
-    embedder = OllamaEmbedder()
-    store = ChromaStore()
+    embedder = get_embeddings()
+    store = get_store()
 
     if force:
         store.clear_collection()
@@ -102,7 +102,7 @@ def run_pipeline(
             all_chunks = [c for _, chunks in doc_batch for c in chunks]
             try:
                 texts = [c["content"] for c in all_chunks]
-                all_embeddings = embedder.embed_batch(texts)
+                all_embeddings = embedder.embed_documents(texts)
                 store.upsert_chunks(all_chunks, all_embeddings)
                 stats.succeeded += len(doc_batch)
             except Exception as e:
