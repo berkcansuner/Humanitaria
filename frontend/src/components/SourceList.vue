@@ -1,6 +1,6 @@
 <template>
   <div class="sources" v-if="validSources.length">
-    <div class="sources-header">Kaynaklar ({{ validSources.length }})</div>
+    <div class="sources-header">SOURCES ({{ validSources.length }})</div>
     <ul class="source-list">
       <li v-for="(src, idx) in validSources" :key="idx" class="source-item">
         <span v-if="src.index != null" class="source-index">[{{ src.index }}]</span>
