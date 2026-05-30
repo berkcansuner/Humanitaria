@@ -28,6 +28,9 @@ chroma_db/
 htmlcov/
 .coverage
 
+# Runtime logs
+*.log
+
 # Node
 node_modules/
 
