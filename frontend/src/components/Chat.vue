@@ -21,26 +21,12 @@
                 <AlertCircle :size="16" class="error-icon" />
                 {{ msg.error }}
               </div>
-              <div v-if="msg.clarification && !msg.clarification.resolved" class="clarification-card">
-                <p class="clarification-message">{{ msg.clarification.message }}</p>
-                <div class="suggestion-groups">
-                  <div v-if="msg.clarification.suggestions.countries.length" class="suggestion-group">
-                    <span class="suggestion-label">Country:</span>
-                    <button v-for="c in msg.clarification.suggestions.countries" :key="c"
-                            @click="applySuggestion(msg, 'country', c)" class="suggestion-chip">{{ c }}</button>
-                  </div>
-                  <div v-if="msg.clarification.suggestions.time_periods.length" class="suggestion-group">
-                    <span class="suggestion-label">Time:</span>
-                    <button v-for="t in msg.clarification.suggestions.time_periods" :key="t"
-                            @click="applySuggestion(msg, 'date', t)" class="suggestion-chip">{{ t }}</button>
-                  </div>
-                  <div v-if="msg.clarification.suggestions.themes.length" class="suggestion-group">
-                    <span class="suggestion-label">Topic:</span>
-                    <button v-for="th in msg.clarification.suggestions.themes" :key="th"
-                            @click="applySuggestion(msg, 'theme', th)" class="suggestion-chip">{{ th }}</button>
-                  </div>
-                </div>
-              </div>
+              <SuggestionCard
+                v-if="msg.clarification && !msg.clarification.resolved"
+                :clarification="msg.clarification"
+                @apply="onSuggestionApply(msg, $event)"
+                @dismiss="onSuggestionDismiss(msg)"
+              />
               <SourceList v-if="msg.sources" :sources="msg.sources" />
             </template>
           </div>
@@ -68,6 +54,7 @@
 import { ref, nextTick } from 'vue'
 import { Send, Loader2, AlertCircle } from 'lucide-vue-next'
 import SourceList from './SourceList.vue'
+import SuggestionCard from './SuggestionCard.vue'
 import { renderMarkdown } from '../utils/renderMarkdown.js'
 import { parseSSE } from '../utils/parseSSE.js'
 
@@ -218,15 +205,19 @@ function scrollToBottom() {
   })
 }
 
-function applySuggestion(msg, type, value) {
+function onSuggestionApply(msg, values) {
   msg.clarification.resolved = true
   messages.value[messages.value.indexOf(msg)] = { ...msg }
   const lastUserMsg = [...messages.value].reverse().find(m => m.role === 'user')
   const originalQuery = lastUserMsg ? lastUserMsg.content : ''
-  const prefixByType = { country: '', date: '', theme: '' }
-  const prefix = prefixByType[type] || ''
-  input.value = originalQuery + ' ' + prefix + value
+  input.value = (originalQuery + ' ' + values.join(' ')).trim()
   sendMessage()
+}
+
+function onSuggestionDismiss(msg) {
+  msg.clarification.resolved = true
+  messages.value[messages.value.indexOf(msg)] = { ...msg }
+  nextTick(() => chatInput.value?.focus())
 }
 </script>
 
@@ -498,59 +489,4 @@ function applySuggestion(msg, type, value) {
   to { transform: rotate(360deg); }
 }
 
-.clarification-card {
-  margin-top: var(--space-3);
-  padding-top: var(--space-3);
-  border-top: 1px dashed var(--color-border);
-}
-
-.clarification-message {
-  margin: 0 0 var(--space-2) 0;
-  font-size: var(--text-xs);
-  color: var(--color-muted);
-  font-weight: 600;
-}
-
-.suggestion-groups {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.suggestion-group {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-.suggestion-label {
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--color-muted);
-  margin-right: var(--space-1);
-}
-
-.suggestion-chip {
-  display: inline-block;
-  padding: var(--space-1) var(--space-3);
-  font-size: var(--text-xs);
-  font-family: var(--font-body);
-  background-color: var(--color-surface);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
-  cursor: pointer;
-  transition: background-color 0.2s, border-color 0.2s;
-}
-
-.suggestion-chip:hover {
-  background-color: var(--color-surface-container-low);
-  border-color: var(--color-accent);
-}
-
-.suggestion-chip:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
 </style>
