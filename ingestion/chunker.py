@@ -10,6 +10,11 @@ def chunk_document(
     settings = get_settings()
     size = chunk_size or settings.CHUNK_SIZE
     overlap = chunk_overlap or settings.CHUNK_OVERLAP
+    raw_date = doc.get("date", "")
+    try:
+        date_ts = int(raw_date[:10].replace("-", "")) if raw_date[:10].count("-") == 2 else 0
+    except (ValueError, AttributeError):
+        date_ts = 0
     body = doc.get("body", "")
     words = body.split()
     if not words:
@@ -30,6 +35,7 @@ def chunk_document(
                 "country": doc.get("country", ""),
                 "theme": doc.get("theme", ""),
                 "date": doc.get("date", ""),
+                "date_ts": date_ts,   # numeric YYYYMMDD for Pinecone $gte range filtering
                 "source": doc.get("source", ""),
                 "format": doc.get("format", ""),
                 "doctype": doc.get("doctype", ""),

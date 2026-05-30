@@ -42,3 +42,18 @@ class TestChunker:
         }
         chunks = chunk_document(doc)
         assert chunks[0]["metadata"]["doctype"] == "country"
+
+
+def test_chunk_metadata_has_numeric_date_ts():
+    from ingestion.chunker import chunk_document
+    doc = {"id": "abc", "body": "word " * 10, "date": "2024-03-15"}
+    chunks = chunk_document(doc, chunk_size=5, chunk_overlap=1)
+    assert chunks
+    assert chunks[0]["metadata"]["date_ts"] == 20240315
+
+
+def test_chunk_metadata_date_ts_zero_when_missing():
+    from ingestion.chunker import chunk_document
+    doc = {"id": "abc", "body": "word " * 10, "date": ""}
+    chunks = chunk_document(doc, chunk_size=5, chunk_overlap=1)
+    assert chunks[0]["metadata"]["date_ts"] == 0
