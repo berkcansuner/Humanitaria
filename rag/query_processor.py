@@ -46,6 +46,23 @@ _DOCTYPE_MAP = {
 _CANONICAL_COUNTRIES = set(_COUNTRY_MAP.values())
 _CANONICAL_THEMES = set(_THEME_MAP.values())
 
+
+def _as_known_country(value: str) -> Optional[str]:
+    """Return the canonical country name if `value` is a known country, else None.
+
+    The small query-processor LLM sometimes drops a country name into the
+    `source` field; this lets the caller detect and reclassify that case.
+    """
+    if not value:
+        return None
+    v = value.strip().lower()
+    if v in _COUNTRY_MAP:
+        return _COUNTRY_MAP[v]
+    for canon in _CANONICAL_COUNTRIES:
+        if canon.lower() == v:
+            return canon
+    return None
+
 _FILTER_EXTRACTION_PROMPT = """You are a filter extraction system for a ReliefWeb humanitarian documents database.
 
 Given a user query in Turkish or English, extract structured search filters.
@@ -143,7 +160,13 @@ def _normalize_llm_filters(result: QueryFilters) -> Dict[str, Any]:
         except ValueError:
             pass  # malformed date → ignore
     if result.source:
-        filters["source"] = result.source
+        # The tiny LLM sometimes misclassifies a country as a source; a source
+        # filter on a country name returns zero documents, so reclassify it.
+        promoted = _as_known_country(result.source)
+        if promoted:
+            filters.setdefault("country", promoted)
+        else:
+            filters["source"] = result.source
     if result.format:
         filters["format"] = result.format
     return filters
@@ -296,10 +319,17 @@ def _extract_filters_rule_based(query: str) -> Dict[str, Any]:
 
 def extract_filters(query: str) -> Dict[str, Any]:
     query_normalized = _turkish_lower(query.strip())
-    filters = _cached_llm_extract(query_normalized)
-    if filters is not None:
-        return filters
-    return _extract_filters_rule_based(query)
+    llm_filters = _cached_llm_extract(query_normalized)
+    rule_filters = _extract_filters_rule_based(query)
+    if llm_filters is None:
+        # LLM call failed entirely → rely on the deterministic extractor.
+        return rule_filters
+    # The small LLM is unreliable and often returns empty/partial output. Use the
+    # rule-based extractor as a backstop: it fills the curated country/theme/doctype/
+    # date fields the LLM left empty, while the LLM still wins on any field it set.
+    merged = dict(rule_filters)
+    merged.update(llm_filters)
+    return merged
 
 
 _SUGGESTION_COUNTRIES = [

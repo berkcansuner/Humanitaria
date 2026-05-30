@@ -310,3 +310,68 @@ class TestNormalizeLlmFilters:
         f = _normalize_llm_filters(result)
         assert "date" in f, "date_from in the past should be accepted"
         assert f["date"]["$gte"] == past
+
+    def test_country_misclassified_as_source_becomes_country(self):
+        # Small LLM (qwen2.5:0.5b) sometimes dumps a country name into `source`.
+        # A source that is actually a known country must be reclassified, not used
+        # as a source filter (which would return zero documents).
+        from rag.query_processor import _normalize_llm_filters
+        result = QueryFilters(source="Sudan")
+        f = _normalize_llm_filters(result)
+        assert f.get("country") == "Sudan"
+        assert "source" not in f, "a known country must not survive as a source filter"
+
+    def test_real_source_org_is_kept(self):
+        from rag.query_processor import _normalize_llm_filters
+        result = QueryFilters(source="WFP")
+        f = _normalize_llm_filters(result)
+        assert f.get("source") == "WFP"
+        assert "country" not in f
+
+    def test_country_as_source_does_not_override_existing_country(self):
+        from rag.query_processor import _normalize_llm_filters
+        result = QueryFilters(country="Yemen", source="Sudan")
+        f = _normalize_llm_filters(result)
+        assert f.get("country") == "Yemen", "explicit country must not be overwritten"
+        assert "source" not in f
+
+
+class TestRuleBasedMergeBackstop:
+    """When the unreliable LLM returns an empty/partial result, the deterministic
+    rule-based extractor must still fill in the curated country/theme/doctype/date
+    fields instead of being bypassed."""
+
+    @patch("rag.query_processor._extract_filters_llm")
+    def test_empty_llm_falls_back_to_rules(self, mock_llm):
+        _clear_llm_cache()
+        mock_llm.return_value = {}  # LLM succeeded but extracted nothing
+        f = extract_filters("Sudan reports")
+        assert f.get("country") == "Sudan"
+        assert f.get("doctype") == "report"
+
+    @patch("rag.query_processor._extract_filters_llm")
+    def test_empty_llm_fills_country_theme_date(self, mock_llm):
+        _clear_llm_cache()
+        mock_llm.return_value = {}
+        f = extract_filters("Yemen food crisis last 3 months")
+        assert f.get("country") == "Yemen"
+        assert f.get("theme") == "Food and Nutrition"
+        assert "date" in f
+
+    @patch("rag.query_processor._extract_filters_llm")
+    def test_llm_values_win_over_rules_on_conflict(self, mock_llm):
+        _clear_llm_cache()
+        # LLM's explicit ISO date must take precedence over rule-based "last 3 months"
+        mock_llm.return_value = {"country": "Syria", "date": {"$gte": "2026-04-07"}}
+        f = extract_filters("food reports in Syria last 3 months")
+        assert f["date"] == {"$gte": "2026-04-07"}
+        assert f.get("country") == "Syria"
+
+    @patch("rag.query_processor._extract_filters_llm")
+    def test_partial_llm_keeps_its_fields_and_gains_rule_fields(self, mock_llm):
+        _clear_llm_cache()
+        mock_llm.return_value = {"source": "WFP"}
+        f = extract_filters("WFP reports about Sudan")
+        assert f.get("source") == "WFP"
+        assert f.get("country") == "Sudan"
+        assert f.get("doctype") == "report"
