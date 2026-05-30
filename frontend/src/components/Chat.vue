@@ -7,10 +7,6 @@
         :class="['message', msg.role]"
       >
         <div class="message-row">
-          <!-- Assistant avatar -->
-          <div v-if="msg.role === 'assistant'" class="assistant-avatar" aria-hidden="true">
-            <Bot :size="20" />
-          </div>
           <div class="message-bubble">
             <template v-if="msg.role === 'assistant' && !msg.content && !msg.error && !msg.clarification">
               <div class="typing-indicator">
@@ -53,11 +49,11 @@
     </div>
     <form class="input-area" @submit.prevent="sendMessage">
       <input
+        ref="chatInput"
         v-model="input"
         type="text"
         placeholder="Ask about humanitarian aid..."
         class="chat-input"
-        :disabled="loading"
         enterkeyhint="send"
       />
       <button type="submit" class="send-btn" :disabled="loading || !input.trim()" aria-label="Send message">
@@ -69,8 +65,8 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { Send, Loader2, Bot, AlertCircle } from 'lucide-vue-next'
+import { ref, nextTick } from 'vue'
+import { Send, Loader2, AlertCircle } from 'lucide-vue-next'
 import SourceList from './SourceList.vue'
 import { renderMarkdown } from '../utils/renderMarkdown.js'
 import { parseSSE } from '../utils/parseSSE.js'
@@ -87,6 +83,7 @@ const input = ref('')
 const loading = ref(false)
 const sessionId = ref(null)
 const messagesContainer = ref(null)
+const chatInput = ref(null)
 
 
 
@@ -206,6 +203,10 @@ async function sendMessage() {
   } finally {
     loading.value = false
     scrollToBottom()
+    // Keep the composer ready to type. When the message was sent by clicking the
+    // send button, focus sits on that button (which becomes disabled once the
+    // input is empty); move it back to the input so the user can keep typing.
+    nextTick(() => chatInput.value?.focus())
   }
 }
 
@@ -275,19 +276,6 @@ function applySuggestion(msg, type, value) {
 
 .message.user .message-row {
   flex-direction: row-reverse;
-}
-
-.assistant-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-full);
-  background-color: var(--color-accent-container);
-  color: var(--color-on-accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-top: var(--space-1);
 }
 
 .message-bubble {
