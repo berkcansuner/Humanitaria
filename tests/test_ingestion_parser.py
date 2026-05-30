@@ -26,7 +26,9 @@ class TestParseReport:
         assert doc["theme"] == "Food and Nutrition"
         assert doc["source"] == "WFP"
         assert doc["format"] == "Situation Report"
-        assert doc["url"] == "https://example.com/file.pdf"
+        # Displayed link is the report web page; the PDF stays in pdf_url.
+        assert doc["url"] == "https://reliefweb.int/report/123"
+        assert doc["pdf_url"] == "https://example.com/file.pdf"
         assert doc["doctype"] == "report"
 
     def test_parse_missing_optional_fields(self):

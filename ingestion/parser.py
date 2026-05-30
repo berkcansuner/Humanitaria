@@ -66,12 +66,11 @@ def parse_report(raw: Dict[str, Any]) -> Dict[str, Any]:
     # different doc_ids and leave orphan chunks in the vector store.
     canonical_url = f"https://reliefweb.int/report/{raw.get('id', '')}"
     doc_id = hashlib.sha256(canonical_url.encode()).hexdigest()
-    # For the displayed source link, prefer the file attachment URL if available.
+    # Displayed source link points to the report's web page (opens in the
+    # browser), not the file attachment — the CDN serves attachments as a
+    # download. The PDF stays available via pdf_url below.
     file_objs = fields.get("file")
-    if file_objs and isinstance(file_objs, list) and len(file_objs) > 0:
-        url = _safe_get(file_objs[0], "url", canonical_url)
-    else:
-        url = canonical_url
+    url = canonical_url
     date_field = fields.get("date")
     date = _normalize_date(_safe_get(date_field, "created") if isinstance(date_field, dict) else "")
     country_field = fields.get("primary_country")
