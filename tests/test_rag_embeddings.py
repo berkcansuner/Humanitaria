@@ -82,6 +82,7 @@ class TestOllamaLangChainEmbeddings:
 
 def _mock_gemini_settings(embed_dim=3072, batch_size=32):
     s = MagicMock()
+    s.EMBED_PROVIDER = "gemini"
     s.GEMINI_API_KEY = "test-key"
     s.GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
     s.GEMINI_EMBED_MODEL = "gemini-embedding-001"
@@ -119,6 +120,19 @@ class TestGeminiLangChainEmbeddings:
             emb = GeminiLangChainEmbeddings()
             result = emb.embed_query("hello")
             assert len(result) == 3072
+
+    def test_embed_documents_batching(self):
+        """Texts exceeding batch_size should trigger multiple embedding calls."""
+        from rag.embeddings import GeminiLangChainEmbeddings
+        with patch("rag.embeddings.get_settings", return_value=_mock_gemini_settings(batch_size=2)), \
+             patch("rag.embeddings.OpenAI") as MockOpenAI:
+            client = MagicMock()
+            client.embeddings.create.return_value = _gemini_response(2)
+            MockOpenAI.return_value = client
+            emb = GeminiLangChainEmbeddings()
+            result = emb.embed_documents(["a", "b", "c", "d"])
+            assert len(result) == 4
+            assert client.embeddings.create.call_count == 2
 
     def test_dim_validation_raises_on_mismatch(self):
         from rag.embeddings import GeminiLangChainEmbeddings

@@ -88,6 +88,7 @@ class GeminiLangChainEmbeddings(Embeddings):
         self.expected_dim = self.settings.EMBED_DIM
 
     def _embed_with_retry(self, texts: List[str]) -> List[List[float]]:
+        """Embed a list of texts with exponential-backoff retry."""
         backoff = _RETRY_BACKOFF_S
         for attempt in range(_RETRY_COUNT):
             try:
@@ -110,6 +111,7 @@ class GeminiLangChainEmbeddings(Embeddings):
                     raise
 
     def _validate_dim(self, vec: List[float]) -> None:
+        """Assert that the returned dimension matches EMBED_DIM."""
         if len(vec) != self.expected_dim:
             raise ValueError(
                 f"Embedding dimension mismatch for model '{self.model}': "
