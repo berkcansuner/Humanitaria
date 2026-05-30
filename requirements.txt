@@ -18,3 +18,5 @@ fastapi==0.115.0
 uvicorn[standard]==0.34.0
 langchain-openai==0.3.14
 sse-starlette
+langchain-pinecone==0.2.13
+pinecone==6.0.2

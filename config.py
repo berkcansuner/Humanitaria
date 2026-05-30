@@ -38,6 +38,21 @@ class Settings(BaseSettings):
     EMBED_DIM: int = 4096          # qwen3-embedding:8b — 4096 dim; 4b variant is 2560
     EMBED_BATCH_SIZE: int = 32     # max texts per Ollama embed call
 
+    # Vector store provider: "chroma" veya "pinecone"
+    VECTOR_STORE_PROVIDER: str = "chroma"
+    # Embedding provider: "ollama" veya "gemini"
+    EMBED_PROVIDER: str = "ollama"
+
+    # Gemini embedding (OpenAI-uyumlu endpoint; GEMINI_API_KEY/GEMINI_BASE_URL yeniden kullanılır)
+    GEMINI_EMBED_MODEL: str = "gemini-embedding-001"
+
+    # Pinecone (serverless)
+    PINECONE_API_KEY: str = ""
+    PINECONE_INDEX: str = "reliefweb-docs"
+    PINECONE_CLOUD: str = "aws"
+    PINECONE_REGION: str = "us-east-1"
+    PINECONE_NAMESPACE: str = ""
+
     # RAG
     CHUNK_SIZE: int = 800
     CHUNK_OVERLAP: int = 100
