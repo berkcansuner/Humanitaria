@@ -74,12 +74,17 @@ const chatInput = ref(null)
 
 
 
-async function sendMessage() {
-  const text = input.value.trim()
+async function sendMessage(opts = {}) {
+  // opts.text  -> send this query instead of the composer's value
+  // opts.silent -> don't add a visible user bubble (used for refined queries
+  //                applied from the suggestion card)
+  const text = (opts.text != null ? opts.text : input.value).trim()
   if (!text || loading.value) return
 
-  messages.value.push({ role: 'user', content: text, error: null })
-  input.value = ''
+  if (!opts.silent) {
+    messages.value.push({ role: 'user', content: text, error: null })
+  }
+  if (opts.text == null) input.value = ''
   loading.value = true
 
   const assistantMsg = { role: 'assistant', content: '', sources: null, error: null, clarification: null }
@@ -210,8 +215,9 @@ function onSuggestionApply(msg, values) {
   messages.value[messages.value.indexOf(msg)] = { ...msg }
   const lastUserMsg = [...messages.value].reverse().find(m => m.role === 'user')
   const originalQuery = lastUserMsg ? lastUserMsg.content : ''
-  input.value = (originalQuery + ' ' + values.join(' ')).trim()
-  sendMessage()
+  const enriched = (originalQuery + ' ' + values.join(' ')).trim()
+  // Refine the search silently — no second user bubble with the raw query.
+  sendMessage({ text: enriched, silent: true })
 }
 
 function onSuggestionDismiss(msg) {
