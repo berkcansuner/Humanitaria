@@ -23,7 +23,7 @@ sohbet sistemi. Şu an yerel geliştirme aşamasında.
 - **Backend:** FastAPI, **port 8000** (.env'de `API_PORT` yok → config default 8000; bu oturumda 8000'de sorunsuz çalıştı). SSE streaming. Başlangıçta lifespan warmup + ingestion scheduler.
 - **Frontend:** Vue 3, `frontend/dist/` build edilmiş, FastAPI statik serve ediyor.
 - **Kaynaklar (citation-grounded):** Yanıt context belgelerine satır içi `[n]` atıfı verir; `sources` event'i yalnızca atıf verilen belgeleri döndürür (atıf yoksa fallback: tümü). Prompt artık kaynakları metin içinde isimlendirmiyor — sadece altta `SOURCES (N)` kompakt liste (`[n]` numaralı).
-- **Öneriler:** Belirsiz sorgularda yanıttan SONRA `SuggestionCard.vue` — Claude tarzı adım adım kart (1/N: ülke→zaman→konu, numaralı seçenekler, Atla, "veya doğrudan yazın"). Seçimler birikir, son adımda sorgu zenginleşip yeniden gönderilir. SSE sırası: token → sources → clarification.
+- **Öneriler:** Belirsiz sorgularda yanıttan SONRA **React island** öneri kartı (Claude tarzı, 1/N: ülke→zaman→konu, numaralı seçenekler, ilerleme noktaları, tam klavye [1-9/ok/Enter/Esc], CSS animasyon+reduced-motion, ARIA radiogroup, "Atla"/"veya doğrudan yazın"). `react/SuggestionCard.jsx` + `SuggestionCardIsland.vue` (Vue↔React köprüsü); seçimler birikir, son adımda sorgu zenginleşip yeniden gönderilir. SSE sırası: token → sources → clarification.
 - **Test:** **212 backend (pytest) + 11 frontend (vitest), hepsi yeşil.**
 
 ## Veri Durumu
@@ -41,13 +41,11 @@ sohbet sistemi. Şu an yerel geliştirme aşamasında.
 | Frontend build | `cd frontend && npm run build` |
 | Frontend testleri | `cd frontend && npm test -- --run` |
 
-## ⚠️ PUSH ENGELİ — DOĞRU REMOTE GEREK
-- Yerelde tüm iş commit'li ama **push edilmedi.** Kullanıcının verdiği `https://github.com/berkcansuner/RState_ai` **YANLIŞ repo** — orası tamamen farklı bir proje (React/TS **emlak/fiyat-takip dashboard'u**: `FiyatDususleriPage.tsx`, `IlceOzetiPage.tsx`, `TumIlanlarPage.tsx`...). Ortak git geçmişi yok (ayrı kökler). Oraya push o projeyi ezerdi → YAPILMADI, eklenen `origin` kaldırıldı.
-- **Bekleyen:** Kullanıcıdan ReliefWeb RAG için DOĞRU repo URL'si (veya yeni repo açma onayı). Alınınca `git remote add origin <url>` + `git push -u origin master`.
+## Remote / Push
+- Remote: **https://github.com/berkcansuner/reliefweb-rag** (private). `origin/master` güncel — her tur push ediliyor. (NOT: `RState_ai` farklı bir proje, ona dokunulmadı.)
 
 ## Sıradaki Adımlar
-1. [ ] **Push:** doğru remote alınınca `master`'ı push et (yukarı bak).
-2. [ ] (Opsiyonel) Stale warmup düzeltmesi: `api/main.py` lifespan warmup'ı `OllamaLangChainEmbeddings`'i hardcode ediyor → `rag.embeddings.get_embeddings()` factory'sine çevir (yanıltıcı 4096≠3072 log'unu ve gereksiz Ollama bağımlılığını giderir).
+1. [ ] (Opsiyonel) Stale warmup düzeltmesi: `api/main.py` lifespan warmup'ı `OllamaLangChainEmbeddings`'i hardcode ediyor → `rag.embeddings.get_embeddings()` factory'sine çevir (yanıltıcı 4096≠3072 log'unu ve gereksiz Ollama bağımlılığını giderir).
 3. [ ] (Opsiyonel) Daha fazla veri toplama — `ingest.py --limit` artır; çoklu endpoint (`--endpoints reports disasters countries`).
 4. [ ] (Opsiyonel) `RunnableWithMessageHistory` → LangGraph migrasyonu (4 deprecation uyarısı).
 
@@ -59,9 +57,20 @@ sohbet sistemi. Şu an yerel geliştirme aşamasında.
 - CORS production için daraltılmalı (şu an localhost origin'leri, `.env` `CORS_ORIGINS`).
 - Pipeline resume kısmi: scheduler watermark (`chroma_db/.last_ingest.json`) var ama uzun kesinti tam test edilmedi.
 
-## Son Oturum Özeti (2026-05-30)
-Önceki turda query-processor merge fix + chat input UX fix yapıldı ve commit'lendi (7 commit).
-Bu turda 3 özellik eklendi (commit'lendi) + push denendi ama doğru remote yok:
+## Son Oturum Özeti (2026-05-31)
+Öneri kartı **React island** olarak yeniden tasarlandı (kullanıcı tercihi). `ui-ux-pro-max` skill
+tasarım yönü için kullanıldı; **Magic MCP `[object Object]` döndürdü (bu ortamda bozuk)** → React
+bileşeni spec'e göre elle yazıldı. Eklenenler: `frontend/src/components/react/SuggestionCard.jsx`
+(+`.css`), `SuggestionCardIsland.vue` (createRoot ile Vue↔React köprüsü), `vite.config.js`'e
+`@vitejs/plugin-react@^4` (jsx/tsx scope), deps `react@18 react-dom lucide-react`. Eski Vue
+`SuggestionCard.vue` kaldırıldı. Cilalı minimal + tam klavye + CSS animasyon (reduced-motion) + ARIA.
+Bundle 52→99KB gz (React maliyeti). CDP ile canlı doğrulandı (tema `rgb(97,0,0)`, klavye 1/3→3/3→birleşik
+sorgu). 11/11 frontend test geçiyor. (Daha hafif Vue-native alternatif fallback olarak duruyor.)
+
+---
+
+### Önceki tur (2026-05-30)
+query-processor merge fix + chat input UX fix (7 commit). Ardından 3 özellik:
 
 1. **Citation-grounded sources** (`api/routes/chat.py`, `rag/chain.py`): Context belgeleri `[n]` ile
    numaralanır; prompt modele kullandığı belgeye `[n]` atıfı vermesini söyler; route yanıttaki `[n]`
