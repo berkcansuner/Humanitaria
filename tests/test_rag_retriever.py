@@ -80,7 +80,9 @@ class TestRetriever:
             )
 
     def test_build_retriever_date_excluded_from_chroma(self):
-        with patch("rag.retriever._get_vectorstore") as mock_get_vs:
+        # Force chroma provider so the test is independent of the ambient .env.
+        with patch("rag.retriever._get_vectorstore") as mock_get_vs, \
+             patch.object(get_settings(), "VECTOR_STORE_PROVIDER", "chroma"):
             mock_vs = MagicMock()
             mock_vs.as_retriever.return_value = MagicMock()
             mock_get_vs.return_value = mock_vs
@@ -91,7 +93,10 @@ class TestRetriever:
             assert chroma_filter == {"country": {"$in": ["Iran", "Iran (Islamic Republic of)"]}}
 
     def test_get_vectorstore_caches_chroma(self):
-        with patch("rag.retriever.Chroma") as MockChroma:
+        # Force chroma provider so the test is independent of the ambient .env.
+        with patch("rag.retriever.Chroma") as MockChroma, \
+             patch("rag.retriever.get_embeddings", return_value=MagicMock()), \
+             patch.object(get_settings(), "VECTOR_STORE_PROVIDER", "chroma"):
             mock_vs1 = MagicMock()
             MockChroma.return_value = mock_vs1
             vs1 = _get_vectorstore()
