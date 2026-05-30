@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from rag.retriever import build_retriever, _get_vectorstore, _build_chroma_filter
+from rag.retriever import build_retriever, _get_vectorstore, _build_chroma_filter, _build_pinecone_filter
 from config import get_settings
 
 
@@ -97,4 +97,68 @@ class TestRetriever:
             vs1 = _get_vectorstore()
             vs2 = _get_vectorstore()
             assert vs1 is vs2
+            MockChroma.assert_called_once()
+
+
+class TestPineconeFilter:
+    def test_empty_returns_none(self):
+        from rag.retriever import _build_pinecone_filter
+        assert _build_pinecone_filter({}) is None
+        assert _build_pinecone_filter(None) is None
+
+    def test_country_alias_uses_in(self):
+        from rag.retriever import _build_pinecone_filter
+        assert _build_pinecone_filter({"country": "Iran"}) == {
+            "country": {"$in": ["Iran", "Iran (Islamic Republic of)"]}
+        }
+
+    def test_country_non_alias_uses_eq(self):
+        from rag.retriever import _build_pinecone_filter
+        assert _build_pinecone_filter({"country": "Yemen"}) == {"country": {"$eq": "Yemen"}}
+
+    def test_date_becomes_numeric_date_ts_gte(self):
+        from rag.retriever import _build_pinecone_filter
+        assert _build_pinecone_filter({"date": {"$gte": "2024-01-01"}}) == {
+            "date_ts": {"$gte": 20240101}
+        }
+
+    def test_multi_field_implicit_and(self):
+        from rag.retriever import _build_pinecone_filter
+        assert _build_pinecone_filter({"country": "Yemen", "date": {"$gte": "2024-06-01"}}) == {
+            "country": {"$eq": "Yemen"},
+            "date_ts": {"$gte": 20240601},
+        }
+
+
+class TestProviderVectorstore:
+    def setup_method(self):
+        from rag.retriever import _get_vectorstore
+        _get_vectorstore.cache_clear()
+
+    def teardown_method(self):
+        from rag.retriever import _get_vectorstore
+        _get_vectorstore.cache_clear()
+
+    def test_pinecone_vectorstore_built_when_provider_pinecone(self):
+        from rag.retriever import _get_vectorstore
+        s = MagicMock(VECTOR_STORE_PROVIDER="pinecone", EMBED_PROVIDER="gemini",
+                     PINECONE_API_KEY="k", PINECONE_INDEX="reliefweb-docs", PINECONE_NAMESPACE="")
+        with patch("rag.retriever.get_settings", return_value=s), \
+             patch("rag.retriever.get_embeddings", return_value=MagicMock()), \
+             patch("rag.retriever.Pinecone") as MockPC, \
+             patch("rag.retriever.PineconeVectorStore") as MockPVS:
+            MockPC.return_value.Index.return_value = MagicMock()
+            _get_vectorstore.cache_clear()
+            _get_vectorstore()
+            MockPVS.assert_called_once()
+
+    def test_chroma_vectorstore_built_when_provider_chroma(self):
+        from rag.retriever import _get_vectorstore
+        s = MagicMock(VECTOR_STORE_PROVIDER="chroma", EMBED_PROVIDER="ollama",
+                     CHROMA_COLLECTION="reliefweb_docs", CHROMA_DB_PATH="./chroma_db")
+        with patch("rag.retriever.get_settings", return_value=s), \
+             patch("rag.retriever.get_embeddings", return_value=MagicMock()), \
+             patch("rag.retriever.Chroma") as MockChroma:
+            _get_vectorstore.cache_clear()
+            _get_vectorstore()
             MockChroma.assert_called_once()

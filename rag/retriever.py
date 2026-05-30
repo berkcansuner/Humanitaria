@@ -6,17 +6,28 @@ from typing import Dict, Any, List, Optional
 
 from langchain_core.documents import Document
 from langchain_chroma import Chroma
+from langchain_pinecone import PineconeVectorStore
+from pinecone import Pinecone
 
 from config import get_settings
-from rag.embeddings import OllamaLangChainEmbeddings
+from rag.embeddings import get_embeddings
 
 logger = logging.getLogger(__name__)
 
 
 @lru_cache(maxsize=1)
-def _get_vectorstore() -> Chroma:
+def _get_vectorstore():
     settings = get_settings()
-    embeddings = OllamaLangChainEmbeddings()
+    embeddings = get_embeddings()
+    if settings.VECTOR_STORE_PROVIDER == "pinecone":
+        pc = Pinecone(api_key=settings.PINECONE_API_KEY)
+        index = pc.Index(settings.PINECONE_INDEX)
+        return PineconeVectorStore(
+            index=index,
+            embedding=embeddings,
+            text_key="text",
+            namespace=settings.PINECONE_NAMESPACE or None,
+        )
     return Chroma(
         collection_name=settings.CHROMA_COLLECTION,
         persist_directory=settings.CHROMA_DB_PATH,
@@ -77,10 +88,51 @@ def _build_chroma_filter(filters: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     return {"$and": conditions}
 
 
+def _date_to_int(date_str: str) -> Optional[int]:
+    """'2024-01-01' -> 20240101; invalid/empty -> None."""
+    try:
+        if isinstance(date_str, str) and date_str[:10].count("-") == 2:
+            return int(date_str[:10].replace("-", ""))
+    except (ValueError, AttributeError):
+        pass
+    return None
+
+
+def _build_pinecone_filter(filters: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """Pinecone metadata filter (keys are implicitly AND-ed).
+
+    Date is pushed into the DB as a numeric `date_ts` $gte range — the feature
+    ChromaDB's string $gte could not provide.
+    """
+    if not filters:
+        return None
+    conditions: Dict[str, Any] = {}
+    for key, val in filters.items():
+        if key == "date":
+            date_from = val.get("$gte") if isinstance(val, dict) else None
+            ts = _date_to_int(date_from) if date_from else None
+            if ts is not None:
+                conditions["date_ts"] = {"$gte": ts}
+        elif key == "country":
+            full_name = _COUNTRY_RELIEFWEB_ALIASES.get(val)
+            if full_name:
+                conditions[key] = {"$in": [val, full_name]}
+            else:
+                conditions[key] = {"$eq": val}
+        elif isinstance(val, dict):
+            conditions[key] = val
+        else:
+            conditions[key] = {"$eq": val}
+    return conditions or None
+
+
 def build_retriever(filter: Optional[Dict[str, Any]] = None):
     vectorstore = _get_vectorstore()
     settings = get_settings()
-    chroma_filter = _build_chroma_filter(filter)
+    if settings.VECTOR_STORE_PROVIDER == "pinecone":
+        store_filter = _build_pinecone_filter(filter)
+    else:
+        store_filter = _build_chroma_filter(filter)
     # When a date filter is present, fetch more candidates so post-filtering
     # in Python has enough docs to work with after the date cut.
     has_date_filter = isinstance(filter, dict) and "date" in filter
@@ -91,7 +143,7 @@ def build_retriever(filter: Optional[Dict[str, Any]] = None):
             "k": settings.TOP_K_RETRIEVAL,
             "fetch_k": max(fetch_k, settings.TOP_K_RETRIEVAL),
             "lambda_mult": settings.MMR_LAMBDA,
-            "filter": chroma_filter,
+            "filter": store_filter,
         },
     )
 
