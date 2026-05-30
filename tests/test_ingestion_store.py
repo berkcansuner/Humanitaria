@@ -56,3 +56,77 @@ class TestChromaStoreErrorHandling:
             store.clear_collection()
         assert "Failed to clear collection" in caplog.text
         mock_client.get_or_create_collection.assert_called_once()
+
+
+def _mock_pinecone_settings():
+    s = MagicMock()
+    s.PINECONE_API_KEY = "k"
+    s.PINECONE_INDEX = "reliefweb-docs"
+    s.PINECONE_NAMESPACE = ""
+    return s
+
+
+def _mock_pinecone_settings_with_provider():
+    s = _mock_pinecone_settings()
+    s.VECTOR_STORE_PROVIDER = "pinecone"
+    return s
+
+
+class TestPineconeStore:
+    def _make_store(self, mock_index):
+        from ingestion.store import PineconeStore
+        with patch("ingestion.store.get_settings", return_value=_mock_pinecone_settings()), \
+             patch("ingestion.store.Pinecone") as MockPC:
+            pc = MagicMock()
+            pc.Index.return_value = mock_index
+            MockPC.return_value = pc
+            return PineconeStore()
+
+    def test_upsert_chunks_includes_text_and_values(self):
+        mock_index = MagicMock()
+        store = self._make_store(mock_index)
+        chunks = [{"id": "abc_0", "content": "c1", "metadata": {"doc_id": "abc", "date_ts": 20240101}}]
+        store.upsert_chunks(chunks, [[0.1] * 3072])
+        mock_index.upsert.assert_called_once()
+        vectors = mock_index.upsert.call_args[1]["vectors"]
+        assert vectors[0]["id"] == "abc_0"
+        assert vectors[0]["values"] == [0.1] * 3072
+        assert vectors[0]["metadata"]["text"] == "c1"
+        assert vectors[0]["metadata"]["date_ts"] == 20240101
+
+    def test_delete_document_chunks_lists_by_prefix_then_deletes(self):
+        mock_index = MagicMock()
+        mock_index.list.return_value = iter([["abc_0", "abc_5"]])
+        store = self._make_store(mock_index)
+        store.delete_document_chunks("abc")
+        mock_index.list.assert_called_once_with(prefix="abc_", namespace=None)
+        mock_index.delete.assert_called_once_with(ids=["abc_0", "abc_5"], namespace=None)
+
+    def test_delete_document_chunks_noop_when_empty(self):
+        mock_index = MagicMock()
+        mock_index.list.return_value = iter([])
+        store = self._make_store(mock_index)
+        store.delete_document_chunks("abc")
+        mock_index.delete.assert_not_called()
+
+    def test_clear_collection_deletes_all(self):
+        mock_index = MagicMock()
+        store = self._make_store(mock_index)
+        store.clear_collection()
+        mock_index.delete.assert_called_once_with(delete_all=True, namespace=None)
+
+
+class TestGetStoreFactory:
+    def test_factory_returns_chroma(self):
+        from ingestion.store import get_store, ChromaStore
+        s = MagicMock(VECTOR_STORE_PROVIDER="chroma", CHROMA_DB_PATH="./chroma_db",
+                     CHROMA_COLLECTION="reliefweb_docs")
+        with patch("ingestion.store.get_settings", return_value=s), \
+             patch("ingestion.store.chromadb.PersistentClient"):
+            assert isinstance(get_store(), ChromaStore)
+
+    def test_factory_returns_pinecone(self):
+        from ingestion.store import get_store, PineconeStore
+        with patch("ingestion.store.get_settings", return_value=_mock_pinecone_settings_with_provider()), \
+             patch("ingestion.store.Pinecone"):
+            assert isinstance(get_store(), PineconeStore)
