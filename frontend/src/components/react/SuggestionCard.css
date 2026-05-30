@@ -130,6 +130,20 @@
   color: var(--color-accent);
 }
 
+/* "Selected" feedback flash on chip click */
+.sc-opt.selecting {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-on-accent);
+  animation: sc-pick 240ms ease-out;
+}
+
+@keyframes sc-pick {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
 /* Free-text answer for the current step */
 .sc-input-row {
   display: flex;
@@ -204,6 +218,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .sc-card,
-  .sc-opt { animation: none; }
+  .sc-opt,
+  .sc-opt.selecting { animation: none; }
   .sc-dot { transition: none; }
 }

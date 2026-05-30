@@ -28,13 +28,19 @@ export default function SuggestionCard({ clarification, onApply, onDismiss }) {
   const [current, setCurrent] = useState(0)
   const [selections, setSelections] = useState({})
   const [custom, setCustom] = useState('')
+  const [selecting, setSelecting] = useState(null)
   const firstOptRef = useRef(null)
+  const timer = useRef(null)
 
-  // On each step, clear the typed value and move focus to the first chip.
+  // On each step, clear transient state and move focus to the first chip.
   useEffect(() => {
     setCustom('')
+    setSelecting(null)
     firstOptRef.current?.focus({ preventScroll: true })
   }, [current])
+
+  // Clear any pending "selected" animation timer on unmount.
+  useEffect(() => () => clearTimeout(timer.current), [])
 
   if (!steps.length) return null
   const step = steps[current]
@@ -49,19 +55,32 @@ export default function SuggestionCard({ clarification, onApply, onDismiss }) {
     if (current < steps.length - 1) setCurrent((c) => c + 1)
     else finalize(next)
   }
-  function select(opt) {
-    const v = (opt || '').trim()
-    if (!v) return
-    const next = { ...selections, [step.key]: v }
+  function prefersReduced() {
+    return typeof window !== 'undefined' && window.matchMedia
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  }
+  function applyValue(v) {
+    const val = (v || '').trim()
+    if (!val) return null
+    const next = { ...selections, [step.key]: val }
     setSelections(next)
-    advance(next)
+    return next
+  }
+  // Chip click: briefly flash the "selected" state, then advance.
+  function selectChip(opt) {
+    const next = applyValue(opt)
+    if (!next) return
+    if (prefersReduced()) { advance(next); return }
+    setSelecting((opt || '').trim())
+    timer.current = setTimeout(() => { setSelecting(null); advance(next) }, 240)
   }
   function skip() { advance(selections) }
   function prev() { if (current > 0) setCurrent((c) => c - 1) }
 
   function submitCustom(e) {
     e.preventDefault()
-    select(custom)
+    const next = applyValue(custom)
+    if (next) advance(next)
   }
   function onKeyDown(e) {
     // Keep it simple and conflict-free with the text input: Esc dismisses;
@@ -113,11 +132,11 @@ export default function SuggestionCard({ clarification, onApply, onDismiss }) {
             key={opt}
             ref={i === 0 ? firstOptRef : undefined}
             type="button"
-            className="sc-opt"
+            className={'sc-opt' + (selecting === opt ? ' selecting' : '')}
             style={{ '--i': i }}
             role="radio"
             aria-checked={selections[step.key] === opt}
-            onClick={() => select(opt)}
+            onClick={() => selectChip(opt)}
           >
             {opt}
           </button>
