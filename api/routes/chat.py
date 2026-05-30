@@ -42,8 +42,8 @@ def _no_docs_message(filters: dict) -> str:
     scope = " + ".join(parts) if parts else "bu sorgu"
     return (
         f"Veritabanımızda {scope} için eşleşen belge bulunamadı.\n\n"
-        "Daha fazla belge eklemek için ingestion çalıştırın:\n"
-        "```\npython scripts/ingest.py --limit 500\n```"
+        "Farklı bir ülke, konu ya da tarih aralığı deneyebilir veya sorunuzu "
+        "daha genel bir şekilde ifade edebilirsiniz."
     )
 
 
