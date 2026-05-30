@@ -23,7 +23,7 @@ sohbet sistemi. Şu an yerel geliştirme aşamasında.
 - **Backend:** FastAPI, **port 8000** (.env'de `API_PORT` yok → config default 8000; bu oturumda 8000'de sorunsuz çalıştı). SSE streaming. Başlangıçta lifespan warmup + ingestion scheduler.
 - **Frontend:** Vue 3, `frontend/dist/` build edilmiş, FastAPI statik serve ediyor.
 - **Kaynaklar (citation-grounded):** Yanıt context belgelerine satır içi `[n]` atıfı verir; `sources` event'i yalnızca atıf verilen belgeleri döndürür (atıf yoksa fallback: tümü). Prompt artık kaynakları metin içinde isimlendirmiyor — sadece altta `SOURCES (N)` kompakt liste (`[n]` numaralı).
-- **Öneriler:** Belirsiz sorgularda yanıttan SONRA **React island** öneri kartı (Claude tarzı, 1/N: ülke→zaman→konu). Seçenekler **yan yana sarmalanan çipler** (uzun dikey liste yok) + **serbest metin girişi** (kullanıcı kendi cevabını yazıp Enter/→ ile gönderebilir). İlerleme noktaları, klavye (Tab/Enter, Esc kapatır), CSS animasyon+reduced-motion, ARIA radiogroup, "Atla". `react/SuggestionCard.jsx`(+`.css`) + `SuggestionCardIsland.vue` (Vue↔React köprüsü); seçimler birikir, son adımda sorgu zenginleşip yeniden gönderilir. SSE sırası: token → sources → clarification.
+- **Öneriler:** Belirsiz sorgularda yanıttan SONRA **React island** öneri kartı (Claude tarzı, 1/N: ülke→zaman→konu). **Ülke adımı: çip YOK, sadece metin girişi + autocomplete** (yazarken eşleşen ülkeler açılır listede). Zaman/konu adımları: yan yana çipler (tıklamada "seçildi" flash animasyonu) + metin girişi. Tüm girişlerde autocomplete (yazılanı filtreler; ok tuşları + Enter / tık seçer). İlerleme noktaları (mobilde gizli), **mobil/responsive (375px doğrulandı)**, klavye, CSS animasyon+reduced-motion, ARIA. `react/SuggestionCard.jsx`(+`.css`) + `SuggestionCardIsland.vue` (Vue↔React köprüsü); seçimler birikir, son adımda sorgu zenginleşip yeniden gönderilir. SSE sırası: token → sources → clarification.
 - **Test:** **212 backend (pytest) + 11 frontend (vitest), hepsi yeşil.**
 
 ## Veri Durumu
@@ -45,10 +45,11 @@ sohbet sistemi. Şu an yerel geliştirme aşamasında.
 - Remote: **https://github.com/berkcansuner/reliefweb-rag** (private). `origin/master` güncel — her tur push ediliyor. (NOT: `RState_ai` farklı bir proje, ona dokunulmadı.)
 
 ## Sıradaki Adımlar (2026-05-31'de planlandı — bir sonraki oturumda buradan devam)
-**Öneri kartı (SuggestionCard) iyileştirmeleri — en olası sıradaki iş:**
-1. [ ] **Metin girişine autocomplete:** kullanıcı yazarken mevcut çipleri filtrele/öner (örn. "ır" → Iraq/Iran). `react/SuggestionCard.jsx` içinde `custom` state'ine göre `options` filtrelemesi.
-2. [ ] **Çip sayısını sınırla + "daha fazla":** çok seçenek olduğunda ilk ~6 çip + "daha fazla" toggle (uzunlukta denge).
-3. [ ] **Mobil/responsive kontrol:** kartı 375px'te CDP ile test et; çip sarması ve dokunma hedefleri (≥44px) doğrula.
+**Öneri kartı (SuggestionCard) iyileştirmeleri:**
+1. [x] ~~Metin girişine autocomplete~~ — TAMAM (2026-05-31, tüm adımlarda).
+2. [ ] **Çip sayısını sınırla + "daha fazla":** zaman/konu adımlarında çok seçenek olursa ilk ~6 çip + "daha fazla" toggle.
+3. [x] ~~Mobil/responsive~~ — TAMAM (375px CDP doğrulandı; noktalar gizli, taşma yok).
+4. [x] ~~Ülke adımı çipsiz, sadece yazı + autocomplete~~ — TAMAM.
 
 **Performans / kalite:**
 4. [ ] **React island'ı lazy-load:** `defineAsyncComponent` ile `SuggestionCardIsland`'ı yalnız clarification gelince yükle → React+lucide ilk bundle'dan çıkar (~47KB gz initial tasarruf). `Chat.vue`'de async import.
