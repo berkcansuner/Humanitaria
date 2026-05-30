@@ -96,6 +96,10 @@ class PineconeStore:
         except Exception as e:
             logger.debug("delete_document_chunks no-op for doc_id=%s: %s", doc_id, e)
 
+    # Pinecone caps a single upsert request at ~4 MB. With 3072-dim float
+    # vectors + text metadata (~18 KB/vector), batches of 100 stay well under.
+    _UPSERT_BATCH = 100
+
     def upsert_chunks(self, chunks: List[Dict[str, Any]], embeddings: List[List[float]]) -> None:
         if not chunks:
             return
@@ -110,7 +114,10 @@ class PineconeStore:
             for c, emb in zip(chunks, embeddings)
         ]
         try:
-            self.index.upsert(vectors=vectors, namespace=self.namespace)
+            for i in range(0, len(vectors), self._UPSERT_BATCH):
+                self.index.upsert(
+                    vectors=vectors[i : i + self._UPSERT_BATCH], namespace=self.namespace
+                )
             logger.info("Upserted %d chunks into Pinecone", len(chunks))
         except Exception as e:
             logger.error("Failed to upsert %d chunks into Pinecone: %s", len(chunks), e)

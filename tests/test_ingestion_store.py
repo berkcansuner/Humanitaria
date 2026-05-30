@@ -95,6 +95,17 @@ class TestPineconeStore:
         assert vectors[0]["metadata"]["date_ts"] == 20240101
         assert mock_index.upsert.call_args[1]["namespace"] is None
 
+    def test_upsert_chunks_batches_over_request_limit(self):
+        # Pinecone caps a single upsert at ~4MB; large batches must be split.
+        mock_index = MagicMock()
+        store = self._make_store(mock_index)
+        chunks = [{"id": f"abc_{i}", "content": "c", "metadata": {"doc_id": "abc"}} for i in range(250)]
+        embeddings = [[0.1] * 3072 for _ in range(250)]
+        store.upsert_chunks(chunks, embeddings)
+        assert mock_index.upsert.call_count == 3  # 100 + 100 + 50
+        assert len(mock_index.upsert.call_args_list[0][1]["vectors"]) == 100
+        assert len(mock_index.upsert.call_args_list[2][1]["vectors"]) == 50
+
     def test_delete_document_chunks_lists_by_prefix_then_deletes(self):
         mock_index = MagicMock()
         mock_index.list.return_value = iter([["abc_0", "abc_5"]])
