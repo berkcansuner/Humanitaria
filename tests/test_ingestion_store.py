@@ -93,6 +93,7 @@ class TestPineconeStore:
         assert vectors[0]["values"] == [0.1] * 3072
         assert vectors[0]["metadata"]["text"] == "c1"
         assert vectors[0]["metadata"]["date_ts"] == 20240101
+        assert mock_index.upsert.call_args[1]["namespace"] is None
 
     def test_delete_document_chunks_lists_by_prefix_then_deletes(self):
         mock_index = MagicMock()
@@ -109,11 +110,31 @@ class TestPineconeStore:
         store.delete_document_chunks("abc")
         mock_index.delete.assert_not_called()
 
+    def test_delete_document_chunks_batches_over_1000(self):
+        # Pinecone delete accepts at most 1000 ids per request.
+        mock_index = MagicMock()
+        all_ids = [f"abc_{i}" for i in range(1500)]
+        mock_index.list.return_value = iter([all_ids])
+        store = self._make_store(mock_index)
+        store.delete_document_chunks("abc")
+        assert mock_index.delete.call_count == 2
+        assert len(mock_index.delete.call_args_list[0][1]["ids"]) == 1000
+        assert len(mock_index.delete.call_args_list[1][1]["ids"]) == 500
+
     def test_clear_collection_deletes_all(self):
         mock_index = MagicMock()
         store = self._make_store(mock_index)
         store.clear_collection()
         mock_index.delete.assert_called_once_with(delete_all=True, namespace=None)
+
+    def test_clear_collection_logs_warning_on_error(self, caplog):
+        import logging
+        mock_index = MagicMock()
+        mock_index.delete.side_effect = Exception("namespace missing")
+        store = self._make_store(mock_index)
+        with caplog.at_level(logging.WARNING):
+            store.clear_collection()
+        assert "Failed to clear Pinecone namespace" in caplog.text
 
 
 class TestGetStoreFactory:

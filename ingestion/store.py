@@ -90,8 +90,9 @@ class PineconeStore:
             ids: List[str] = []
             for page in self.index.list(prefix=f"{doc_id}_", namespace=self.namespace):
                 ids.extend(page)
-            if ids:
-                self.index.delete(ids=ids, namespace=self.namespace)
+            # Pinecone delete accepts at most 1000 ids per request.
+            for i in range(0, len(ids), 1000):
+                self.index.delete(ids=ids[i : i + 1000], namespace=self.namespace)
         except Exception as e:
             logger.debug("delete_document_chunks no-op for doc_id=%s: %s", doc_id, e)
 
