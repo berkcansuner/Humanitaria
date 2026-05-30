@@ -11,6 +11,7 @@ def _settings():
     s.PINECONE_INDEX = "reliefweb-docs"
     s.PINECONE_CLOUD = "aws"
     s.PINECONE_REGION = "us-east-1"
+    s.EMBED_PROVIDER = "gemini"
     s.EMBED_DIM = 3072
     return s
 
@@ -29,6 +30,18 @@ def test_creates_index_when_absent():
         assert kwargs["name"] == "reliefweb-docs"
         assert kwargs["dimension"] == 3072
         assert kwargs["metric"] == "cosine"
+
+
+def test_raises_when_gemini_dim_mismatch():
+    import pytest
+    from scripts.setup_pinecone import create_index
+    s = _settings()
+    s.EMBED_DIM = 4096  # wrong for gemini-embedding-001 (must be 3072)
+    with patch("scripts.setup_pinecone.get_settings", return_value=s), \
+         patch("scripts.setup_pinecone.Pinecone") as MockPC:
+        with pytest.raises(ValueError, match="EMBED_DIM=3072"):
+            create_index()
+        MockPC.assert_not_called()
 
 
 def test_skips_when_index_exists():
