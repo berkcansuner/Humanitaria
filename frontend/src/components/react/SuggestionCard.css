@@ -5,7 +5,8 @@
   border-radius: var(--radius-lg);
   background: var(--color-surface);
   box-shadow: var(--shadow-sm);
-  overflow: hidden;
+  /* visible so the autocomplete dropdown can overflow the card bottom */
+  overflow: visible;
   outline: none;
   animation: sc-card-in 200ms ease-out both;
 }
@@ -144,12 +145,46 @@
   100% { transform: scale(1); }
 }
 
-/* Free-text answer for the current step */
+/* Free-text answer for the current step (with autocomplete) */
+.sc-input-wrap { position: relative; }
+
 .sc-input-row {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   padding: 0 var(--space-4) var(--space-2);
+}
+
+.sc-ac {
+  position: absolute;
+  left: var(--space-4);
+  right: var(--space-4);
+  top: 100%;
+  margin-top: -4px;
+  z-index: 30;
+  list-style: none;
+  margin-block: 0;
+  padding: var(--space-1);
+  max-height: 190px;
+  overflow-y: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+.sc-ac-item {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.sc-ac-item:hover,
+.sc-ac-item.active {
+  background: var(--color-surface-container-low);
+  color: var(--color-accent);
 }
 
 .sc-input {
@@ -214,6 +249,17 @@
   font-size: var(--text-xs);
   color: var(--color-muted);
   font-variant-numeric: tabular-nums;
+}
+
+/* Mobile / small screens */
+@media (max-width: 480px) {
+  .sc-header { padding: var(--space-3); gap: var(--space-2); }
+  .sc-dots { display: none; }
+  .sc-iconbtn { width: 32px; height: 32px; }
+  .sc-options { padding: var(--space-3) var(--space-3) var(--space-2); }
+  .sc-input-row { padding: 0 var(--space-3) var(--space-2); }
+  .sc-ac { left: var(--space-3); right: var(--space-3); }
+  .sc-footer { padding: 0 var(--space-3) var(--space-3); }
 }
 
 @media (prefers-reduced-motion: reduce) {
