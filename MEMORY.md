@@ -22,7 +22,9 @@ sohbet sistemi. Şu an yerel geliştirme aşamasında.
 - **Vector DB:** Pinecone serverless, index `reliefweb-docs` (3072, cosine, aws/us-east-1). (`VECTOR_STORE_PROVIDER=chroma` ile yerel ChromaDB'ye dönülebilir.)
 - **Backend:** FastAPI, **port 8000** (.env'de `API_PORT` yok → config default 8000; bu oturumda 8000'de sorunsuz çalıştı). SSE streaming. Başlangıçta lifespan warmup + ingestion scheduler.
 - **Frontend:** Vue 3, `frontend/dist/` build edilmiş, FastAPI statik serve ediyor.
-- **Test:** **205 backend (pytest) + 11 frontend (vitest), hepsi yeşil.**
+- **Kaynaklar (citation-grounded):** Yanıt context belgelerine satır içi `[n]` atıfı verir; `sources` event'i yalnızca atıf verilen belgeleri döndürür (atıf yoksa fallback: tümü). Frontend kompakt satır + `[n]` numara.
+- **Öneriler:** Belirsiz sorgularda öneri çipleri yanıttan SONRA gösterilir (SSE sırası: token → sources → clarification).
+- **Test:** **212 backend (pytest) + 11 frontend (vitest), hepsi yeşil.**
 
 ## Veri Durumu
 - **Pinecone `reliefweb-docs`: 866 vektör (3072-dim).** Uçtan uca retrieval + tarih filtresi doğrulandı (Sudan sorguları 5 kaynak dönüyor).
@@ -39,17 +41,12 @@ sohbet sistemi. Şu an yerel geliştirme aşamasında.
 | Frontend build | `cd frontend && npm run build` |
 | Frontend testleri | `cd frontend && npm test -- --run` |
 
-## ⚠️ COMMIT EDİLMEMİŞ DEĞİŞİKLİKLER (bu oturum — branch `master`)
-Bu oturumda yapılan iki düzeltme henüz commit edilmedi (kullanıcı isteğiyle bekliyor):
-1. **`rag/query_processor.py` + `tests/test_rag_query_processor.py`** — query-processor merge fix (aşağıda).
-2. **`frontend/src/components/Chat.vue`** (+ rebuild edilmiş `frontend/dist/`) — input UX fix (aşağıda).
-- `server.log` çalışan sunucunun log dosyası (untracked, .gitignore'a eklenebilir).
-- Not: `App.vue`, `style.css`, `renderMarkdown.js`, `package-lock.json` bu oturum ÖNCESİNDEN modifiye durumdaydı (bana ait değil).
+## ⚠️ PUSH ENGELİ — DOĞRU REMOTE GEREK
+- Yerelde tüm iş commit'li ama **push edilmedi.** Kullanıcının verdiği `https://github.com/berkcansuner/RState_ai` **YANLIŞ repo** — orası tamamen farklı bir proje (React/TS **emlak/fiyat-takip dashboard'u**: `FiyatDususleriPage.tsx`, `IlceOzetiPage.tsx`, `TumIlanlarPage.tsx`...). Ortak git geçmişi yok (ayrı kökler). Oraya push o projeyi ezerdi → YAPILMADI, eklenen `origin` kaldırıldı.
+- **Bekleyen:** Kullanıcıdan ReliefWeb RAG için DOĞRU repo URL'si (veya yeni repo açma onayı). Alınınca `git remote add origin <url>` + `git push -u origin master`.
 
 ## Sıradaki Adımlar
-1. [ ] **Commit kararı:** yukarıdaki 2 düzeltmeyi commit et (conventional commit, İngilizce). Önerilen:
-   `fix(query): merge rule-based extractor as backstop and reclassify country-as-source`
-   ve `fix(frontend): keep chat input editable during streaming`.
+1. [ ] **Push:** doğru remote alınınca `master`'ı push et (yukarı bak).
 2. [ ] (Opsiyonel) Stale warmup düzeltmesi: `api/main.py` lifespan warmup'ı `OllamaLangChainEmbeddings`'i hardcode ediyor → `rag.embeddings.get_embeddings()` factory'sine çevir (yanıltıcı 4096≠3072 log'unu ve gereksiz Ollama bağımlılığını giderir).
 3. [ ] (Opsiyonel) Daha fazla veri toplama — `ingest.py --limit` artır; çoklu endpoint (`--endpoints reports disasters countries`).
 4. [ ] (Opsiyonel) `RunnableWithMessageHistory` → LangGraph migrasyonu (4 deprecation uyarısı).
@@ -63,18 +60,16 @@ Bu oturumda yapılan iki düzeltme henüz commit edilmedi (kullanıcı isteğiyl
 - Pipeline resume kısmi: scheduler watermark (`chroma_db/.last_ingest.json`) var ama uzun kesinti tam test edilmedi.
 
 ## Son Oturum Özeti (2026-05-30)
-Sistem `master` üzerinde çalıştırıldı (Pinecone+Gemini config, port 8000). venv güncel değildi →
-eksik paketler kuruldu (yukarı bak). İki bug bulundu ve düzeltildi (commit EDİLMEDİ):
+Önceki turda query-processor merge fix + chat input UX fix yapıldı ve commit'lendi (7 commit).
+Bu turda 3 özellik eklendi (commit'lendi) + push denendi ama doğru remote yok:
 
-1. **Query-processor misclassification fix** (`rag/query_processor.py`): Mimari "LLM-first, sadece
-   exception'da rule-based fallback" idi; `qwen2.5:0.5b` tutarsız — "Sudan"ı `source`'a koyuyor ya da
-   `{}` dönüyordu → başarılı-ama-boş/yanlış LLM çıktısı güvenilir rule-based'i baypaslıyor, retrieval 0
-   sonuç. Fix: (a) `extract_filters` artık rule-based'i **backstop merge** ediyor (`{**rule, **llm}` —
-   LLM çakışmada kazanır, rule-based curated country/theme/doctype/date boşluklarını doldurur);
-   (b) yeni `_as_known_country` ile `_normalize_llm_filters` `source`'a düşen bilinen ülkeyi `country`'ye
-   taşıyor. 5 yeni test eklendi; 205/205 backend test geçiyor. Canlı doğrulandı (Sudan sorguları 0→5 kaynak).
-2. **Frontend chat input UX fix** (`frontend/src/components/Chat.vue`): Mesaj gönderince input focus'u
-   kaybediyordu. Önce refocus eklendi (`ref="chatInput"` + `nextTick(focus)`), sonra kullanıcı isteğiyle
-   input'tan `:disabled="loading"` kaldırıldı → artık yanıt akarken bir sonraki soru yazılabiliyor (send
-   butonu disable kalıyor, `sendMessage` loading guard'ı çift gönderimi engelliyor). Gerçek Chrome (CDP) ile
-   doğrulandı; frontend 11/11 test geçiyor; `frontend/dist/` rebuild edildi.
+1. **Citation-grounded sources** (`api/routes/chat.py`, `rag/chain.py`): Context belgeleri `[n]` ile
+   numaralanır; prompt modele kullandığı belgeye `[n]` atıfı vermesini söyler; route yanıttaki `[n]`
+   işaretlerini ayıklayıp `sources`'u sadece atıf verilenlere filtreler (`_filter_cited_sources`,
+   atıf yoksa fallback=tümü). `SourceDocument`'a `index` eklendi. Canlı: 5 retrieve → 4 atıf → 4 kaynak.
+2. **Öneriler yanıttan sonra** (`api/routes/chat.py`, `Chat.vue`): `clarification` SSE event'i artık
+   token+sources'tan SONRA yayınlanıyor; `Chat.vue` clarification kartı sade öneri şeridine restyle edildi.
+3. **Kompakt kaynak listesi** (`SourceList.vue`): büyük kartlar → ince tek-satır `[n] başlık · kaynak · tarih`.
+
+212/212 backend + 11/11 frontend test geçiyor. Backend (citation filter + event sırası) ve frontend
+(kompakt liste + `[n]`, CDP screenshot) canlı doğrulandı. **Push engellendi:** verilen repo yanlış (bkz. üstteki PUSH ENGELİ).
