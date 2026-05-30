@@ -22,8 +22,8 @@ sohbet sistemi. Şu an yerel geliştirme aşamasında.
 - **Vector DB:** Pinecone serverless, index `reliefweb-docs` (3072, cosine, aws/us-east-1). (`VECTOR_STORE_PROVIDER=chroma` ile yerel ChromaDB'ye dönülebilir.)
 - **Backend:** FastAPI, **port 8000** (.env'de `API_PORT` yok → config default 8000; bu oturumda 8000'de sorunsuz çalıştı). SSE streaming. Başlangıçta lifespan warmup + ingestion scheduler.
 - **Frontend:** Vue 3, `frontend/dist/` build edilmiş, FastAPI statik serve ediyor.
-- **Kaynaklar (citation-grounded):** Yanıt context belgelerine satır içi `[n]` atıfı verir; `sources` event'i yalnızca atıf verilen belgeleri döndürür (atıf yoksa fallback: tümü). Frontend kompakt satır + `[n]` numara.
-- **Öneriler:** Belirsiz sorgularda öneri çipleri yanıttan SONRA gösterilir (SSE sırası: token → sources → clarification).
+- **Kaynaklar (citation-grounded):** Yanıt context belgelerine satır içi `[n]` atıfı verir; `sources` event'i yalnızca atıf verilen belgeleri döndürür (atıf yoksa fallback: tümü). Prompt artık kaynakları metin içinde isimlendirmiyor — sadece altta `SOURCES (N)` kompakt liste (`[n]` numaralı).
+- **Öneriler:** Belirsiz sorgularda yanıttan SONRA `SuggestionCard.vue` — Claude tarzı adım adım kart (1/N: ülke→zaman→konu, numaralı seçenekler, Atla, "veya doğrudan yazın"). Seçimler birikir, son adımda sorgu zenginleşip yeniden gönderilir. SSE sırası: token → sources → clarification.
 - **Test:** **212 backend (pytest) + 11 frontend (vitest), hepsi yeşil.**
 
 ## Veri Durumu
