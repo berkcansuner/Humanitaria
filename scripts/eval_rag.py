@@ -19,6 +19,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+# Windows konsolu (cp1254) Unicode sembolleri (—, ⚠) encode edemiyor → UTF-8'e geç.
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+except Exception:
+    pass
+
 from rag.query_processor import extract_filters, analyze_query
 from rag.retriever import (
     build_retriever,
