@@ -35,16 +35,16 @@ sohbet sistemi. Şu an yerel geliştirme aşamasında.
   konu çipli), sessiz uygulama.
 - **Test:** **217 backend (pytest) + 11 frontend (vitest), hepsi yeşil.**
 - **RAG eval:** `python scripts/eval_rag.py` (filtre + canlı retrieval) / `--no-retrieval` (offline).
-  Son koşu: filtre 10/10, retrieval ülke eşleşmesi 5/5 (Sudan, Yemen, Ukraine, Afganistan, Somali, Gazze).
+  Son koşu: filtre 10/10; retrieval Sudan/Yemen/Syria/Ukraine/Afghanistan 5/5, Somalia 3/3.
 
 ## Veri Durumu
-- **Pinecone `reliefweb-docs`: 4232 vektör (3072-dim)** (önceki 866'dan; 2026-05-31 `reports`
+- **Pinecone `reliefweb-docs`: 2699 vektör (3072-dim)** (önceki 866'dan; 2026-05-31 `reports`
   `--limit 3000` → 2282 OK / 718 skipped / 0 failed). Yalnız `reports` endpoint.
 - **Tema uyuşmazlığı ÇÖZÜLDÜ:** tema adları ReliefWeb taksonomisine hizalandı
   (`Protection and Human Rights`, `Shelter and Non-Food Items`; diğer 6 zaten doğruydu). Eval ile
   doğrulandı (tema filtreli sorgular artık sonuç dönüyor).
-- **Bilinen veri boşluğu:** bazı ülke+tema kombinasyonları az kapsamlı (eval'de "Syria + Food and
-  Nutrition" → 0 belge). Kod değil, veri kapsamı meselesi; daha fazla/çoklu-endpoint ingest ile artar.
+- **Bilinen veri boşluğu:** bazı ülke+tema kombinasyonları az kapsamlı (eval'de "Sudan + Water
+  Sanitation Hygiene" → 0 belge). Kod değil, veri kapsamı meselesi; daha fazla ingest ile artar.
 - Daha fazla veri: `python scripts/ingest.py --limit N` (`--force` KULLANMA; idempotent upsert).
   Pagination zaten var (pipeline offset döngüsü, BATCH_SIZE=500) → >1000 sorunsuz.
 
@@ -93,12 +93,12 @@ Tema fix + 3 iyileştirme + veri ingestion (hepsi commit+push'lu):
   taksonomisine uyduruldu (ReliefWeb facet ile doğrulandı). 2 yeni test.
 - **Warmup fix** (`api/main.py`): `get_embeddings()` factory.
 - **React island lazy-load** (`Chat.vue`): `defineAsyncComponent`, bundle 99→52 KB gz.
-- **Veri ingestion:** `reports --limit 3000` → 2282 OK; Pinecone 866→**4232 vektör**.
+- **Veri ingestion:** `reports --limit 3000` → 2282 OK; Pinecone 866→**2699 vektör**.
 - **Query processor → Gemini** (`config.py` `QUERY_LLM_PROVIDER`/`GEMINI_QUERY_MODEL`,
   `query_processor.py`): Ollama bağımlılığı kalktı; liste-coerce validator + 3 test.
 - **requirements.txt** çalışan sete sabitlendi (chromadb 1.5.9 / fastapi 0.115.9 ...); `pip check` temiz.
 - **RAG eval harness** (`scripts/eval_rag.py`): filtre 10/10, retrieval canlı doğrulandı; Gemini
-  liste-bug'ını ve bir veri boşluğunu (Syria+Food) yakaladı.
+  liste-bug'ını ve bir veri boşluğunu (Sudan+WASH) yakaladı.
 - **Testler:** 217 backend + 11 frontend yeşil.
 
 > NOT (ortam): Bu oturumda araç çıktıları kalıcı şekilde ~1 tur gecikmeli geldi (harness sorunu);
