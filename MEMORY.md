@@ -23,7 +23,7 @@ Plan dosyası: `C:\Users\bcsun\.claude\plans\synchronous-honking-cerf.md`. Test:
    `--judge-threshold` default 3.5 çıkış kodunu etkiler), vaka seti 10→20. Canlı koşu: filtre 20/20,
    judge groundedness **5.00**/relevance **5.00**.
 
-**Sıradaki adım:** `git push origin master` (4 commit bekliyor).
+**Sıradaki adım:** `git push origin master` — 5 commit bekliyor (yukarıdaki 4 feature + bu MEMORY.md commit'i).
 
 ---
 
