@@ -22,12 +22,15 @@ async def lifespan(app: FastAPI):
     try:
         from rag.retriever import _get_vectorstore
         from rag.chain import build_chain
-        from rag.embeddings import OllamaLangChainEmbeddings
+        from rag.embeddings import get_embeddings
         _get_vectorstore()
         build_chain()
         logger.info("RAG vectorstore + chain warmed up")
-        # Embed a short dummy text to load the model into GPU/CPU memory
-        embedder = OllamaLangChainEmbeddings()
+        # Embed a short dummy text to load the model into GPU/CPU memory.
+        # Use the factory so warmup honors EMBED_PROVIDER (gemini/ollama) instead
+        # of always hitting Ollama — avoids a misleading dim-mismatch warning and
+        # a needless Ollama dependency when EMBED_PROVIDER=gemini.
+        embedder = get_embeddings()
         embedder.embed_query("warmup")
         logger.info("Embedding model warmed up")
     except Exception as exc:
