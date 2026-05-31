@@ -67,7 +67,7 @@
 </template>
 
 <script setup>
-import { ref, nextTick, defineAsyncComponent } from 'vue'
+import { ref, watch, nextTick, defineAsyncComponent } from 'vue'
 import { Send, Loader2, AlertCircle, Square } from 'lucide-vue-next'
 import SourceList from './SourceList.vue'
 import EmptyState from './EmptyState.vue'
@@ -81,6 +81,7 @@ import { parseSSE } from '../utils/parseSSE.js'
 import { renumberCitations } from '../utils/renumberCitations.js'
 import { decorateCodeBlocks } from '../utils/codeCopy.js'
 import { findLastUserIndex, truncateAt } from '../utils/conversationOps.js'
+import { getMessages } from '../utils/api.js'
 
 const ERROR_MESSAGES = {
   connection: 'Connection lost. Please try again.',
@@ -88,6 +89,11 @@ const ERROR_MESSAGES = {
   empty_response: 'No response received. Please try again.',
   sse_parse: 'Something went wrong. Please try again.',
 }
+
+const props = defineProps({
+  conversationId: { type: String, default: null },
+})
+const emit = defineEmits(['session'])
 
 const messages = ref([])
 const input = ref('')
@@ -191,7 +197,10 @@ async function sendMessage(opts = {}) {
         } else if (sse.event === 'session') {
           try {
             const data = JSON.parse(sse.data)
+            // Set our own id BEFORE notifying the parent so the conversationId
+            // watcher sees newId === sessionId and skips a redundant reload.
             sessionId.value = data.session_id
+            emit('session', data.session_id)
           } catch (e) {
             console.error('SSE session parse error:', e, sse.data)
           }
@@ -285,6 +294,33 @@ function onSuggestionDismiss(msg) {
   messages.value[messages.value.indexOf(msg)] = { ...msg }
   nextTick(() => chatInput.value?.focus())
 }
+
+// React to conversation switches driven by the sidebar (via the conversationId
+// prop). A null id means "new chat"; an id we already show is a no-op (this is
+// also what keeps the freshly-created-conversation echo from reloading).
+watch(() => props.conversationId, async (newId) => {
+  if (newId === sessionId.value) return
+  if (loading.value) controller.value?.abort()
+  if (!newId) {
+    messages.value = []
+    sessionId.value = null
+    return
+  }
+  try {
+    const rows = await getMessages(newId)
+    messages.value = rows.map(m => ({
+      role: m.role,
+      content: m.content,
+      sources: m.sources || null,
+      error: null,
+      clarification: null,
+    }))
+    sessionId.value = newId
+    nextTick(() => decorateCodeBlocks(messagesContainer.value))
+  } catch (e) {
+    console.error('Failed to load conversation:', e)
+  }
+})
 </script>
 
 <style scoped>
