@@ -29,6 +29,13 @@
                 @dismiss="onSuggestionDismiss(msg)"
               />
               <SourceList v-if="msg.sources" :sources="msg.sources" />
+              <MessageActions
+                v-if="msg.role === 'assistant' && msg.content && !msg.error && !(loading && idx === messages.length - 1)"
+                :role="msg.role"
+                :content="msg.content"
+                :can-regenerate="idx === messages.length - 1"
+                @regenerate="regenerate"
+              />
             </template>
           </div>
         </div>
@@ -43,9 +50,17 @@
         class="chat-input"
         enterkeyhint="send"
       />
-      <button type="submit" class="send-btn" :disabled="loading || !input.trim()" aria-label="Send message">
-        <Loader2 v-if="loading" :size="20" class="spin" />
-        <Send v-else :size="20" />
+      <button
+        v-if="loading"
+        type="button"
+        class="send-btn stop-btn"
+        @click="stopGenerating"
+        aria-label="Üretimi durdur"
+      >
+        <Square :size="18" />
+      </button>
+      <button v-else type="submit" class="send-btn" :disabled="!input.trim()" aria-label="Send message">
+        <Send :size="20" />
       </button>
     </form>
   </div>
@@ -53,9 +68,10 @@
 
 <script setup>
 import { ref, nextTick, defineAsyncComponent } from 'vue'
-import { Send, Loader2, AlertCircle } from 'lucide-vue-next'
+import { Send, Loader2, AlertCircle, Square } from 'lucide-vue-next'
 import SourceList from './SourceList.vue'
 import EmptyState from './EmptyState.vue'
+import MessageActions from './MessageActions.vue'
 // Lazy-loaded: the React island (React + react-dom + lucide-react) is only
 // needed when a clarification card is shown, so it is split into its own async
 // chunk and kept out of the initial bundle.
@@ -64,6 +80,7 @@ import { renderMarkdown } from '../utils/renderMarkdown.js'
 import { parseSSE } from '../utils/parseSSE.js'
 import { renumberCitations } from '../utils/renumberCitations.js'
 import { decorateCodeBlocks } from '../utils/codeCopy.js'
+import { findLastUserIndex, truncateAt } from '../utils/conversationOps.js'
 
 const ERROR_MESSAGES = {
   connection: 'Connection lost. Please try again.',
@@ -78,6 +95,7 @@ const loading = ref(false)
 const sessionId = ref(null)
 const messagesContainer = ref(null)
 const chatInput = ref(null)
+const controller = ref(null)
 
 
 
@@ -99,6 +117,7 @@ async function sendMessage(opts = {}) {
   const msgIndex = messages.value.length - 1
   scrollToBottom()
 
+  controller.value = new AbortController()
   try {
     const res = await fetch('/chat/stream', {
       method: 'POST',
@@ -107,7 +126,8 @@ async function sendMessage(opts = {}) {
         message: text,
         history: messages.value.slice(0, -1).map(m => ({ role: m.role, content: m.content })),
         session_id: sessionId.value,
-      })
+      }),
+      signal: controller.value.signal,
     })
     if (!res.ok) {
       console.error(`API error: ${res.status} ${res.statusText} — POST /chat/stream`)
@@ -196,6 +216,16 @@ async function sendMessage(opts = {}) {
       messages.value[msgIndex] = { ...assistantMsg }
     }
   } catch (err) {
+    if (err?.name === 'AbortError') {
+      // User pressed Stop — keep whatever streamed so far with no error banner.
+      // If nothing streamed yet, drop the empty assistant bubble.
+      if (!assistantMsg.content.trim()) {
+        messages.value.splice(msgIndex, 1)
+      } else {
+        messages.value[msgIndex] = { ...assistantMsg }
+      }
+      return
+    }
     if (!assistantMsg.content) {
       console.error('Connection error:', err)
       assistantMsg.error = ERROR_MESSAGES.connection
@@ -205,6 +235,7 @@ async function sendMessage(opts = {}) {
     }
     messages.value[msgIndex] = { ...assistantMsg }
   } finally {
+    controller.value = null
     loading.value = false
     scrollToBottom()
     // Add copy buttons to any code blocks now that the message is fully rendered
@@ -214,6 +245,21 @@ async function sendMessage(opts = {}) {
       chatInput.value?.focus()
     })
   }
+}
+
+function stopGenerating() {
+  controller.value?.abort()
+}
+
+function regenerate() {
+  if (loading.value) return
+  const u = findLastUserIndex(messages.value)
+  if (u === -1) return
+  const text = messages.value[u].content
+  // Drop the last assistant answer (and anything after the question), then
+  // re-ask silently so no duplicate user bubble is added.
+  messages.value = truncateAt(messages.value, u)
+  sendMessage({ text, silent: true })
 }
 
 function scrollToBottom() {
@@ -498,6 +544,16 @@ function onSuggestionDismiss(msg) {
 .send-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.stop-btn {
+  background-color: var(--color-tertiary);
+  color: var(--color-on-tertiary);
+}
+
+.stop-btn:hover {
+  background-color: var(--color-text-secondary);
+  transform: translateY(-1px);
 }
 
 .spin {
