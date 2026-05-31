@@ -33,9 +33,9 @@ Plan dosyası: `C:\Users\bcsun\.claude\plans\misty-spinning-pebble.md`.
 **Sıradaki adım:** `git push origin master` (6 commit). Manuel tarayıcı testi kullanıcıda.
 Ingest bitince Pinecone vektör sayısını güncelle.
 
-**ÇALIŞAN VERİ İNGESTİ (arka plan):** `ingest.py --country IRN TUR UKR SYR IRQ --limit 5000`.
-IRN/TUR/UKR/SYR bitti, IRQ sürüyordu (son ülke, ETA ~45dk). Bitince Pinecone toplam vektörü
-`describe_index_stats` ile kontrol et + güncelle (başlangıç 11.599).
+**VERİ İNGESTİ TAMAMLANDI (2026-05-31 akşam):** `ingest.py --country IRN TUR UKR SYR IRQ --limit 5000`,
+**0 hata**, 20.112 doküman OK (IRN 3559, TUR 3827, UKR 4457, SYR 4287, IRQ 3982; skip'ler idempotent
+dedup). **Pinecone: 11.599 → 31.508 vektör (3072-dim).**
 
 **Önceki iş (pushed, `acd4170`'e kadar):** 4 iyileştirme — tema kirliliği fix, retrieval dedup+rerank,
 API rate-limit+auth, eval LLM-judge (groundedness/relevance 5.00/5.00).
@@ -67,15 +67,16 @@ sohbet sistemi. Şu an yerel geliştirme aşamasında.
 - **Kaynaklar:** citation-grounded (`[n]`), rapor web sayfası linkleri.
 - **Öneriler:** belirsiz sorguda yanıttan sonra React island kartı (ülke/zaman çipsiz+autocomplete,
   konu çipli), sessiz uygulama.
-- **Test:** **232 backend (pytest) + 11 frontend (vitest), hepsi yeşil.**
+- **Test:** **251 backend (pytest) + 43 frontend (vitest), hepsi yeşil.**
 - **RAG eval:** `python scripts/eval_rag.py` (filtre + canlı retrieval) / `--no-retrieval` (offline) /
   `--judge` (LLM-judge: groundedness+relevance 1-5, Gemini). Son koşu: filtre 20/20 vaka, judge
   groundedness 5.00 / relevance 5.00.
 
 ## Veri Durumu
-- **Pinecone `reliefweb-docs`: 11.599 vektör (3072-dim).** Üç aşamada (2026-05-31): (1) global
-  `reports --limit 3000` → 2282 OK; (2) ülke-bazlı `--country` (10 ülke × 400) → 3035 OK;
-  (3) ülke-bazlı (10 ülke × 1000) → 7894 OK. Yalnız `reports` endpoint.
+- **Pinecone `reliefweb-docs`: 31.508 vektör (3072-dim).** Aşamalar (2026-05-31): global
+  `reports --limit 3000` (2282 OK) + ülke-bazlı 10×400 (3035) + 10×1000 (7894) → 11.599; ardından
+  IRN/TUR/UKR/SYR/IRQ ×5000 (20.112 OK, 0 hata) → **31.508**. Yalnız `reports` endpoint.
+  IRN/TUR/UKR/SYR/IRQ artık derin kapsamlı (en güncel ~4-5 bin rapor/ülke).
 - **Tema uyuşmazlığı ÇÖZÜLDÜ:** tema adları ReliefWeb taksonomisine hizalandı
   (`Protection and Human Rights`, `Shelter and Non-Food Items`; diğer 6 zaten doğruydu). Eval ile
   doğrulandı (tema filtreli sorgular artık sonuç dönüyor).
