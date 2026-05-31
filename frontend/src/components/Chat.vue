@@ -51,10 +51,13 @@
 </template>
 
 <script setup>
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, defineAsyncComponent } from 'vue'
 import { Send, Loader2, AlertCircle } from 'lucide-vue-next'
 import SourceList from './SourceList.vue'
-import SuggestionCardIsland from './SuggestionCardIsland.vue'
+// Lazy-loaded: the React island (React + react-dom + lucide-react) is only
+// needed when a clarification card is shown, so it is split into its own async
+// chunk and kept out of the initial bundle.
+const SuggestionCardIsland = defineAsyncComponent(() => import('./SuggestionCardIsland.vue'))
 import { renderMarkdown } from '../utils/renderMarkdown.js'
 import { parseSSE } from '../utils/parseSSE.js'
 
