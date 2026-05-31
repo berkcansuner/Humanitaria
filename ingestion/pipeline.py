@@ -30,13 +30,14 @@ def run_pipeline(
     force: bool = False,
     endpoints: Optional[List[str]] = None,
     date_from: Optional[str] = None,
+    country: Optional[str] = None,
 ) -> Dict[str, IngestionStats]:
     if endpoints is None:
         endpoints = ["reports"]
     settings = get_settings()
     logger.info(
-        "Starting ingestion pipeline (limit=%d, force=%s, endpoints=%s, date_from=%s)",
-        limit, force, endpoints, date_from,
+        "Starting ingestion pipeline (limit=%d, force=%s, endpoints=%s, date_from=%s, country=%s)",
+        limit, force, endpoints, date_from, country,
     )
     client = ReliefWebClient()
     embedder = get_embeddings()
@@ -56,7 +57,7 @@ def run_pipeline(
 
         while processed < limit:
             batch_limit = min(BATCH_SIZE, limit - processed)
-            items = client.fetch(endpoint, limit=batch_limit, offset=offset, date_from=date_from)
+            items = client.fetch(endpoint, limit=batch_limit, offset=offset, date_from=date_from, country=country)
             if not items:
                 break
 

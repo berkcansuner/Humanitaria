@@ -77,6 +77,30 @@ class TestReliefWebClient:
             call_url = mock_post.call_args[0][0]
             assert call_url.endswith("/reports")
 
+    def test_fetch_with_country_filter(self):
+        client = ReliefWebClient()
+        with patch("requests.post") as mock_post:
+            mock_response = MagicMock()
+            mock_response.json.return_value = {"data": []}
+            mock_response.status_code = 200
+            mock_post.return_value = mock_response
+            client.fetch("reports", limit=1, country="SDN")
+            payload = mock_post.call_args[1]["json"]
+            assert payload["filter"] == {"field": "primary_country.iso3", "value": "SDN"}
+
+    def test_fetch_with_country_and_date_filter(self):
+        client = ReliefWebClient()
+        with patch("requests.post") as mock_post:
+            mock_response = MagicMock()
+            mock_response.json.return_value = {"data": []}
+            mock_response.status_code = 200
+            mock_post.return_value = mock_response
+            client.fetch("reports", limit=1, country="SDN", date_from="2026-01-01")
+            payload = mock_post.call_args[1]["json"]
+            assert payload["filter"]["operator"] == "AND"
+            fields = {c["field"] for c in payload["filter"]["conditions"]}
+            assert fields == {"date.created", "primary_country.iso3"}
+
     def test_endpoint_config_has_all_endpoints(self):
         assert "reports" in ENDPOINT_CONFIG
         assert "disasters" in ENDPOINT_CONFIG

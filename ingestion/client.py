@@ -50,6 +50,7 @@ class ReliefWebClient:
         sort: Optional[str] = None,
         fields: Optional[List[str]] = None,
         date_from: Optional[str] = None,
+        country: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         config = ENDPOINT_CONFIG.get(endpoint)
         if config is None:
@@ -65,12 +66,18 @@ class ReliefWebClient:
             "sort": [sort or config["sort"]],
             "fields": {"include": fields or config["fields"]},
         }
+        # Build ReliefWeb filter: date lower-bound and/or country (by iso3).
+        # When both are present they are AND-combined; a single condition is
+        # passed bare so existing date-only behaviour is unchanged.
+        filter_conditions = []
         if date_from:
-            payload["filter"] = {
-                "field": "date.created",
-                "operator": "gte",
-                "value": date_from,
-            }
+            filter_conditions.append({"field": "date.created", "operator": "gte", "value": date_from})
+        if country:
+            filter_conditions.append({"field": "primary_country.iso3", "value": country})
+        if len(filter_conditions) == 1:
+            payload["filter"] = filter_conditions[0]
+        elif len(filter_conditions) > 1:
+            payload["filter"] = {"operator": "AND", "conditions": filter_conditions}
         max_retries = 5
         backoff = 1.0
         for attempt in range(max_retries):

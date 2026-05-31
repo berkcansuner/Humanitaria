@@ -21,9 +21,21 @@ class TestPipeline:
             mock_store = MagicMock()
             mock_get_store.return_value = mock_store
             run_pipeline(limit=1)
-            mock_client.fetch.assert_called_once_with("reports", limit=1, offset=0, date_from=None)
+            mock_client.fetch.assert_called_once_with("reports", limit=1, offset=0, date_from=None, country=None)
             mock_store.upsert_chunks.assert_called_once()
             mock_store.clear_collection.assert_not_called()
+
+    def test_run_pipeline_passes_country(self):
+        with patch("ingestion.pipeline.ReliefWebClient") as MockClient, \
+             patch("ingestion.pipeline.get_embeddings") as mock_get_emb, \
+             patch("ingestion.pipeline.get_store") as mock_get_store:
+            mock_client = MagicMock()
+            mock_client.fetch.return_value = []
+            MockClient.return_value = mock_client
+            mock_get_emb.return_value = MagicMock()
+            mock_get_store.return_value = MagicMock()
+            run_pipeline(limit=1, country="SDN")
+            mock_client.fetch.assert_called_once_with("reports", limit=1, offset=0, date_from=None, country="SDN")
 
     def test_run_pipeline_with_force(self):
         with patch("ingestion.pipeline.ReliefWebClient") as MockClient, \

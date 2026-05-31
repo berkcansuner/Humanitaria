@@ -46,9 +46,30 @@ def main():
         choices=list(ENDPOINT_CONFIG.keys()),
         help="Endpoints to ingest from (default: reports)",
     )
+    parser.add_argument(
+        "--country",
+        nargs="+",
+        default=None,
+        metavar="ISO3",
+        help="Restrict to one or more primary-country ISO3 codes (e.g. SDN SYR). "
+             "Runs the pipeline once per country so --limit applies per country.",
+    )
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
-    all_stats = run_pipeline(limit=args.limit, force=args.force, endpoints=args.endpoints, date_from=args.date_from)
+    if args.country:
+        # Per-country runs guarantee depth for each country instead of letting
+        # high-volume countries dominate a single global date-sorted fetch.
+        if args.force:
+            from ingestion.store import get_store
+            get_store().clear_collection()
+        all_stats = {}
+        for code in args.country:
+            stats = run_pipeline(limit=args.limit, force=False, endpoints=args.endpoints,
+                                 date_from=args.date_from, country=code)
+            for ep, st in stats.items():
+                all_stats[f"{ep}:{code}"] = st
+    else:
+        all_stats = run_pipeline(limit=args.limit, force=args.force, endpoints=args.endpoints, date_from=args.date_from)
     _print_summary(all_stats)
     total_failed = sum(s.failed for s in all_stats.values())
     total_succeeded = sum(s.succeeded for s in all_stats.values())
