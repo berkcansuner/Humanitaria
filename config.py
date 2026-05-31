@@ -15,13 +15,18 @@ class Settings(BaseSettings):
     OLLAMA_CLOUD_BASE_URL: str = "https://ollama.com/v1"
     OLLAMA_LLM_MODEL: str = "qwen3.5:397b-cloud"
 
-    # Chat LLM provider: "ollama" veya "gemini" (sadece chat yanıtı; query processor Ollama'da kalır)
+    # Chat LLM provider: "ollama" veya "gemini" (chat yanıtı için)
     CHAT_LLM_PROVIDER: str = "gemini"
+
+    # Query processor (filtre çıkarma) LLM provider: "gemini" veya "ollama".
+    # "gemini" → yerel Ollama bağımlılığı yok, filtre doğruluğu daha yüksek.
+    QUERY_LLM_PROVIDER: str = "gemini"
 
     # Google Gemini (chat üretim LLM'i — OpenAI uyumlu endpoint)
     GEMINI_API_KEY: str = ""
     GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
     GEMINI_LLM_MODEL: str = "gemini-2.5-pro"   # Tier 1'de kullanılabilir; .env'den değiştirilebilir
+    GEMINI_QUERY_MODEL: str = "gemini-2.5-flash"  # filtre çıkarma için hızlı/ucuz model
 
     # Ollama Local (Embedding)
     OLLAMA_LOCAL_BASE_URL: str = "http://localhost:11434"

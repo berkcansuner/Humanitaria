@@ -206,6 +206,22 @@ class TestRuleBasedDatePatterns:
         assert "date" in f
 
 
+class TestQueryFiltersCoercion:
+    def test_list_values_coerced_to_string(self):
+        # Gemini json_mode may return single-element lists; they must coerce.
+        f = QueryFilters(country=["Somalia"], theme=["Education"])
+        assert f.country == "Somalia"
+        assert f.theme == "Education"
+
+    def test_empty_list_coerced_to_none(self):
+        f = QueryFilters(country=[])
+        assert f.country is None
+
+    def test_plain_string_unchanged(self):
+        f = QueryFilters(country="Sudan")
+        assert f.country == "Sudan"
+
+
 class TestLLMFilterExtraction:
     @patch("rag.query_processor._extract_filters_llm")
     def test_llm_extracts_country_and_theme(self, mock_llm):

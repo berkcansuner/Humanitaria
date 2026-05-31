@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 
 from dateutil.relativedelta import relativedelta
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +16,16 @@ class QueryFilters(BaseModel):
     date_from: Optional[str] = Field(default=None, description="ISO date string for lower bound")
     source: Optional[str] = Field(default=None, description="Source organization name")
     format: Optional[str] = Field(default=None, description="Document format")
+
+    @field_validator("country", "theme", "doctype", "date_from", "source", "format", mode="before")
+    @classmethod
+    def _coerce_list_to_str(cls, v):
+        # Gemini (json_mode) sometimes returns these as single-element lists
+        # (e.g. ["Somalia"]) instead of a plain string; take the first element
+        # so structured parsing succeeds instead of failing into the fallback.
+        if isinstance(v, list):
+            return v[0] if v else None
+        return v
 
 
 _COUNTRY_MAP = {
@@ -111,13 +121,24 @@ def _get_llm_extractor():
         from langchain_openai import ChatOpenAI
         from config import get_settings
         settings = get_settings()
-        llm = ChatOpenAI(
-            model=settings.OLLAMA_LLM_MODEL,
-            base_url=settings.OLLAMA_CLOUD_BASE_URL,
-            api_key=settings.OLLAMA_CLOUD_API_KEY,
-            temperature=0.0,
-            timeout=5,
-        )
+        if settings.QUERY_LLM_PROVIDER == "gemini":
+            # Gemini via the OpenAI-compatible endpoint — reuses the chat key.
+            # A small/fast model is enough for structured filter extraction.
+            llm = ChatOpenAI(
+                model=settings.GEMINI_QUERY_MODEL,
+                base_url=settings.GEMINI_BASE_URL,
+                api_key=settings.GEMINI_API_KEY,
+                temperature=0.0,
+                timeout=10,
+            )
+        else:
+            llm = ChatOpenAI(
+                model=settings.OLLAMA_LLM_MODEL,
+                base_url=settings.OLLAMA_CLOUD_BASE_URL,
+                api_key=settings.OLLAMA_CLOUD_API_KEY,
+                temperature=0.0,
+                timeout=5,
+            )
         _llm_extractor = llm.with_structured_output(QueryFilters, method="json_mode")
     return _llm_extractor
 
