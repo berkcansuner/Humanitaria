@@ -50,6 +50,22 @@ def test_delete(client):
     assert client.get("/conversations").json() == []
 
 
+def test_truncate_drops_later_messages(client):
+    from rag import conversations as store
+    store.create_conversation("c1", "t")
+    first_user = store.append_message("c1", "user", "q1")
+    store.append_message("c1", "assistant", "a1")
+    store.append_message("c1", "user", "q2")
+    r = client.post("/conversations/c1/truncate", json={"keep_through_message_id": first_user})
+    assert r.status_code == 204
+    assert [m["content"] for m in store.get_messages("c1")] == ["q1"]
+
+
+def test_truncate_404_for_unknown(client):
+    r = client.post("/conversations/nope/truncate", json={"keep_through_message_id": 0})
+    assert r.status_code == 404
+
+
 class TestApiKeyAuth:
     def test_requires_key_when_configured(self, tmp_path):
         convo_settings = MagicMock()

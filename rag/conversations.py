@@ -103,12 +103,12 @@ def get_messages(conv_id: str) -> list[dict]:
     return result
 
 
-def append_message(conv_id: str, role: str, content: str, sources=None) -> None:
-    """Append a message and bump the conversation's updated_at."""
+def append_message(conv_id: str, role: str, content: str, sources=None) -> int:
+    """Append a message, bump updated_at, and return the new message id."""
     now = _now()
     sources_json = json.dumps(sources, ensure_ascii=False) if sources else None
     with _connect() as conn:
-        conn.execute(
+        cur = conn.execute(
             "INSERT INTO messages(conversation_id, role, content, sources_json, created_at) "
             "VALUES (?, ?, ?, ?, ?)",
             (conv_id, role, content, sources_json, now),
@@ -116,6 +116,7 @@ def append_message(conv_id: str, role: str, content: str, sources=None) -> None:
         conn.execute(
             "UPDATE conversations SET updated_at = ? WHERE id = ?", (now, conv_id)
         )
+        return cur.lastrowid
 
 
 def rename_conversation(conv_id: str, title: str) -> None:
@@ -162,3 +163,12 @@ def messages_as_langchain(conv_id: str) -> list[BaseMessage]:
         else:
             msgs.append(AIMessage(content=m["content"]))
     return msgs
+
+
+def resync_window(conv_id: str) -> None:
+    """Rebuild the in-memory window from the (possibly trimmed) persisted
+    messages so the LLM never sees stale context after a truncate."""
+    from rag.history import clear_session, populate_history_from_messages
+
+    clear_session(conv_id)
+    populate_history_from_messages(conv_id, messages_as_langchain(conv_id))

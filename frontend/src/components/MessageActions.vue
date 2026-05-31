@@ -13,12 +13,21 @@
     >
       <RotateCcw :size="15" />
     </button>
+    <button
+      v-if="role === 'user'"
+      type="button"
+      class="action-btn"
+      aria-label="Mesajı düzenle"
+      @click="$emit('edit')"
+    >
+      <Pencil :size="15" />
+    </button>
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
-import { Copy, Check, RotateCcw } from 'lucide-vue-next'
+import { Copy, Check, RotateCcw, Pencil } from 'lucide-vue-next'
 
 const props = defineProps({
   role: { type: String, required: true },
@@ -26,7 +35,7 @@ const props = defineProps({
   canRegenerate: { type: Boolean, default: true },
 })
 
-const emit = defineEmits(['copy', 'regenerate'])
+const emit = defineEmits(['copy', 'regenerate', 'edit'])
 
 const copied = ref(false)
 

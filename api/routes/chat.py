@@ -132,11 +132,13 @@ def _ensure_conversation_and_seed(session_id: str, message: str) -> None:
         )
 
 
-def _persist_exchange(session_id: str, user_message: str, answer: str, sources: list) -> None:
-    """Persist a completed user+assistant exchange. Sync — offload to a thread.
-    Only called after the chain finishes, so aborted turns are never written."""
-    convo_store.append_message(session_id, "user", user_message)
-    convo_store.append_message(session_id, "assistant", answer, sources=sources or None)
+def _persist_exchange(session_id: str, user_message: str, answer: str, sources: list) -> tuple:
+    """Persist a completed user+assistant exchange and return the new (user_id,
+    assistant_id). Sync — offload to a thread. Only called after the chain
+    finishes, so aborted turns are never written."""
+    user_id = convo_store.append_message(session_id, "user", user_message)
+    assistant_id = convo_store.append_message(session_id, "assistant", answer, sources=sources or None)
+    return user_id, assistant_id
 
 
 async def _retrieve_docs(query: str, filters: dict):
@@ -298,8 +300,14 @@ async def chat_stream(request: Request, req: ChatRequest):
 
             # Persist to the durable store (runs only after a full stream, so
             # an aborted turn is never written).
-            await anyio.to_thread.run_sync(
+            user_id, assistant_id = await anyio.to_thread.run_sync(
                 _persist_exchange, session_id, req.message, full_response, sources
+            )
+            # Tell the client the persisted message ids so it can target a
+            # precise cut point for Edit/resend and Regenerate (truncate).
+            yield ServerSentEvent(
+                event="persisted",
+                data=json.dumps({"user_id": user_id, "assistant_id": assistant_id}),
             )
 
             if sources:

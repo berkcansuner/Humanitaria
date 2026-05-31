@@ -35,3 +35,10 @@ export function renameConversation(id, title) {
 export function deleteConversation(id) {
   return request(`/conversations/${id}`, { method: 'DELETE' })
 }
+
+export function truncateConversation(id, keepThroughMessageId) {
+  return request(`/conversations/${id}/truncate`, {
+    method: 'POST',
+    body: JSON.stringify({ keep_through_message_id: keepThroughMessageId }),
+  })
+}

@@ -45,6 +45,12 @@ class RenameIn(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
 
 
+class TruncateIn(BaseModel):
+    # Keep messages with id <= this; delete everything after. 0 clears all
+    # messages (used when editing the very first message).
+    keep_through_message_id: int = Field(..., ge=0)
+
+
 @router.get("", response_model=List[ConversationOut])
 async def list_conversations():
     return await anyio.to_thread.run_sync(store.list_conversations)
@@ -82,3 +88,13 @@ async def delete_conversation(conv_id: str):
     await anyio.to_thread.run_sync(store.delete_conversation, conv_id)
     # Drop the in-memory window too so a stale session can't linger.
     clear_session(conv_id)
+
+
+@router.post("/{conv_id}/truncate", status_code=204)
+async def truncate_conversation(conv_id: str, body: TruncateIn):
+    """Drop every message after `keep_through_message_id` and rebuild the
+    in-memory window. Backs both Edit/resend and Regenerate."""
+    if not await anyio.to_thread.run_sync(store.conversation_exists, conv_id):
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    await anyio.to_thread.run_sync(store.truncate_after, conv_id, body.keep_through_message_id)
+    await anyio.to_thread.run_sync(store.resync_window, conv_id)

@@ -5,6 +5,7 @@ import {
   createConversation,
   renameConversation,
   deleteConversation,
+  truncateConversation,
 } from './api.js'
 
 describe('conversation api client', () => {
@@ -50,6 +51,15 @@ describe('conversation api client', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 204 }))
     await deleteConversation('id1')
     expect(fetch).toHaveBeenCalledWith('/conversations/id1', expect.objectContaining({ method: 'DELETE' }))
+  })
+
+  it('truncateConversation POSTs the keep-through id', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 204 }))
+    await truncateConversation('id1', 7)
+    expect(fetch).toHaveBeenCalledWith('/conversations/id1/truncate', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ keep_through_message_id: 7 }),
+    }))
   })
 
   it('throws on a non-ok response', async () => {

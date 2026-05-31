@@ -17,25 +17,42 @@
               </div>
             </template>
             <template v-else>
-              <div class="message-content" v-html="renderMarkdown(msg.content)"></div>
-              <div v-if="msg.error" class="error-banner">
-                <AlertCircle :size="16" class="error-icon" />
-                {{ msg.error }}
+              <div v-if="editingIndex === idx" class="edit-box">
+                <textarea
+                  ref="editTextarea"
+                  v-model="editText"
+                  class="edit-textarea"
+                  rows="3"
+                  @keydown.esc="cancelEdit"
+                  @keydown.enter.exact.prevent="saveEdit"
+                ></textarea>
+                <div class="edit-actions">
+                  <button type="button" class="edit-cancel" @click="cancelEdit">İptal</button>
+                  <button type="button" class="edit-save" @click="saveEdit">Kaydet & gönder</button>
+                </div>
               </div>
-              <SuggestionCardIsland
-                v-if="msg.clarification && !msg.clarification.resolved"
-                :clarification="msg.clarification"
-                @apply="onSuggestionApply(msg, $event)"
-                @dismiss="onSuggestionDismiss(msg)"
-              />
-              <SourceList v-if="msg.sources" :sources="msg.sources" />
-              <MessageActions
-                v-if="msg.role === 'assistant' && msg.content && !msg.error && !(loading && idx === messages.length - 1)"
-                :role="msg.role"
-                :content="msg.content"
-                :can-regenerate="idx === messages.length - 1"
-                @regenerate="regenerate"
-              />
+              <template v-else>
+                <div class="message-content" v-html="renderMarkdown(msg.content)"></div>
+                <div v-if="msg.error" class="error-banner">
+                  <AlertCircle :size="16" class="error-icon" />
+                  {{ msg.error }}
+                </div>
+                <SuggestionCardIsland
+                  v-if="msg.clarification && !msg.clarification.resolved"
+                  :clarification="msg.clarification"
+                  @apply="onSuggestionApply(msg, $event)"
+                  @dismiss="onSuggestionDismiss(msg)"
+                />
+                <SourceList v-if="msg.sources" :sources="msg.sources" />
+                <MessageActions
+                  v-if="msg.content && !msg.error && !(loading && idx === messages.length - 1)"
+                  :role="msg.role"
+                  :content="msg.content"
+                  :can-regenerate="idx === messages.length - 1"
+                  @regenerate="regenerate"
+                  @edit="startEdit(idx)"
+                />
+              </template>
             </template>
           </div>
         </div>
@@ -80,8 +97,8 @@ import { renderMarkdown } from '../utils/renderMarkdown.js'
 import { parseSSE } from '../utils/parseSSE.js'
 import { renumberCitations } from '../utils/renumberCitations.js'
 import { decorateCodeBlocks } from '../utils/codeCopy.js'
-import { findLastUserIndex, truncateAt } from '../utils/conversationOps.js'
-import { getMessages } from '../utils/api.js'
+import { findLastUserIndex, truncateAt, lastServerIdBefore } from '../utils/conversationOps.js'
+import { getMessages, truncateConversation } from '../utils/api.js'
 
 const ERROR_MESSAGES = {
   connection: 'Connection lost. Please try again.',
@@ -102,6 +119,9 @@ const sessionId = ref(null)
 const messagesContainer = ref(null)
 const chatInput = ref(null)
 const controller = ref(null)
+const editingIndex = ref(null)
+const editText = ref('')
+const editTextarea = ref(null)
 
 
 
@@ -113,12 +133,12 @@ async function sendMessage(opts = {}) {
   if (!text || loading.value) return
 
   if (!opts.silent) {
-    messages.value.push({ role: 'user', content: text, error: null })
+    messages.value.push({ role: 'user', content: text, error: null, serverId: null })
   }
   if (opts.text == null) input.value = ''
   loading.value = true
 
-  const assistantMsg = { role: 'assistant', content: '', sources: null, error: null, clarification: null }
+  const assistantMsg = { role: 'assistant', content: '', sources: null, error: null, clarification: null, serverId: null }
   messages.value.push(assistantMsg)
   const msgIndex = messages.value.length - 1
   scrollToBottom()
@@ -204,6 +224,18 @@ async function sendMessage(opts = {}) {
           } catch (e) {
             console.error('SSE session parse error:', e, sse.data)
           }
+        } else if (sse.event === 'persisted') {
+          try {
+            const data = JSON.parse(sse.data)
+            // Tag the just-saved messages with their server ids so Edit/
+            // Regenerate can target a precise truncate cut point.
+            const lastUser = findLastUserIndex(messages.value)
+            if (lastUser !== -1) messages.value[lastUser].serverId = data.user_id
+            assistantMsg.serverId = data.assistant_id
+            messages.value[msgIndex] = { ...assistantMsg }
+          } catch (e) {
+            console.error('SSE persisted parse error:', e, sse.data)
+          }
         } else if (sse.event === 'error') {
           try {
             const data = JSON.parse(sse.data)
@@ -260,15 +292,49 @@ function stopGenerating() {
   controller.value?.abort()
 }
 
+async function resendFrom(targetIndex, text) {
+  // Shared by Regenerate and Edit: drop the target user turn (and everything
+  // after) on both the server and the client, then re-ask. The server truncate
+  // keeps the conversation + window consistent so the re-sent turn isn't a
+  // duplicate. keep_through is the last persisted message before the target.
+  if (loading.value || targetIndex < 0) return
+  if (sessionId.value) {
+    try {
+      await truncateConversation(sessionId.value, lastServerIdBefore(messages.value, targetIndex))
+    } catch (e) {
+      console.error('Truncate failed:', e)
+    }
+  }
+  messages.value = truncateAt(messages.value, targetIndex - 1)
+  sendMessage({ text })
+}
+
 function regenerate() {
-  if (loading.value) return
   const u = findLastUserIndex(messages.value)
   if (u === -1) return
-  const text = messages.value[u].content
-  // Drop the last assistant answer (and anything after the question), then
-  // re-ask silently so no duplicate user bubble is added.
-  messages.value = truncateAt(messages.value, u)
-  sendMessage({ text, silent: true })
+  resendFrom(u, messages.value[u].content)
+}
+
+function startEdit(idx) {
+  if (loading.value) return
+  editingIndex.value = idx
+  editText.value = messages.value[idx].content
+  nextTick(() => {
+    const el = Array.isArray(editTextarea.value) ? editTextarea.value[0] : editTextarea.value
+    el?.focus()
+  })
+}
+
+function cancelEdit() {
+  editingIndex.value = null
+}
+
+function saveEdit() {
+  const idx = editingIndex.value
+  const text = editText.value.trim()
+  editingIndex.value = null
+  if (idx == null || !text) return
+  resendFrom(idx, text)
 }
 
 function scrollToBottom() {
@@ -314,6 +380,7 @@ watch(() => props.conversationId, async (newId) => {
       sources: m.sources || null,
       error: null,
       clarification: null,
+      serverId: m.id,
     }))
     sessionId.value = newId
     nextTick(() => decorateCodeBlocks(messagesContainer.value))
@@ -480,6 +547,59 @@ watch(() => props.conversationId, async (newId) => {
 
 .message-content :deep(tr:nth-child(even)) {
   background-color: var(--color-bg);
+}
+
+.edit-box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 280px;
+}
+
+.edit-textarea {
+  width: 100%;
+  padding: var(--space-3);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  outline: none;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.edit-cancel,
+.edit-save {
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  border: 1px solid var(--color-border);
+}
+
+.edit-cancel {
+  background-color: var(--color-surface);
+  color: var(--color-text-secondary);
+}
+
+.edit-save {
+  background-color: var(--color-accent-container);
+  color: var(--color-on-accent);
+  border-color: var(--color-accent-container);
+  font-weight: 600;
+}
+
+.edit-save:hover {
+  background-color: var(--color-accent);
 }
 
 .error-banner {

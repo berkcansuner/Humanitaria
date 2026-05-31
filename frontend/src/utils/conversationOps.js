@@ -19,3 +19,16 @@ export function findLastUserIndex(messages) {
 export function truncateAt(messages, index) {
   return messages.slice(0, Math.max(0, index + 1))
 }
+
+/**
+ * The server message id to keep through when truncating before `index`: the
+ * last message before it that carries a serverId. Messages without one
+ * (greetings, errors, in-flight turns) aren't persisted, so they're skipped.
+ * Returns 0 when nothing persisted precedes the index (delete-all).
+ */
+export function lastServerIdBefore(messages, index) {
+  for (let i = index - 1; i >= 0; i--) {
+    if (messages[i].serverId != null) return messages[i].serverId
+  }
+  return 0
+}
