@@ -1,6 +1,7 @@
 <template>
   <div class="chat">
     <div class="messages" ref="messagesContainer" role="log" aria-live="polite">
+      <EmptyState v-if="messages.length === 0" @select="sendMessage({ text: $event })" />
       <div
         v-for="(msg, idx) in messages"
         :key="idx"
@@ -54,6 +55,7 @@
 import { ref, nextTick, defineAsyncComponent } from 'vue'
 import { Send, Loader2, AlertCircle } from 'lucide-vue-next'
 import SourceList from './SourceList.vue'
+import EmptyState from './EmptyState.vue'
 // Lazy-loaded: the React island (React + react-dom + lucide-react) is only
 // needed when a clarification card is shown, so it is split into its own async
 // chunk and kept out of the initial bundle.
@@ -61,6 +63,7 @@ const SuggestionCardIsland = defineAsyncComponent(() => import('./SuggestionCard
 import { renderMarkdown } from '../utils/renderMarkdown.js'
 import { parseSSE } from '../utils/parseSSE.js'
 import { renumberCitations } from '../utils/renumberCitations.js'
+import { decorateCodeBlocks } from '../utils/codeCopy.js'
 
 const ERROR_MESSAGES = {
   connection: 'Connection lost. Please try again.',
@@ -204,10 +207,12 @@ async function sendMessage(opts = {}) {
   } finally {
     loading.value = false
     scrollToBottom()
-    // Keep the composer ready to type. When the message was sent by clicking the
-    // send button, focus sits on that button (which becomes disabled once the
-    // input is empty); move it back to the input so the user can keep typing.
-    nextTick(() => chatInput.value?.focus())
+    // Add copy buttons to any code blocks now that the message is fully rendered
+    // (decorateCodeBlocks is idempotent, so re-decorating the container is safe).
+    nextTick(() => {
+      decorateCodeBlocks(messagesContainer.value)
+      chatInput.value?.focus()
+    })
   }
 }
 

@@ -5,6 +5,9 @@
         <h1 class="masthead-title">ReliefWeb RAG</h1>
         <p class="masthead-subtitle">Intelligent assistant on humanitarian aid documents</p>
       </div>
+      <div class="masthead-actions">
+        <ThemeToggle />
+      </div>
     </header>
     <main class="content">
       <Chat />
@@ -14,6 +17,7 @@
 
 <script setup>
 import Chat from './components/Chat.vue'
+import ThemeToggle from './components/ThemeToggle.vue'
 </script>
 
 <style scoped>
@@ -25,9 +29,23 @@ import Chat from './components/Chat.vue'
 }
 
 .masthead {
-  background: linear-gradient(180deg, #f5f0e8 0%, var(--color-bg) 100%);
+  position: relative;
+  background: linear-gradient(180deg, var(--color-surface-container) 0%, var(--color-bg) 100%);
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
+}
+
+.masthead-actions {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-5);
+}
+
+@media (max-width: 640px) {
+  .masthead-actions {
+    top: var(--space-3);
+    right: var(--space-4);
+  }
 }
 
 .masthead-inner {

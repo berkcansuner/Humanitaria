@@ -66,6 +66,35 @@
   --content-max-width: 1280px;
 }
 
+/* Dark theme — overrides color tokens only; spacing/radii/typography unchanged.
+   Activated by setTheme() setting data-theme="dark" on <html>. */
+:root[data-theme="dark"] {
+  --color-bg: #1a1816;
+  --color-surface: #242220;
+  --color-surface-container: #2d2a27;
+  --color-surface-container-low: #282522;
+  --color-surface-container-high: #353230;
+  --color-surface-variant: #3a3633;
+  --color-text: #ece9e6;
+  --color-text-secondary: #b3aea8;
+  --color-text-variant: #d8b4ae;
+  --color-accent: #ff8a80;
+  --color-accent-container: #c5483f;
+  --color-on-accent: #2a0d0a;
+  --color-muted: #a89690;
+  --color-border: #3a3633;
+  --color-border-subtle: #332f2c;
+  --color-outline: #6f5f5a;
+  --color-tertiary: #d6d3d0;
+  --color-on-tertiary: #1a1816;
+  --color-error: #ffb4ab;
+  --color-error-bg: #5c1310;
+  --color-error-accent: #ffb4ab;
+  --color-success: #81c784;
+  --color-code-bg: #2d2a27;
+  --color-primary-fixed: #5c1310;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -92,4 +121,36 @@ body {
   height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+/* Copy button injected into rendered code blocks (decorateCodeBlocks).
+   Lives in global CSS because the element is created in v-html content,
+   which scoped component styles don't reach. */
+.message-content pre {
+  position: relative;
+}
+
+.message-content pre .copy-code {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  padding: 2px 8px;
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.message-content pre:hover .copy-code,
+.message-content pre .copy-code:focus-visible {
+  opacity: 1;
+}
+
+.message-content pre .copy-code:hover {
+  color: var(--color-accent);
 }
