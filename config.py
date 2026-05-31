@@ -90,6 +90,9 @@ class Settings(BaseSettings):
     SESSION_MAX_MEMORY: int = 1000    # max in-memory sessions before LRU eviction
     REDIS_URL: str = ""               # e.g. redis://localhost:6379 — empty = in-memory
     SESSION_TTL_HOURS: int = 24       # Redis session TTL
+    # Persistent conversation store (SQLite, file-based like CHROMA_DB_PATH).
+    # Holds the named conversations + messages shown in the sidebar.
+    CONVERSATION_DB_PATH: str = "./conversations.db"
 
     # Ingestion
     FETCH_PDF_CONTENT: bool = False   # download and index PDF attachments (slow, opt-in)

@@ -1,5 +1,19 @@
 """Shared pytest fixtures for RAG system tests."""
+from unittest.mock import MagicMock, patch
+
 import pytest
+
+
+@pytest.fixture(autouse=True)
+def _isolate_conversation_db(tmp_path):
+    """Point the SQLite conversation store at a throwaway DB for every test so
+    the chat flow (which now persists exchanges) never writes to the real
+    ./conversations.db. Tests that need their own DB still patch get_settings
+    explicitly; that inner patch transparently overrides this one."""
+    settings = MagicMock()
+    settings.CONVERSATION_DB_PATH = str(tmp_path / "conversations.db")
+    with patch("rag.conversations.get_settings", return_value=settings):
+        yield
 
 
 @pytest.fixture(autouse=True)

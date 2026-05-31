@@ -23,6 +23,11 @@ build/
 # ChromaDB
 chroma_db/
 
+# SQLite conversation store
+conversations.db
+conversations.db-wal
+conversations.db-shm
+
 # Pytest
 .pytest_cache/
 htmlcov/

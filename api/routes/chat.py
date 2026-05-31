@@ -3,6 +3,7 @@ import logging
 import re
 from uuid import uuid4
 
+import anyio
 from fastapi import APIRouter, HTTPException, Request, Depends, Header
 from pydantic import BaseModel, Field, field_validator
 from typing import List, Literal, Optional
@@ -18,7 +19,8 @@ from rag.retriever import (
     dedupe_by_document, rerank_by_relevance,
 )
 from rag.chain import build_chain
-from rag.history import get_session_history
+from rag.history import get_session_history, has_session, populate_history_from_messages
+from rag import conversations as convo_store
 
 logger = logging.getLogger(__name__)
 
@@ -110,6 +112,33 @@ def _filter_cited_sources(answer_text: str, sources: list) -> list:
     return filtered or sources
 
 
+def _derive_title(text: str) -> str:
+    """Conversation title = the first user message, whitespace-collapsed and
+    truncated. Cheap and avoids an extra LLM call on every new chat."""
+    title = re.sub(r"\s+", " ", text).strip()
+    return title[:60] if len(title) <= 60 else title[:57] + "..."
+
+
+def _ensure_conversation_and_seed(session_id: str, message: str) -> None:
+    """Create the conversation on its first real message, and on a cold request
+    for an existing conversation (e.g. after a restart) seed the in-memory
+    window from the persistent store so the LLM keeps its context. Sync — call
+    via anyio.to_thread.run_sync."""
+    if not convo_store.conversation_exists(session_id):
+        convo_store.create_conversation(session_id, _derive_title(message))
+    elif not has_session(session_id):
+        populate_history_from_messages(
+            session_id, convo_store.messages_as_langchain(session_id)
+        )
+
+
+def _persist_exchange(session_id: str, user_message: str, answer: str, sources: list) -> None:
+    """Persist a completed user+assistant exchange. Sync — offload to a thread.
+    Only called after the chain finishes, so aborted turns are never written."""
+    convo_store.append_message(session_id, "user", user_message)
+    convo_store.append_message(session_id, "assistant", answer, sources=sources or None)
+
+
 async def _retrieve_docs(query: str, filters: dict):
     """Shared retrieval pipeline used by both chat routes.
 
@@ -179,6 +208,8 @@ async def chat(request: Request, req: ChatRequest):
             msg = _no_docs_message(filters)
             return ChatResponse(answer=msg, sources=[], session_id=session_id)
 
+        await anyio.to_thread.run_sync(_ensure_conversation_and_seed, session_id, req.message)
+
         context, source_dicts = _build_context_and_sources(docs)
 
         history = get_session_history(session_id)
@@ -194,7 +225,10 @@ async def chat(request: Request, req: ChatRequest):
         history.add_message(HumanMessage(content=req.message))
         history.add_message(AIMessage(content=answer))
 
-        sources = [SourceDocument(**d) for d in _filter_cited_sources(answer, source_dicts)]
+        filtered = _filter_cited_sources(answer, source_dicts)
+        await anyio.to_thread.run_sync(_persist_exchange, session_id, req.message, answer, filtered)
+
+        sources = [SourceDocument(**d) for d in filtered]
         return ChatResponse(answer=answer, sources=sources, session_id=session_id)
 
     except Exception as e:
@@ -232,6 +266,8 @@ async def chat_stream(request: Request, req: ChatRequest):
                 yield ServerSentEvent(event="done", data="{}")
                 return
 
+            await anyio.to_thread.run_sync(_ensure_conversation_and_seed, session_id, req.message)
+
             analysis = analyze_query(req.message, filters=filters)
             context, source_dicts = _build_context_and_sources(docs)
 
@@ -259,6 +295,13 @@ async def chat_stream(request: Request, req: ChatRequest):
 
             # Surface only the sources the answer actually cited ([n] markers).
             sources = _filter_cited_sources(full_response, source_dicts)
+
+            # Persist to the durable store (runs only after a full stream, so
+            # an aborted turn is never written).
+            await anyio.to_thread.run_sync(
+                _persist_exchange, session_id, req.message, full_response, sources
+            )
+
             if sources:
                 yield ServerSentEvent(
                     event="sources",

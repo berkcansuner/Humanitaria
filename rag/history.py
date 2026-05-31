@@ -58,6 +58,14 @@ def get_session_history(session_id: str) -> Union[WindowedChatMessageHistory, "R
     return _get_memory_history(session_id, k, max_sessions)
 
 
+def has_session(session_id: str) -> bool:
+    """True if an in-memory window already exists for this session.
+
+    Used by the chat route to decide whether to seed the window from the
+    persistent store on a cold request (e.g. after a server restart)."""
+    return session_id in _session_histories
+
+
 def clear_session(session_id: str) -> None:
     _session_histories.pop(session_id, None)
 
