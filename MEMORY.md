@@ -8,6 +8,25 @@
 
 ---
 
+## ✅ Son tamamlanan iş (2026-05-31, 4 iyileştirme — hepsi commit'lendi, push EDİLMEDİ)
+Plan dosyası: `C:\Users\bcsun\.claude\plans\synchronous-honking-cerf.md`. Test: **232 passed**.
+4 ayrı commit `master`'da (`389a9ef`, `5675fa3`, `bef9a28`, `5d6e728`) — **henüz `git push` yapılmadı.**
+
+1. **Tema kirliliği fix:** `ingestion/parser.py` `parse_disaster` artık `theme=""` (afet tipi sektör teması değil).
+2. **Retrieval dedup + rerank:** `config.py` `RERANK_ENABLED/RERANK_MODEL=bge-reranker-v2-m3/RERANK_CANDIDATE_MULTIPLIER=4`;
+   `rag/retriever.py` `build_retriever(filter, k=None)` + `dedupe_by_document` + `rerank_by_relevance`
+   (Pinecone hosted reranker, chroma/devre-dışı/hata → no-op) + `_get_pinecone_client`;
+   `api/routes/chat.py` ortak `_retrieve_docs` (candidates→date filter→dedupe→relevance rerank→recency).
+3. **API rate limiting + opsiyonel auth:** `slowapi` (`RATE_LIMIT=20/minute`, per-IP, 429 handler),
+   opsiyonel `API_KEY` (`X-API-Key`; boşsa açık). Testlerde limiter autouse fixture ile kapalı.
+4. **Eval LLM-judge:** `scripts/eval_rag.py --judge` (groundedness+relevance 1-5, Gemini json_mode;
+   `--judge-threshold` default 3.5 çıkış kodunu etkiler), vaka seti 10→20. Canlı koşu: filtre 20/20,
+   judge groundedness **5.00**/relevance **5.00**.
+
+**Sıradaki adım:** `git push origin master` (4 commit bekliyor).
+
+---
+
 ## Hedef
 İnsani yardım M&E ekibi için ReliefWeb belgeleri üzerinden Türkçe/İngilizce çok dilli RAG
 sohbet sistemi. Şu an yerel geliştirme aşamasında.
@@ -33,14 +52,15 @@ sohbet sistemi. Şu an yerel geliştirme aşamasında.
 - **Kaynaklar:** citation-grounded (`[n]`), rapor web sayfası linkleri.
 - **Öneriler:** belirsiz sorguda yanıttan sonra React island kartı (ülke/zaman çipsiz+autocomplete,
   konu çipli), sessiz uygulama.
-- **Test:** **217 backend (pytest) + 11 frontend (vitest), hepsi yeşil.**
-- **RAG eval:** `python scripts/eval_rag.py` (filtre + canlı retrieval) / `--no-retrieval` (offline).
-  Son koşu: filtre 10/10; tüm retrieval vakaları 4-5 belge, ülke eşleşmesi tam (Sudan+WASH dahil).
+- **Test:** **232 backend (pytest) + 11 frontend (vitest), hepsi yeşil.**
+- **RAG eval:** `python scripts/eval_rag.py` (filtre + canlı retrieval) / `--no-retrieval` (offline) /
+  `--judge` (LLM-judge: groundedness+relevance 1-5, Gemini). Son koşu: filtre 20/20 vaka, judge
+  groundedness 5.00 / relevance 5.00.
 
 ## Veri Durumu
-- **Pinecone `reliefweb-docs`: 5697 vektör (3072-dim).** İki aşamada (2026-05-31): (1) global
-  `reports --limit 3000` → 2282 OK; (2) ülke-bazlı `--country` (10 öneri ülkesi × 400) → 3035 OK.
-  Yalnız `reports` endpoint.
+- **Pinecone `reliefweb-docs`: 11.599 vektör (3072-dim).** Üç aşamada (2026-05-31): (1) global
+  `reports --limit 3000` → 2282 OK; (2) ülke-bazlı `--country` (10 ülke × 400) → 3035 OK;
+  (3) ülke-bazlı (10 ülke × 1000) → 7894 OK. Yalnız `reports` endpoint.
 - **Tema uyuşmazlığı ÇÖZÜLDÜ:** tema adları ReliefWeb taksonomisine hizalandı
   (`Protection and Human Rights`, `Shelter and Non-Food Items`; diğer 6 zaten doğruydu). Eval ile
   doğrulandı (tema filtreli sorgular artık sonuç dönüyor).
@@ -69,9 +89,8 @@ sohbet sistemi. Şu an yerel geliştirme aşamasında.
 **Veri / kapsam:**
 - [ ] Ülke/tema haritalarını genişlet (`_COUNTRY_MAP` ~10 ülke; temalar 8/19). Kapsam dışı
       ülke/tema sorulduğunda filtre üretilmiyor.
-- [ ] (Opsiyonel) Çoklu endpoint ingest (`--endpoints reports disasters countries`) — DİKKAT:
-      `parser.py` disaster/country `theme` alanına afet TÜRÜNÜ yazıyor (ör. "Flood"), tema filtresini
-      kirletir; önce ayrı alana taşı.
+- [ ] (Opsiyonel) Çoklu endpoint ingest (`--endpoints reports disasters countries`). NOT: tema
+      kirliliği ÇÖZÜLDÜ — `parse_disaster` artık `theme=""` (afet tipini tema filtresine yazmıyor).
 - [ ] (Opsiyonel) PDF içerik ingestion (`FETCH_PDF_CONTENT=True`) — daha zengin gövde, yavaş.
 
 **Frontend (bekleyen):**
@@ -79,8 +98,7 @@ sohbet sistemi. Şu an yerel geliştirme aşamasında.
 - [ ] Frontend bileşen testleri (vitest + @vue/test-utils; şu an yalnız parseSSE).
 
 **Backend / RAG:**
-- [ ] (Opsiyonel) `RunnableWithMessageHistory` → LangGraph migrasyonu (deprecation uyarıları).
-- [ ] Eval setini büyüt / retrieval eşik kontrolü ekle (CI için).
+- [ ] (Opsiyonel) Session history kalıcılığı için `REDIS_URL` (şu an in-memory).
 
 ## Bilinen Sorunlar / Kısıtlamalar
 - Gemini query json_mode bazen liste döndürüyor (validator ile coerce ediliyor; sorun değil).
