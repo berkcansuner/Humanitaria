@@ -1,22 +1,35 @@
+# Pinned to the known-good, mutually compatible set actually installed in the
+# project venv. chromadb 1.5.9 requires fastapi==0.115.9 — both are pinned here
+# so `pip install -r requirements.txt` resolves cleanly (the old chromadb==1.0.5
+# / fastapi==0.115.0 combination conflicted).
+
+# Core LangChain stack
 langchain==0.3.24
 langchain-community==0.3.22
+langchain-openai==0.3.14
 langchain-chroma==0.2.4
-apscheduler==3.10.4
+langchain-pinecone==0.2.13
+
+# Vector stores
+chromadb==1.5.9
+pinecone==7.3.0
+
+# Web / API
+fastapi==0.115.9
+uvicorn[standard]==0.46.0
+sse-starlette==3.0.3
+
+# LLM / embedding clients
+ollama==0.4.8
+
+# Ingestion / utilities
 pypdf==5.4.0
+apscheduler==3.10.4
 redis==5.2.1
-# NOTE (Windows): chromadb 1.0.5 requires chroma-hnswlib==0.7.6 but a prebuilt
-# wheel for cp312-win_amd64 may be missing. If build fails, install
-# chroma-hnswlib==0.7.5 first, then run: pip install chromadb==1.0.5 --no-deps
-chromadb==1.0.5
-pydantic-settings==2.9.1
+requests==2.32.3
 python-dotenv==1.1.0
 python-dateutil==2.9.0
-requests==2.32.3
+pydantic-settings==2.9.1
+
+# Testing
 pytest==8.3.5
-ollama==0.4.8
-fastapi==0.115.0
-uvicorn[standard]==0.34.0
-langchain-openai==0.3.14
-sse-starlette
-langchain-pinecone==0.2.13
-pinecone==6.0.2
