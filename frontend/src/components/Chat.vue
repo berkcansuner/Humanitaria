@@ -60,6 +60,7 @@ import SourceList from './SourceList.vue'
 const SuggestionCardIsland = defineAsyncComponent(() => import('./SuggestionCardIsland.vue'))
 import { renderMarkdown } from '../utils/renderMarkdown.js'
 import { parseSSE } from '../utils/parseSSE.js'
+import { renumberCitations } from '../utils/renumberCitations.js'
 
 const ERROR_MESSAGES = {
   connection: 'Connection lost. Please try again.',
@@ -146,7 +147,12 @@ async function sendMessage(opts = {}) {
         } else if (sse.event === 'sources') {
           try {
             const data = JSON.parse(sse.data)
-            assistantMsg.sources = data.sources
+            // The answer is fully streamed by the time sources arrive, so we can
+            // renumber the cited [n] markers and the source list to a contiguous
+            // 1..M sequence (the backend keeps original retrieval positions).
+            const { content, sources } = renumberCitations(assistantMsg.content, data.sources)
+            assistantMsg.content = content
+            assistantMsg.sources = sources
             messages.value[msgIndex] = { ...assistantMsg }
           } catch (e) {
             console.error('SSE sources parse error:', e, sse.data)
