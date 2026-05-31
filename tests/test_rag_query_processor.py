@@ -100,6 +100,17 @@ class TestRuleBasedFallback:
         f = _extract_filters_rule_based("sağlık raporları")
         assert f.get("theme") == "Health"
 
+    def test_rule_based_theme_protection(self):
+        # Canonical ReliefWeb taxonomy name is "Protection and Human Rights",
+        # not "Protection" — theme filter is $eq so the name must match exactly.
+        f = _extract_filters_rule_based("koruma faaliyetleri")
+        assert f.get("theme") == "Protection and Human Rights"
+
+    def test_rule_based_theme_shelter(self):
+        # Canonical name is "Shelter and Non-Food Items", not "Shelter and NFI".
+        f = _extract_filters_rule_based("barınma yardımı")
+        assert f.get("theme") == "Shelter and Non-Food Items"
+
     def test_rule_based_date_english(self):
         f = _extract_filters_rule_based("last 30 days")
         assert "date" in f

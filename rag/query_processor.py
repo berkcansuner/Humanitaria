@@ -27,9 +27,9 @@ _COUNTRY_MAP = {
 
 _THEME_MAP = {
     "gıda": "Food and Nutrition", "food": "Food and Nutrition", "nutrition": "Food and Nutrition",
-    "sağlık": "Health", "health": "Health", "shelter": "Shelter and NFI",
-    "barınma": "Shelter and NFI", "su": "Water Sanitation Hygiene", "wash": "Water Sanitation Hygiene",
-    "koruma": "Protection", "protection": "Protection",
+    "sağlık": "Health", "health": "Health", "shelter": "Shelter and Non-Food Items",
+    "barınma": "Shelter and Non-Food Items", "su": "Water Sanitation Hygiene", "wash": "Water Sanitation Hygiene",
+    "koruma": "Protection and Human Rights", "protection": "Protection and Human Rights",
     "eğitim": "Education", "education": "Education",
     "lojistik": "Logistics and Telecommunications",
     "koordinasyon": "Coordination", "coordination": "Coordination",
@@ -78,8 +78,8 @@ Rules:
   in general — do NOT assign it to any theme. "gelişmeler/gelismeler", "durum", "kriz", "rapor"
   are also general words — do NOT map them to themes either.
   Theme mappings: Food and Nutrition (gida/food/nutrition), Health (saglik/health),
-  Shelter and NFI (barinma/shelter), Water Sanitation Hygiene (su/wash),
-  Protection (koruma/protection), Education (egitim/education),
+  Shelter and Non-Food Items (barinma/shelter), Water Sanitation Hygiene (su/wash),
+  Protection and Human Rights (koruma/protection), Education (egitim/education),
   Logistics and Telecommunications (lojistik), Coordination (koordinasyon/coordination).
 - Map document type mentions: rapor/report/raporlar/reports -> report,
   afet/disaster/afetler/disasters -> disaster, ulke/country/ulkeler/countries -> country.
@@ -338,8 +338,8 @@ _SUGGESTION_COUNTRIES = [
 ]
 
 _SUGGESTION_THEMES = [
-    "Food and Nutrition", "Health", "Shelter and NFI",
-    "Water Sanitation Hygiene", "Protection", "Education",
+    "Food and Nutrition", "Health", "Shelter and Non-Food Items",
+    "Water Sanitation Hygiene", "Protection and Human Rights", "Education",
     "Logistics and Telecommunications", "Coordination",
 ]
 
