@@ -66,7 +66,9 @@ class TestParseDisaster:
         assert doc["body"] == "Heavy rains caused flooding."
         assert doc["date"] == "2021-09-06"
         assert doc["country"] == "Benin"
-        assert doc["theme"] == "Flood"
+        # Disaster type ("Flood") is intentionally NOT mapped to theme — theme is a
+        # humanitarian sector field and must stay empty to avoid polluting the filter.
+        assert doc["theme"] == ""
         assert doc["format"] == "past"
         assert doc["doctype"] == "disaster"
         assert "50910" in doc["url"]
@@ -82,7 +84,8 @@ class TestParseDisaster:
             }
         }
         doc = parse_disaster(raw)
-        assert doc["theme"] == "Earthquake"
+        # Disaster type is not a sector theme — see test_parse_full_disaster.
+        assert doc["theme"] == ""
         assert doc["doctype"] == "disaster"
 
     def test_parse_disaster_no_body(self):

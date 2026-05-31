@@ -111,11 +111,11 @@ def parse_disaster(raw: Dict[str, Any]) -> Dict[str, Any]:
     date = _normalize_date(_safe_get(date_field, "created") if isinstance(date_field, dict) else "")
     country_field = fields.get("primary_country")
     country = _normalize_country_name(_safe_get(country_field, "name")) if isinstance(country_field, dict) else ""
-    primary_type = fields.get("primary_type")
-    theme = _safe_get(primary_type, "name") if isinstance(primary_type, dict) else ""
-    if not theme:
-        types = fields.get("type")
-        theme = _safe_list_get(types, 0, "name")
+    # Disaster TYPE (e.g. "Flood", "Earthquake") is NOT a humanitarian sector theme.
+    # Keep it out of `theme` so the sector-theme filter ($eq on report themes like
+    # "Health"/"Protection and Human Rights") is not polluted if the disasters
+    # endpoint is ingested alongside reports.
+    theme = ""
     return {
         "id": doc_id,
         "url": url,
