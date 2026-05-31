@@ -18,6 +18,7 @@ pinecone==7.3.0
 fastapi==0.115.9
 uvicorn[standard]==0.46.0
 sse-starlette==3.0.3
+slowapi==0.1.9
 
 # LLM / embedding clients
 ollama==0.4.8

@@ -5,8 +5,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from api.routes import chat, health
+from api.routes.chat import limiter
 from config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -53,6 +56,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="ReliefWeb RAG API", lifespan=lifespan)
+
+# Rate limiting: register the shared limiter and the 429 handler.
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 settings = get_settings()
 _cors_origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]

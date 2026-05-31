@@ -79,6 +79,11 @@ class Settings(BaseSettings):
     API_HOST: str = "127.0.0.1"
     API_PORT: int = 8000
     API_RELOAD: bool = False
+    # Rate limiting (slowapi) — applied per client IP to the chat endpoints.
+    RATE_LIMIT: str = "20/minute"
+    # Optional API key. Empty = open (local dev); non-empty requires the
+    # X-API-Key header on the chat endpoints.
+    API_KEY: str = ""
 
     # Session history
     HISTORY_WINDOW_K: int = 5         # number of exchanges (user+assistant pairs) to keep

@@ -3,11 +3,13 @@ import logging
 import re
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request, Depends, Header
 from pydantic import BaseModel, Field, field_validator
 from typing import List, Literal, Optional
 from langchain_core.messages import HumanMessage, AIMessage
 from sse_starlette.sse import EventSourceResponse, ServerSentEvent
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from config import get_settings
 from rag.query_processor import extract_filters, analyze_query
@@ -21,6 +23,21 @@ from rag.history import get_session_history
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# Per-client-IP rate limiter; the limit string is read from settings at call time.
+limiter = Limiter(key_func=get_remote_address)
+
+
+def _rate_limit() -> str:
+    return get_settings().RATE_LIMIT
+
+
+def require_api_key(x_api_key: Optional[str] = Header(default=None)):
+    """Optional API-key auth. Open when API_KEY is empty (local dev); otherwise
+    the X-API-Key header must match."""
+    expected = get_settings().API_KEY
+    if expected and x_api_key != expected:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
 _GREETING_PATTERN = re.compile(
     r'^(merhaba|selam|hey|hi|hello|good\s*(morning|afternoon|evening)|nasılsın|how are you|günaydın|iyi\s*günler)[\s!.?]*$',
@@ -146,8 +163,9 @@ class ChatResponse(BaseModel):
     session_id: str
 
 
-@router.post("/chat", response_model=ChatResponse)
-async def chat(req: ChatRequest):
+@router.post("/chat", response_model=ChatResponse, dependencies=[Depends(require_api_key)])
+@limiter.limit(_rate_limit)
+async def chat(request: Request, req: ChatRequest):
     session_id = req.session_id or str(uuid4())
 
     if _is_greeting(req.message):
@@ -184,8 +202,9 @@ async def chat(req: ChatRequest):
         raise HTTPException(status_code=503, detail="Service temporarily unavailable")
 
 
-@router.post("/chat/stream")
-async def chat_stream(req: ChatRequest):
+@router.post("/chat/stream", dependencies=[Depends(require_api_key)])
+@limiter.limit(_rate_limit)
+async def chat_stream(request: Request, req: ChatRequest):
     session_id = req.session_id or str(uuid4())
 
     if _is_greeting(req.message):

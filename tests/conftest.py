@@ -2,6 +2,18 @@
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def _disable_rate_limit():
+    """Disable the per-IP rate limiter by default so unrelated endpoint tests
+    don't trip the shared-IP limit. Tests that exercise rate limiting re-enable
+    it explicitly."""
+    from api.routes.chat import limiter
+    previous = limiter.enabled
+    limiter.enabled = False
+    yield
+    limiter.enabled = previous
+
+
 @pytest.fixture
 def clean_singletons():
     """Reset all module-level singletons before and after a test.
