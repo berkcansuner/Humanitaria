@@ -196,6 +196,7 @@ class TestSSEEventBody:
         doc2 = self._make_doc("Doc Two", "https://reliefweb.int/report/2")
         with patch("api.routes.chat.build_chain") as mock_chain_builder, \
              patch("api.routes.chat.build_retriever") as mock_retriever_builder, \
+             patch("api.routes.chat.rerank_by_relevance", side_effect=lambda q, docs, top_n: docs[:top_n]), \
              patch("api.routes.chat.extract_filters", return_value={}), \
              patch("api.routes.chat.analyze_query", return_value={"is_vague": False, "has_country": True, "has_date": False, "has_theme": False, "message": "", "suggestions": {}}):
             mock_retriever = MagicMock()
@@ -224,6 +225,7 @@ class TestSSEEventBody:
         doc2 = self._make_doc("Doc Two", "https://reliefweb.int/report/2")
         with patch("api.routes.chat.build_chain") as mock_chain_builder, \
              patch("api.routes.chat.build_retriever") as mock_retriever_builder, \
+             patch("api.routes.chat.rerank_by_relevance", side_effect=lambda q, docs, top_n: docs[:top_n]), \
              patch("api.routes.chat.extract_filters", return_value={}), \
              patch("api.routes.chat.analyze_query", return_value={"is_vague": False, "has_country": True, "has_date": False, "has_theme": False, "message": "", "suggestions": {}}):
             mock_retriever = MagicMock()

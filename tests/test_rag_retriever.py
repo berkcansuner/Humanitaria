@@ -1,6 +1,10 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from rag.retriever import build_retriever, _get_vectorstore, _build_chroma_filter, _build_pinecone_filter
+from langchain_core.documents import Document
+from rag.retriever import (
+    build_retriever, _get_vectorstore, _build_chroma_filter, _build_pinecone_filter,
+    dedupe_by_document, rerank_by_relevance,
+)
 from config import get_settings
 
 
@@ -60,6 +64,17 @@ class TestRetriever:
                     "filter": {"country": {"$in": ["Iran", "Iran (Islamic Republic of)"]}},
                 },
             )
+
+    def test_build_retriever_k_override(self):
+        # Caller raises k to fetch a larger candidate pool; fetch_k follows.
+        with patch("rag.retriever._get_vectorstore") as mock_get_vs:
+            mock_vs = MagicMock()
+            mock_vs.as_retriever.return_value = MagicMock()
+            mock_get_vs.return_value = mock_vs
+            build_retriever(k=20)
+            call_kwargs = mock_vs.as_retriever.call_args[1]["search_kwargs"]
+            assert call_kwargs["k"] == 20
+            assert call_kwargs["fetch_k"] >= 20
 
     def test_build_retriever_no_filter(self):
         with patch("rag.retriever._get_vectorstore") as mock_get_vs:
@@ -167,3 +182,71 @@ class TestProviderVectorstore:
             _get_vectorstore.cache_clear()
             _get_vectorstore()
             MockChroma.assert_called_once()
+
+
+def _doc(doc_id, content="text", url=None):
+    meta = {"doc_id": doc_id}
+    if url is not None:
+        meta["url"] = url
+    return Document(page_content=content, metadata=meta)
+
+
+class TestDedupeByDocument:
+    def test_keeps_first_chunk_per_document(self):
+        docs = [_doc("a", "chunk1"), _doc("a", "chunk2"), _doc("b", "chunk3")]
+        out = dedupe_by_document(docs)
+        assert len(out) == 2
+        assert out[0].page_content == "chunk1"  # highest-ranked chunk of "a" kept
+        assert out[1].metadata["doc_id"] == "b"
+
+    def test_falls_back_to_url_when_no_doc_id(self):
+        d1 = Document(page_content="c1", metadata={"url": "u1"})
+        d2 = Document(page_content="c2", metadata={"url": "u1"})
+        out = dedupe_by_document([d1, d2])
+        assert len(out) == 1
+
+    def test_empty_list(self):
+        assert dedupe_by_document([]) == []
+
+
+class TestRerankByRelevance:
+    def test_noop_when_not_pinecone(self):
+        # Chroma provider: rerank is skipped, list truncated to top_n.
+        s = MagicMock(RERANK_ENABLED=True, VECTOR_STORE_PROVIDER="chroma")
+        docs = [_doc("a"), _doc("b"), _doc("c")]
+        with patch("rag.retriever.get_settings", return_value=s):
+            out = rerank_by_relevance("q", docs, top_n=2)
+        assert out == docs[:2]
+
+    def test_noop_when_disabled(self):
+        s = MagicMock(RERANK_ENABLED=False, VECTOR_STORE_PROVIDER="pinecone")
+        docs = [_doc("a"), _doc("b")]
+        with patch("rag.retriever.get_settings", return_value=s):
+            out = rerank_by_relevance("q", docs, top_n=5)
+        assert out == docs
+
+    def test_reorders_by_pinecone_result(self):
+        s = MagicMock(RERANK_ENABLED=True, VECTOR_STORE_PROVIDER="pinecone",
+                      RERANK_MODEL="bge-reranker-v2-m3")
+        docs = [_doc("a"), _doc("b"), _doc("c")]
+        # Pinecone returns indices in relevance order: c, a
+        result = MagicMock()
+        result.data = [MagicMock(index=2), MagicMock(index=0)]
+        client = MagicMock()
+        client.inference.rerank.return_value = result
+        with patch("rag.retriever.get_settings", return_value=s), \
+             patch("rag.retriever._get_pinecone_client", return_value=client):
+            out = rerank_by_relevance("q", docs, top_n=2)
+        assert [d.metadata["doc_id"] for d in out] == ["c", "a"]
+        client.inference.rerank.assert_called_once()
+
+    def test_falls_back_to_original_order_on_error(self):
+        s = MagicMock(RERANK_ENABLED=True, VECTOR_STORE_PROVIDER="pinecone",
+                      RERANK_MODEL="bge-reranker-v2-m3")
+        docs = [_doc("a"), _doc("b"), _doc("c")]
+        client = MagicMock()
+        client.inference.rerank.side_effect = RuntimeError("network down")
+        with patch("rag.retriever.get_settings", return_value=s), \
+             patch("rag.retriever._get_pinecone_client", return_value=client):
+            out = rerank_by_relevance("q", docs, top_n=2)
+        assert out == docs[:2]

@@ -9,8 +9,12 @@ from typing import List, Literal, Optional
 from langchain_core.messages import HumanMessage, AIMessage
 from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 
+from config import get_settings
 from rag.query_processor import extract_filters, analyze_query
-from rag.retriever import build_retriever, rerank_by_recency, apply_date_filter
+from rag.retriever import (
+    build_retriever, rerank_by_recency, apply_date_filter,
+    dedupe_by_document, rerank_by_relevance,
+)
 from rag.chain import build_chain
 from rag.history import get_session_history
 
@@ -89,6 +93,23 @@ def _filter_cited_sources(answer_text: str, sources: list) -> list:
     return filtered or sources
 
 
+async def _retrieve_docs(query: str, filters: dict):
+    """Shared retrieval pipeline used by both chat routes.
+
+    candidates (larger k) -> date filter -> dedupe by document ->
+    relevance rerank (Pinecone) -> recency blend -> final top-k.
+    """
+    settings = get_settings()
+    candidate_k = settings.TOP_K_RETRIEVAL * settings.RERANK_CANDIDATE_MULTIPLIER
+    retriever = build_retriever(filter=filters if filters else None, k=candidate_k)
+    docs = await retriever.ainvoke(query)
+    docs = apply_date_filter(docs, filters.get("date"))
+    docs = dedupe_by_document(docs)
+    docs = rerank_by_relevance(query, docs, settings.TOP_K_RETRIEVAL)
+    docs = rerank_by_recency(docs)
+    return docs
+
+
 class ChatMessage(BaseModel):
     role: Literal["user", "assistant"]
     content: str
@@ -134,10 +155,7 @@ async def chat(req: ChatRequest):
 
     try:
         filters = extract_filters(req.message)
-        retriever = build_retriever(filter=filters if filters else None)
-        docs = await retriever.ainvoke(req.message)
-        docs = apply_date_filter(docs, filters.get("date"))
-        docs = rerank_by_recency(docs)
+        docs = await _retrieve_docs(req.message, filters)
 
         if not docs:
             msg = _no_docs_message(filters)
@@ -183,10 +201,7 @@ async def chat_stream(req: ChatRequest):
     async def event_generator():
         try:
             filters = extract_filters(req.message)
-            retriever = build_retriever(filter=filters if filters else None)
-            docs = await retriever.ainvoke(req.message)
-            docs = apply_date_filter(docs, filters.get("date"))
-            docs = rerank_by_recency(docs)
+            docs = await _retrieve_docs(req.message, filters)
 
             if not docs:
                 msg = _no_docs_message(filters)

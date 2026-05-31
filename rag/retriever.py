@@ -127,9 +127,12 @@ def _build_pinecone_filter(filters: Optional[Dict[str, Any]]) -> Optional[Dict[s
     return conditions or None
 
 
-def build_retriever(filter: Optional[Dict[str, Any]] = None):
+def build_retriever(filter: Optional[Dict[str, Any]] = None, k: Optional[int] = None):
     vectorstore = _get_vectorstore()
     settings = get_settings()
+    # k may be raised by the caller to fetch a larger candidate pool for
+    # dedup + reranking; defaults to the final top-k.
+    k = k or settings.TOP_K_RETRIEVAL
     if settings.VECTOR_STORE_PROVIDER == "pinecone":
         store_filter = _build_pinecone_filter(filter)
     else:
@@ -141,12 +144,60 @@ def build_retriever(filter: Optional[Dict[str, Any]] = None):
     return vectorstore.as_retriever(
         search_type="mmr",
         search_kwargs={
-            "k": settings.TOP_K_RETRIEVAL,
-            "fetch_k": max(fetch_k, settings.TOP_K_RETRIEVAL),
+            "k": k,
+            "fetch_k": max(fetch_k, k),
             "lambda_mult": settings.MMR_LAMBDA,
             "filter": store_filter,
         },
     )
+
+
+@lru_cache(maxsize=1)
+def _get_pinecone_client() -> Pinecone:
+    return Pinecone(api_key=get_settings().PINECONE_API_KEY)
+
+
+def dedupe_by_document(docs: List[Document]) -> List[Document]:
+    """Keep only the highest-ranked chunk per source document.
+
+    Several chunks of the same report can rank together; collapsing them to one
+    spreads the final top-k across distinct documents (better source diversity).
+    """
+    seen = set()
+    out: List[Document] = []
+    for doc in docs:
+        key = doc.metadata.get("doc_id") or doc.metadata.get("url")
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(doc)
+    return out
+
+
+def rerank_by_relevance(query: str, docs: List[Document], top_n: int) -> List[Document]:
+    """Re-score candidates against the query with Pinecone's hosted reranker.
+
+    Adds a true query-relevance signal on top of MMR retrieval. Active only when
+    the Pinecone provider is used and RERANK_ENABLED; otherwise (or on any error)
+    the original order is preserved (truncated to top_n) so a request never fails.
+    """
+    settings = get_settings()
+    if (not settings.RERANK_ENABLED
+            or settings.VECTOR_STORE_PROVIDER != "pinecone"
+            or len(docs) <= 1):
+        return docs[:top_n]
+    try:
+        result = _get_pinecone_client().inference.rerank(
+            model=settings.RERANK_MODEL,
+            query=query,
+            documents=[doc.page_content for doc in docs],
+            top_n=min(top_n, len(docs)),
+            return_documents=False,
+        )
+        return [docs[item.index] for item in result.data]
+    except Exception as e:
+        logger.warning("Relevance rerank failed, keeping original order: %s", e)
+        return docs[:top_n]
 
 
 def apply_date_filter(docs: List[Document], date_filter: Optional[Dict[str, Any]]) -> List[Document]:

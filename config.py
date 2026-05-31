@@ -64,6 +64,10 @@ class Settings(BaseSettings):
     TOP_K_RETRIEVAL: int = 5
     MMR_FETCH_K: int = 20          # candidate pool for MMR diversity
     MMR_LAMBDA: float = 0.5        # 0=max diversity, 1=max relevance
+    # Two-stage retrieval: Pinecone hosted reranker over a larger candidate pool.
+    RERANK_ENABLED: bool = True
+    RERANK_MODEL: str = "bge-reranker-v2-m3"
+    RERANK_CANDIDATE_MULTIPLIER: int = 4   # candidate pool = TOP_K_RETRIEVAL * this
     INGEST_SCHEDULE_HOURS: int = 12
     RERANK_BY_DATE: bool = True
     DATE_DECAY_FACTOR: float = 0.3
