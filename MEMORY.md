@@ -8,24 +8,37 @@
 
 ---
 
-## ✅ Son tamamlanan iş (2026-05-31, 4 iyileştirme — commit'li VE push'lu)
-Plan dosyası: `C:\Users\bcsun\.claude\plans\synchronous-honking-cerf.md`. Test: **232 passed**.
-4 ayrı commit `master`'da (`389a9ef`, `5675fa3`, `bef9a28`, `5d6e728`) — **`git push` yapıldı**
-(`origin/master` güncel, `acd4170`'e kadar).
+## ✅ Son tamamlanan iş (2026-05-31 akşam — claude.ai-tarzı özellikler, 5 faz + citation fix)
+Plan dosyası: `C:\Users\bcsun\.claude\plans\misty-spinning-pebble.md`.
+**6 commit `master`'da, henüz PUSH EDİLMEDİ** (`git log origin/master..HEAD`):
+`2432f85` citation fix → `5639981` faz1 → `563e163` faz2 → `f3a66f1` faz3 → `4c53cb8` faz4 →
+`8180513` faz5. Test: **251 backend + 43 frontend** yeşil.
 
-1. **Tema kirliliği fix:** `ingestion/parser.py` `parse_disaster` artık `theme=""` (afet tipi sektör teması değil).
-2. **Retrieval dedup + rerank:** `config.py` `RERANK_ENABLED/RERANK_MODEL=bge-reranker-v2-m3/RERANK_CANDIDATE_MULTIPLIER=4`;
-   `rag/retriever.py` `build_retriever(filter, k=None)` + `dedupe_by_document` + `rerank_by_relevance`
-   (Pinecone hosted reranker, chroma/devre-dışı/hata → no-op) + `_get_pinecone_client`;
-   `api/routes/chat.py` ortak `_retrieve_docs` (candidates→date filter→dedupe→relevance rerank→recency).
-3. **API rate limiting + opsiyonel auth:** `slowapi` (`RATE_LIMIT=20/minute`, per-IP, 429 handler),
-   opsiyonel `API_KEY` (`X-API-Key`; boşsa açık). Testlerde limiter autouse fixture ile kapalı.
-4. **Eval LLM-judge:** `scripts/eval_rag.py --judge` (groundedness+relevance 1-5, Gemini json_mode;
-   `--judge-threshold` default 3.5 çıkış kodunu etkiler), vaka seti 10→20. Canlı koşu: filtre 20/20,
-   judge groundedness **5.00**/relevance **5.00**.
+1. **Citation fix** (`renumberCitations.js`): atıf verilen kaynaklar 1..M'e yeniden numaralanıyor —
+   tek kaynak artık `[3]` değil `[1]` (eski hata: `_filter_cited_sources` orijinal index'i koruyup boşluk bırakıyordu).
+2. **Faz1 hızlı kazanımlar:** dark mode (`theme.js`, `style.css` `:root[data-theme=dark]`, `ThemeToggle`),
+   boş-ekran örnek sorgu kartları (`EmptyState`), kod-bloğu kopyala (`codeCopy.js`).
+3. **Faz2 durdur+yeniden üret:** `AbortController`+Stop (abort=temiz durdurma, kısmi metin kalır),
+   `MessageActions` (kopyala/regenerate), `conversationOps.js`.
+4. **Faz3 SQLite kalıcılık:** `rag/conversations.py` (sync, WAL, CASCADE), `api/routes/conversations.py`
+   (CRUD; auth VAR, chat rate-limit YOK), `chat.py` entegrasyon (ilk mesajda auto-create+başlık,
+   soğuk-başlangıç pencere seed, her exchange persist). `CONVERSATION_DB_PATH=./conversations.db`
+   (gitignore'da). conftest autouse fixture DB'yi izole eder (gerçek DB kirlenmesin).
+5. **Faz4 sidebar:** `api.js` client, `Sidebar`/`ConversationList`, App.vue sidebar+main layout,
+   Chat.vue `conversationId` prop ile konuşma yükleme/değiştirme + yeni sohbet.
+6. **Faz5 düzenle/yeniden gönder:** stream `persisted` event (mesaj id'leri)+`serverId` takibi;
+   `POST /conversations/{id}/truncate`+`resync_window`; edit (inline textarea) ve regenerate ortak
+   `resendFrom` ile sunucu+istemci kırpıp yeniden gönderir (duplicate/bayat turn yok).
 
-**Sıradaki adım:** Push tamamlandı. Açık işler → "Sıradaki Adımlar" bölümü
-(veri/kapsam genişletme, frontend çip limiti + Vue testleri, opsiyonel Redis).
+**Sıradaki adım:** `git push origin master` (6 commit). Manuel tarayıcı testi kullanıcıda.
+Ingest bitince Pinecone vektör sayısını güncelle.
+
+**ÇALIŞAN VERİ İNGESTİ (arka plan):** `ingest.py --country IRN TUR UKR SYR IRQ --limit 5000`.
+IRN/TUR/UKR/SYR bitti, IRQ sürüyordu (son ülke, ETA ~45dk). Bitince Pinecone toplam vektörü
+`describe_index_stats` ile kontrol et + güncelle (başlangıç 11.599).
+
+**Önceki iş (pushed, `acd4170`'e kadar):** 4 iyileştirme — tema kirliliği fix, retrieval dedup+rerank,
+API rate-limit+auth, eval LLM-judge (groundedness/relevance 5.00/5.00).
 
 ---
 
