@@ -10,9 +10,11 @@
 
 ## ✅ Son tamamlanan iş (2026-05-31 akşam — claude.ai-tarzı özellikler, 5 faz + citation fix)
 Plan dosyası: `C:\Users\bcsun\.claude\plans\misty-spinning-pebble.md`.
-**6 commit `master`'da, henüz PUSH EDİLMEDİ** (`git log origin/master..HEAD`):
+**Bu seansın TÜM commit'leri `master`'da, PUSH EDİLMEDİ** (kesin liste: `git log origin/master..HEAD`):
 `2432f85` citation fix → `5639981` faz1 → `563e163` faz2 → `f3a66f1` faz3 → `4c53cb8` faz4 →
-`8180513` faz5. Test: **251 backend + 43 frontend** yeşil.
+`8180513` faz5 (+ MEMORY.md güncellemeleri). Test: **251 backend + 43 frontend** yeşil.
+> **Kullanıcı kararı (2026-05-31):** PUSH ETME — sonraki seansta buradan devam edilecek. Push'u
+> kullanıcı isteyince yap; kendiliğinden push etme.
 
 1. **Citation fix** (`renumberCitations.js`): atıf verilen kaynaklar 1..M'e yeniden numaralanıyor —
    tek kaynak artık `[3]` değil `[1]` (eski hata: `_filter_cited_sources` orijinal index'i koruyup boşluk bırakıyordu).
@@ -30,8 +32,14 @@ Plan dosyası: `C:\Users\bcsun\.claude\plans\misty-spinning-pebble.md`.
    `POST /conversations/{id}/truncate`+`resync_window`; edit (inline textarea) ve regenerate ortak
    `resendFrom` ile sunucu+istemci kırpıp yeniden gönderir (duplicate/bayat turn yok).
 
-**Sıradaki adım:** `git push origin master` (6 commit). Manuel tarayıcı testi kullanıcıda.
-Ingest bitince Pinecone vektör sayısını güncelle.
+**SIRADAKİ SEANSTA NEREDEN DEVAM:**
+1. **Manuel tarayıcı testi (bekliyor, kullanıcı yapacak):** `http://127.0.0.1:8010` → dark mode,
+   sidebar (geçiş/yeni/rename/sil), Stop (akış sırasında), regenerate, mesaj düzenle (kalem→inline),
+   kod-bloğu kopyala. Görsel/etkileşim doğrulaması henüz yapılmadı — unit+API testleri ve canlı API
+   doğrulandı. Sunucu: `./venv/Scripts/python.exe -m uvicorn api.main:app --host 127.0.0.1 --port 8010`
+   (önce `frontend/dist` mevcut; gerekirse `cd frontend && npm run build`).
+2. **`git push origin master`** — push edilmemiş commit'ler bekliyor; kullanıcı onayıyla.
+3. Tarayıcı testinde sorun çıkarsa düzelt.
 
 **VERİ İNGESTİ TAMAMLANDI (2026-05-31 akşam):** `ingest.py --country IRN TUR UKR SYR IRQ --limit 5000`,
 **0 hata**, 20.112 doküman OK (IRN 3559, TUR 3827, UKR 4457, SYR 4287, IRQ 3982; skip'ler idempotent
