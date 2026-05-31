@@ -8,9 +8,10 @@
 
 ---
 
-## ✅ Son tamamlanan iş (2026-05-31, 4 iyileştirme — hepsi commit'lendi, push EDİLMEDİ)
+## ✅ Son tamamlanan iş (2026-05-31, 4 iyileştirme — commit'li VE push'lu)
 Plan dosyası: `C:\Users\bcsun\.claude\plans\synchronous-honking-cerf.md`. Test: **232 passed**.
-4 ayrı commit `master`'da (`389a9ef`, `5675fa3`, `bef9a28`, `5d6e728`) — **henüz `git push` yapılmadı.**
+4 ayrı commit `master`'da (`389a9ef`, `5675fa3`, `bef9a28`, `5d6e728`) — **`git push` yapıldı**
+(`origin/master` güncel, `acd4170`'e kadar).
 
 1. **Tema kirliliği fix:** `ingestion/parser.py` `parse_disaster` artık `theme=""` (afet tipi sektör teması değil).
 2. **Retrieval dedup + rerank:** `config.py` `RERANK_ENABLED/RERANK_MODEL=bge-reranker-v2-m3/RERANK_CANDIDATE_MULTIPLIER=4`;
@@ -23,8 +24,8 @@ Plan dosyası: `C:\Users\bcsun\.claude\plans\synchronous-honking-cerf.md`. Test:
    `--judge-threshold` default 3.5 çıkış kodunu etkiler), vaka seti 10→20. Canlı koşu: filtre 20/20,
    judge groundedness **5.00**/relevance **5.00**.
 
-**Sıradaki adım:** `git push origin master` — push edilmemiş commit'ler bekliyor
-(`git log origin/master..HEAD` ile gör; 4 feature + MEMORY.md güncellemeleri).
+**Sıradaki adım:** Push tamamlandı. Açık işler → "Sıradaki Adımlar" bölümü
+(veri/kapsam genişletme, frontend çip limiti + Vue testleri, opsiyonel Redis).
 
 ---
 
