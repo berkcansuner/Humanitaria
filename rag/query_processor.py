@@ -365,7 +365,6 @@ _SUGGESTION_THEMES = [
 ]
 
 _SUGGESTION_TIME_PERIODS = [
-    "son 1 hafta", "son 1 ay", "son 3 ay", "son 1 yıl",
     "last week", "last month", "last 3 months", "last year",
 ]
 
@@ -392,15 +391,15 @@ def analyze_query(query: str, filters: Optional[Dict[str, Any]] = None) -> Dict[
     }
 
     if is_vague:
-        result["message"] = "Hangi ülke, zaman aralığı veya konu hakkında bilgi almak istiyorsunuz?"
+        result["message"] = "Which country, time period, or topic would you like information about?"
     elif not has_country and not has_date:
-        result["message"] = "Hangi ülke ve zaman aralığı hakkında bilgi almak istiyorsunuz?"
+        result["message"] = "Which country and time period would you like information about?"
     elif not has_country:
-        result["message"] = "Hangi ülke hakkında bilgi almak istiyorsunuz?"
+        result["message"] = "Which country would you like information about?"
     elif not has_date:
-        result["message"] = "Hangi zaman aralığı hakkında bilgi almak istiyorsunuz?"
+        result["message"] = "Which time period would you like information about?"
     elif not has_theme:
-        result["message"] = "Hangi konu hakkında bilgi almak istiyorsunuz?"
+        result["message"] = "Which topic would you like information about?"
     else:
         result["message"] = ""
 

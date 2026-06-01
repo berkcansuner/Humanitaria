@@ -46,7 +46,7 @@ _GREETING_PATTERN = re.compile(
     re.IGNORECASE | re.UNICODE,
 )
 
-_GREETING_REPLY = "Merhaba! Size insani yardım raporları hakkında nasıl yardımcı olabilirim?"
+_GREETING_REPLY = "Hello! How can I help you with humanitarian reports?"
 
 
 def _is_greeting(text: str) -> bool:
@@ -54,19 +54,19 @@ def _is_greeting(text: str) -> bool:
 
 
 def _no_docs_message(filters: dict) -> str:
-    """Return a clear Turkish/English message when the retriever finds nothing."""
+    """Return a clear message when the retriever finds nothing."""
     parts = []
     if filters.get("country"):
         parts.append(f"**{filters['country']}**")
     if filters.get("theme"):
         parts.append(f"**{filters['theme']}**")
     if filters.get("date"):
-        parts.append("belirtilen tarih aralığı")
-    scope = " + ".join(parts) if parts else "bu sorgu"
+        parts.append("the specified date range")
+    scope = " + ".join(parts) if parts else "this query"
     return (
-        f"Veritabanımızda {scope} için eşleşen belge bulunamadı.\n\n"
-        "Farklı bir ülke, konu ya da tarih aralığı deneyebilir veya sorunuzu "
-        "daha genel bir şekilde ifade edebilirsiniz."
+        f"No matching documents were found in our database for {scope}.\n\n"
+        "You can try a different country, topic, or date range, or rephrase your "
+        "question more generally."
     )
 
 
@@ -86,7 +86,7 @@ def _build_context_and_sources(docs):
     sources = [
         {
             "index": i,
-            "title": doc.metadata.get("title", "Belirsiz"),
+            "title": doc.metadata.get("title", "Untitled"),
             "url": doc.metadata.get("url", ""),
             "date": doc.metadata.get("date"),
             "country": doc.metadata.get("country"),

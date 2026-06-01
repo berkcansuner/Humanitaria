@@ -38,7 +38,7 @@ class MessageOut(BaseModel):
 
 
 class CreateConversationIn(BaseModel):
-    title: Optional[str] = Field(default="Yeni sohbet", max_length=200)
+    title: Optional[str] = Field(default="New chat", max_length=200)
 
 
 class RenameIn(BaseModel):

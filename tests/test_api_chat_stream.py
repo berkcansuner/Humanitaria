@@ -204,7 +204,7 @@ class TestSSEEventBody:
             mock_retriever_builder.return_value = mock_retriever
 
             async def mock_astream(*args, **kwargs):
-                yield "Sadece ilk belgeden bilgi [1]."
+                yield "Information from the first document only [1]."
 
             mock_chain = MagicMock()
             mock_chain.astream = mock_astream
@@ -233,7 +233,7 @@ class TestSSEEventBody:
             mock_retriever_builder.return_value = mock_retriever
 
             async def mock_astream(*args, **kwargs):
-                yield "Atıf içermeyen bir özet."
+                yield "A summary without any citation."
 
             mock_chain = MagicMock()
             mock_chain.astream = mock_astream
@@ -253,8 +253,8 @@ class TestSSEEventBody:
         vague_analysis = {
             "is_vague": True,
             "has_country": False, "has_date": False, "has_theme": False,
-            "message": "Hangi ülke, zaman aralığı veya konu?",
-            "suggestions": {"countries": ["Sudan"], "time_periods": ["son 1 ay"], "themes": ["Health"]},
+            "message": "Which country, time period, or topic?",
+            "suggestions": {"countries": ["Sudan"], "time_periods": ["last month"], "themes": ["Health"]},
         }
         with patch("api.routes.chat.build_chain") as mock_chain_builder, \
              patch("api.routes.chat.build_retriever") as mock_retriever_builder, \
