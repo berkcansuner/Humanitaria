@@ -4,46 +4,43 @@
 > Bu bir tarihçe değil — GÜNCEL durumu yansıtır. Eskiyen satırları sil/değiştir.
 > "Nerede kalmıştık?" sorusunun cevabı burasıdır.
 
-**Son güncelleme:** 2026-06-01
+**Son güncelleme:** 2026-06-02
 
 ---
 
-## 🎯 SIRADAKİ SEANS — Faz 2: RAG Kalitesi (kullanıcı "kaldığım yerden devam" dedi)
-**Amaç:** Kullanıcıların sorduğu sorularda istedikleri sonuca ulaşması — retrieval + yanıt kalitesini artır.
-Kullanıcı bunu Faz 2 olarak istedi (Faz 1 = İngilizce çeviri TAMAMLANDI).
+## ✅ Bu seansta tamamlanan iş (2026-06-02) — COMMIT'LENDİ + PUSH'LANDI
 
-**İlk adım:** Kullanıcıya **somut sorun/örnek sor** (alakasız kaynak mı, eksik bilgi mi, yanlış filtre mi),
-sonra `eval_rag.py --judge` ile ölç → hedefli iyileştir → tekrar ölç (önce/sonra kıyas).
+### A) Önceki seansın bekleyen işi 5 mantıklı commit'e ayrıldı (master)
+`3323e51` ingestion (source-link `/node/{id}` + 5xx/orphan reliability) · `fe94ebe` CORS `X-API-Key` ·
+`a12767a` İngilizce backend mesaj/prompt · `edec7a4` Humanitaria redesign + İngilizce UI + resend guard ·
+`98564d3` MEMORY.md. (redesign+İngilizce aynı dosyalarda iç içe → dosya düzeyinde birleşti.)
 
-**Olası eksenler (kullanıcı yönlendirecek):**
-- **Retrieval:** `TOP_K_RETRIEVAL`/MMR (`MMR_FETCH_K`,`MMR_LAMBDA`) ayarı; hosted reranker'ı her zaman aç
-  (şu an iki-aşamalı `_retrieve_docs`'ta var); hibrit (keyword+vektör) arama; kaynak snippet/önizleme.
-- **Sorgu anlama:** filtre çıkarma kalitesi (ülke/tema/tarih); eşanlamlı genişletme; belirsiz sorguda
-  netleştirme akışı (zaten `analyze_query` + SuggestionCard var).
-- **Yanıt:** daha sıkı groundedness; "yeterli kaynak yoksa söyle"; follow-up/çok-adımlı bağlam.
-- **Ölçüm:** `python scripts/eval_rag.py --judge` (groundedness/relevance 1-5, Gemini). Son temel: 5.00/5.00.
+### B) Faz 2 ilk dilim — Güncellik-farkında retrieval TAMAMLANDI (7 commit)
+**Amaç:** "current situation in X" sorularında en güncel raporların yanıta girmesi (veri silmeden, geçmiş sorgularını bozmadan).
+- `should_boost_recency(query, filters)` (`rag/query_processor.py`): boost varsayılan AÇIK; tarih filtresi varsa
+  veya geçmiş/trend kelimesi (evolv/trend/tarihçe/"nasıl gelişti"...) varsa KAPALI.
+- `_retrieve_docs` (`api/routes/chat.py`): boost AÇIK → alaka rerank'i **geniş havuza** (`RECENCY_RERANK_POOL=10`)
+  uygulanır, sonra `RECENCY_BOOST_FACTOR=0.6` ile recency-blend, sonra top-k → 6-10. sıradaki güncel raporlar yükselir.
+  Boost KAPALI → eski davranış (alaka→top-k + hafif recency 0.3).
+- Yanıt: context satırları artık `[n] (YYYY-MM-DD) ...` (LLM tarihleri görüyor); system prompt **rule 9** "en yeni
+  belgelere öncelik ver, tarih aralığını belirt". `eval_rag.py` formatı senkron.
+- `eval_rag.py`: artık route'un gerçek `_retrieve_docs`'unu çağırıyor (DRY) + **freshness metriği** + vakalar.
 
----
+**Önce/sonra (eval, canlı Pinecone) — sıfır-sonuç regresyonu YOK:**
+| Sorgu | medyan yaş (önce→sonra) | ≤6ay (önce→sonra) |
+|---|---|---|
+| Sudan "current" | 80g → 42g | 5/5 → 5/5 |
+| Yemen "current" | 315g → **76g** | 1/5 → **4/5** |
+| Ukraine "latest" | 542g → **260g** | 1/5 → **2/5** |
 
-## ✅ Bu seansta tamamlanan iş (2026-06-01) — hepsi working tree'de, COMMIT EDİLMEDİ
-Plan dosyası: `C:\Users\bcsun\.claude\plans\witty-riding-wirth.md` (son hali İngilizce çeviri planı).
+**Test:** **277 backend (pytest) + 51 frontend (vitest) yeşil.** Spec/plan: `docs/superpowers/{specs,plans}/2026-06-01-recency-aware-retrieval*` (gitignore'da, yerel).
 
-1. **Source-link 404 fix + backfill.** `parse_report` linki artık `url_alias→url→/node/{id}` (doc_id sentetik
-   kanonikten — idempotency korundu); `client.py` reports field'larına `url`/`url_alias` eklendi.
-   `scripts/backfill_source_urls.py` (yeni) mevcut **31.508 Pinecone vektörünün** metadata url'ini
-   `/report/{id}`→`/node/{id}` yaptı (**0 hata**). Kaynak linkleri artık **HTTP 200**. (Eski `/report/{id}` 404 veriyordu.)
-2. **Tier-1 doğruluk fix'leri** (kapsamlı kod denetimi sonrası, hepsi TDD):
-   A1 `client.py` 5xx retry (backoff); A2 `pipeline.py` orphan-delete artık embed BAŞARILIYSA;
-   A3 `Chat.vue` truncate-hatası `planResend` guard (saf helper, ayrışma yok); A4 `main.py` CORS `X-API-Key`.
-3. **Humanitaria redesign (frontend).** Yeşil+antrasit palet, `HelpingHandLogo.vue`, topbar marka+alt başlık,
-   sidebar arama+tarih grupları (Today/This week/Older)+avatar footer, EmptyState, yeşil `[n]` atıf çipleri.
-   React prototip → mevcut Vue'ya taşındı (yapı korundu). Export: `Desktop/Reliefweb_RAG_System_FRONTEND_CHANGE`.
-4. **İngilizce çeviri (Faz 1).** UI **sadece İngilizce** (hard-convert, i18n yok); sohbet **ÇOK DİLLİ KORUNDU**
-   (system prompt İngilizce yazıldı ama "answer in the user's language" kuralı kalıyor → TR soru=TR yanıt, EN=EN).
-   Frontend ~42 string + backend mesajları (greeting, no-docs, clarifications, "New chat", "Untitled") İngilizce.
-   Türkçe GİRDİ desteği (greeting pattern, query_processor kelime eşlemeleri) korundu.
-
-**Test:** **260 backend + 51 frontend yeşil.** Canlı doğrulandı (EN→EN, TR→TR, greeting EN, UI EN).
+### ⚠️ Açık taşınan notlar (kullanıcıya iletildi, henüz YAPILMADI)
+1. **`rerank_by_relevance` Pinecone reranker 1024-token sınırını aşıp başarısız oluyor** → MMR sırasına düşüyor.
+   Feature'dan önce de vardı. Düzeltilirse (chunk'ı reranker'a göndermeden önce kısaltma) alaka sinyali güçlenir,
+   Ukraine gibi sorgular daha da iyileşir. **Faz 2'nin en yüksek getirili sıradaki adımı.**
+2. **Büyük-harf Türkçe** geçmiş sorgusu ("NASIL GELİŞTİ") boost-off'u kaçırır (`_turkish_lower` noktalı/noktasız `i`).
+   Düşük etki, mevcut rule-based davranışıyla tutarlı.
 
 ---
 
@@ -54,17 +51,16 @@ sohbet çok dilli.** Marka: **Humanitaria**. Şu an yerel geliştirme aşamasın
 ## Mevcut Durum (çalışıyor)
 - **Aktif config (.env):** `CHAT_LLM_PROVIDER=gemini`, `VECTOR_STORE_PROVIDER=pinecone`, `EMBED_PROVIDER=gemini`,
   `QUERY_LLM_PROVIDER=gemini` → **tamamen bulut, Ollama gerekmez**.
-- **Chat LLM:** Gemini `gemini-2.5-flash`. **System prompt İngilizce; yanıt kullanıcının dilinde.**
+- **Chat LLM:** Gemini `gemini-2.5-flash`. System prompt İngilizce; yanıt kullanıcının dilinde. Rule 9 = recency.
 - **Embedding:** Gemini `gemini-embedding-001` (3072-dim). **Vector DB:** Pinecone `reliefweb-docs` (31.508 vektör).
-- **Backend:** FastAPI, **port 8010** (8000'i RState_ai tutuyor). SSE streaming. Sunucu komutu için tabloya bak.
-  > Backend kod değişikliğinden sonra **sunucuyu restart et** (uvicorn `--reload` yok; eski kodu hafızada tutar).
-- **Frontend:** Vue 3, Humanitaria redesign (yeşil/antrasit, dark+light), İngilizce. `frontend/dist/` gitignore'da
-  — yerelde `npm run build` ile üretilir. SourceList linkleri `/node/{id}` (çalışıyor).
-- **Test:** 260 backend (pytest) + 51 frontend (vitest).
+- **Retrieval:** güncellik-farkında (yukarı bak). Yeni config: `RECENCY_RERANK_POOL=10`, `RECENCY_BOOST_FACTOR=0.6`.
+- **Backend:** FastAPI, **port 8010**. SSE streaming. Kod değişikliğinden sonra sunucuyu restart et (`--reload` yok).
+- **Frontend:** Vue 3, Humanitaria (yeşil/antrasit, dark+light), İngilizce. `frontend/dist/` gitignore'da (`npm run build`).
+- **Test:** 277 backend + 51 frontend.
 
 ## Veri Durumu
-- **Pinecone `reliefweb-docs`: 31.508 vektör (3072-dim).** Kaynak url'leri `/node/{id}` (backfill ile düzeltildi, 200).
-- IRN/TUR/UKR/SYR/IRQ derin kapsamlı (~4-5 bin rapor/ülke) + 10 öneri ülkesi. Yalnız `reports` endpoint.
+- **Pinecone `reliefweb-docs`: 31.508 vektör (3072-dim).** Kaynak url'leri `/node/{id}` (200).
+- IRN/TUR/UKR/SYR/IRQ derin + 10 öneri ülkesi. Yalnız `reports` endpoint.
 - Daha fazla veri: `python scripts/ingest.py --limit N` (`--force` KULLANMA; idempotent upsert).
 
 ## Önemli Komutlar
@@ -74,25 +70,25 @@ sohbet çok dilli.** Marka: **Humanitaria**. Şu an yerel geliştirme aşamasın
 | Frontend build | `cd frontend && npm run build` |
 | Backend testleri | `./venv/Scripts/python.exe -m pytest tests/ -q` |
 | Frontend testleri | `cd frontend && npm test -- --run` |
+| RAG eval (freshness) | `./venv/Scripts/python.exe scripts/eval_rag.py` |
 | RAG eval (judge) | `./venv/Scripts/python.exe scripts/eval_rag.py --judge` |
-| URL backfill (gerekirse) | `./venv/Scripts/python.exe -u scripts/backfill_source_urls.py --apply` |
 
-## Commit / Push Durumu (ÖNEMLİ)
-- **Bu seansın TÜM işi commit EDİLMEDİ** — working tree'de duruyor (yukarıdaki 4 blok).
-- Ek olarak **önceki seanstan 9 commit `origin/master` önünde, push EDİLMEDİ** (claude.ai-tarzı özellikler).
-- Remote: **https://github.com/berkcansuner/reliefweb-rag** (private). Kullanıcı onayıyla mantıklı commit'lere
-  bölünüp push edilecek — kendiliğinden push etme.
+> **Bash gotcha:** kabuk cwd kalıcı; her git/komutta önce `cd "C:/Projeler/Reliefweb_RAG_System"` (mutlak). `cd frontend` sonrası geri dönmeyi unutma.
 
-## Sıradaki Adımlar
-- [ ] **Faz 2: RAG kalitesi** (yukarıdaki "🎯 SIRADAKİ SEANS" bölümü) — kullanıcı somut sorun/örnek verecek.
-- [ ] (Kullanıcı isteyince) Bu seansın işini commit'le + push.
-- [ ] (Deploy öncesi, denetimden) Conversation endpoint'lerinde kullanıcı modeli/IDOR; conv rate-limit; CORS daraltma.
-- [ ] (Opsiyonel, denetimden D1-D3) embedding dim her batch doğrula; disaster/country doc_id stabilitesi;
-      scheduler watermark `date.changed` ile güncelleme algılama.
+## Commit / Push Durumu
+- **2026-06-02:** Bu seansın tüm işi (önceki 5 + recency 7 commit) ve önceki seanstan 9 commit **`origin/master`'a PUSH'LANDI**.
+- Remote: **https://github.com/berkcansuner/reliefweb-rag** (private).
+
+## Sıradaki Adımlar (Faz 2 devamı — kullanıcı yönlendirir)
+- [ ] **Reranker token-limit fix** (yukarıdaki not #1) — Pinecone reranker'a giden chunk'ları kısalt; en yüksek getiri.
+- [ ] Diğer Faz 2 eksenleri: hibrit (keyword+vektör) arama; sorgu anlama (eşanlamlı genişletme, netleştirme); kaynak snippet/önizleme.
+- [ ] (Opsiyonel) recency parametre ayarı: Ukraine hâlâ medyan 260g → `RECENCY_BOOST_FACTOR`/`RECENCY_RERANK_POOL` eval ile ince ayar.
+- [ ] (Opsiyonel) büyük-harf Türkçe geçmiş-niyeti (not #2).
+- [ ] (Deploy öncesi) Conversation endpoint'lerinde kullanıcı modeli/IDOR; conv rate-limit; CORS daraltma.
 
 ## Bilinen Sorunlar / Kısıtlamalar
+- `rerank_by_relevance` reranker 1024-token sınırı → bazı sorgularda MMR'a düşüyor (bkz. not #1).
 - Conversation endpoint'lerinde gerçek kullanıcı modeli/auth YOK → IDOR (yerel tek-kullanıcıda sorun değil, deploy öncesi şart).
 - Şablon/sistem mesajları (greeting, no-docs, clarification) İngilizce; yalnız LLM yanıtı çok dilli (bilinçli ayrım).
 - Session history varsayılan in-memory (restart'ta silinir); `REDIS_URL` ile kalıcı.
-- Gemini query json_mode bazen liste döndürüyor (validator coerce ediyor; sorun değil).
 - Pipeline resume kısmi: scheduler watermark var ama uzun kesinti tam test edilmedi.
