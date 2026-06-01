@@ -12,6 +12,10 @@ ENDPOINT_CONFIG = {
         "fields": [
             "title", "body", "date.created", "source.name",
             "primary_country.name", "theme.name", "format.name", "file",
+            # Real web URL for the displayed source link. url_alias is the
+            # human-readable slug page; url is the /node/{id} redirect. The
+            # synthesized /report/{id} path is NOT served by ReliefWeb (404).
+            "url", "url_alias",
         ],
         "sort": "date.created:desc",
     },
@@ -93,6 +97,15 @@ class ReliefWebClient:
                         raise requests.RequestException("Max retries exceeded for 429")
                 # 4xx errors (except 429) are not retryable — fail immediately
                 if 400 <= resp.status_code < 500:
+                    resp.raise_for_status()
+                # 5xx errors are transient — retry with backoff (same as 429),
+                # raising only once retries are exhausted.
+                if resp.status_code >= 500:
+                    if attempt < max_retries - 1:
+                        logger.warning("Server error (%d), backing off %.1fs", resp.status_code, backoff)
+                        time.sleep(backoff)
+                        backoff *= 2
+                        continue
                     resp.raise_for_status()
                 resp.raise_for_status()
                 data = resp.json()

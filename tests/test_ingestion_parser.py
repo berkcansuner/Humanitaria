@@ -15,7 +15,9 @@ class TestParseReport:
                 "primary_country": {"name": "Iran"},
                 "theme": [{"name": "Food and Nutrition"}],
                 "format": [{"name": "Situation Report"}],
-                "file": [{"url": "https://example.com/file.pdf"}]
+                "file": [{"url": "https://example.com/file.pdf"}],
+                "url": "https://reliefweb.int/node/123",
+                "url_alias": "https://reliefweb.int/report/iran/test-title",
             }
         }
         doc = parse_report(raw)
@@ -26,8 +28,9 @@ class TestParseReport:
         assert doc["theme"] == "Food and Nutrition"
         assert doc["source"] == "WFP"
         assert doc["format"] == "Situation Report"
-        # Displayed link is the report web page; the PDF stays in pdf_url.
-        assert doc["url"] == "https://reliefweb.int/report/123"
+        # Displayed link is the report's real web page from the API (url_alias),
+        # NOT the synthesized /report/{id} path which 404s on ReliefWeb.
+        assert doc["url"] == "https://reliefweb.int/report/iran/test-title"
         assert doc["pdf_url"] == "https://example.com/file.pdf"
         assert doc["doctype"] == "report"
 
@@ -44,6 +47,46 @@ class TestParseReport:
         assert doc["country"] == ""
         assert doc["theme"] == ""
         assert doc["doctype"] == "report"
+
+    def test_url_prefers_alias_over_synthesized_report_path(self):
+        """Regression: the synthesized /report/{numeric-id} path 404s on ReliefWeb.
+
+        When the API returns the real url_alias, the displayed source link must
+        use it so clicks land on a live page (not a 404).
+        """
+        raw = {
+            "id": "4163625",
+            "fields": {
+                "title": "Ukraine Snapshot",
+                "body": "Body.",
+                "url": "https://reliefweb.int/node/4163625",
+                "url_alias": "https://reliefweb.int/report/ukraine/snapshot-enuk",
+            },
+        }
+        doc = parse_report(raw)
+        assert doc["url"] == "https://reliefweb.int/report/ukraine/snapshot-enuk"
+        assert doc["url"] != "https://reliefweb.int/report/4163625"
+
+    def test_url_falls_back_to_node_when_only_url_present(self):
+        """No alias but a /node/{id} url present → use it (it redirects, 200)."""
+        raw = {
+            "id": "555",
+            "fields": {
+                "title": "T",
+                "body": "B",
+                "url": "https://reliefweb.int/node/555",
+            },
+        }
+        doc = parse_report(raw)
+        assert doc["url"] == "https://reliefweb.int/node/555"
+
+    def test_url_falls_back_to_node_when_api_url_missing(self):
+        """Belt-and-suspenders: no API url at all → /node/{id} (works), never
+        the 404-ing /report/{id}. doc_id still derives from the canonical path."""
+        raw = {"id": "777", "fields": {"title": "T", "body": "B"}}
+        doc = parse_report(raw)
+        assert doc["url"] == "https://reliefweb.int/node/777"
+        assert doc["url"] != "https://reliefweb.int/report/777"
 
 
 class TestParseDisaster:

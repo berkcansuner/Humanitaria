@@ -95,15 +95,18 @@ def run_pipeline(
                 offset += batch_limit
                 continue
 
-            # Phase 2: delete orphan chunks from previous ingestions
-            for doc, _ in doc_batch:
-                store.delete_document_chunks(doc["id"])
-
-            # Phase 3: embed all chunks together (cross-document batching)
+            # Phase 2: embed all chunks together (cross-document batching).
+            # Orphan cleanup is deferred until AFTER embedding succeeds: if the
+            # embed step fails (e.g. a transient Gemini rate limit), the existing
+            # chunks must stay in place rather than leaving the document with zero
+            # chunks until a later successful re-ingest.
             all_chunks = [c for _, chunks in doc_batch for c in chunks]
             try:
                 texts = [c["content"] for c in all_chunks]
                 all_embeddings = embedder.embed_documents(texts)
+                # Phase 3: delete orphan chunks from previous ingestions, then upsert.
+                for doc, _ in doc_batch:
+                    store.delete_document_chunks(doc["id"])
                 store.upsert_chunks(all_chunks, all_embeddings)
                 stats.succeeded += len(doc_batch)
             except Exception as e:

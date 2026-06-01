@@ -61,16 +61,23 @@ def _normalize_date(value: str) -> str:
 
 def parse_report(raw: Dict[str, Any]) -> Dict[str, Any]:
     fields = raw.get("fields") or {}
-    # Use the canonical page URL for doc_id (stable across attachment changes).
-    # File attachment URLs can change between re-ingests, which would produce
-    # different doc_ids and leave orphan chunks in the vector store.
+    # Use the canonical /report/{id} string ONLY to seed doc_id — it is stable
+    # across attachment/alias changes and is never visited. (File attachment
+    # URLs can change between re-ingests, producing different doc_ids and
+    # leaving orphan chunks in the vector store.)
     canonical_url = f"https://reliefweb.int/report/{raw.get('id', '')}"
     doc_id = hashlib.sha256(canonical_url.encode()).hexdigest()
-    # Displayed source link points to the report's web page (opens in the
-    # browser), not the file attachment — the CDN serves attachments as a
-    # download. The PDF stays available via pdf_url below.
+    # Displayed source link must point to the report's REAL web page from the
+    # API: url_alias is the readable slug, url is the /node/{id} redirect.
+    # The synthesized /report/{id} path 404s on ReliefWeb, so it is never used
+    # for the link; the /node/{id} fallback is only for the (now impossible)
+    # case where the API returns neither field.
     file_objs = fields.get("file")
-    url = canonical_url
+    url = (
+        _safe_get(fields, "url_alias")
+        or _safe_get(fields, "url")
+        or f"https://reliefweb.int/node/{raw.get('id', '')}"
+    )
     date_field = fields.get("date")
     date = _normalize_date(_safe_get(date_field, "created") if isinstance(date_field, dict) else "")
     country_field = fields.get("primary_country")

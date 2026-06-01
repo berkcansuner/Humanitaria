@@ -154,6 +154,34 @@ class TestPipelineErrorIsolation:
             called_ids = {c[0][0] for c in mock_store.delete_document_chunks.call_args_list}
             assert called_ids == {"id1", "id2"}
 
+    def test_orphan_chunks_retained_when_embed_fails(self):
+        """If embedding fails, existing chunks must NOT be deleted (no 0-chunk window).
+
+        Orphan cleanup must run only after embedding succeeds; otherwise a transient
+        embed failure (e.g. Gemini rate limit) would wipe a document from search until
+        a later successful re-ingest.
+        """
+        with patch("ingestion.pipeline.ReliefWebClient") as MockClient, \
+             patch("ingestion.pipeline.parse") as mock_parse, \
+             patch("ingestion.pipeline.chunk_document") as mock_chunk, \
+             patch("ingestion.pipeline.get_embeddings") as mock_get_emb, \
+             patch("ingestion.pipeline.get_store") as mock_get_store:
+            mock_client = MagicMock()
+            mock_client.fetch.return_value = [{"id": "1"}]
+            MockClient.return_value = mock_client
+            mock_parse.return_value = {"id": "id1", "url": "u1", "title": "t1", "body": "b1", "date": "", "country": "", "theme": "", "source": "", "format": "", "doctype": "report"}
+            mock_chunk.return_value = [{"id": "id1_0", "content": "b", "metadata": {}}]
+            mock_emb = MagicMock()
+            mock_emb.embed_documents.side_effect = RuntimeError("embed boom")
+            mock_get_emb.return_value = mock_emb
+            mock_store = MagicMock()
+            mock_get_store.return_value = mock_store
+            stats = run_pipeline(limit=1)
+            mock_store.delete_document_chunks.assert_not_called()
+            mock_store.upsert_chunks.assert_not_called()
+            assert stats["reports"].failed == 1
+            assert stats["reports"].succeeded == 0
+
     def test_empty_body_counted_as_skipped(self):
         with patch("ingestion.pipeline.ReliefWebClient") as MockClient, \
              patch("ingestion.pipeline.parse") as mock_parse, \

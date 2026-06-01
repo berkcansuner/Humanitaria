@@ -47,6 +47,50 @@ class TestReliefWebClient:
                     client.fetch_reports(limit=1)
                 assert mock_sleep.call_count >= 2
 
+    def test_fetch_reports_5xx_retries_then_succeeds(self):
+        """A transient 5xx must be retried with backoff (not failed immediately)."""
+        import requests
+        client = ReliefWebClient()
+        resp_500 = MagicMock()
+        resp_500.status_code = 500
+        resp_500.raise_for_status.side_effect = requests.HTTPError("500")
+        resp_200 = MagicMock()
+        resp_200.status_code = 200
+        resp_200.json.return_value = {"data": [{"id": "1"}], "totalCount": 1}
+        with patch("requests.post", side_effect=[resp_500, resp_200]) as mock_post:
+            with patch("time.sleep") as mock_sleep:
+                result = client.fetch_reports(limit=1)
+        assert result == [{"id": "1"}]
+        assert mock_post.call_count == 2
+        assert mock_sleep.call_count == 1
+
+    def test_fetch_reports_5xx_exhausts_retries_then_raises(self):
+        """Persistent 5xx eventually raises after exhausting retries with backoff."""
+        import requests
+        client = ReliefWebClient()
+        resp_500 = MagicMock()
+        resp_500.status_code = 500
+        resp_500.raise_for_status.side_effect = requests.HTTPError("500")
+        with patch("requests.post", return_value=resp_500):
+            with patch("time.sleep") as mock_sleep:
+                with pytest.raises(requests.HTTPError):
+                    client.fetch_reports(limit=1)
+        # 5 attempts → backoff slept on the first 4 (last attempt raises)
+        assert mock_sleep.call_count == 4
+
+    def test_fetch_reports_4xx_fails_fast_no_retry(self):
+        """Non-429 4xx is non-retryable: raise immediately without sleeping."""
+        import requests
+        client = ReliefWebClient()
+        resp_404 = MagicMock()
+        resp_404.status_code = 404
+        resp_404.raise_for_status.side_effect = requests.HTTPError("404")
+        with patch("requests.post", return_value=resp_404):
+            with patch("time.sleep") as mock_sleep:
+                with pytest.raises(requests.HTTPError):
+                    client.fetch_reports(limit=1)
+        assert mock_sleep.call_count == 0
+
     def test_fetch_generic_endpoint(self):
         client = ReliefWebClient()
         mock_data = {"data": [{"id": "1", "fields": {"name": "Test Disaster"}}], "totalCount": 1}
