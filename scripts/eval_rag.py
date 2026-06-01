@@ -29,14 +29,12 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+import anyio
+
 from rag.query_processor import extract_filters, analyze_query
-from rag.retriever import (
-    build_retriever,
-    apply_date_filter,
-    rerank_by_recency,
-    _COUNTRY_RELIEFWEB_ALIASES,
-)
+from rag.retriever import _COUNTRY_RELIEFWEB_ALIASES
 from rag.chain import build_chain
+from api.routes.chat import _retrieve_docs
 
 
 # Her vaka: sorgu + beklenen filtreler.
@@ -88,6 +86,15 @@ EVAL_CASES = [
      "country": "Somalia", "theme": "Water Sanitation Hygiene"},
     {"query": "Afganistan'daki genel insani durum",
      "country": "Afghanistan", "min_results": 1},
+    # --- güncellik (freshness) vakaları ---
+    {"query": "What is the current humanitarian situation in Sudan?",
+     "country": "Sudan", "min_results": 1, "freshness": True},
+    {"query": "current humanitarian situation in Yemen",
+     "country": "Yemen", "min_results": 1, "freshness": True},
+    {"query": "latest situation in Ukraine",
+     "country": "Ukraine", "min_results": 1, "freshness": True},
+    {"query": "how did the situation in Sudan evolve over 2024",
+     "country": "Sudan", "min_results": 1},
 ]
 
 
@@ -116,13 +123,30 @@ def _check_filters(case: dict, filters: dict) -> list[str]:
     return errors
 
 
+def _freshness_note(docs) -> str:
+    """Dönen kaynakların yaş dağılımı (gün): medyan, en yeni, son 6 ay (≤182g) oranı."""
+    from datetime import datetime
+    today = datetime.now()
+    ages = []
+    for d in docs:
+        ds = d.metadata.get("date", "")
+        if ds and len(ds) >= 10:
+            try:
+                ages.append((today - datetime.strptime(ds[:10], "%Y-%m-%d")).days)
+            except ValueError:
+                pass
+    if not ages:
+        return "freshness: tarih yok"
+    ages.sort()
+    median = ages[len(ages) // 2]
+    within6mo = sum(1 for a in ages if a <= 182)
+    return f"freshness: medyan {median}g, en yeni {min(ages)}g, {within6mo}/{len(ages)} ≤6ay"
+
+
 def _run_retrieval(case: dict, filters: dict):
-    """Canlı retrieval çalıştır; (özet metni, docs) döndür. Hata → (mesaj, [])."""
+    """Route ile birebir retrieval (boost dahil); (özet metni, docs) döndür. Hata → (mesaj, [])."""
     try:
-        retriever = build_retriever(filters)
-        docs = retriever.invoke(case["query"])
-        docs = apply_date_filter(docs, filters.get("date"))
-        docs = rerank_by_recency(docs)
+        docs = anyio.run(_retrieve_docs, case["query"], filters)
     except Exception as e:
         return f"retrieval HATASI: {e}", []
 
@@ -134,6 +158,8 @@ def _run_retrieval(case: dict, filters: dict):
     min_results = case.get("min_results")
     if min_results is not None and n < min_results:
         note += f"  ⚠ min {min_results} beklendi"
+    if case.get("freshness"):
+        note += "  |  " + _freshness_note(docs)
     return note, docs
 
 
