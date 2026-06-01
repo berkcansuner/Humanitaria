@@ -423,6 +423,39 @@ class TestRetrieveDocsRecencyBoost:
         assert rel.call_args.args[2] == s.TOP_K_RETRIEVAL
         assert "decay_factor" not in rec.call_args.kwargs
 
+    def test_boost_on_surfaces_recent_doc_into_topk(self):
+        """Behavioral: a recent doc ranked LOW by relevance rises into the final
+        top-k via the REAL recency blend (rerank_by_recency not mocked).
+
+        Relies on RERANK_BY_DATE=True (the project default). rerank_by_relevance
+        is patched to identity so input order encodes the relevance ranking; only
+        candidate index 7 is recent, the rest are ~2.5 years old."""
+        import anyio
+        from unittest.mock import patch, MagicMock, AsyncMock
+        from datetime import datetime, timedelta
+        import api.routes.chat as chat
+        from config import get_settings
+        s = get_settings()
+        today = datetime.now()
+        old = (today - timedelta(days=900)).strftime("%Y-%m-%d")
+        fresh = (today - timedelta(days=5)).strftime("%Y-%m-%d")
+        cands = []
+        for i in range(8):
+            d = MagicMock(page_content=str(i))
+            d.metadata = {"date": fresh if i == 7 else old, "title": f"D{i}"}
+            cands.append(d)
+        retriever = MagicMock()
+        retriever.ainvoke = AsyncMock(return_value=cands)
+        with patch("api.routes.chat.build_retriever", return_value=retriever), \
+             patch("api.routes.chat.apply_date_filter", side_effect=lambda docs, df: docs), \
+             patch("api.routes.chat.dedupe_by_document", side_effect=lambda docs: docs), \
+             patch("api.routes.chat.rerank_by_relevance", side_effect=lambda q, docs, n: docs[:n]), \
+             patch("api.routes.chat.should_boost_recency", return_value=True):
+            out = anyio.run(chat._retrieve_docs, "current situation in Sudan", {"country": "Sudan"})
+        titles = [d.metadata["title"] for d in out]
+        assert "D7" in titles, "the recent doc (relevance-rank 7) should rise into the final top-k"
+        assert len(out) == s.TOP_K_RETRIEVAL
+
 
 class TestRateLimit:
     def test_limit_exceeded_returns_429(self):
