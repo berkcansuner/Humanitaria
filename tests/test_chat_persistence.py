@@ -39,7 +39,7 @@ def _patched_chat_deps():
         patch("api.routes.chat.apply_date_filter", side_effect=lambda d, f: d),
         patch("api.routes.chat.dedupe_by_document", side_effect=lambda d: d),
         patch("api.routes.chat.rerank_by_relevance", side_effect=lambda q, d, k: d),
-        patch("api.routes.chat.rerank_by_recency", side_effect=lambda d: d),
+        patch("api.routes.chat.rerank_by_recency", side_effect=lambda d, decay_factor=None: d),
     ]
 
 
