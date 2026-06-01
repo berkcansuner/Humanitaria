@@ -353,6 +353,34 @@ def extract_filters(query: str) -> Dict[str, Any]:
     return merged
 
 
+# Geçmiş/trend görünümü isteyen ifadeler. Biri varsa recency boost KAPATILIR
+# (belgeler dönem boyunca yayılır, yeni→eski zorlanmaz). _turkish_lower yalnız
+# BÜYÜK harf Türkçe karakterleri katlar; küçük ş/ç/ı/ğ/ö/ü olduğu gibi kalır,
+# bu yüzden anahtar kelimeleri küçük-harf gerçek yazımıyla tutuyoruz.
+_HISTORICAL_INTENT_KEYWORDS = (
+    # English
+    "evolv", "trend", "over the years", "over time", "historical", "history of", "timeline",
+    # Türkçe
+    "nasıl gelişti", "nasıl değişti", "gelişimi", "değişimi",
+    "yıllar içinde", "zaman içinde", "geçmişte", "tarihçe",
+)
+
+
+def should_boost_recency(query: str, filters: Dict[str, Any]) -> bool:
+    """Bu sorgu için en yeni belgelere öncelik verilsin mi?
+
+    Varsayılan AÇIK (çoğu sorgu güncel durumu sorar). KAPATILIR:
+      - açık bir tarih filtresi çıkarıldıysa (pencere zaten zamanı sınırlıyor), veya
+      - sorgu geçmiş/trend niyeti taşıyorsa.
+    """
+    if filters and "date" in filters:
+        return False
+    lowered = _turkish_lower(query)
+    if any(kw in lowered for kw in _HISTORICAL_INTENT_KEYWORDS):
+        return False
+    return True
+
+
 _SUGGESTION_COUNTRIES = [
     "Iran", "Syria", "Yemen", "Ukraine", "Turkey",
     "Afghanistan", "Somalia", "Sudan", "State of Palestine", "Iraq",

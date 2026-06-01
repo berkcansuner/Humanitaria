@@ -402,3 +402,51 @@ class TestRuleBasedMergeBackstop:
         assert f.get("source") == "WFP"
         assert f.get("country") == "Sudan"
         assert f.get("doctype") == "report"
+
+
+class TestShouldBoostRecency:
+    def test_boost_on_for_current_english(self):
+        from rag.query_processor import should_boost_recency
+        assert should_boost_recency(
+            "What is the current humanitarian situation in Sudan?", {"country": "Sudan"}
+        ) is True
+
+    def test_boost_on_for_neutral_query(self):
+        from rag.query_processor import should_boost_recency
+        assert should_boost_recency("Sudan humanitarian situation", {"country": "Sudan"}) is True
+
+    def test_boost_on_for_latest(self):
+        from rag.query_processor import should_boost_recency
+        assert should_boost_recency("latest situation in Ukraine", {"country": "Ukraine"}) is True
+
+    def test_boost_on_for_empty_filters(self):
+        from rag.query_processor import should_boost_recency
+        assert should_boost_recency("genel insani durum", {}) is True
+
+    def test_boost_off_when_date_filter_present(self):
+        from rag.query_processor import should_boost_recency
+        assert should_boost_recency(
+            "Sudan reports last 3 months", {"country": "Sudan", "date": {"$gte": "2026-03-01"}}
+        ) is False
+
+    def test_boost_off_historical_evolve_english(self):
+        from rag.query_processor import should_boost_recency
+        assert should_boost_recency(
+            "how did the situation in Sudan evolve over 2024", {"country": "Sudan"}
+        ) is False
+
+    def test_boost_off_trend_english(self):
+        from rag.query_processor import should_boost_recency
+        assert should_boost_recency(
+            "humanitarian funding trend in Yemen", {"country": "Yemen"}
+        ) is False
+
+    def test_boost_off_historical_turkish_gelisti(self):
+        from rag.query_processor import should_boost_recency
+        assert should_boost_recency(
+            "Sudan'da durum yıllar içinde nasıl gelişti", {"country": "Sudan"}
+        ) is False
+
+    def test_boost_off_historical_turkish_tarihce(self):
+        from rag.query_processor import should_boost_recency
+        assert should_boost_recency("Yemen krizinin tarihçesi", {"country": "Yemen"}) is False
