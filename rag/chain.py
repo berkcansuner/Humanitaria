@@ -26,7 +26,10 @@ _SYSTEM_PROMPT = (
     "missing and which details the user could provide (country, time period, topic).\n"
     "8. If the Context section is empty or contains documents irrelevant to the question, tell the user — in their own "
     "language — that no relevant documents were found in the database and suggest specifying a more specific country, "
-    "topic, or date range, or that new documents may need to be added. Never answer from your own general knowledge."
+    "topic, or date range, or that new documents may need to be added. Never answer from your own general knowledge.\n"
+    "9. Each document in the Context is labeled with its publication date as (YYYY-MM-DD). For questions about the "
+    "current or latest situation, prioritize the most recent documents and state the date range of the information you "
+    "used. If the most recent relevant document is old, note that more recent information may not be available."
 )
 
 _chain: Runnable | None = None

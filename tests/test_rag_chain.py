@@ -88,3 +88,12 @@ class TestChainProvider:
         assert kwargs["model"] == "qwen2.5:0.5b"
         assert kwargs["base_url"] == "http://localhost:11434/v1"
         assert kwargs["api_key"] == "ollama"
+
+
+def test_system_prompt_has_date_awareness_rule():
+    from rag.chain import _SYSTEM_PROMPT
+    low = _SYSTEM_PROMPT.lower()
+    # Pin rule 9 specifically: "date"/"most recent" alone also occur in earlier
+    # rules, so assert the rule-9 phrasing to guard against its accidental removal.
+    assert "prioritize the most recent" in low
+    assert "(yyyy-mm-dd)" in low

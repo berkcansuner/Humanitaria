@@ -81,7 +81,8 @@ def _build_context_and_sources(docs):
     (keeping numbering aligned) but are not surfaced as sources.
     """
     context = "\n\n---\n\n".join(
-        f"[{i}] {doc.page_content}" for i, doc in enumerate(docs, 1)
+        f"[{i}] ({doc.metadata.get('date') or 'tarih yok'}) {doc.page_content}"
+        for i, doc in enumerate(docs, 1)
     )
     sources = [
         {

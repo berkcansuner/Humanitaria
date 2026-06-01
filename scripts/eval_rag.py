@@ -202,8 +202,11 @@ def _get_judge():
 
 
 def _build_context(docs) -> str:
-    """Inference'taki ile aynı [n]-numaralı context formatı (chat route ile eşleşir)."""
-    return "\n\n---\n\n".join(f"[{i}] {d.page_content}" for i, d in enumerate(docs, 1))
+    """Inference'taki ile aynı [n]-numaralı, tarih etiketli context formatı (chat route ile eşleşir)."""
+    return "\n\n---\n\n".join(
+        f"[{i}] ({d.metadata.get('date') or 'tarih yok'}) {d.page_content}"
+        for i, d in enumerate(docs, 1)
+    )
 
 
 def _judge_case(case: dict, docs: list):

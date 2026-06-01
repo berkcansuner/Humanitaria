@@ -442,3 +442,32 @@ class TestRateLimit:
         finally:
             limiter.reset()
             limiter.enabled = False
+
+
+class TestContextDateLabel:
+    def _doc(self, **meta):
+        from unittest.mock import MagicMock
+        d = MagicMock()
+        d.page_content = "Body text"
+        d.metadata = meta
+        return d
+
+    def test_context_includes_date_label(self):
+        from api.routes.chat import _build_context_and_sources
+        doc = self._doc(title="T", url="https://x/1", date="2026-05-01")
+        context, _ = _build_context_and_sources([doc])
+        assert "[1]" in context
+        assert "(2026-05-01)" in context
+
+    def test_context_missing_date_is_graceful(self):
+        from api.routes.chat import _build_context_and_sources
+        doc = self._doc(title="T", url="https://x/1")  # date yok
+        context, _ = _build_context_and_sources([doc])
+        assert "[1]" in context
+        assert "tarih yok" in context
+
+    def test_context_empty_date_is_graceful(self):
+        from api.routes.chat import _build_context_and_sources
+        doc = self._doc(title="T", url="https://x/1", date="")  # boş tarih
+        context, _ = _build_context_and_sources([doc])
+        assert "tarih yok" in context
