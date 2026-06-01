@@ -5,9 +5,9 @@ import './SuggestionCard.css'
 // Each missing query dimension becomes one step (only those with suggestions).
 // `chips: false` -> free-text only (with autocomplete); `true` -> chips + text.
 const STEP_DEFS = [
-  { key: 'country', src: 'countries', chips: false, title: 'Hangi ülke hakkında bilgi almak istiyorsunuz?', placeholder: 'Ülke yazın…' },
-  { key: 'date', src: 'time_periods', chips: false, title: 'Hangi zaman aralığı?', placeholder: 'Zaman aralığı yazın…' },
-  { key: 'theme', src: 'themes', chips: true, title: 'Hangi konu?', placeholder: 'veya bir konu yazın…' },
+  { key: 'country', src: 'countries', chips: false, title: 'Which country would you like information about?', placeholder: 'Enter a country…' },
+  { key: 'date', src: 'time_periods', chips: false, title: 'Which time period?', placeholder: 'Enter a time period…' },
+  { key: 'theme', src: 'themes', chips: true, title: 'Which topic?', placeholder: 'or enter a topic…' },
 ]
 
 /**
@@ -124,7 +124,7 @@ export default function SuggestionCard({ clarification, onApply, onDismiss }) {
   const chosen = steps.map((s) => selections[s.key]).filter(Boolean)
 
   return (
-    <div className="sc-card" role="group" aria-label="Sorgunuzu detaylandırma önerileri" onKeyDown={onCardKey}>
+    <div className="sc-card" role="group" aria-label="Refine your query suggestions" onKeyDown={onCardKey}>
       <div className="sc-header">
         <span className="sc-title" aria-live="polite">{step.title}</span>
         <div className="sc-nav">
@@ -134,13 +134,13 @@ export default function SuggestionCard({ clarification, onApply, onDismiss }) {
             ))}
           </span>
           <span className="sc-hint">{current + 1} / {steps.length}</span>
-          <button className="sc-iconbtn" onClick={prev} disabled={current === 0} aria-label="Önceki adım">
+          <button className="sc-iconbtn" onClick={prev} disabled={current === 0} aria-label="Previous step">
             <ChevronLeft size={16} />
           </button>
-          <button className="sc-iconbtn" onClick={skip} aria-label="Sonraki adım">
+          <button className="sc-iconbtn" onClick={skip} aria-label="Next step">
             <ChevronRight size={16} />
           </button>
-          <button className="sc-iconbtn" onClick={onDismiss} aria-label="Önerileri kapat">
+          <button className="sc-iconbtn" onClick={onDismiss} aria-label="Close suggestions">
             <X size={16} />
           </button>
         </div>
@@ -189,7 +189,7 @@ export default function SuggestionCard({ clarification, onApply, onDismiss }) {
             aria-expanded={matches.length > 0}
             aria-controls="sc-ac-list"
           />
-          <button className="sc-input-go" type="submit" disabled={!custom.trim()} aria-label="Yazdığını kullan">
+          <button className="sc-input-go" type="submit" disabled={!custom.trim()} aria-label="Use your input">
             <ArrowRight size={16} />
           </button>
         </form>
@@ -212,7 +212,7 @@ export default function SuggestionCard({ clarification, onApply, onDismiss }) {
       </div>
 
       <div className="sc-footer">
-        <button className="sc-skip" onClick={skip}>{isLast ? 'Bitir' : 'Atla'}</button>
+        <button className="sc-skip" onClick={skip}>{isLast ? 'Finish' : 'Skip'}</button>
       </div>
     </div>
   )

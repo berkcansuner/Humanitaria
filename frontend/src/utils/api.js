@@ -24,7 +24,7 @@ export function getMessages(id) {
   return request(`/conversations/${id}/messages`, { method: 'GET' })
 }
 
-export function createConversation(title = 'Yeni sohbet') {
+export function createConversation(title = 'New chat') {
   return request('/conversations', { method: 'POST', body: JSON.stringify({ title }) })
 }
 

@@ -17,8 +17,8 @@ export function decorateCodeBlocks(root) {
     const btn = document.createElement('button')
     btn.className = 'copy-code'
     btn.type = 'button'
-    btn.textContent = 'Kopyala'
-    btn.setAttribute('aria-label', 'Kodu kopyala')
+    btn.textContent = 'Copy'
+    btn.setAttribute('aria-label', 'Copy code')
 
     btn.addEventListener('click', () => {
       const code = pre.querySelector('code')
@@ -27,7 +27,7 @@ export function decorateCodeBlocks(root) {
       const text = (code || pre).textContent
       navigator.clipboard?.writeText(text)
       const prev = btn.textContent
-      btn.textContent = 'Kopyalandı'
+      btn.textContent = 'Copied'
       setTimeout(() => { btn.textContent = prev }, 1500)
     })
 

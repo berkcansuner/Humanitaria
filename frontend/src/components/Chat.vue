@@ -1,6 +1,6 @@
 <template>
   <div class="chat">
-    <div class="messages" ref="messagesContainer" role="log" aria-live="polite">
+    <div class="messages" ref="messagesContainer" role="log" aria-live="polite" @click="onCiteClick">
       <EmptyState v-if="messages.length === 0" @select="sendMessage({ text: $event })" />
       <div
         v-for="(msg, idx) in messages"
@@ -27,8 +27,8 @@
                   @keydown.enter.exact.prevent="saveEdit"
                 ></textarea>
                 <div class="edit-actions">
-                  <button type="button" class="edit-cancel" @click="cancelEdit">İptal</button>
-                  <button type="button" class="edit-save" @click="saveEdit">Kaydet & gönder</button>
+                  <button type="button" class="edit-cancel" @click="cancelEdit">Cancel</button>
+                  <button type="button" class="edit-save" @click="saveEdit">Save & send</button>
                 </div>
               </div>
               <template v-else>
@@ -63,7 +63,7 @@
         ref="chatInput"
         v-model="input"
         type="text"
-        placeholder="Ask about humanitarian aid..."
+        placeholder="Ask about humanitarian documents…"
         class="chat-input"
         enterkeyhint="send"
       />
@@ -72,7 +72,7 @@
         type="button"
         class="send-btn stop-btn"
         @click="stopGenerating"
-        aria-label="Üretimi durdur"
+        aria-label="Stop generating"
       >
         <Square :size="18" />
       </button>
@@ -80,6 +80,7 @@
         <Send :size="20" />
       </button>
     </form>
+    <p class="composer-hint">Responses are generated from real humanitarian reports.</p>
   </div>
 </template>
 
@@ -97,7 +98,7 @@ import { renderMarkdown } from '../utils/renderMarkdown.js'
 import { parseSSE } from '../utils/parseSSE.js'
 import { renumberCitations } from '../utils/renumberCitations.js'
 import { decorateCodeBlocks } from '../utils/codeCopy.js'
-import { findLastUserIndex, truncateAt, lastServerIdBefore } from '../utils/conversationOps.js'
+import { findLastUserIndex, lastServerIdBefore, planResend } from '../utils/conversationOps.js'
 import { getMessages, truncateConversation } from '../utils/api.js'
 
 const ERROR_MESSAGES = {
@@ -292,21 +293,42 @@ function stopGenerating() {
   controller.value?.abort()
 }
 
+// Clicking a [n] citation chip scrolls to its source within the same message
+// and briefly highlights it. The chips are injected by renderMarkdown().
+function onCiteClick(e) {
+  const cite = e.target.closest('.cite')
+  if (!cite) return
+  e.preventDefault()
+  const id = cite.getAttribute('data-cite')
+  const message = cite.closest('.message')
+  const item = message?.querySelector(`.source-item[data-srcid="${id}"]`)
+  if (!item) return
+  item.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  item.classList.add('flash')
+  setTimeout(() => item.classList.remove('flash'), 1500)
+}
+
 async function resendFrom(targetIndex, text) {
   // Shared by Regenerate and Edit: drop the target user turn (and everything
   // after) on both the server and the client, then re-ask. The server truncate
   // keeps the conversation + window consistent so the re-sent turn isn't a
   // duplicate. keep_through is the last persisted message before the target.
   if (loading.value || targetIndex < 0) return
+  let truncateOk = true
   if (sessionId.value) {
     try {
       await truncateConversation(sessionId.value, lastServerIdBefore(messages.value, targetIndex))
     } catch (e) {
+      // A swallowed truncate failure would leave the server holding the old
+      // turns while the client drops them — re-sending then duplicates the
+      // turn on reload. Abort the resend and surface the error instead.
       console.error('Truncate failed:', e)
+      truncateOk = false
     }
   }
-  messages.value = truncateAt(messages.value, targetIndex - 1)
-  sendMessage({ text })
+  const plan = planResend(messages.value, targetIndex, truncateOk, ERROR_MESSAGES.connection)
+  messages.value = plan.messages
+  if (plan.resend) sendMessage({ text })
 }
 
 function regenerate() {
@@ -665,12 +687,21 @@ watch(() => props.conversationId, async (newId) => {
 
 .chat-input:focus {
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px rgba(97, 0, 0, 0.08);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-accent) 18%, transparent);
 }
 
 .chat-input::placeholder {
   color: var(--color-muted);
   font-style: italic;
+}
+
+.composer-hint {
+  text-align: center;
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+  margin-top: var(--space-2);
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
 }
 
 .send-btn {

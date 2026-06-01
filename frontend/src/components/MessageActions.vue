@@ -1,6 +1,6 @@
 <template>
   <div class="message-actions">
-    <button type="button" class="action-btn" :aria-label="copied ? 'Kopyalandı' : 'Mesajı kopyala'" @click="onCopy">
+    <button type="button" class="action-btn" :aria-label="copied ? 'Copied' : 'Copy message'" @click="onCopy">
       <Check v-if="copied" :size="15" />
       <Copy v-else :size="15" />
     </button>
@@ -8,7 +8,7 @@
       v-if="role === 'assistant' && canRegenerate"
       type="button"
       class="action-btn"
-      aria-label="Yanıtı yeniden üret"
+      aria-label="Regenerate response"
       @click="$emit('regenerate')"
     >
       <RotateCcw :size="15" />
@@ -17,7 +17,7 @@
       v-if="role === 'user'"
       type="button"
       class="action-btn"
-      aria-label="Mesajı düzenle"
+      aria-label="Edit message"
       @click="$emit('edit')"
     >
       <Pencil :size="15" />

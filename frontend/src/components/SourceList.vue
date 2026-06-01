@@ -2,7 +2,13 @@
   <div class="sources" v-if="validSources.length">
     <div class="sources-header">SOURCES ({{ validSources.length }})</div>
     <ul class="source-list">
-      <li v-for="(src, idx) in validSources" :key="idx" class="source-item">
+      <li
+        v-for="(src, idx) in validSources"
+        :key="idx"
+        class="source-item"
+        :id="src.index != null ? 'src-' + src.index : null"
+        :data-srcid="src.index != null ? src.index : null"
+      >
         <span v-if="src.index != null" class="source-index">[{{ src.index }}]</span>
         <a :href="safeUrl(src.url)" target="_blank" rel="noopener noreferrer" class="source-link">
           <span class="source-title-text">{{ src.title }}</span>
@@ -80,6 +86,13 @@ const validSources = computed(() => (props.sources || []).filter(isValidSource))
   gap: var(--space-1);
   font-size: var(--text-xs);
   line-height: 1.5;
+  border-radius: var(--radius-md);
+  transition: background-color 0.3s;
+}
+
+/* Briefly highlight a source when its [n] citation chip is clicked. */
+.source-item.flash {
+  background-color: var(--color-accent-soft);
 }
 
 .source-index {

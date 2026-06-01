@@ -13,10 +13,18 @@
 
     <div class="main">
       <header class="topbar">
-        <button class="hamburger" aria-label="Menüyü aç/kapat" @click="sidebarOpen = !sidebarOpen">
+        <button class="hamburger" aria-label="Toggle menu" @click="sidebarOpen = !sidebarOpen">
           <Menu :size="20" />
         </button>
-        <h1 class="topbar-title">ReliefWeb RAG</h1>
+        <div class="brand">
+          <HelpingHandLogo :size="34" :radius="11" />
+          <div class="brand-text">
+            <h1 class="brand-title">Humanitaria</h1>
+            <span class="brand-sub">Humanitarian Information Assistant</span>
+          </div>
+        </div>
+        <div class="topbar-spacer"></div>
+        <ThemeToggle />
       </header>
       <main class="content">
         <Chat :conversation-id="activeId" @session="onSession" />
@@ -30,6 +38,8 @@ import { ref, onMounted } from 'vue'
 import { Menu } from 'lucide-vue-next'
 import Chat from './components/Chat.vue'
 import Sidebar from './components/Sidebar.vue'
+import HelpingHandLogo from './components/HelpingHandLogo.vue'
+import ThemeToggle from './components/ThemeToggle.vue'
 import {
   listConversations,
   renameConversation,
@@ -113,12 +123,40 @@ onMounted(loadConversations)
   flex-shrink: 0;
 }
 
-.topbar-title {
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  min-width: 0;
+}
+
+.brand-title {
   font-family: var(--font-display);
   font-size: var(--text-lg);
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: var(--color-accent);
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.brand-sub {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
+.topbar-spacer {
+  flex: 1;
 }
 
 .hamburger {
@@ -152,6 +190,9 @@ onMounted(loadConversations)
 @media (max-width: 640px) {
   .hamburger {
     display: inline-flex;
+  }
+  .brand-sub {
+    display: none;
   }
   .sidebar-backdrop {
     display: block;

@@ -1,10 +1,7 @@
 <template>
   <div class="empty-state">
-    <div class="empty-icon">
-      <MessagesSquare :size="40" />
-    </div>
-    <h2 class="empty-title">İnsani yardım belgeleri hakkında sorun</h2>
-    <p class="empty-subtitle">Başlamak için bir örnek seçin ya da kendi sorunuzu yazın.</p>
+    <HelpingHandLogo :size="56" :radius="18" class="empty-logo" />
+    <h2 class="empty-title">Ask about humanitarian aid</h2>
     <div class="prompt-grid">
       <button
         v-for="(p, i) in prompts"
@@ -20,16 +17,16 @@
 </template>
 
 <script setup>
-import { MessagesSquare } from 'lucide-vue-next'
+import HelpingHandLogo from './HelpingHandLogo.vue'
 
 defineEmits(['select'])
 
 // Örnekler indekslenmiş veri kapsamına (Sudan/Yemen/Ukrayna/Suriye) hizalı.
 const prompts = [
-  'Sudan\'daki son insani durum nedir?',
-  'Yemen\'de gıda güvensizliği hakkında ne biliniyor?',
-  'Ukrayna\'da yerinden edilme verileri neler?',
-  'Suriye\'de sağlık sektörü ihtiyaçları nelerdir?',
+  'What is the current humanitarian situation in Sudan?',
+  'What is known about food insecurity in Yemen?',
+  'What are the displacement figures in Ukraine?',
+  'What are the health sector needs in Syria?',
 ]
 </script>
 
@@ -45,9 +42,8 @@ const prompts = [
   gap: var(--space-3);
 }
 
-.empty-icon {
-  color: var(--color-accent);
-  opacity: 0.85;
+.empty-logo {
+  margin-bottom: var(--space-1);
 }
 
 .empty-title {
@@ -55,11 +51,6 @@ const prompts = [
   font-size: var(--text-xl);
   font-weight: 700;
   color: var(--color-text);
-}
-
-.empty-subtitle {
-  font-size: var(--text-sm);
-  color: var(--color-muted);
   margin-bottom: var(--space-2);
 }
 

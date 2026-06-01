@@ -1,34 +1,40 @@
 <template>
   <ul class="conv-list">
-    <li
-      v-for="c in conversations"
-      :key="c.id"
-      :class="['conv-item', { active: c.id === activeId }]"
-    >
-      <template v-if="editingId === c.id">
-        <input
-          ref="editInput"
-          v-model="editTitle"
-          class="conv-edit-input"
-          @keyup.enter="commitRename(c.id)"
-          @keyup.esc="cancelRename"
-          @blur="commitRename(c.id)"
-        />
+    <template v-if="groups.length">
+      <template v-for="group in groups" :key="group.key">
+        <li class="conv-section-label">{{ group.label }}</li>
+        <li
+          v-for="c in group.items"
+          :key="c.id"
+          :class="['conv-item', { active: c.id === activeId }]"
+        >
+          <template v-if="editingId === c.id">
+            <input
+              ref="editInput"
+              v-model="editTitle"
+              class="conv-edit-input"
+              @keyup.enter="commitRename(c.id)"
+              @keyup.esc="cancelRename"
+              @blur="commitRename(c.id)"
+            />
+          </template>
+          <template v-else>
+            <button type="button" class="conv-select" :title="c.title" @click="$emit('select', c.id)">
+              {{ c.title }}
+            </button>
+            <div class="conv-actions">
+              <button type="button" class="conv-action" aria-label="Rename" @click.stop="startRename(c)">
+                <Pencil :size="13" />
+              </button>
+              <button type="button" class="conv-action" aria-label="Delete" @click.stop="$emit('delete', c.id)">
+                <Trash2 :size="13" />
+              </button>
+            </div>
+          </template>
+        </li>
       </template>
-      <template v-else>
-        <button type="button" class="conv-select" :title="c.title" @click="$emit('select', c.id)">
-          {{ c.title }}
-        </button>
-        <div class="conv-actions">
-          <button type="button" class="conv-action" aria-label="Yeniden adlandır" @click.stop="startRename(c)">
-            <Pencil :size="13" />
-          </button>
-          <button type="button" class="conv-action" aria-label="Sil" @click.stop="$emit('delete', c.id)">
-            <Trash2 :size="13" />
-          </button>
-        </div>
-      </template>
-    </li>
+    </template>
+    <li v-else-if="hasQuery" class="conv-section-label conv-empty">No results</li>
   </ul>
 </template>
 
@@ -37,8 +43,10 @@ import { ref, nextTick } from 'vue'
 import { Pencil, Trash2 } from 'lucide-vue-next'
 
 defineProps({
-  conversations: { type: Array, default: () => [] },
+  // [{ key, label, items: [{ id, title, ... }] }] — pre-filtered & grouped by the Sidebar.
+  groups: { type: Array, default: () => [] },
   activeId: { type: String, default: null },
+  hasQuery: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['select', 'rename', 'delete'])
@@ -80,6 +88,21 @@ function cancelRename() {
   overflow-y: auto;
 }
 
+.conv-section-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  padding: var(--space-2) var(--space-2) var(--space-1);
+}
+
+.conv-empty {
+  opacity: 0.7;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
 .conv-item {
   display: flex;
   align-items: center;
@@ -109,6 +132,11 @@ function cancelRename() {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.conv-item.active .conv-select {
+  color: var(--color-accent);
+  font-weight: 600;
 }
 
 .conv-actions {

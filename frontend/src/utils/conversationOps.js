@@ -32,3 +32,61 @@ export function lastServerIdBefore(messages, index) {
   }
   return 0
 }
+
+/**
+ * Decide the local outcome of a resend (Edit/Regenerate) given whether the
+ * server-side truncate succeeded.
+ *
+ * - success → truncate the message list locally and signal a re-send.
+ * - failure → keep every message (so the client never diverges from the server),
+ *   mark only the target message with `errorMessage`, and do NOT re-send. This
+ *   prevents a swallowed truncate error from producing duplicate/stale turns.
+ *
+ * Pure: returns a new array and never mutates the input.
+ */
+export function planResend(messages, targetIndex, truncateOk, errorMessage) {
+  if (!truncateOk) {
+    return {
+      messages: messages.map((m, i) => (i === targetIndex ? { ...m, error: errorMessage } : m)),
+      resend: false,
+    }
+  }
+  return { messages: truncateAt(messages, targetIndex - 1), resend: true }
+}
+
+/** Filter conversations by a case-insensitive title substring. Blank query → all. */
+export function filterConversations(conversations, query) {
+  const q = (query || '').trim().toLowerCase()
+  if (!q) return conversations
+  return conversations.filter((c) => (c.title || '').toLowerCase().includes(q))
+}
+
+/** Bucket key for a conversation's updated_at relative to `now`. */
+function _dateGroupKey(updatedAt, now) {
+  const d = new Date(updatedAt)
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  if (d >= startOfToday) return 'today'
+  const weekAgo = new Date(startOfToday.getTime() - 7 * 86400000)
+  if (d >= weekAgo) return 'week'
+  return 'older'
+}
+
+const _DATE_GROUPS = [
+  ['today', 'Today'],
+  ['week', 'This week'],
+  ['older', 'Older'],
+]
+
+/**
+ * Group conversations by `updated_at` into Today / This week / Older sections.
+ * Returns [{ key, label, items }] for non-empty groups, in fixed order. Item order
+ * within a group is preserved (the server already returns updated_at desc). `now`
+ * is injected for testability (defaults to the current time).
+ */
+export function groupConversationsByDate(conversations, now = new Date()) {
+  return _DATE_GROUPS.map(([key, label]) => ({
+    key,
+    label,
+    items: conversations.filter((c) => _dateGroupKey(c.updated_at, now) === key),
+  })).filter((g) => g.items.length)
+}

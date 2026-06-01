@@ -2,8 +2,8 @@
   <button
     type="button"
     class="theme-toggle"
-    :aria-label="theme === 'dark' ? 'Açık temaya geç' : 'Koyu temaya geç'"
-    :title="theme === 'dark' ? 'Açık tema' : 'Koyu tema'"
+    :aria-label="theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'"
+    :title="theme === 'dark' ? 'Light theme' : 'Dark theme'"
     @click="toggle"
   >
     <Sun v-if="theme === 'dark'" :size="18" />
