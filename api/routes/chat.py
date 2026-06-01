@@ -13,7 +13,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from config import get_settings
-from rag.query_processor import extract_filters, analyze_query
+from rag.query_processor import extract_filters, analyze_query, should_boost_recency
 from rag.retriever import (
     build_retriever, rerank_by_recency, apply_date_filter,
     dedupe_by_document, rerank_by_relevance,
@@ -146,6 +146,11 @@ async def _retrieve_docs(query: str, filters: dict):
 
     candidates (larger k) -> date filter -> dedupe by document ->
     relevance rerank (Pinecone) -> recency blend -> final top-k.
+
+    For "current"-style queries (no explicit date window, no historical intent)
+    the recency boost reranks a wider relevance pool by recency so the newest
+    reports surface into the final top-k; date-scoped / historical queries keep
+    the relevance-first ordering.
     """
     settings = get_settings()
     candidate_k = settings.TOP_K_RETRIEVAL * settings.RERANK_CANDIDATE_MULTIPLIER
@@ -153,8 +158,14 @@ async def _retrieve_docs(query: str, filters: dict):
     docs = await retriever.ainvoke(query)
     docs = apply_date_filter(docs, filters.get("date"))
     docs = dedupe_by_document(docs)
-    docs = rerank_by_relevance(query, docs, settings.TOP_K_RETRIEVAL)
-    docs = rerank_by_recency(docs)
+    if should_boost_recency(query, filters):
+        pool = max(settings.RECENCY_RERANK_POOL, settings.TOP_K_RETRIEVAL)
+        docs = rerank_by_relevance(query, docs, pool)
+        docs = rerank_by_recency(docs, decay_factor=settings.RECENCY_BOOST_FACTOR)
+        docs = docs[:settings.TOP_K_RETRIEVAL]
+    else:
+        docs = rerank_by_relevance(query, docs, settings.TOP_K_RETRIEVAL)
+        docs = rerank_by_recency(docs)
     return docs
 
 

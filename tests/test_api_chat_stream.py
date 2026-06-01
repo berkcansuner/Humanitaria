@@ -376,6 +376,54 @@ class TestApiKeyAuth:
             assert response.status_code == 200
 
 
+class TestRetrieveDocsRecencyBoost:
+    """_retrieve_docs'un boost AÇIK/KAPALI dallarını doğrular (anyio ile sürülür)."""
+
+    def _candidates(self, n=8):
+        from unittest.mock import MagicMock
+        return [MagicMock(metadata={"date": "2026-05-01"}, page_content=str(i)) for i in range(n)]
+
+    def test_boost_on_uses_wide_pool_and_boost_factor(self):
+        import anyio
+        from unittest.mock import patch, MagicMock, AsyncMock
+        import api.routes.chat as chat
+        from config import get_settings
+        s = get_settings()
+        cands = self._candidates()
+        retriever = MagicMock()
+        retriever.ainvoke = AsyncMock(return_value=cands)
+        with patch("api.routes.chat.build_retriever", return_value=retriever), \
+             patch("api.routes.chat.apply_date_filter", side_effect=lambda docs, df: docs), \
+             patch("api.routes.chat.dedupe_by_document", side_effect=lambda docs: docs), \
+             patch("api.routes.chat.rerank_by_relevance", side_effect=lambda q, docs, n: docs[:n]) as rel, \
+             patch("api.routes.chat.rerank_by_recency", side_effect=lambda docs, decay_factor=None: docs) as rec, \
+             patch("api.routes.chat.should_boost_recency", return_value=True):
+            out = anyio.run(chat._retrieve_docs, "current situation in Sudan", {"country": "Sudan"})
+        assert rel.call_args.args[2] == max(s.RECENCY_RERANK_POOL, s.TOP_K_RETRIEVAL)
+        assert rec.call_args.kwargs.get("decay_factor") == s.RECENCY_BOOST_FACTOR
+        assert len(out) <= s.TOP_K_RETRIEVAL
+
+    def test_boost_off_uses_topk_and_default_recency(self):
+        import anyio
+        from unittest.mock import patch, MagicMock, AsyncMock
+        import api.routes.chat as chat
+        from config import get_settings
+        s = get_settings()
+        cands = self._candidates()
+        retriever = MagicMock()
+        retriever.ainvoke = AsyncMock(return_value=cands)
+        with patch("api.routes.chat.build_retriever", return_value=retriever), \
+             patch("api.routes.chat.apply_date_filter", side_effect=lambda docs, df: docs), \
+             patch("api.routes.chat.dedupe_by_document", side_effect=lambda docs: docs), \
+             patch("api.routes.chat.rerank_by_relevance", side_effect=lambda q, docs, n: docs[:n]) as rel, \
+             patch("api.routes.chat.rerank_by_recency", side_effect=lambda docs, decay_factor=None: docs) as rec, \
+             patch("api.routes.chat.should_boost_recency", return_value=False):
+            out = anyio.run(chat._retrieve_docs, "Sudan since 2024-01-01",
+                            {"country": "Sudan", "date": {"$gte": "2024-01-01"}})
+        assert rel.call_args.args[2] == s.TOP_K_RETRIEVAL
+        assert "decay_factor" not in rec.call_args.kwargs
+
+
 class TestRateLimit:
     def test_limit_exceeded_returns_429(self):
         from api.routes.chat import limiter
