@@ -71,6 +71,10 @@ class Settings(BaseSettings):
     INGEST_SCHEDULE_HOURS: int = 12
     RERANK_BY_DATE: bool = True
     DATE_DECAY_FACTOR: float = 0.3
+    # Recency boost — "current situation" sorgularında (tarih filtresi yok, geçmiş niyeti yok)
+    # daha geniş bir alaka havuzunu recency ile yeniden sıralayıp en yeni raporları top-k'ya taşır.
+    RECENCY_RERANK_POOL: int = 10      # boost'ta ara alaka havuzu (sonra recency ile top-k'ya inilir)
+    RECENCY_BOOST_FACTOR: float = 0.6  # boost'ta recency ağırlığı (varsayılan DATE_DECAY_FACTOR 0.3'e karşı)
 
     # CORS — comma-separated allowed origins
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000,http://localhost:8000"

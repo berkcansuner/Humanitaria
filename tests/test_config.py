@@ -16,6 +16,13 @@ class TestConfig:
         assert s1 is s2
 
 
+def test_recency_boost_defaults():
+    from config import Settings
+    s = Settings(_env_file=None, OLLAMA_CLOUD_API_KEY="test")
+    assert s.RECENCY_RERANK_POOL == 10
+    assert s.RECENCY_BOOST_FACTOR == 0.6
+
+
 def test_vector_store_and_embed_provider_defaults():
     from config import Settings
     s = Settings(_env_file=None, OLLAMA_CLOUD_API_KEY="test")
