@@ -58,6 +58,15 @@ niyetinde retrieval'da recency-pencere (Y3, Pinecone `date_ts $gte` + otomatik g
 - **Chunk boyutu 800 kelime** (büyük): retrieval hassasiyetini + context boyutunu etkiler, reranker truncate=END ile
   yalnız ilk ~1024 token'ı görür. Küçültmek 31.5k vektör re-ingest gerektirir → ayrı/büyük karar.
 
+### ✅ ChromaDB + Ollama sağlayıcıları KALDIRILDI — Gemini + Pinecone only (2026-06-02, 4 commit)
+Kullanılmayan flag'li sağlayıcılar tümden silindi: `OllamaLangChainEmbeddings`, `ChromaStore`, `_build_chroma_filter`,
+ollama/chroma dalları, `OLLAMA_*`/`CHROMA_*` + tüm `*_PROVIDER` config alanları, `chromadb`/`langchain-chroma`/`ollama`
+bağımlılıkları. Kod artık **tek-yol** (Gemini chat/query/embed + Pinecone). `langchain-community` KORUNDU (Redis history kullanıyor).
+Watermark `CHROMA_DB_PATH/.last_ingest.json` → yeni `INGEST_WATERMARK_PATH="./.last_ingest.json"`. `EMBED_DIM` varsayılan 3072.
+Commit: `35db3d5` (ollama) · `c982168` (chroma) · `ec67109` (docs) · `f8a832a` (test temizlik). Spec/plan `docs/superpowers/`.
+**Doğrulama:** paketler venv'den uninstall edildi → import + 261 test yeşil; `pip check` temiz; source grep tertemiz;
+canlı eval regresyonsuz (freshness birebir aynı, groundedness 5.0). Davranış-koruyucu (yalnız ölü kod silindi).
+
 ---
 
 ## Hedef
@@ -65,14 +74,13 @@ niyetinde retrieval'da recency-pencere (Y3, Pinecone `date_ts $gte` + otomatik g
 sohbet çok dilli.** Marka: **Humanitaria**. Şu an yerel geliştirme aşamasında.
 
 ## Mevcut Durum (çalışıyor)
-- **Aktif config (.env):** `CHAT_LLM_PROVIDER=gemini`, `VECTOR_STORE_PROVIDER=pinecone`, `EMBED_PROVIDER=gemini`,
-  `QUERY_LLM_PROVIDER=gemini` → **tamamen bulut, Ollama gerekmez**.
+- **Mimari:** Gemini (chat/query/embed) + Pinecone — **tek sağlayıcı, provider flag YOK** (chroma/ollama kaldırıldı). Tamamen bulut.
 - **Chat LLM:** Gemini `gemini-2.5-flash`. System prompt İngilizce; yanıt kullanıcının dilinde. Rule 9 = recency.
-- **Embedding:** Gemini `gemini-embedding-001` (3072-dim). **Vector DB:** Pinecone `reliefweb-docs` (31.508 vektör).
+- **Embedding:** Gemini `gemini-embedding-001` (3072-dim, `EMBED_DIM=3072`). **Vector DB:** Pinecone `reliefweb-docs` (31.508 vektör).
 - **Retrieval:** güncellik-farkında + alaka reranker'ı (truncate=END) çalışıyor; recency blend ham alaka skoruyla. Config: `RECENCY_RERANK_POOL=10`, `RECENCY_BOOST_FACTOR=0.6`.
 - **Backend:** FastAPI, **port 8010**. SSE streaming. Kod değişikliğinden sonra sunucuyu restart et (`--reload` yok).
 - **Frontend:** Vue 3, Humanitaria (yeşil/antrasit, dark+light), İngilizce. `frontend/dist/` gitignore'da (`npm run build`).
-- **Test:** 281 backend + 51 frontend. **Judge: groundedness 5.0/5, relevance 5.0/5.**
+- **Test:** 261 backend + 51 frontend. **Judge: groundedness 5.0/5, relevance ~4.8-5.0/5 (judge varyansı).**
 
 ## Veri Durumu
 - **Pinecone `reliefweb-docs`: 31.508 vektör (3072-dim).** Kaynak url'leri `/node/{id}` (200).
@@ -92,7 +100,8 @@ sohbet çok dilli.** Marka: **Humanitaria**. Şu an yerel geliştirme aşamasın
 > **Bash gotcha:** kabuk cwd kalıcı; her git/komutta önce `cd "C:/Projeler/Reliefweb_RAG_System"` (mutlak). `cd frontend` sonrası geri dönmeyi unutma.
 
 ## Commit / Push Durumu
-- **Hepsi `origin/master`'a PUSH'LANDI** (2026-06-02): önceki seans (5) + recency feature (7) + reranker fix `e4624b2` + skor-blend `f9d8a4c` + MEMORY.
+- `origin/master`'a PUSH'LANDI: önceki seans + recency feature + reranker fix + skor-blend + README/.env.example docs (`ca1c262`).
+- **chroma/ollama kaldırma 4 commit (`35db3d5`,`c982168`,`ec67109`,`f8a832a`) + bu MEMORY** push'landı (kullanıcı onayıyla 2026-06-02).
 - Remote: **https://github.com/berkcansuner/reliefweb-rag** (private).
 
 ## Sıradaki Adımlar (Faz 2 devamı — kullanıcı yönlendirir)
