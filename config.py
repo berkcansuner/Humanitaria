@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     # Google Gemini (chat üretim LLM'i — OpenAI uyumlu endpoint)
     GEMINI_API_KEY: str = ""
     GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
-    GEMINI_LLM_MODEL: str = "gemini-2.5-pro"   # Tier 1'de kullanılabilir; .env'den değiştirilebilir
+    GEMINI_LLM_MODEL: str = "gemini-3.5-flash"   # chat yanıtı (GA 2026; multilingual/RAG)
     GEMINI_QUERY_MODEL: str = "gemini-2.5-flash"  # filtre çıkarma için hızlı/ucuz model
 
     # ReliefWeb
