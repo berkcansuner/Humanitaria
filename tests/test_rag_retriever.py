@@ -250,3 +250,20 @@ class TestRerankByRelevance:
              patch("rag.retriever._get_pinecone_client", return_value=client):
             out = rerank_by_relevance("q", docs, top_n=2)
         assert out == docs[:2]
+
+    def test_passes_truncate_end_to_reranker(self):
+        # bge-reranker-v2-m3 rejects query+document pairs over 1024 tokens, and our
+        # chunks can exceed that. Pinecone truncates long pairs when asked, so the
+        # rerank call must pass parameters={"truncate": "END"} or it 400s and the
+        # relevance signal is silently lost to the MMR fallback.
+        s = MagicMock(RERANK_ENABLED=True, VECTOR_STORE_PROVIDER="pinecone",
+                      RERANK_MODEL="bge-reranker-v2-m3")
+        docs = [_doc("a"), _doc("b")]
+        result = MagicMock()
+        result.data = [MagicMock(index=0), MagicMock(index=1)]
+        client = MagicMock()
+        client.inference.rerank.return_value = result
+        with patch("rag.retriever.get_settings", return_value=s), \
+             patch("rag.retriever._get_pinecone_client", return_value=client):
+            rerank_by_relevance("q", docs, top_n=2)
+        assert client.inference.rerank.call_args.kwargs.get("parameters") == {"truncate": "END"}

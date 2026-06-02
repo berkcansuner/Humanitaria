@@ -193,6 +193,10 @@ def rerank_by_relevance(query: str, docs: List[Document], top_n: int) -> List[Do
             documents=[doc.page_content for doc in docs],
             top_n=min(top_n, len(docs)),
             return_documents=False,
+            # Chunks can exceed bge-reranker-v2-m3's 1024-token query+document limit
+            # (chunker sizes by word count). Without this the call 400s and the
+            # relevance signal is silently lost to the MMR fallback below.
+            parameters={"truncate": "END"},
         )
         return [docs[item.index] for item in result.data]
     except Exception as e:
