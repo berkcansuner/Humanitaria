@@ -5,10 +5,30 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from datetime import date
+
+from dateutil.relativedelta import relativedelta
+
 from ingestion.pipeline import run_pipeline, IngestionStats
 from ingestion.client import ENDPOINT_CONFIG
+from config import get_settings
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_date_from(explicit, lookback_years, today=None):
+    """Resolve the ingestion date floor.
+
+    An explicit --date-from always wins. Otherwise, when lookback_years > 0,
+    default to (today - N years) so manual ingests don't pull ancient ReliefWeb
+    history. lookback_years <= 0 disables the floor (full history).
+    """
+    if explicit:
+        return explicit
+    if lookback_years and lookback_years > 0:
+        today = today or date.today()
+        return (today - relativedelta(years=lookback_years)).strftime("%Y-%m-%d")
+    return None
 
 
 def _print_summary(all_stats: dict[str, IngestionStats]) -> None:
@@ -56,6 +76,11 @@ def main():
     )
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
+    date_from = _resolve_date_from(args.date_from, get_settings().INGEST_LOOKBACK_YEARS)
+    if date_from and not args.date_from:
+        logger.info("No --date-from given; applying freshness floor %s "
+                    "(INGEST_LOOKBACK_YEARS=%d). Pass --date-from to override.",
+                    date_from, get_settings().INGEST_LOOKBACK_YEARS)
     if args.country:
         # Per-country runs guarantee depth for each country instead of letting
         # high-volume countries dominate a single global date-sorted fetch.
@@ -65,11 +90,11 @@ def main():
         all_stats = {}
         for code in args.country:
             stats = run_pipeline(limit=args.limit, force=False, endpoints=args.endpoints,
-                                 date_from=args.date_from, country=code)
+                                 date_from=date_from, country=code)
             for ep, st in stats.items():
                 all_stats[f"{ep}:{code}"] = st
     else:
-        all_stats = run_pipeline(limit=args.limit, force=args.force, endpoints=args.endpoints, date_from=args.date_from)
+        all_stats = run_pipeline(limit=args.limit, force=args.force, endpoints=args.endpoints, date_from=date_from)
     _print_summary(all_stats)
     total_failed = sum(s.failed for s in all_stats.values())
     total_succeeded = sum(s.succeeded for s in all_stats.values())
