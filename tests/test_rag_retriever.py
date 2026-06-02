@@ -102,8 +102,7 @@ class TestProviderVectorstore:
 
     def test_pinecone_vectorstore_built(self):
         from rag.retriever import _get_vectorstore
-        s = MagicMock(EMBED_PROVIDER="gemini",
-                     PINECONE_API_KEY="k", PINECONE_INDEX="reliefweb-docs", PINECONE_NAMESPACE="")
+        s = MagicMock(PINECONE_API_KEY="k", PINECONE_INDEX="reliefweb-docs", PINECONE_NAMESPACE="")
         with patch("rag.retriever.get_settings", return_value=s), \
              patch("rag.retriever.get_embeddings", return_value=MagicMock()), \
              patch("rag.retriever.Pinecone") as MockPC, \
@@ -115,8 +114,7 @@ class TestProviderVectorstore:
 
     def test_vectorstore_result_is_cached(self):
         from rag.retriever import _get_vectorstore
-        s = MagicMock(EMBED_PROVIDER="gemini",
-                     PINECONE_API_KEY="k", PINECONE_INDEX="reliefweb-docs", PINECONE_NAMESPACE="")
+        s = MagicMock(PINECONE_API_KEY="k", PINECONE_INDEX="reliefweb-docs", PINECONE_NAMESPACE="")
         with patch("rag.retriever.get_settings", return_value=s), \
              patch("rag.retriever.get_embeddings", return_value=MagicMock()), \
              patch("rag.retriever.Pinecone") as MockPC, \
