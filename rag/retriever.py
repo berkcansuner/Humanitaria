@@ -198,7 +198,14 @@ def rerank_by_relevance(query: str, docs: List[Document], top_n: int) -> List[Do
             # relevance signal is silently lost to the MMR fallback below.
             parameters={"truncate": "END"},
         )
-        return [docs[item.index] for item in result.data]
+        reranked = []
+        for item in result.data:
+            doc = docs[item.index]
+            # Attach the (0-1) relevance score so rerank_by_recency can blend it
+            # with recency instead of the steep 1/(1+i) position fallback.
+            doc.metadata["_relevance_score"] = float(item.score)
+            reranked.append(doc)
+        return reranked
     except Exception as e:
         logger.warning("Relevance rerank failed, keeping original order: %s", e)
         return docs[:top_n]
@@ -221,8 +228,13 @@ def apply_date_filter(docs: List[Document], date_filter: Optional[Dict[str, Any]
 def rerank_by_recency(docs: List[Document], decay_factor: Optional[float] = None) -> List[Document]:
     """Re-rank retrieved documents to prioritize recent ones.
 
-    Blends MMR relevance position with exponential document recency:
-    score = (1 - decay_factor) * mmr_rank_score + decay_factor * recency_score
+    Blends a relevance component with exponential document recency:
+    score = (1 - decay_factor) * relevance + decay_factor * recency_score
+
+    relevance is the raw Pinecone reranker score (0-1) when present on every doc
+    (set by rerank_by_relevance); otherwise it falls back to the position-based
+    1/(1+i). Using the raw score lets recency matter among comparably-relevant
+    docs, instead of the steep position decay pinning the top-ranked doc.
 
     recency_score = exp(-days_ago / 365)  — always positive, 1.0 at 0 days, ~0.37 at 1 yr
     Documents without a date get recency_score = 0.
@@ -237,6 +249,9 @@ def rerank_by_recency(docs: List[Document], decay_factor: Optional[float] = None
     factor = decay_factor if decay_factor is not None else settings.DATE_DECAY_FACTOR
     today = datetime.now()
 
+    rel_scores = [doc.metadata.get("_relevance_score") for doc in docs]
+    use_scores = len(docs) > 1 and all(s is not None for s in rel_scores)
+
     parsed_dates: List[Optional[datetime]] = []
     for doc in docs:
         date_str = doc.metadata.get("date", "")
@@ -250,13 +265,14 @@ def rerank_by_recency(docs: List[Document], decay_factor: Optional[float] = None
 
     scored = []
     for i, (doc, doc_date) in enumerate(zip(docs, parsed_dates)):
-        mmr_score = 1.0 / (1 + i)  # Position 0=1.0, 1=0.5, 2=0.33, ...
+        # Raw Pinecone relevance score when available, else position fallback.
+        relevance = rel_scores[i] if use_scores else 1.0 / (1 + i)
         if doc_date is not None:
             days_ago = max(0, (today - doc_date).days)
             recency_score = math.exp(-days_ago / 365.0)
         else:
             recency_score = 0.0
-        blended = (1 - factor) * mmr_score + factor * recency_score
+        blended = (1 - factor) * relevance + factor * recency_score
         scored.append((blended, doc))
 
     scored.sort(key=lambda x: x[0], reverse=True)

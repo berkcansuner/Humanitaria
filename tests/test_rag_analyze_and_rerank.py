@@ -119,3 +119,42 @@ class TestRerankByRecency:
         assert len(result) == 2
         # Same dates, original order preserved (MMR rank dominates)
         assert result[0].metadata["title"] == "A"
+
+
+class TestRerankByRecencyWithScores:
+    """When docs carry a Pinecone _relevance_score, the blend uses the raw score
+    (not the steep 1/(1+i) position decay), so recency can matter among
+    comparably-relevant docs."""
+
+    def _doc(self, title, score, days_ago):
+        from datetime import timedelta
+        now = datetime.now()
+        return Document(page_content=title, metadata={
+            "title": title,
+            "_relevance_score": score,
+            "date": (now - timedelta(days=days_ago)).strftime("%Y-%m-%d"),
+        })
+
+    def test_raw_score_lets_recent_doc_at_depth_win(self):
+        # Mirrors the real Ukraine case: a moderately-recent doc (97d) ranked
+        # LOWER by relevance outranks an older (260d) top-relevance doc once the
+        # compressed raw scores replace the steep position decay. The old
+        # position-based blend kept the position-0 doc first.
+        docs = [
+            self._doc("A", 0.25, 260),    # pos 0, older, top relevance
+            self._doc("F1", 0.22, 1000),
+            self._doc("F2", 0.20, 1000),
+            self._doc("D", 0.15, 97),     # pos 3, recent, lower relevance
+        ]
+        out = rerank_by_recency(docs, decay_factor=0.6)
+        assert out[0].metadata["title"] == "D"
+
+    def test_relevance_score_breaks_tie_for_same_date(self):
+        # Same date → recency equal → the higher raw relevance score wins.
+        # (Position-based would have kept the first-listed doc on top.)
+        docs = [
+            self._doc("low", 0.10, 10),
+            self._doc("high", 0.95, 10),
+        ]
+        out = rerank_by_recency(docs, decay_factor=0.6)
+        assert out[0].metadata["title"] == "high"

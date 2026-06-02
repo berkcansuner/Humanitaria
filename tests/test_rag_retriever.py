@@ -267,3 +267,20 @@ class TestRerankByRelevance:
              patch("rag.retriever._get_pinecone_client", return_value=client):
             rerank_by_relevance("q", docs, top_n=2)
         assert client.inference.rerank.call_args.kwargs.get("parameters") == {"truncate": "END"}
+
+    def test_attaches_relevance_score_to_metadata(self):
+        # The Pinecone relevance score is attached so rerank_by_recency can blend
+        # it with recency instead of using the steep position-based fallback.
+        s = MagicMock(RERANK_ENABLED=True, VECTOR_STORE_PROVIDER="pinecone",
+                      RERANK_MODEL="bge-reranker-v2-m3")
+        docs = [_doc("a"), _doc("b")]
+        result = MagicMock()
+        result.data = [MagicMock(index=1, score=0.91), MagicMock(index=0, score=0.42)]
+        client = MagicMock()
+        client.inference.rerank.return_value = result
+        with patch("rag.retriever.get_settings", return_value=s), \
+             patch("rag.retriever._get_pinecone_client", return_value=client):
+            out = rerank_by_relevance("q", docs, top_n=2)
+        assert [d.metadata["doc_id"] for d in out] == ["b", "a"]
+        assert out[0].metadata["_relevance_score"] == 0.91
+        assert out[1].metadata["_relevance_score"] == 0.42
