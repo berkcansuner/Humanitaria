@@ -1,59 +1,45 @@
-import pytest
 from ingestion.chunker import chunk_document
 
 
-class TestChunker:
-    def test_chunks_preserves_metadata(self):
-        doc = {
-            "id": "abc",
-            "url": "https://example.com",
-            "title": "Title",
-            "body": "Word " * 200,
-            "date": "2026-04-01",
-            "country": "Iran",
-            "theme": "Food",
-            "source": "WFP",
-            "format": "Report",
-            "doctype": "report",
-        }
-        chunks = chunk_document(doc, chunk_size=50, chunk_overlap=10)
-        assert len(chunks) > 1
-        for c in chunks:
-            assert c["metadata"]["title"] == "Title"
-            assert c["metadata"]["country"] == "Iran"
-            assert c["metadata"]["url"] == "https://example.com"
-            assert c["metadata"]["doctype"] == "report"
-            assert "content" in c
-
-    def test_short_body_single_chunk(self):
-        doc = {
-            "id": "abc", "url": "https://example.com", "title": "T",
-            "body": "Short body.", "date": "", "country": "", "theme": "", "source": "", "format": "", "doctype": "disaster"
-        }
-        chunks = chunk_document(doc, chunk_size=100, chunk_overlap=10)
-        assert len(chunks) == 1
-        assert chunks[0]["content"] == "Short body."
-        assert chunks[0]["metadata"]["doctype"] == "disaster"
-
-    def test_doctype_in_metadata(self):
-        doc = {
-            "id": "xyz", "url": "u", "title": "T", "body": "text",
-            "date": "", "country": "", "theme": "", "source": "", "format": "", "doctype": "country"
-        }
-        chunks = chunk_document(doc)
-        assert chunks[0]["metadata"]["doctype"] == "country"
+def _doc(body, **kw):
+    base = {"id": "abc", "url": "u", "title": "T", "country": "Syria", "theme": "Health",
+            "date": "2026-05-01", "source": "WHO", "format": "Report", "doctype": "report"}
+    base.update(kw); base["body"] = body
+    return base
 
 
-def test_chunk_metadata_has_numeric_date_ts():
-    from ingestion.chunker import chunk_document
-    doc = {"id": "abc", "body": "word " * 10, "date": "2024-03-15"}
-    chunks = chunk_document(doc, chunk_size=5, chunk_overlap=1)
-    assert chunks
-    assert chunks[0]["metadata"]["date_ts"] == 20240315
+def test_empty_body_returns_no_chunks():
+    assert chunk_document(_doc("")) == []
+    assert chunk_document(_doc("   ")) == []
 
 
-def test_chunk_metadata_date_ts_zero_when_missing():
-    from ingestion.chunker import chunk_document
-    doc = {"id": "abc", "body": "word " * 10, "date": ""}
-    chunks = chunk_document(doc, chunk_size=5, chunk_overlap=1)
+def test_long_body_splits_into_bounded_chunks():
+    body = ("Bir cümle. " * 400)  # ~4400 chars
+    chunks = chunk_document(_doc(body), chunk_size=1500, chunk_overlap=200)
+    assert len(chunks) >= 3
+    # Each chunk respects the size bound (allow a small separator slack).
+    assert all(len(c["content"]) <= 1500 + 50 for c in chunks)
+
+
+def test_chunk_metadata_and_ids_preserved():
+    chunks = chunk_document(_doc("Bir cümle. " * 400), chunk_size=1500, chunk_overlap=200)
+    c = chunks[0]
+    assert c["id"] == "abc_0"
+    assert c["metadata"]["doc_id"] == "abc"
+    assert c["metadata"]["country"] == "Syria"
+    assert c["metadata"]["date"] == "2026-05-01"
+    assert c["metadata"]["date_ts"] == 20260501
+    assert c["metadata"]["doctype"] == "report"
+    # ids are doc_id-prefixed + ordinal (orphan cleanup uses the "{doc_id}_" prefix)
+    assert [x["id"] for x in chunks] == [f"abc_{i}" for i in range(len(chunks))]
+
+
+def test_invalid_date_gives_zero_ts():
+    chunks = chunk_document(_doc("Bir cümle. " * 400, date=""), chunk_size=1500, chunk_overlap=200)
     assert chunks[0]["metadata"]["date_ts"] == 0
+
+
+def test_short_body_single_chunk():
+    chunks = chunk_document(_doc("Kısa bir gövde."), chunk_size=1500, chunk_overlap=200)
+    assert len(chunks) == 1
+    assert chunks[0]["content"] == "Kısa bir gövde."

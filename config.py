@@ -35,8 +35,8 @@ class Settings(BaseSettings):
     PINECONE_NAMESPACE: str = ""
 
     # RAG
-    CHUNK_SIZE: int = 800
-    CHUNK_OVERLAP: int = 100
+    CHUNK_SIZE: int = 1500        # characters per chunk (recursive splitter)
+    CHUNK_OVERLAP: int = 200
     TOP_K_RETRIEVAL: int = 5
     MMR_FETCH_K: int = 20          # candidate pool for MMR diversity
     MMR_LAMBDA: float = 0.5        # 0=max diversity, 1=max relevance

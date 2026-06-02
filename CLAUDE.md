@@ -77,8 +77,8 @@ EMBED_DIM=3072                  # gemini-embedding-001 → 3072
 EMBED_BATCH_SIZE=32
 
 # RAG retrieval
-CHUNK_SIZE=800
-CHUNK_OVERLAP=100
+CHUNK_SIZE=1500                 # karakter (recursive ~1500 char splitter)
+CHUNK_OVERLAP=200
 TOP_K_RETRIEVAL=5
 MMR_FETCH_K=20
 MMR_LAMBDA=0.5
