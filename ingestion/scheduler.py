@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 def _watermark_path() -> Path:
-    """Watermark file lives alongside the Chroma DB so it's gitignored too."""
-    return Path(get_settings().CHROMA_DB_PATH) / ".last_ingest.json"
+    """Return the path to the incremental ingest watermark file."""
+    return Path(get_settings().INGEST_WATERMARK_PATH)
 
 
 def _load_watermark() -> Optional[str]:

@@ -2,44 +2,10 @@ import pytest
 from unittest.mock import patch, MagicMock
 from langchain_core.documents import Document
 from rag.retriever import (
-    build_retriever, _get_vectorstore, _build_chroma_filter, _build_pinecone_filter,
+    build_retriever, _get_vectorstore, _build_pinecone_filter,
     dedupe_by_document, rerank_by_relevance,
 )
 from config import get_settings
-
-
-class TestChromaFilter:
-    def test_empty_filter_returns_none(self):
-        assert _build_chroma_filter({}) is None
-        assert _build_chroma_filter(None) is None
-
-    def test_single_field_country_uses_in_for_aliased(self):
-        # Countries with full ReliefWeb names get $in with both forms
-        result = _build_chroma_filter({"country": "Iran"})
-        assert result == {"country": {"$in": ["Iran", "Iran (Islamic Republic of)"]}}
-
-    def test_single_field_country_eq_for_non_aliased(self):
-        # Countries without a known alias get $eq
-        result = _build_chroma_filter({"country": "Yemen"})
-        assert result == {"country": {"$eq": "Yemen"}}
-
-    def test_date_field_excluded(self):
-        # Date is excluded from Chroma (applied in Python post-retrieval)
-        result = _build_chroma_filter({"date": {"$gte": "2024-01-01"}})
-        assert result is None
-
-    def test_multi_field_uses_and(self):
-        result = _build_chroma_filter({"country": "Iran", "theme": "Health"})
-        assert result == {"$and": [
-            {"country": {"$in": ["Iran", "Iran (Islamic Republic of)"]}},
-            {"theme": {"$eq": "Health"}},
-        ]}
-
-    def test_date_excluded_from_chroma_filter(self):
-        # Date filtering is done in Python post-retrieval; ChromaDB $gte only supports numbers
-        result = _build_chroma_filter({"country": "Iran", "date": {"$gte": "2024-01-01"}})
-        # date key is stripped, only country remains
-        assert result == {"country": {"$in": ["Iran", "Iran (Islamic Republic of)"]}}
 
 
 class TestRetriever:
@@ -94,31 +60,6 @@ class TestRetriever:
                 },
             )
 
-    def test_build_retriever_date_excluded_from_chroma(self):
-        # Force chroma provider so the test is independent of the ambient .env.
-        with patch("rag.retriever._get_vectorstore") as mock_get_vs, \
-             patch.object(get_settings(), "VECTOR_STORE_PROVIDER", "chroma"):
-            mock_vs = MagicMock()
-            mock_vs.as_retriever.return_value = MagicMock()
-            mock_get_vs.return_value = mock_vs
-            build_retriever(filter={"country": "Iran", "date": {"$gte": "2024-01-01"}})
-            call_kwargs = mock_vs.as_retriever.call_args[1]
-            chroma_filter = call_kwargs["search_kwargs"]["filter"]
-            # Only country remains; date is applied in Python post-retrieval
-            assert chroma_filter == {"country": {"$in": ["Iran", "Iran (Islamic Republic of)"]}}
-
-    def test_get_vectorstore_caches_chroma(self):
-        # Force chroma provider so the test is independent of the ambient .env.
-        with patch("rag.retriever.Chroma") as MockChroma, \
-             patch("rag.retriever.get_embeddings", return_value=MagicMock()), \
-             patch.object(get_settings(), "VECTOR_STORE_PROVIDER", "chroma"):
-            mock_vs1 = MagicMock()
-            MockChroma.return_value = mock_vs1
-            vs1 = _get_vectorstore()
-            vs2 = _get_vectorstore()
-            assert vs1 is vs2
-            MockChroma.assert_called_once()
-
 
 class TestPineconeFilter:
     def test_empty_returns_none(self):
@@ -159,9 +100,9 @@ class TestProviderVectorstore:
         from rag.retriever import _get_vectorstore
         _get_vectorstore.cache_clear()
 
-    def test_pinecone_vectorstore_built_when_provider_pinecone(self):
+    def test_pinecone_vectorstore_built(self):
         from rag.retriever import _get_vectorstore
-        s = MagicMock(VECTOR_STORE_PROVIDER="pinecone", EMBED_PROVIDER="gemini",
+        s = MagicMock(EMBED_PROVIDER="gemini",
                      PINECONE_API_KEY="k", PINECONE_INDEX="reliefweb-docs", PINECONE_NAMESPACE="")
         with patch("rag.retriever.get_settings", return_value=s), \
              patch("rag.retriever.get_embeddings", return_value=MagicMock()), \
@@ -172,16 +113,22 @@ class TestProviderVectorstore:
             _get_vectorstore()
             MockPVS.assert_called_once()
 
-    def test_chroma_vectorstore_built_when_provider_chroma(self):
+    def test_vectorstore_result_is_cached(self):
         from rag.retriever import _get_vectorstore
-        s = MagicMock(VECTOR_STORE_PROVIDER="chroma", EMBED_PROVIDER="ollama",
-                     CHROMA_COLLECTION="reliefweb_docs", CHROMA_DB_PATH="./chroma_db")
+        s = MagicMock(EMBED_PROVIDER="gemini",
+                     PINECONE_API_KEY="k", PINECONE_INDEX="reliefweb-docs", PINECONE_NAMESPACE="")
         with patch("rag.retriever.get_settings", return_value=s), \
              patch("rag.retriever.get_embeddings", return_value=MagicMock()), \
-             patch("rag.retriever.Chroma") as MockChroma:
+             patch("rag.retriever.Pinecone") as MockPC, \
+             patch("rag.retriever.PineconeVectorStore") as MockPVS:
+            MockPC.return_value.Index.return_value = MagicMock()
+            mock_vs = MagicMock()
+            MockPVS.return_value = mock_vs
             _get_vectorstore.cache_clear()
-            _get_vectorstore()
-            MockChroma.assert_called_once()
+            vs1 = _get_vectorstore()
+            vs2 = _get_vectorstore()
+            assert vs1 is vs2
+            MockPVS.assert_called_once()
 
 
 def _doc(doc_id, content="text", url=None):
@@ -210,24 +157,22 @@ class TestDedupeByDocument:
 
 
 class TestRerankByRelevance:
-    def test_noop_when_not_pinecone(self):
-        # Chroma provider: rerank is skipped, list truncated to top_n.
-        s = MagicMock(RERANK_ENABLED=True, VECTOR_STORE_PROVIDER="chroma")
-        docs = [_doc("a"), _doc("b"), _doc("c")]
-        with patch("rag.retriever.get_settings", return_value=s):
-            out = rerank_by_relevance("q", docs, top_n=2)
-        assert out == docs[:2]
-
     def test_noop_when_disabled(self):
-        s = MagicMock(RERANK_ENABLED=False, VECTOR_STORE_PROVIDER="pinecone")
+        s = MagicMock(RERANK_ENABLED=False)
         docs = [_doc("a"), _doc("b")]
         with patch("rag.retriever.get_settings", return_value=s):
             out = rerank_by_relevance("q", docs, top_n=5)
         assert out == docs
 
+    def test_noop_when_single_doc(self):
+        s = MagicMock(RERANK_ENABLED=True)
+        docs = [_doc("a")]
+        with patch("rag.retriever.get_settings", return_value=s):
+            out = rerank_by_relevance("q", docs, top_n=5)
+        assert out == docs
+
     def test_reorders_by_pinecone_result(self):
-        s = MagicMock(RERANK_ENABLED=True, VECTOR_STORE_PROVIDER="pinecone",
-                      RERANK_MODEL="bge-reranker-v2-m3")
+        s = MagicMock(RERANK_ENABLED=True, RERANK_MODEL="bge-reranker-v2-m3")
         docs = [_doc("a"), _doc("b"), _doc("c")]
         # Pinecone returns indices in relevance order: c, a
         result = MagicMock()
@@ -241,8 +186,7 @@ class TestRerankByRelevance:
         client.inference.rerank.assert_called_once()
 
     def test_falls_back_to_original_order_on_error(self):
-        s = MagicMock(RERANK_ENABLED=True, VECTOR_STORE_PROVIDER="pinecone",
-                      RERANK_MODEL="bge-reranker-v2-m3")
+        s = MagicMock(RERANK_ENABLED=True, RERANK_MODEL="bge-reranker-v2-m3")
         docs = [_doc("a"), _doc("b"), _doc("c")]
         client = MagicMock()
         client.inference.rerank.side_effect = RuntimeError("network down")
@@ -256,8 +200,7 @@ class TestRerankByRelevance:
         # chunks can exceed that. Pinecone truncates long pairs when asked, so the
         # rerank call must pass parameters={"truncate": "END"} or it 400s and the
         # relevance signal is silently lost to the MMR fallback.
-        s = MagicMock(RERANK_ENABLED=True, VECTOR_STORE_PROVIDER="pinecone",
-                      RERANK_MODEL="bge-reranker-v2-m3")
+        s = MagicMock(RERANK_ENABLED=True, RERANK_MODEL="bge-reranker-v2-m3")
         docs = [_doc("a"), _doc("b")]
         result = MagicMock()
         result.data = [MagicMock(index=0), MagicMock(index=1)]
@@ -271,8 +214,7 @@ class TestRerankByRelevance:
     def test_attaches_relevance_score_to_metadata(self):
         # The Pinecone relevance score is attached so rerank_by_recency can blend
         # it with recency instead of using the steep position-based fallback.
-        s = MagicMock(RERANK_ENABLED=True, VECTOR_STORE_PROVIDER="pinecone",
-                      RERANK_MODEL="bge-reranker-v2-m3")
+        s = MagicMock(RERANK_ENABLED=True, RERANK_MODEL="bge-reranker-v2-m3")
         docs = [_doc("a"), _doc("b")]
         result = MagicMock()
         result.data = [MagicMock(index=1, score=0.91), MagicMock(index=0, score=0.42)]

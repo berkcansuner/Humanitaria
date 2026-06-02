@@ -21,14 +21,8 @@ class Settings(BaseSettings):
     RELIEFWEB_APPNAME: str = ""
     RELIEFWEB_BASE_URL: str = "https://api.reliefweb.int/v2"
 
-    # ChromaDB
-    CHROMA_DB_PATH: str = "./chroma_db"
-    CHROMA_COLLECTION: str = "reliefweb_docs"
     EMBED_DIM: int = 3072          # Gemini gemini-embedding-001 → 3072
     EMBED_BATCH_SIZE: int = 32
-
-    # Vector store provider: "chroma" veya "pinecone"
-    VECTOR_STORE_PROVIDER: str = "chroma"
 
     # Gemini embedding (OpenAI-uyumlu endpoint; GEMINI_API_KEY/GEMINI_BASE_URL yeniden kullanılır)
     GEMINI_EMBED_MODEL: str = "gemini-embedding-001"
@@ -76,12 +70,13 @@ class Settings(BaseSettings):
     SESSION_MAX_MEMORY: int = 1000    # max in-memory sessions before LRU eviction
     REDIS_URL: str = ""               # e.g. redis://localhost:6379 — empty = in-memory
     SESSION_TTL_HOURS: int = 24       # Redis session TTL
-    # Persistent conversation store (SQLite, file-based like CHROMA_DB_PATH).
+    # Persistent conversation store (SQLite, file-based).
     # Holds the named conversations + messages shown in the sidebar.
     CONVERSATION_DB_PATH: str = "./conversations.db"
 
     # Ingestion
     FETCH_PDF_CONTENT: bool = False   # download and index PDF attachments (slow, opt-in)
+    INGEST_WATERMARK_PATH: str = "./.last_ingest.json"   # incremental ingest watermark
 
 
 @lru_cache

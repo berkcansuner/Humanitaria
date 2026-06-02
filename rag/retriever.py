@@ -6,7 +6,6 @@ from typing import Dict, Any, List, Optional
 
 from langchain_core.documents import Document
 from langchain_core.vectorstores import VectorStore
-from langchain_chroma import Chroma
 from langchain_pinecone import PineconeVectorStore
 from pinecone import Pinecone
 
@@ -20,19 +19,13 @@ logger = logging.getLogger(__name__)
 def _get_vectorstore() -> VectorStore:
     settings = get_settings()
     embeddings = get_embeddings()
-    if settings.VECTOR_STORE_PROVIDER == "pinecone":
-        pc = Pinecone(api_key=settings.PINECONE_API_KEY)
-        index = pc.Index(settings.PINECONE_INDEX)
-        return PineconeVectorStore(
-            index=index,
-            embedding=embeddings,
-            text_key="text",
-            namespace=settings.PINECONE_NAMESPACE or None,
-        )
-    return Chroma(
-        collection_name=settings.CHROMA_COLLECTION,
-        persist_directory=settings.CHROMA_DB_PATH,
-        embedding_function=embeddings,
+    pc = Pinecone(api_key=settings.PINECONE_API_KEY)
+    index = pc.Index(settings.PINECONE_INDEX)
+    return PineconeVectorStore(
+        index=index,
+        embedding=embeddings,
+        text_key="text",
+        namespace=settings.PINECONE_NAMESPACE or None,
     )
 
 
@@ -53,42 +46,6 @@ _COUNTRY_RELIEFWEB_ALIASES: Dict[str, str] = {
 }
 
 
-def _build_chroma_filter(filters: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    """Convert a flat filter dict to explicit ChromaDB operator format.
-
-    Chroma 1.0+ requires an explicit $and wrapper for multi-field queries.
-    Single-field filters are passed as-is to avoid unnecessary wrapping.
-
-    Country uses $in with both the canonical short name and the full ReliefWeb
-    official name so queries work on both current data (full names) and
-    future re-ingested data (normalized short names via parser).
-    """
-    if not filters:
-        return None
-    conditions = []
-    for key, val in filters.items():
-        if key == "date":
-            # ChromaDB 1.5.9 only supports $gte/$lte for numeric values, not strings.
-            # Date filtering is handled in Python after retrieval (see routes/chat.py).
-            pass
-        elif key == "country":
-            full_name = _COUNTRY_RELIEFWEB_ALIASES.get(val)
-            if full_name:
-                conditions.append({key: {"$in": [val, full_name]}})
-            else:
-                conditions.append({key: {"$eq": val}})
-        elif isinstance(val, dict):
-            # Other operator dicts (e.g. {"$in": [...]}) passed through as-is
-            conditions.append({key: val})
-        else:
-            conditions.append({key: {"$eq": val}})
-    if not conditions:
-        return None
-    if len(conditions) == 1:
-        return conditions[0]
-    return {"$and": conditions}
-
-
 def _date_to_int(date_str: str) -> Optional[int]:
     """'2024-01-01' -> 20240101; invalid/empty -> None."""
     try:
@@ -102,8 +59,8 @@ def _date_to_int(date_str: str) -> Optional[int]:
 def _build_pinecone_filter(filters: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     """Pinecone metadata filter (keys are implicitly AND-ed).
 
-    Date is pushed into the DB as a numeric `date_ts` $gte range — the feature
-    ChromaDB's string $gte could not provide.
+    Date is pushed into the DB as a numeric `date_ts` $gte range for
+    server-side date filtering.
     """
     if not filters:
         return None
@@ -133,10 +90,7 @@ def build_retriever(filter: Optional[Dict[str, Any]] = None, k: Optional[int] = 
     # k may be raised by the caller to fetch a larger candidate pool for
     # dedup + reranking; defaults to the final top-k.
     k = k or settings.TOP_K_RETRIEVAL
-    if settings.VECTOR_STORE_PROVIDER == "pinecone":
-        store_filter = _build_pinecone_filter(filter)
-    else:
-        store_filter = _build_chroma_filter(filter)
+    store_filter = _build_pinecone_filter(filter)
     # When a date filter is present, fetch more candidates so post-filtering
     # in Python has enough docs to work with after the date cut.
     has_date_filter = isinstance(filter, dict) and "date" in filter
@@ -178,13 +132,11 @@ def rerank_by_relevance(query: str, docs: List[Document], top_n: int) -> List[Do
     """Re-score candidates against the query with Pinecone's hosted reranker.
 
     Adds a true query-relevance signal on top of MMR retrieval. Active only when
-    the Pinecone provider is used and RERANK_ENABLED; otherwise (or on any error)
+    RERANK_ENABLED and there is more than one doc; otherwise (or on any error)
     the original order is preserved (truncated to top_n) so a request never fails.
     """
     settings = get_settings()
-    if (not settings.RERANK_ENABLED
-            or settings.VECTOR_STORE_PROVIDER != "pinecone"
-            or len(docs) <= 1):
+    if not settings.RERANK_ENABLED or len(docs) <= 1:
         return docs[:top_n]
     try:
         result = _get_pinecone_client().inference.rerank(
@@ -212,10 +164,9 @@ def rerank_by_relevance(query: str, docs: List[Document], top_n: int) -> List[Do
 
 
 def apply_date_filter(docs: List[Document], date_filter: Optional[Dict[str, Any]]) -> List[Document]:
-    """Post-retrieval date filter using Python string comparison (YYYY-MM-DD is lexicographic).
+    """Post-retrieval date filter (YYYY-MM-DD lexicographic compare).
 
-    ChromaDB 1.5.9 does not support $gte/$lte on string metadata fields,
-    so date filtering is done here after retrieval.
+    Defensive layer on top of Pinecone's server-side date_ts $gte filter.
     """
     if not date_filter or not isinstance(date_filter, dict):
         return docs

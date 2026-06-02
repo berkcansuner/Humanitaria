@@ -92,9 +92,6 @@ def main():
     args = ap.parse_args()
 
     settings = get_settings()
-    if settings.VECTOR_STORE_PROVIDER != "pinecone":
-        raise SystemExit(f"VECTOR_STORE_PROVIDER is {settings.VECTOR_STORE_PROVIDER!r}, expected 'pinecone'")
-
     pc = Pinecone(api_key=settings.PINECONE_API_KEY)
     index = pc.Index(settings.PINECONE_INDEX)
     namespace = settings.PINECONE_NAMESPACE or None

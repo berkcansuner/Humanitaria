@@ -20,8 +20,11 @@ build/
 # Environment
 .env
 
-# ChromaDB
+# ChromaDB (kept for existing local data)
 chroma_db/
+
+# Ingest watermark
+.last_ingest.json
 
 # SQLite conversation store
 conversations.db

@@ -1,7 +1,7 @@
 """Persistent conversation store (SQLite).
 
 Holds the named conversations and their messages that back the sidebar. Plain
-stdlib ``sqlite3`` — file-based like ChromaDB, survives restart, no extra infra.
+stdlib ``sqlite3`` — file-based, survives restart, no extra infra.
 
 All functions are synchronous; FastAPI routes offload them with
 ``anyio.to_thread.run_sync`` so the event loop is not blocked. A fresh

@@ -288,7 +288,7 @@ class TestSSEEventBody:
         with patch("api.routes.chat.build_retriever") as mock_retriever_builder, \
              patch("api.routes.chat.extract_filters", return_value={}):
             mock_retriever = MagicMock()
-            mock_retriever.ainvoke = AsyncMock(side_effect=RuntimeError("Chroma offline"))
+            mock_retriever.ainvoke = AsyncMock(side_effect=RuntimeError("retriever offline"))
             mock_retriever_builder.return_value = mock_retriever
 
             from api.main import app

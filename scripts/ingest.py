@@ -35,7 +35,7 @@ def _print_summary(all_stats: dict[str, IngestionStats]) -> None:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Ingest ReliefWeb content into ChromaDB")
+    parser = argparse.ArgumentParser(description="Ingest ReliefWeb content into Pinecone")
     parser.add_argument("--limit", type=int, default=1000, help="Max documents per endpoint")
     parser.add_argument("--force", action="store_true", help="Force re-ingestion (clear collection first)")
     parser.add_argument("--date-from", type=str, default=None, help="Only ingest documents created on or after this date (YYYY-MM-DD)")

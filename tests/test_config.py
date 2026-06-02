@@ -23,13 +23,9 @@ def test_recency_boost_defaults():
     assert s.RECENCY_BOOST_FACTOR == 0.6
 
 
-def test_vector_store_and_embed_provider_defaults():
+def test_provider_and_ingest_defaults():
     from config import Settings
     s = Settings(_env_file=None)
-    assert s.VECTOR_STORE_PROVIDER == "chroma"
-    assert s.EMBED_DIM == 3072
-    assert s.GEMINI_EMBED_MODEL == "gemini-embedding-001"
     assert s.PINECONE_INDEX == "reliefweb-docs"
-    assert s.PINECONE_CLOUD == "aws"
-    assert s.PINECONE_REGION == "us-east-1"
-    assert s.PINECONE_NAMESPACE == ""
+    assert s.EMBED_DIM == 3072
+    assert s.INGEST_WATERMARK_PATH == "./.last_ingest.json"

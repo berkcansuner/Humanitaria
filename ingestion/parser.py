@@ -44,10 +44,10 @@ def _safe_list_get(items, index=0, key="name", default=""):
 
 
 def _normalize_date(value: str) -> str:
-    """Normalize ReliefWeb date strings to YYYY-MM-DD for reliable ChromaDB filtering.
+    """Normalize ReliefWeb date strings to YYYY-MM-DD.
 
     ReliefWeb returns mixed formats like "2026-04-01" or "2021-09-06T00:00:00+00:00".
-    ChromaDB $gte is lexicographic, so all dates must use the same format.
+    All dates must use the same YYYY-MM-DD format for consistent comparison.
     """
     if not value or not value.strip():
         return ""
