@@ -18,10 +18,6 @@ Kullanıcı → Vue 3 Frontend → FastAPI → RAG Engine (LangChain LCEL) → G
 - **Vektör DB:** Pinecone serverless (`reliefweb-docs`).
 - **Tamamen bulut** — yerel model sunucusu gerektirmez.
 
-> **Opsiyonel alternatif sağlayıcılar:** yerel Ollama (embedding/LLM) ve ChromaDB, `config.py`
-> flag'leriyle (`EMBED_PROVIDER`, `CHAT_LLM_PROVIDER`, `QUERY_LLM_PROVIDER`, `VECTOR_STORE_PROVIDER`)
-> desteklenir. Varsayılan kurulum yukarıdaki bulut mimarisidir.
-
 ## Kurulum
 
 1. Gerekli Python sürümü: 3.12
@@ -73,7 +69,7 @@ Kullanıcı → Vue 3 Frontend → FastAPI → RAG Engine (LangChain LCEL) → G
 
 ```
 .
-├── config.py            # Pydantic ayarları (sağlayıcı flag'leri dahil)
+├── config.py            # Pydantic ayarları
 ├── requirements.txt     # Python bağımlılıkları
 ├── .env.example         # Ortam değişkenleri şablonu
 ├── api/                 # FastAPI uygulaması
@@ -86,6 +82,5 @@ Kullanıcı → Vue 3 Frontend → FastAPI → RAG Engine (LangChain LCEL) → G
 ├── rag/                 # Embedding, retriever, LangChain zinciri, query processor
 ├── scripts/             # CLI komutları (ingest.py, setup_pinecone.py, eval_rag.py)
 ├── tests/               # pytest testleri
-├── chroma_db/           # ChromaDB verileri (yalnız chroma sağlayıcısında; gitignore'da)
 └── conversations.db     # Sohbet geçmişi (SQLite; gitignore'da)
 ```

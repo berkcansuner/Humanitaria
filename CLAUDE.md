@@ -10,17 +10,17 @@ deployment kararı proje olgunlaştıktan sonra verilecek.
 ## Mimari
 
 ```
-ReliefWeb API → Ingestion Pipeline → ChromaDB (yerel) | Pinecone (bulut)  ← VECTOR_STORE_PROVIDER
+ReliefWeb API → Ingestion Pipeline → Pinecone (serverless vektör DB)
                                             ↓
 Kullanıcı → Vue 3 Frontend → FastAPI (localhost:8001) → RAG Engine (LangChain LCEL)
-                                          ↓                        ↓              ↓
-                  Embedding: yerel Ollama | Gemini      Gemini (chat yanıtı)
-                  (EMBED_PROVIDER) + query processor Ollama (:11434)
+                                          ↓                        ↓
+                  Gemini embedding (gemini-embedding-001, 3072 boyut)    Gemini (chat yanıtı)
+                  + query processor (gemini-2.5-flash)
 ```
 
-- **Chat yanıtı:** Google Gemini (OpenAI-uyumlu endpoint).
-- **Query processor + embedding:** yerel Ollama (`localhost:11434`) — varsayılan; `EMBED_PROVIDER=gemini` ile Gemini'ye geçilebilir.
-- **Vector DB:** ChromaDB (yerel dosya) — varsayılan; `VECTOR_STORE_PROVIDER=pinecone` ile Pinecone serverless'a geçilebilir.
+- **Chat yanıtı:** Google Gemini `gemini-2.5-flash` (OpenAI-uyumlu endpoint).
+- **Query processor + embedding:** Google Gemini (`gemini-2.5-flash` + `gemini-embedding-001`).
+- **Vector DB:** Pinecone serverless (`reliefweb-docs`).
 
 ---
 
@@ -28,10 +28,10 @@ Kullanıcı → Vue 3 Frontend → FastAPI (localhost:8001) → RAG Engine (Lang
 
 | Katman | Teknoloji | Notlar |
 |--------|-----------|--------|
-| Chat LLM | Google Gemini `gemini-2.5-flash` | OpenAI-uyumlu endpoint; `CHAT_LLM_PROVIDER` ile ollama'ya geçilebilir |
-| Query processor LLM | Yerel Ollama `qwen2.5:0.5b` | Filtre çıkarma (json_mode) + rule-based fallback |
-| Embedding | Yerel Ollama `qwen3-embedding:8b` (varsayılan) veya Gemini `gemini-embedding-001` | `EMBED_PROVIDER` flag'i; ollama→4096 dim, gemini→3072 dim |
-| Vector DB | ChromaDB (varsayılan) veya Pinecone serverless | `VECTOR_STORE_PROVIDER` flag'i; ChromaDB gömülü dosya tabanlı, Pinecone bulut |
+| Chat LLM | Google Gemini `gemini-2.5-flash` | OpenAI-uyumlu endpoint |
+| Query processor LLM | Google Gemini `gemini-2.5-flash` | Filtre çıkarma (json_mode) + rule-based fallback |
+| Embedding | Google Gemini `gemini-embedding-001` | 3072 boyut |
+| Vector DB | Pinecone serverless | Bulut; `reliefweb-docs` index |
 | Backend | Python 3.12 / FastAPI | REST + SSE; Vue statik sunumu; port **8001** |
 | RAG Framework | LangChain LCEL | Düz `prompt \| llm \| StrOutputParser`; history route'da manuel beslenir |
 | Web UI | Vue 3 + Vite | Chat arayüzü, SSE streaming, kaynak gösterimi |
@@ -48,51 +48,32 @@ Kullanıcı → Vue 3 Frontend → FastAPI (localhost:8001) → RAG Engine (Lang
 - **`rag/`** — `embeddings.py`, `retriever.py`, `chain.py`, `query_processor.py`, `history.py`
 - **`tests/`** — pytest, modül yapısını yansıtır
 - **`scripts/`** — CLI (`ingest.py`, `setup_pinecone.py`)
-- **`chroma_db/`** — ChromaDB verisi, `.gitignore`'da
 
 ---
 
 ## Ortam Değişkenleri (.env)
 
 ```env
-# Vector store provider: "chroma" veya "pinecone"
-VECTOR_STORE_PROVIDER=chroma
-# Embedding provider: "ollama" veya "gemini"
-EMBED_PROVIDER=ollama
+# Google Gemini (chat + sorgu işleme + embedding — OpenAI-uyumlu endpoint)
+GEMINI_API_KEY=xxx
+GEMINI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+GEMINI_LLM_MODEL=gemini-2.5-flash      # chat yanıtı
+GEMINI_QUERY_MODEL=gemini-2.5-flash    # filtre çıkarma
 GEMINI_EMBED_MODEL=gemini-embedding-001
 
-# Pinecone (serverless) — VECTOR_STORE_PROVIDER=pinecone ile aktif
+# Pinecone (serverless vektör DB)
 PINECONE_API_KEY=xxx
 PINECONE_INDEX=reliefweb-docs
 PINECONE_CLOUD=aws
 PINECONE_REGION=us-east-1
 PINECONE_NAMESPACE=
 
-# Chat LLM provider: "gemini" veya "ollama"
-CHAT_LLM_PROVIDER=gemini
-
-# Google Gemini (chat — OpenAI uyumlu endpoint)
-GEMINI_API_KEY=xxx
-GEMINI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
-GEMINI_LLM_MODEL=gemini-2.5-flash
-
-# Ollama Cloud/Local (query processor LLM) — şu an yerele işaret ediyor
-OLLAMA_CLOUD_API_KEY=ollama
-OLLAMA_CLOUD_BASE_URL=http://localhost:11434/v1
-OLLAMA_LLM_MODEL=qwen2.5:0.5b
-
-# Ollama Local (embedding)
-OLLAMA_LOCAL_BASE_URL=http://localhost:11434
-OLLAMA_EMBED_MODEL=qwen3-embedding:8b
-
 # ReliefWeb
 RELIEFWEB_APPNAME=xxx           # URL param: ?appname=...  (Bearer auth YOK)
 RELIEFWEB_BASE_URL=https://api.reliefweb.int/v2
 
-# ChromaDB / Embedding
-CHROMA_DB_PATH=./chroma_db
-CHROMA_COLLECTION=reliefweb_docs
-EMBED_DIM=4096                  # provider'a bağlı: ollama qwen3-embedding:8b → 4096, gemini gemini-embedding-001 → 3072
+# Embedding
+EMBED_DIM=3072                  # gemini-embedding-001 → 3072
 EMBED_BATCH_SIZE=32
 
 # RAG retrieval
@@ -113,6 +94,7 @@ API_HOST=127.0.0.1
 API_PORT=8001
 FETCH_PDF_CONTENT=False         # PDF eklerini indir+parse et (yavaş, opsiyonel)
 INGEST_SCHEDULE_HOURS=12
+INGEST_WATERMARK_PATH=./.last_ingest.json
 ```
 
 ---
@@ -131,7 +113,7 @@ primary_country.name, theme.name, format.name, file`. Sıralama `date.created:de
 - Embedding'ler dokümanlar arası toplu (`EMBED_BATCH_SIZE`), upsert tek seferde
 - 429/5xx → exponential backoff; 4xx → hemen başarısız (retry yok)
 - Ülke adları normalize edilir ("Iran (Islamic Republic of)" → retriever `$in` ile eşler)
-- `scheduler.py` — APScheduler + watermark (`chroma_db/.last_ingest.json`) ile incremental
+- `scheduler.py` — APScheduler + watermark (`INGEST_WATERMARK_PATH`, varsayılan `./.last_ingest.json`) ile incremental
 
 ---
 
@@ -143,18 +125,18 @@ primary_country.name, theme.name, format.name, file`. Sıralama `date.created:de
 "şu anda / güncel / latest" gibi belirsiz ifadeler date filtresi ÜRETMEZ; `date_from`
 bugün/gelecek ise reddedilir.
 
-**Retriever** (`rag/retriever.py`): provider'a göre ChromaDB veya Pinecone MMR
-(`k=TOP_K_RETRIEVAL`, `fetch_k=MMR_FETCH_K`, `lambda_mult=MMR_LAMBDA`). `_build_chroma_filter`
-/ `_build_pinecone_filter` → `$eq`/`$in`; country `$in` (kısa+tam ad).
-**Tarih filtresi:** ChromaDB'de `apply_date_filter` ile Python'da post-retrieval (string `$gte`
-desteklenmez); Pinecone'da sunucu tarafında sayısal `date_ts` `$gte` ile DB'de.
+**Retriever** (`rag/retriever.py`): Pinecone MMR
+(`k=TOP_K_RETRIEVAL`, `fetch_k=MMR_FETCH_K`, `lambda_mult=MMR_LAMBDA`). `_build_pinecone_filter`
+→ `$eq`/`$in`; country `$in` (kısa+tam ad).
+**Tarih filtresi:** Pinecone'da sunucu tarafında sayısal `date_ts` `$gte`; `apply_date_filter`
+ek savunmacı katman.
 `rerank_by_recency` → MMR + üstel recency blend.
 
-**Chain** (`rag/chain.py`): düz LCEL `prompt | llm | StrOutputParser`. Provider'a göre
-Gemini veya Ollama `ChatOpenAI`. History route'da `get_session_history` ile alınır,
+**Chain** (`rag/chain.py`): düz LCEL `prompt | llm | StrOutputParser`. Gemini `ChatOpenAI`.
+History route'da `get_session_history` ile alınır,
 `chat_history` olarak geçilir, yanıt sonrası kaydedilir (RunnableWithMessageHistory YOK).
 
-**Metadata şeması (her chunk, her iki store):**
+**Metadata şeması (her chunk, Pinecone):**
 ```python
 {"doc_id", "url", "title", "country", "theme", "date" (YYYY-MM-DD),
  "date_ts" (sayısal YYYYMMDD, Pinecone $gte için), "source", "format",
@@ -179,21 +161,17 @@ Selamlaşma → retrieval atlanır. Mesaj doğrulama: boş/4000+ karakter redded
 ## Geliştirme Kuralları
 
 1. **API anahtarları** yalnızca `.env` içinde — asla kod veya commit'te.
-2. **`chroma_db/`** `.gitignore`'da — vektör verisi repoya girmesin.
-3. **Ingestion idempotent**: kanonik URL `doc_id` + upsert öncesi orphan temizliği.
-4. **Rate limiting**: ReliefWeb 429/5xx → backoff; 4xx → retry yok; Ollama → retry x3.
-5. **Loglama**: her modülde `logger = logging.getLogger(__name__)`.
-6. **Testler**: `tests/` altında pytest; değişiklikten sonra `python -m pytest tests/ -q`.
+2. **Ingestion idempotent**: kanonik URL `doc_id` + upsert öncesi orphan temizliği.
+3. **Rate limiting**: ReliefWeb 429/5xx → backoff; 4xx → retry yok; Gemini → retry x3.
+4. **Loglama**: her modülde `logger = logging.getLogger(__name__)`.
+5. **Testler**: `tests/` altında pytest; değişiklikten sonra `python -m pytest tests/ -q`.
 
 ---
 
 ## Bilinen Kısıtlamalar
 
-- `EMBED_PROVIDER=ollama` (varsayılan) ise embedding yerel çalışır — ingestion sırasında `ollama serve` ayakta olmalı; yavaştır. `EMBED_PROVIDER=gemini` ise bulut (Ollama gerekmez).
-- `qwen3-embedding:8b` ~4.7GB RAM; yetersizse `qwen3-embedding:4b` (2560 dim, `EMBED_DIM` güncelle).
 - Görseller/infografikler doğrudan sorgulanamaz; başlık + açıklama metadata'sı index'lenir.
 - Session history varsayılan in-memory (restart'ta silinir); `REDIS_URL` ile kalıcı yapılabilir.
-- Query processor modeli küçük (`qwen2.5:0.5b`) — filtre kalitesi sınırlı, rule-based fallback var.
 - Pipeline resume kısmi (watermark var, uzun kesinti tam test edilmedi).
 - CORS şu an localhost origin'leri — production'da `CORS_ORIGINS` daraltılmalı.
 - PDF içerik ingestion opsiyonel (`FETCH_PDF_CONTENT=False`); varsayılan sadece HTML `body`.
