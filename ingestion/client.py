@@ -75,7 +75,11 @@ class ReliefWebClient:
         # passed bare so existing date-only behaviour is unchanged.
         filter_conditions = []
         if date_from:
-            filter_conditions.append({"field": "date.created", "operator": "gte", "value": date_from})
+            # ReliefWeb date filtering uses a range value, NOT a 'gte' operator
+            # (only AND/OR are valid filter operators). The range bound must be a
+            # full ISO 8601 datetime; callers pass YYYY-MM-DD.
+            date_value = date_from if "T" in date_from else f"{date_from}T00:00:00+00:00"
+            filter_conditions.append({"field": "date.created", "value": {"from": date_value}})
         if country:
             filter_conditions.append({"field": "primary_country.iso3", "value": country})
         if len(filter_conditions) == 1:
