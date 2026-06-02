@@ -33,7 +33,7 @@
 | Yemen "current" | 315g → **76g** | 1/5 → **4/5** |
 | Ukraine "latest" | 542g → **260g** | 1/5 → **2/5** |
 
-**Test:** **278 backend (pytest) + 51 frontend (vitest) yeşil.** Spec/plan: `docs/superpowers/{specs,plans}/2026-06-01-recency-aware-retrieval*` (gitignore'da, yerel).
+**Test:** **281 backend (pytest) + 51 frontend (vitest) yeşil.** Spec/plan: `docs/superpowers/{specs,plans}/2026-06-0*` (gitignore'da, yerel).
 
 ### ✅ Reranker token-limit fix (2026-06-02, master'da, commit `e4624b2`)
 `rerank_by_relevance` query+doc çiftinde 1024-token sınırını aşan chunk'larda 400 verip MMR'a düşüyordu
@@ -42,6 +42,15 @@
 **Yan etki/gözlem:** gerçek alaka reranking'i devreye girince Ukraine "latest" sorgusu *daha eski* çıktı
 (medyan 260g→501g) — en alakalı Ukraine içeriği eski; eski 260g bozuk reranker'ın yan etkisiydi. **Sonuç:
 recency-boost artık yeniden ayar gerektirebilir** (alaka güçlendi). Sudan 39g/5-5, Yemen 76g/5-5 (Yemen 4/5→5/5'e çıktı).
+
+### ✅ Recency yeniden ayarı — skor-blend tutuldu; freshness VERİ/RETRIEVAL-sınırlı (2026-06-02, commit `f9d8a4c`)
+`rerank_by_recency` artık alaka **pozisyonu** (`1/(1+i)`, dik decay) yerine Pinecone'un ham alaka **skorunu** (0-1)
+recency ile harmanlıyor (`rerank_by_relevance` skoru `metadata["_relevance_score"]`'a iliştiriyor; skor yoksa eski
+pozisyon-bazlıya düşer). Pozisyon-decay kusuru giderildi, faktör anlamlı oldu. **AMA:** ne skor-blend ne de faktör 0.8
+denemesi eval freshness'ını oynattı (Ukraine yine 501g/1-5); judge baştan sona 5.0/5.0. **Kanıtlanmış kök neden:**
+freshness rerank-katmanında ÇÖZÜLEMEZ — Ukraine aday havuzunda zaten yalnız 1-2 belge ≤6 ay; recency havuzu yeniden
+sıralar ama taze belge **ekleyemez**. **Asıl kaldıraç yukarıda:** (1) güncel veri ingest, VEYA (2) "current/latest"
+niyetinde retrieval'da recency-pencere (Y3, Pinecone `date_ts $gte` + otomatik geniş­leme). Faktör 0.8 denendi→fayda yok→0.6.
 
 ### ⚠️ Açık taşınan not
 - **Büyük-harf Türkçe** geçmiş sorgusu ("NASIL GELİŞTİ") boost-off'u kaçırır (`_turkish_lower` noktalı/noktasız `i`).
@@ -60,10 +69,10 @@ sohbet çok dilli.** Marka: **Humanitaria**. Şu an yerel geliştirme aşamasın
   `QUERY_LLM_PROVIDER=gemini` → **tamamen bulut, Ollama gerekmez**.
 - **Chat LLM:** Gemini `gemini-2.5-flash`. System prompt İngilizce; yanıt kullanıcının dilinde. Rule 9 = recency.
 - **Embedding:** Gemini `gemini-embedding-001` (3072-dim). **Vector DB:** Pinecone `reliefweb-docs` (31.508 vektör).
-- **Retrieval:** güncellik-farkında + alaka reranker'ı (truncate=END ile) çalışıyor. Config: `RECENCY_RERANK_POOL=10`, `RECENCY_BOOST_FACTOR=0.6`.
+- **Retrieval:** güncellik-farkında + alaka reranker'ı (truncate=END) çalışıyor; recency blend ham alaka skoruyla. Config: `RECENCY_RERANK_POOL=10`, `RECENCY_BOOST_FACTOR=0.6`.
 - **Backend:** FastAPI, **port 8010**. SSE streaming. Kod değişikliğinden sonra sunucuyu restart et (`--reload` yok).
 - **Frontend:** Vue 3, Humanitaria (yeşil/antrasit, dark+light), İngilizce. `frontend/dist/` gitignore'da (`npm run build`).
-- **Test:** 278 backend + 51 frontend.
+- **Test:** 281 backend + 51 frontend. **Judge: groundedness 5.0/5, relevance 5.0/5.**
 
 ## Veri Durumu
 - **Pinecone `reliefweb-docs`: 31.508 vektör (3072-dim).** Kaynak url'leri `/node/{id}` (200).
@@ -83,14 +92,12 @@ sohbet çok dilli.** Marka: **Humanitaria**. Şu an yerel geliştirme aşamasın
 > **Bash gotcha:** kabuk cwd kalıcı; her git/komutta önce `cd "C:/Projeler/Reliefweb_RAG_System"` (mutlak). `cd frontend` sonrası geri dönmeyi unutma.
 
 ## Commit / Push Durumu
-- Recency feature + önceki iş (toplam ~22 commit) **`origin/master`'a PUSH'LANDI** (2026-06-02).
-- **Reranker fix `e4624b2` + MEMORY güncellemesi: lokal commit'li, PUSH durumu için seans sonuna bak.**
+- **Hepsi `origin/master`'a PUSH'LANDI** (2026-06-02): önceki seans (5) + recency feature (7) + reranker fix `e4624b2` + skor-blend `f9d8a4c` + MEMORY.
 - Remote: **https://github.com/berkcansuner/reliefweb-rag** (private).
 
 ## Sıradaki Adımlar (Faz 2 devamı — kullanıcı yönlendirir)
-- [ ] **Recency yeniden ayarı (öne çıktı):** Reranker artık çalıştığından alaka güçlendi; Ukraine "latest" 501g.
-      `RECENCY_BOOST_FACTOR`/`RECENCY_RERANK_POOL` (veya recency'yi aday havuzunda relevance'tan ÖNCE uygulama) eval ile ince ayar.
-- [ ] `eval_rag.py --judge` ile yanıt kalitesi (groundedness/relevance) önce/sonra ölçümü.
+- [ ] **Freshness'ın gerçek kaldıracı (rerank DEĞİL, kanıtlandı):** (1) güncel veri ingest (Ukraine vb. az güncel rapor),
+      VEYA (2) Y3 — "current/latest" niyetinde retrieval'da recency-pencere (`date_ts $gte` son-N-ay + otomatik genişleme).
 - [ ] Diğer Faz 2 eksenleri: hibrit (keyword+vektör) arama; sorgu anlama; kaynak snippet/önizleme.
 - [ ] (Büyük/ayrı) chunk boyutunu küçült + re-ingest (retrieval hassasiyeti + reranker tam görüş).
 - [ ] (Opsiyonel) büyük-harf Türkçe geçmiş-niyeti.
