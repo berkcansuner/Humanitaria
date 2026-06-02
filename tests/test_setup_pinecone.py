@@ -11,7 +11,6 @@ def _settings():
     s.PINECONE_INDEX = "reliefweb-docs"
     s.PINECONE_CLOUD = "aws"
     s.PINECONE_REGION = "us-east-1"
-    s.EMBED_PROVIDER = "gemini"
     s.EMBED_DIM = 3072
     return s
 

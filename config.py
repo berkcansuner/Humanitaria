@@ -10,27 +10,11 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # Ollama Cloud (LLM)
-    OLLAMA_CLOUD_API_KEY: str
-    OLLAMA_CLOUD_BASE_URL: str = "https://ollama.com/v1"
-    OLLAMA_LLM_MODEL: str = "qwen3.5:397b-cloud"
-
-    # Chat LLM provider: "ollama" veya "gemini" (chat yanıtı için)
-    CHAT_LLM_PROVIDER: str = "gemini"
-
-    # Query processor (filtre çıkarma) LLM provider: "gemini" veya "ollama".
-    # "gemini" → yerel Ollama bağımlılığı yok, filtre doğruluğu daha yüksek.
-    QUERY_LLM_PROVIDER: str = "gemini"
-
     # Google Gemini (chat üretim LLM'i — OpenAI uyumlu endpoint)
     GEMINI_API_KEY: str = ""
     GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
     GEMINI_LLM_MODEL: str = "gemini-2.5-pro"   # Tier 1'de kullanılabilir; .env'den değiştirilebilir
     GEMINI_QUERY_MODEL: str = "gemini-2.5-flash"  # filtre çıkarma için hızlı/ucuz model
-
-    # Ollama Local (Embedding)
-    OLLAMA_LOCAL_BASE_URL: str = "http://localhost:11434"
-    OLLAMA_EMBED_MODEL: str = "qwen3-embedding:8b"
 
     # ReliefWeb
     RELIEFWEB_API_KEY: str = ""
@@ -40,13 +24,11 @@ class Settings(BaseSettings):
     # ChromaDB
     CHROMA_DB_PATH: str = "./chroma_db"
     CHROMA_COLLECTION: str = "reliefweb_docs"
-    EMBED_DIM: int = 4096          # qwen3-embedding:8b — 4096 dim; 4b variant is 2560
-    EMBED_BATCH_SIZE: int = 32     # max texts per Ollama embed call
+    EMBED_DIM: int = 3072          # Gemini gemini-embedding-001 → 3072
+    EMBED_BATCH_SIZE: int = 32
 
     # Vector store provider: "chroma" veya "pinecone"
     VECTOR_STORE_PROVIDER: str = "chroma"
-    # Embedding provider: "ollama" veya "gemini"
-    EMBED_PROVIDER: str = "ollama"
 
     # Gemini embedding (OpenAI-uyumlu endpoint; GEMINI_API_KEY/GEMINI_BASE_URL yeniden kullanılır)
     GEMINI_EMBED_MODEL: str = "gemini-embedding-001"

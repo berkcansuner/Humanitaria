@@ -18,16 +18,16 @@ class TestConfig:
 
 def test_recency_boost_defaults():
     from config import Settings
-    s = Settings(_env_file=None, OLLAMA_CLOUD_API_KEY="test")
+    s = Settings(_env_file=None)
     assert s.RECENCY_RERANK_POOL == 10
     assert s.RECENCY_BOOST_FACTOR == 0.6
 
 
 def test_vector_store_and_embed_provider_defaults():
     from config import Settings
-    s = Settings(_env_file=None, OLLAMA_CLOUD_API_KEY="test")
+    s = Settings(_env_file=None)
     assert s.VECTOR_STORE_PROVIDER == "chroma"
-    assert s.EMBED_PROVIDER == "ollama"
+    assert s.EMBED_DIM == 3072
     assert s.GEMINI_EMBED_MODEL == "gemini-embedding-001"
     assert s.PINECONE_INDEX == "reliefweb-docs"
     assert s.PINECONE_CLOUD == "aws"

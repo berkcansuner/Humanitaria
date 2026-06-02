@@ -49,15 +49,11 @@ class TestChain:
         assert not isinstance(chain, RunnableWithMessageHistory)
 
 
-def _settings(provider):
+def _settings():
     s = MagicMock()
-    s.CHAT_LLM_PROVIDER = provider
     s.GEMINI_LLM_MODEL = "gemini-2.5-pro"
     s.GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
     s.GEMINI_API_KEY = "gemini-key"
-    s.OLLAMA_LLM_MODEL = "qwen2.5:0.5b"
-    s.OLLAMA_CLOUD_BASE_URL = "http://localhost:11434/v1"
-    s.OLLAMA_CLOUD_API_KEY = "ollama"
     return s
 
 
@@ -69,7 +65,7 @@ class TestChainProvider:
     @patch("rag.chain.get_settings")
     @patch("rag.chain.ChatOpenAI")
     def test_gemini_provider_uses_gemini_config(self, MockLLM, mock_settings):
-        mock_settings.return_value = _settings("gemini")
+        mock_settings.return_value = _settings()
         MockLLM.return_value = MagicMock(spec=ChatOpenAI)
         build_chain()
         _, kwargs = MockLLM.call_args
@@ -77,17 +73,6 @@ class TestChainProvider:
         assert kwargs["base_url"] == "https://generativelanguage.googleapis.com/v1beta/openai/"
         assert kwargs["api_key"] == "gemini-key"
         assert kwargs["streaming"] is True
-
-    @patch("rag.chain.get_settings")
-    @patch("rag.chain.ChatOpenAI")
-    def test_ollama_provider_uses_ollama_config(self, MockLLM, mock_settings):
-        mock_settings.return_value = _settings("ollama")
-        MockLLM.return_value = MagicMock(spec=ChatOpenAI)
-        build_chain()
-        _, kwargs = MockLLM.call_args
-        assert kwargs["model"] == "qwen2.5:0.5b"
-        assert kwargs["base_url"] == "http://localhost:11434/v1"
-        assert kwargs["api_key"] == "ollama"
 
 
 def test_system_prompt_has_date_awareness_rule():

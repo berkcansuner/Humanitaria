@@ -102,7 +102,6 @@ class TestRerankByRecency:
         with patch("rag.retriever.get_settings") as mock_settings:
             from config import Settings
             mock_settings.return_value = Settings(
-                OLLAMA_CLOUD_API_KEY="test",
                 RERANK_BY_DATE=False,
             )
             result = rerank_by_recency(docs)

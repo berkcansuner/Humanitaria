@@ -8,7 +8,7 @@ def test_all_imports():
     from ingestion.chunker import chunk_document
     from ingestion.store import ChromaStore, get_store
     from ingestion.pipeline import run_pipeline
-    from rag.embeddings import OllamaLangChainEmbeddings, get_embeddings
+    from rag.embeddings import get_embeddings
     from rag.retriever import build_retriever
     from rag.history import get_session_history, clear_session, populate_history_from_messages
     from rag.query_processor import extract_filters

@@ -30,9 +30,6 @@ async def lifespan(app: FastAPI):
         build_chain()
         logger.info("RAG vectorstore + chain warmed up")
         # Embed a short dummy text to load the model into GPU/CPU memory.
-        # Use the factory so warmup honors EMBED_PROVIDER (gemini/ollama) instead
-        # of always hitting Ollama — avoids a misleading dim-mismatch warning and
-        # a needless Ollama dependency when EMBED_PROVIDER=gemini.
         embedder = get_embeddings()
         embedder.embed_query("warmup")
         logger.info("Embedding model warmed up")

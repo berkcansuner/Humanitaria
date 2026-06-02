@@ -20,9 +20,6 @@ uvicorn[standard]==0.46.0
 sse-starlette==3.0.3
 slowapi==0.1.9
 
-# LLM / embedding clients
-ollama==0.4.8
-
 # Ingestion / utilities
 pypdf==5.4.0
 apscheduler==3.10.4

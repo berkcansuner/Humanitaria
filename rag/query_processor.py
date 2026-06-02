@@ -60,7 +60,7 @@ _CANONICAL_THEMES = set(_THEME_MAP.values())
 def _as_known_country(value: str) -> Optional[str]:
     """Return the canonical country name if `value` is a known country, else None.
 
-    The small query-processor LLM sometimes drops a country name into the
+    The query-extraction LLM sometimes drops a country name into the
     `source` field; this lets the caller detect and reclassify that case.
     """
     if not value:
@@ -121,24 +121,13 @@ def _get_llm_extractor():
         from langchain_openai import ChatOpenAI
         from config import get_settings
         settings = get_settings()
-        if settings.QUERY_LLM_PROVIDER == "gemini":
-            # Gemini via the OpenAI-compatible endpoint — reuses the chat key.
-            # A small/fast model is enough for structured filter extraction.
-            llm = ChatOpenAI(
-                model=settings.GEMINI_QUERY_MODEL,
-                base_url=settings.GEMINI_BASE_URL,
-                api_key=settings.GEMINI_API_KEY,
-                temperature=0.0,
-                timeout=10,
-            )
-        else:
-            llm = ChatOpenAI(
-                model=settings.OLLAMA_LLM_MODEL,
-                base_url=settings.OLLAMA_CLOUD_BASE_URL,
-                api_key=settings.OLLAMA_CLOUD_API_KEY,
-                temperature=0.0,
-                timeout=5,
-            )
+        llm = ChatOpenAI(
+            model=settings.GEMINI_QUERY_MODEL,
+            base_url=settings.GEMINI_BASE_URL,
+            api_key=settings.GEMINI_API_KEY,
+            temperature=0.0,
+            timeout=10,
+        )
         _llm_extractor = llm.with_structured_output(QueryFilters, method="json_mode")
     return _llm_extractor
 
@@ -181,7 +170,7 @@ def _normalize_llm_filters(result: QueryFilters) -> Dict[str, Any]:
         except ValueError:
             pass  # malformed date → ignore
     if result.source:
-        # The tiny LLM sometimes misclassifies a country as a source; a source
+        # The LLM sometimes misclassifies a country as a source; a source
         # filter on a country name returns zero documents, so reclassify it.
         promoted = _as_known_country(result.source)
         if promoted:
@@ -345,8 +334,8 @@ def extract_filters(query: str) -> Dict[str, Any]:
     if llm_filters is None:
         # LLM call failed entirely → rely on the deterministic extractor.
         return rule_filters
-    # The small LLM is unreliable and often returns empty/partial output. Use the
-    # rule-based extractor as a backstop: it fills the curated country/theme/doctype/
+    # The query-extraction LLM sometimes returns empty/partial output, so the
+    # rule-based extractor backstops it: it fills the curated country/theme/doctype/
     # date fields the LLM left empty, while the LLM still wins on any field it set.
     merged = dict(rule_filters)
     merged.update(llm_filters)

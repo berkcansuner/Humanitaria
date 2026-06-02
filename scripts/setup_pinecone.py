@@ -16,10 +16,10 @@ def create_index() -> None:
     settings = get_settings()
     # gemini-embedding-001 (OpenAI-compatible endpoint) always returns 3072 dim.
     # Creating the index at any other dimension silently breaks every upsert.
-    if settings.EMBED_PROVIDER == "gemini" and settings.EMBED_DIM != 3072:
+    if settings.EMBED_DIM != 3072:
         raise ValueError(
-            f"EMBED_PROVIDER=gemini requires EMBED_DIM=3072 (got {settings.EMBED_DIM}). "
-            "Fix EMBED_DIM in .env before creating the Pinecone index."
+            f"Pinecone index expects EMBED_DIM=3072 for gemini-embedding-001 "
+            f"(got {settings.EMBED_DIM}). Fix EMBED_DIM in .env before creating the index."
         )
     pc = Pinecone(api_key=settings.PINECONE_API_KEY)
     existing = [idx.name for idx in pc.list_indexes()]
