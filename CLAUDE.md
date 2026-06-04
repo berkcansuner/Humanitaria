@@ -95,6 +95,7 @@ API_PORT=8001
 FETCH_PDF_CONTENT=False         # PDF eklerini indir+parse et (yavaş, opsiyonel)
 INGEST_SCHEDULE_HOURS=12
 INGEST_WATERMARK_PATH=./.last_ingest.json
+INGEST_LOOKBACK_YEARS=3         # --date-from yoksa manuel ingest tazelik tabanı (0 = sınır yok)
 ```
 
 ---
