@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import List, Dict, Any
 
 from pinecone import Pinecone
@@ -45,6 +46,26 @@ class PineconeStore:
     # Pinecone caps a single upsert request at ~4 MB. With 3072-dim float
     # vectors + text metadata (~18 KB/vector), batches of 100 stay well under.
     _UPSERT_BATCH = 100
+    # Pinecone serverless rate-limits writes (429) under sustained volume.
+    # Exponential backoff: 1+2+4+8+16s across 5 retries before giving up.
+    _UPSERT_MAX_RETRIES = 6
+
+    def _upsert_batch(self, batch: List[Dict[str, Any]]) -> None:
+        """Upsert one batch, retrying with exponential backoff on 429 rate limits."""
+        backoff = 1.0
+        for attempt in range(self._UPSERT_MAX_RETRIES):
+            try:
+                self.index.upsert(vectors=batch, namespace=self.namespace)
+                return
+            except Exception as e:
+                rate_limited = getattr(e, "status", None) == 429 or "429" in str(e)
+                if rate_limited and attempt < self._UPSERT_MAX_RETRIES - 1:
+                    logger.warning("Pinecone upsert rate-limited (429), backing off %.1fs (attempt %d)",
+                                   backoff, attempt + 1)
+                    time.sleep(backoff)
+                    backoff *= 2
+                    continue
+                raise
 
     def upsert_chunks(self, chunks: List[Dict[str, Any]], embeddings: List[List[float]]) -> None:
         if not chunks:
@@ -61,9 +82,7 @@ class PineconeStore:
         ]
         try:
             for i in range(0, len(vectors), self._UPSERT_BATCH):
-                self.index.upsert(
-                    vectors=vectors[i : i + self._UPSERT_BATCH], namespace=self.namespace
-                )
+                self._upsert_batch(vectors[i : i + self._UPSERT_BATCH])
             logger.info("Upserted %d chunks into Pinecone", len(chunks))
         except Exception as e:
             logger.error("Failed to upsert %d chunks into Pinecone: %s", len(chunks), e)

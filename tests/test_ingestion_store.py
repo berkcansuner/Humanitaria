@@ -45,6 +45,29 @@ class TestPineconeStore:
         assert len(mock_index.upsert.call_args_list[0][1]["vectors"]) == 100
         assert len(mock_index.upsert.call_args_list[2][1]["vectors"]) == 50
 
+    def test_upsert_retries_on_429_then_succeeds(self):
+        # Pinecone serverless rate-limits writes (429) under sustained volume;
+        # the upsert must back off and retry instead of dropping the batch.
+        mock_index = MagicMock()
+        mock_index.upsert.side_effect = [Exception("(429) Too Many Requests"), Exception("(429)"), None]
+        store = self._make_store(mock_index)
+        chunks = [{"id": "abc_0", "content": "c", "metadata": {"doc_id": "abc"}}]
+        with patch("ingestion.store.time.sleep") as mock_sleep:
+            store.upsert_chunks(chunks, [[0.1] * 3072])
+        assert mock_index.upsert.call_count == 3   # failed twice, succeeded on 3rd
+        assert mock_sleep.call_count == 2          # backed off before each retry
+
+    def test_upsert_reraises_non_429_immediately(self):
+        # Non-rate-limit errors are not retried — fail fast.
+        mock_index = MagicMock()
+        mock_index.upsert.side_effect = Exception("500 internal error")
+        store = self._make_store(mock_index)
+        chunks = [{"id": "abc_0", "content": "c", "metadata": {"doc_id": "abc"}}]
+        with patch("ingestion.store.time.sleep"):
+            with pytest.raises(Exception, match="500"):
+                store.upsert_chunks(chunks, [[0.1] * 3072])
+        assert mock_index.upsert.call_count == 1
+
     def test_delete_document_chunks_lists_by_prefix_then_deletes(self):
         mock_index = MagicMock()
         mock_index.list.return_value = iter([["abc_0", "abc_5"]])
