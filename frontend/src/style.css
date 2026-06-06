@@ -115,12 +115,15 @@ body {
   color: var(--color-text);
   line-height: 1.6;
   font-size: var(--text-base);
-  height: 100%;
-  overflow: hidden;
+  min-height: 100%;
 }
 
+/* min-height (not fixed height) so tall marketing pages scroll the document.
+   The chat view self-locks to the viewport via ChatView's .app
+   (height:100vh; overflow:hidden), so removing the global lock keeps the chat
+   full-screen without a page scroll while letting Landing/Pricing scroll. */
 #app {
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
