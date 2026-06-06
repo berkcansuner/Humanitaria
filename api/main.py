@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pathlib import Path
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -74,7 +75,20 @@ app.include_router(conversations.router, tags=["conversations"])
 
 frontend_dir = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 if frontend_dir.exists():
-    app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
+    # Vite's hashed assets are served directly. Everything else falls back to
+    # index.html so vue-router history-mode client routes (/pricing, /app) work
+    # on refresh. This block is defined AFTER the API routers so it only catches
+    # GET paths the API didn't claim.
+    assets_dir = frontend_dir / "assets"
+    if assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def spa_fallback(full_path: str):
+        candidate = frontend_dir / full_path
+        if full_path and candidate.is_file():
+            return FileResponse(candidate)        # favicon, robots.txt, etc.
+        return FileResponse(frontend_dir / "index.html")  # client routes → SPA
 
 
 if __name__ == "__main__":
