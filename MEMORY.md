@@ -64,8 +64,8 @@ Plan/spec: `docs/superpowers/{plans,specs}/2026-06-02-reingest-pilot-syria*` (gi
 - **Query processor:** Gemini `gemini-2.5-flash` (DEĞİŞMEDİ). **Embedding:** `gemini-embedding-001` (3072-dim).
 - **Chunker:** **`RecursiveCharacterTextSplitter` ~1500 char/200 overlap** (yeni default). NOT: mevcut default-namespace verisi hâlâ ESKİ 800-kelime chunk'larda — rollout'a kadar karışık durum.
 - **Retrieval:** güncellik-farkında + alaka reranker'ı (truncate=END); recency blend ham alaka skoruyla. `RECENCY_RERANK_POOL=10`, `RECENCY_BOOST_FACTOR=0.6`.
-- **Backend:** FastAPI, port `.env`'deki `API_PORT`. SSE streaming. Kod değişikliğinden sonra restart (`--reload` yok).
-- **Frontend:** Vue 3, Humanitaria (yeşil/antrasit, dark+light), İngilizce. `frontend/dist/` gitignore'da.
+- **Backend:** FastAPI, port `.env`'deki `API_PORT`. SSE streaming. Vue dist'i **SPA history-mode fallback** ile sunar (`api/main.py`: `/assets` mount + index.html catch-all). Kod değişikliğinden sonra restart (`--reload` yok).
+- **Frontend:** Vue 3 + **vue-router** SPA, Humanitaria (yeşil/antrasit, dark+light), İngilizce. Rotalar: **`/` Landing, `/pricing` Pricing** (marketing, `.mkt-scope` izole CSS, design handoff), **`/app` Chat** (eski App.vue → `views/ChatView.vue`). `frontend/dist/` gitignore'da.
 - **Test:** **271 backend** + 51 frontend yeşil. Judge groundedness 5.0/5, relevance ~4.9-5.0/5 (judge doygun/varyanslı).
 
 ## Veri Durumu (Pinecone `reliefweb-docs`, 3072-dim)
