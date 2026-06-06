@@ -4,22 +4,25 @@
 > Bu bir tarihçe değil — GÜNCEL durumu yansıtır. Eskiyen satırları sil/değiştir.
 > "Nerede kalmıştık?" sorusunun cevabı burasıdır.
 
-**Son güncelleme:** 2026-06-05
+**Son güncelleme:** 2026-06-06
 
 ---
 
-## 🎯 SONRAKİ SEANS — Tam Rollout kararı (Suriye pilotu BAŞARILI, branch master'a merge edildi)
+## 🎯 SONRAKİ SEANS — Rollout TIKANDI (Pinecone aylık write-unit kotası doldu); v2 8/10 ülke hazır+doğrulandı
 
-Suriye re-ingest pilotu uygulandı ve doğrulandı (aşağıya bak). Sıradaki büyük adım: **tüm ülkeler için
-re-ingest (rollout)** — ama bu AYRI bir faz ve önce iki karar gerekiyor:
-1. **Veri penceresi:** Pilot yalnız son 1 yılı çekti → tarihsel olayları kaçırıyor (örn. Şubat 2023 Suriye
-   depremi, "earthquake recovery" sorgusunda relevance düştü). **≥2-3 yıl öneririm** (`INGEST_LOOKBACK_YEARS=3`
-   varsayılanıyla uyumlu) → tazelik + büyük olay kapsaması dengesi.
-2. **Cutover stratejisi:** Temiz namespace/index'e tüm ülkeleri yeni chunker ile re-ingest → app'i o namespace'e
-   geçir → eski default namespace'i (31.628 vektör, eski 800-kelime chunk) **kullanıcı onayıyla** emekliye ayır.
+Tüm-ülke rollout başlatıldı (3 yıl, 10 ülke, ülke-başı **en yeni 2000 cap**, yeni **`v2` namespace**).
+**8 ülke başarıyla v2'ye yazıldı (68.936 vektör) + 8-ülke A/B ile kalite DOĞRULANDI (GO):** granülarite
+kesin kazanım (ort. chunk 479 vs default 3070 char → reranker tam görüyor), freshness 160g vs 445g, judge 5.0=5.0.
+AMA son 2 ülke (**Palestine kısmi, Ukraine 0**) yazılamadı: **Pinecone AYLIK write-unit kotası (2.000.000) doldu**
+(hata gövdesi: "reached your write unit limit for the current month"). Sabit kota — retry/backoff çare değil. Bkz. [[run-gotchas]].
 
-Rollout için ayrı spec/plan çıkar (`writing-plans` → `subagent-driven-development`). **Pilot namespace "pilot"
-(4.892 Suriye vektörü) hâlâ Pinecone'da** — rollout testleri için tut ya da temizle (kullanıcı kararı).
+**v2 EKSİK: 8/10 ülke.** Cutover YAPILMADI (eksik v2'ye geçersek default'taki Ukrayna+Filistin kaybolur → regresyon).
+**Veri kaybı yok:** default 31.628 + pilot 4.892 + v2 68.936 sağlam, izole.
+
+**Kota çözülmeden ilerlenemez — kullanıcı kararı bekliyor:**
+1. **Aylık reset bekle** (gelecek fatura döngüsü) → PSE+UKR tamamla → cutover. Bu arada app default'ta (çalışıyor).
+2. **Pinecone planını yükselt** → PSE+UKR hemen tamamla → cutover.
+Cutover = `PINECONE_NAMESPACE=v2` (config/.env) + commit/push; eski default rollback olarak TUT; pilot+kısmi-eski namespace'ler temizlenebilir (kullanıcı onayı).
 
 ---
 
@@ -60,12 +63,14 @@ Plan/spec: `docs/superpowers/{plans,specs}/2026-06-02-reingest-pilot-syria*` (gi
 - **Retrieval:** güncellik-farkında + alaka reranker'ı (truncate=END); recency blend ham alaka skoruyla. `RECENCY_RERANK_POOL=10`, `RECENCY_BOOST_FACTOR=0.6`.
 - **Backend:** FastAPI, port `.env`'deki `API_PORT`. SSE streaming. Kod değişikliğinden sonra restart (`--reload` yok).
 - **Frontend:** Vue 3, Humanitaria (yeşil/antrasit, dark+light), İngilizce. `frontend/dist/` gitignore'da.
-- **Test:** **269 backend** + 51 frontend yeşil. Judge groundedness 5.0/5, relevance ~4.9-5.0/5 (judge doygun/varyanslı).
+- **Test:** **271 backend** + 51 frontend yeşil. Judge groundedness 5.0/5, relevance ~4.9-5.0/5 (judge doygun/varyanslı).
 
 ## Veri Durumu (Pinecone `reliefweb-docs`, 3072-dim)
-- **default namespace (''): 31.628 vektör** — ESKİ 800-kelime chunk. IRN/TUR/UKR/SYR/IRQ derin + 10 öneri ülkesi. App bunu kullanıyor.
-- **"pilot" namespace: 4.892 vektör** — Suriye son-1-yıl (2025-06-02→), YENİ ~1500-char chunk. Yalnız A/B için; app kullanmıyor.
-- Yalnız `reports` endpoint. Kaynak url `/node/{id}`. Daha fazla veri: `scripts/ingest.py --country X --date-from YYYY-MM-DD --limit N` (`--force` KULLANMA; idempotent).
+- **default namespace (''): 31.628 vektör** — ESKİ 800-kelime chunk, 10 ülke. **App bunu kullanıyor** (cutover henüz YOK).
+- **"v2" namespace: 68.936 vektör** — rollout, YENİ ~1500-char chunk. **8/10 ülke** (IRN/IRQ/SYR/TUR/YEM/AFG/SOM/SDN). EKSİK: Palestine (kısmi), Ukraine (0) → Pinecone aylık kotası doldu. 8-ülke A/B GO.
+- **"pilot" namespace: 4.892 vektör** — Suriye son-1-yıl, YENİ chunk. v2 onu kapsıyor → cutover'da temizlenebilir.
+- ⚠️ **Pinecone AYLIK write-unit kotası (2M) DOLU** — kota reset / plan upgrade olmadan YENİ yazma yapılamaz (ingest 429). Reset sonrası PSE+UKR tamamlanır.
+- Yalnız `reports` endpoint. Daha fazla veri: `PINECONE_NAMESPACE=v2 scripts/ingest.py --country X --date-from YYYY-MM-DD --limit N` (`--force` KULLANMA; idempotent).
 
 ## Önemli Komutlar
 | İş | Komut |
@@ -79,19 +84,19 @@ Plan/spec: `docs/superpowers/{plans,specs}/2026-06-02-reingest-pilot-syria*` (gi
 > **Bash gotcha:** kabuk cwd kalıcı; her komutta önce `cd "C:/Projeler/Reliefweb_RAG_System"`. Inline env var (`PINECONE_NAMESPACE=pilot cmd`, `$(...)`) Bash tool'unda çalışır, PowerShell'de DEĞİL.
 
 ## Commit / Push Durumu
-- **`master`'da YEREL (push EDİLMEDİ):** pilot branch merge'i — `e2c0e7d`, `c23963f`, `79d61f1`, `01f6d4d`, `2139951` (yukarı bak).
-- `origin/master`'da (önceki seanslar, PUSH'LANDI): recency feature, reranker fix, chroma/ollama kaldırma, vb.
-- Remote: **https://github.com/berkcansuner/reliefweb-rag** (private). **Push kullanıcı onayına bağlı.**
+- **`origin/master`'a PUSH'LANDI:** pilot (`e2c0e7d`,`c23963f`,`79d61f1`,`01f6d4d`,`2139951`,`5ab02a0`) + store 429-retry fix (`918637d`). Master = origin/master.
+- Remote: **https://github.com/berkcansuner/reliefweb-rag** (private).
 
 ## Sıradaki Adımlar (kullanıcı yönlendirir)
-- [ ] **Tam rollout (ayrı faz):** tüm ülkeler yeni chunker ile re-ingest → veri penceresi ≥2-3 yıl → temiz namespace → cutover → eski default emekliye. Ayrı spec/plan çıkar.
-- [ ] (Karar) Pilot branch'ini `origin/master`'a push et.
-- [ ] (Karar) "pilot" namespace'i tut (rollout testi) ya da temizle.
+- [ ] **Kotayı çöz** (aylık reset bekle VEYA Pinecone plan upgrade) → `PINECONE_NAMESPACE=v2 ingest --country PSE UKR --date-from 2023-06-05 --limit 2000` ile v2'yi tamamla.
+- [ ] v2 tamla → **CUTOVER:** `PINECONE_NAMESPACE=v2` (config default + .env) commit/push → app v2'ye geçer. Eski default rollback olarak TUT; pilot namespace temizle.
+- [ ] (Karar) "pilot" + (cutover sonrası) eski default namespace temizliği.
 - [ ] Diğer Faz 2 eksenleri: hibrit (keyword+vektör) arama; kaynak snippet/önizleme.
 - [ ] (Deploy öncesi) Conversation endpoint'lerinde kullanıcı modeli/IDOR; conv rate-limit; CORS daraltma.
 
 ## Bilinen Sorunlar / Kısıtlamalar
-- **Karışık chunk durumu:** chunker yeni default (~1500 char) ama mevcut default-namespace verisi hâlâ eski 800-kelime — rollout'a kadar böyle. Yeni ingest'ler yeni chunk üretir.
+- **Pinecone aylık write-unit kotası (2M):** rollout bunu doldurdu → yeni yazma 429 ("write unit limit for the current month"). Sabit kota; retry çare değil. Reset/plan-upgrade gerek. Büyük ingest planlarken hesaba kat.
+- **Karışık chunk durumu:** chunker yeni default (~1500 char) ama mevcut default-namespace verisi hâlâ eski 800-kelime — cutover'a kadar böyle. Yeni ingest'ler yeni chunk üretir.
 - 1-yıl ingest penceresi tarihsel büyük olayları kaçırır (deprem) → rollout'ta ≥2-3 yıl.
 - Conversation endpoint'lerinde gerçek auth YOK → IDOR (yerel tek-kullanıcıda sorun değil, deploy öncesi şart).
 - Şablon/sistem mesajları (greeting, no-docs) İngilizce; yalnız LLM yanıtı çok dilli (bilinçli).
