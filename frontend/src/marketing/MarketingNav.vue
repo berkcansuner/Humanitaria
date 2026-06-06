@@ -8,7 +8,6 @@
       <nav class="nav-links">
         <router-link :to="{ path: '/', hash: '#features' }">Product</router-link>
         <router-link :to="{ path: '/', hash: '#sources' }">Sources</router-link>
-        <router-link :to="{ path: '/', hash: '#citations' }">Citations</router-link>
         <router-link :to="{ path: '/', hash: '#uses' }">Use cases</router-link>
       </nav>
       <div class="nav-right">
