@@ -16,13 +16,13 @@ export function useReveal(rootRef) {
     if (!root || !('IntersectionObserver' in window)) return
 
     // Stagger items inside grid groups.
-    ;['.features', '.uses', '.plans'].forEach((g) => {
+    ;['.features', '.uses'].forEach((g) => {
       root.querySelectorAll(`${g} > *`).forEach((k, i) => {
         k.style.transitionDelay = `${i * 85}ms`
       })
     })
 
-    const sel = '.section-head,.fcard,.ucard,.plan,.cit-grid > div,.cta'
+    const sel = '.section-head,.fcard,.ucard,.cit-grid > div,.cta'
     const els = Array.from(root.querySelectorAll(sel))
     io = new IntersectionObserver(
       (entries) => {

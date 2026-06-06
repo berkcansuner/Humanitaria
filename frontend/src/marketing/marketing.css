@@ -1,5 +1,5 @@
 /* ============================================================
-   Humanitaria — marketing pages (Landing + Pricing)
+   Humanitaria — marketing page (Landing)
 
    Every rule is scoped under `.mkt-scope` so it never leaks into
    the chat app (which uses Vue scoped styles). The design tokens
@@ -167,25 +167,6 @@ html.theme-switching .mkt-scope *{transition:none !important;}
 .mkt-scope .btn-onink.ghost{background:transparent;border:1px solid rgba(255,255,255,.22);color:#f1f0ec;}
 .mkt-scope .btn-onink.ghost:hover{border-color:rgba(255,255,255,.5);}
 
-/* pricing */
-.mkt-scope .plans{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;align-items:stretch;}
-.mkt-scope .plan{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:30px 26px;position:relative;transition:border-color .18s,transform .18s,box-shadow .18s;}
-.mkt-scope .plan:hover{transform:translateY(-3px);box-shadow:0 28px 58px -30px rgba(15,25,15,.5);}
-.mkt-scope .plan.featured{border-color:var(--accent);box-shadow:0 26px 60px -34px rgba(30,40,30,.38);}
-.mkt-scope .plan .badge{position:absolute;top:-11px;left:26px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;background:var(--accent-strong);color:var(--on-accent);padding:4px 11px;border-radius:999px;}
-.mkt-scope .plan .pname{font-family:var(--font);font-size:15px;font-weight:700;color:var(--text);}
-.mkt-scope .plan .pdesc{font-size:13.5px;color:var(--muted);margin-top:5px;min-height:36px;}
-.mkt-scope .plan .price{display:flex;align-items:baseline;gap:7px;margin:14px 0 2px;}
-.mkt-scope .plan .price .amt{font-family:var(--font);font-size:42px;font-weight:700;letter-spacing:-.03em;line-height:1;}
-.mkt-scope .plan .price .per{font-size:14px;color:var(--muted);}
-.mkt-scope .plan .pcta{margin:22px 0;}
-.mkt-scope .plan .pcta .btn{width:100%;}
-.mkt-scope .plan ul{list-style:none;display:flex;flex-direction:column;gap:12px;margin-top:auto;padding-top:6px;}
-.mkt-scope .plan li{display:flex;gap:11px;align-items:flex-start;font-size:14px;color:var(--text-2);}
-.mkt-scope .plan li .tick{width:20px;height:20px;border-radius:6px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;flex-shrink:0;margin-top:1px;}
-.mkt-scope .plan li.muted{color:var(--muted);}
-.mkt-scope .plan li.muted .tick{background:var(--surface-2);color:var(--muted);}
-
 /* sample answer modal */
 .mkt-scope .modal{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;padding:24px;}
 .mkt-scope .modal.open{display:flex;}
@@ -225,7 +206,6 @@ html.theme-switching .mkt-scope *{transition:none !important;}
   .mkt-scope .cit-grid{grid-template-columns:1fr;gap:36px;}
   .mkt-scope .features{grid-template-columns:1fr;}
   .mkt-scope .uses{grid-template-columns:1fr;}
-  .mkt-scope .plans{grid-template-columns:1fr;max-width:420px;margin:0 auto;}
   .mkt-scope .foot-grid{grid-template-columns:1fr 1fr;gap:28px;}
   .mkt-scope .nav-links{display:none;}
 }

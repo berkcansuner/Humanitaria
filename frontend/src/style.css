@@ -121,7 +121,7 @@ body {
 /* min-height (not fixed height) so tall marketing pages scroll the document.
    The chat view self-locks to the viewport via ChatView's .app
    (height:100vh; overflow:hidden), so removing the global lock keeps the chat
-   full-screen without a page scroll while letting Landing/Pricing scroll. */
+   full-screen without a page scroll while letting the marketing page scroll. */
 #app {
   min-height: 100vh;
   display: flex;

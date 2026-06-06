@@ -4,9 +4,8 @@ import LandingView from '../views/LandingView.vue'
 
 const routes = [
   { path: '/', name: 'home', component: LandingView },
-  // Marketing pages are lazy-loaded; the chat app is the heaviest chunk and
-  // most visitors land on the marketing site first.
-  { path: '/pricing', name: 'pricing', component: () => import('../views/PricingView.vue') },
+  // The chat app is the heaviest chunk and most visitors land on the marketing
+  // page first, so it is lazy-loaded.
   { path: '/app', name: 'app', component: () => import('../views/ChatView.vue') },
   // Unknown paths fall back to the landing page.
   { path: '/:pathMatch(.*)*', redirect: '/' },

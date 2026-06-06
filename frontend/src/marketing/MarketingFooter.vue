@@ -14,7 +14,6 @@
           <router-link :to="{ path: '/', hash: '#features' }">Features</router-link>
           <router-link :to="{ path: '/', hash: '#citations' }">Citations</router-link>
           <router-link :to="{ path: '/', hash: '#sources' }">Sources</router-link>
-          <router-link to="/pricing">Pricing</router-link>
         </div>
         <div class="foot-col">
           <h5>Use cases</h5>
