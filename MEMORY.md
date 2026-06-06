@@ -19,10 +19,13 @@ AMA son 2 ülke (**Palestine kısmi, Ukraine 0**) yazılamadı: **Pinecone AYLIK
 **v2 EKSİK: 8/10 ülke.** Cutover YAPILMADI (eksik v2'ye geçersek default'taki Ukrayna+Filistin kaybolur → regresyon).
 **Veri kaybı yok:** default 31.628 + pilot 4.892 + v2 68.936 sağlam, izole.
 
-**Kota çözülmeden ilerlenemez — kullanıcı kararı bekliyor:**
-1. **Aylık reset bekle** (gelecek fatura döngüsü) → PSE+UKR tamamla → cutover. Bu arada app default'ta (çalışıyor).
-2. **Pinecone planını yükselt** → PSE+UKR hemen tamamla → cutover.
-Cutover = `PINECONE_NAMESPACE=v2` (config/.env) + commit/push; eski default rollback olarak TUT; pilot+kısmi-eski namespace'ler temizlenebilir (kullanıcı onayı).
+**KARAR (2026-06-06): Aylık write-unit reset'i BEKLE** (gelecek fatura döngüsü — kesin tarih için Pinecone dashboard). Bu arada app default'ta çalışıyor.
+
+**RESUME TARİFİ (reset gelince, sırayla):**
+1. `PINECONE_NAMESPACE=v2 ./venv/Scripts/python.exe scripts/ingest.py --country PSE UKR --date-from 2023-06-05 --limit 2000` → v2 = 10/10 olur (store'da artık 429-retry var; aynı 2023-06-05 penceresi = diğer 8 ülkeyle tutarlı). Önce stats al; kota gerçekten resetlendi mi diye tek-vektör test upsert ile kontrol et.
+2. v2 stats doğrula (PSE/UKR 0 failed) + 10-ülke A/B (v2 vs default).
+3. **CUTOVER:** `PINECONE_NAMESPACE=v2` → `config.py` default + `.env` → commit/push → app v2'ye geçer.
+4. v2 sağlam çalıştığı teyit edilince → **eski default ('') namespace'i SİL** (yer açılır) + **pilot namespace'i sil** (v2 Suriye'yi kapsıyor). Silmeden önce kullanıcıya son onay.
 
 ---
 
