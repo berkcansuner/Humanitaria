@@ -43,6 +43,7 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
         """
         CREATE TABLE IF NOT EXISTS conversations (
             id         TEXT PRIMARY KEY,
+            user_id    TEXT,
             title      TEXT NOT NULL,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
@@ -58,20 +59,31 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_messages_conv ON messages(conversation_id, id);
         """
     )
+    # Migrate pre-auth DBs that lack the owner column (legacy rows get user_id
+    # NULL → invisible to every user, which is the safe default).
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(conversations)").fetchall()}
+    if "user_id" not in cols:
+        conn.execute("ALTER TABLE conversations ADD COLUMN user_id TEXT")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_conversations_user ON conversations(user_id)"
+    )
 
 
-def create_conversation(conv_id: str, title: str) -> None:
-    """Insert a conversation; idempotent (existing id is left untouched)."""
+def create_conversation(user_id: str, conv_id: str, title: str) -> None:
+    """Insert a conversation owned by user_id; idempotent (existing id is left
+    untouched)."""
     now = _now()
     with _connect() as conn:
         conn.execute(
-            "INSERT OR IGNORE INTO conversations(id, title, created_at, updated_at) "
-            "VALUES (?, ?, ?, ?)",
-            (conv_id, title, now, now),
+            "INSERT OR IGNORE INTO conversations(id, user_id, title, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (conv_id, user_id, title, now, now),
         )
 
 
 def conversation_exists(conv_id: str) -> bool:
+    """True if a conversation with this id exists for ANY user (used to detect
+    id collisions). Ownership is checked with is_owner."""
     with _connect() as conn:
         row = conn.execute(
             "SELECT 1 FROM conversations WHERE id = ?", (conv_id,)
@@ -79,11 +91,22 @@ def conversation_exists(conv_id: str) -> bool:
     return row is not None
 
 
-def list_conversations() -> list[dict]:
+def is_owner(user_id: str, conv_id: str) -> bool:
+    """True only if conv_id exists AND belongs to user_id."""
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT 1 FROM conversations WHERE id = ? AND user_id = ?",
+            (conv_id, user_id),
+        ).fetchone()
+    return row is not None
+
+
+def list_conversations(user_id: str) -> list[dict]:
     with _connect() as conn:
         rows = conn.execute(
             "SELECT id, title, created_at, updated_at FROM conversations "
-            "ORDER BY updated_at DESC"
+            "WHERE user_id = ? ORDER BY updated_at DESC",
+            (user_id,),
         ).fetchall()
     return [dict(r) for r in rows]
 

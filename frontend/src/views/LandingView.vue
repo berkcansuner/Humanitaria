@@ -156,8 +156,8 @@
             <h2>Understand any crisis in seconds.</h2>
             <p>Join the teams using Humanitaria to turn the humanitarian record into answers they can trust and cite.</p>
             <div class="cta-btns">
-              <router-link class="btn btn-onink" to="/app">Sign up free</router-link>
-              <router-link class="btn btn-onink ghost" to="/app">Log in</router-link>
+              <router-link class="btn btn-onink" to="/signup">Sign up free</router-link>
+              <router-link class="btn btn-onink ghost" to="/login">Log in</router-link>
             </div>
           </div>
         </div>

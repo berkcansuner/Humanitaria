@@ -3,17 +3,51 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+# Identity injected by the get_current_user override for non-real_auth tests.
+_TEST_USER_ID = "test-user"
+
+
+@pytest.fixture
+def test_user_id():
+    """The user id that owns conversations created under the auth override."""
+    return _TEST_USER_ID
+
 
 @pytest.fixture(autouse=True)
 def _isolate_conversation_db(tmp_path):
-    """Point the SQLite conversation store at a throwaway DB for every test so
-    the chat flow (which now persists exchanges) never writes to the real
-    ./conversations.db. Tests that need their own DB still patch get_settings
-    explicitly; that inner patch transparently overrides this one."""
+    """Point the SQLite stores (conversations + users/sessions, same DB file) at a
+    throwaway DB for every test so the chat flow (which now persists exchanges)
+    and the auth store never write to the real ./conversations.db. Tests that need
+    their own DB still patch get_settings explicitly; that inner patch
+    transparently overrides this one."""
     settings = MagicMock()
     settings.CONVERSATION_DB_PATH = str(tmp_path / "conversations.db")
-    with patch("rag.conversations.get_settings", return_value=settings):
+    with patch("rag.conversations.get_settings", return_value=settings), \
+         patch("rag.users.get_settings", return_value=settings):
         yield
+
+
+@pytest.fixture(autouse=True)
+def _auth_override(request):
+    """Authenticate route tests as a fixed test user by overriding
+    get_current_user, so the many chat/conversation tests don't each have to log
+    in. Tests that exercise the real cookie auth / ownership opt out with
+    @pytest.mark.real_auth (the override is removed for them)."""
+    from api.main import app
+    from api.routes.auth import get_current_user
+
+    if request.node.get_closest_marker("real_auth"):
+        app.dependency_overrides.pop(get_current_user, None)
+        yield
+        return
+
+    app.dependency_overrides[get_current_user] = lambda: {
+        "id": _TEST_USER_ID,
+        "email": "test@example.com",
+        "name": "Test User",
+    }
+    yield
+    app.dependency_overrides.pop(get_current_user, None)
 
 
 @pytest.fixture(autouse=True)

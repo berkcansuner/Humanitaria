@@ -65,6 +65,15 @@ class Settings(BaseSettings):
     # X-API-Key header on the chat endpoints.
     API_KEY: str = ""
 
+    # Auth (login/signup — httpOnly cookie session + Google OAuth)
+    AUTH_SESSION_SECRET: str = "dev-insecure-change-me"   # signs OAuth state (Starlette SessionMiddleware)
+    SESSION_COOKIE_NAME: str = "rw_session"               # httpOnly session cookie name
+    SESSION_COOKIE_SECURE: bool = False                   # True in production (HTTPS only)
+    FRONTEND_URL: str = "http://localhost:5173"           # post-OAuth redirect target
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GOOGLE_REDIRECT_URI: str = "http://localhost:8000/auth/google/callback"
+
     # Session history
     HISTORY_WINDOW_K: int = 5         # number of exchanges (user+assistant pairs) to keep
     SESSION_MAX_MEMORY: int = 1000    # max in-memory sessions before LRU eviction

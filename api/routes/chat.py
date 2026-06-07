@@ -4,7 +4,7 @@ import re
 from uuid import uuid4
 
 import anyio
-from fastapi import APIRouter, HTTPException, Request, Depends, Header
+from fastapi import APIRouter, HTTPException, Request, Depends
 from pydantic import BaseModel, Field, field_validator
 from typing import List, Literal, Optional
 from langchain_core.messages import HumanMessage, AIMessage
@@ -21,6 +21,7 @@ from rag.retriever import (
 from rag.chain import build_chain
 from rag.history import get_session_history, has_session, populate_history_from_messages
 from rag import conversations as convo_store
+from api.routes.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -33,13 +34,6 @@ limiter = Limiter(key_func=get_remote_address)
 def _rate_limit() -> str:
     return get_settings().RATE_LIMIT
 
-
-def require_api_key(x_api_key: Optional[str] = Header(default=None)):
-    """Optional API-key auth. Open when API_KEY is empty (local dev); otherwise
-    the X-API-Key header must match."""
-    expected = get_settings().API_KEY
-    if expected and x_api_key != expected:
-        raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
 _GREETING_PATTERN = re.compile(
     r'^(merhaba|selam|hey|hi|hello|good\s*(morning|afternoon|evening)|nasılsın|how are you|günaydın|iyi\s*günler)[\s!.?]*$',
@@ -120,17 +114,26 @@ def _derive_title(text: str) -> str:
     return title[:60] if len(title) <= 60 else title[:57] + "..."
 
 
-def _ensure_conversation_and_seed(session_id: str, message: str) -> None:
-    """Create the conversation on its first real message, and on a cold request
-    for an existing conversation (e.g. after a restart) seed the in-memory
-    window from the persistent store so the LLM keeps its context. Sync — call
+def _ensure_conversation_and_seed(user_id: str, session_id: str, message: str) -> None:
+    """Create the conversation (owned by user_id) on its first real message, and
+    on a cold request for an existing conversation (e.g. after a restart) seed the
+    in-memory window from the persistent store so the LLM keeps its context. The
+    route has already verified session_id is new or owned by user_id. Sync — call
     via anyio.to_thread.run_sync."""
     if not convo_store.conversation_exists(session_id):
-        convo_store.create_conversation(session_id, _derive_title(message))
+        convo_store.create_conversation(user_id, session_id, _derive_title(message))
     elif not has_session(session_id):
         populate_history_from_messages(
             session_id, convo_store.messages_as_langchain(session_id)
         )
+
+
+def _verify_session_owner(user_id: str, session_id: str) -> bool:
+    """A client-supplied session_id must be brand-new or owned by the user.
+    Returns False when it exists but belongs to someone else (cross-user access)."""
+    if not convo_store.conversation_exists(session_id):
+        return True
+    return convo_store.is_owner(user_id, session_id)
 
 
 def _persist_exchange(session_id: str, user_message: str, answer: str, sources: list) -> tuple:
@@ -206,10 +209,14 @@ class ChatResponse(BaseModel):
     session_id: str
 
 
-@router.post("/chat", response_model=ChatResponse, dependencies=[Depends(require_api_key)])
+@router.post("/chat", response_model=ChatResponse)
 @limiter.limit(_rate_limit)
-async def chat(request: Request, req: ChatRequest):
+async def chat(request: Request, req: ChatRequest, user: dict = Depends(get_current_user)):
     session_id = req.session_id or str(uuid4())
+    if req.session_id and not await anyio.to_thread.run_sync(
+        _verify_session_owner, user["id"], session_id
+    ):
+        raise HTTPException(status_code=404, detail="Conversation not found")
 
     if _is_greeting(req.message):
         return ChatResponse(answer=_GREETING_REPLY, sources=[], session_id=session_id)
@@ -222,7 +229,7 @@ async def chat(request: Request, req: ChatRequest):
             msg = _no_docs_message(filters)
             return ChatResponse(answer=msg, sources=[], session_id=session_id)
 
-        await anyio.to_thread.run_sync(_ensure_conversation_and_seed, session_id, req.message)
+        await anyio.to_thread.run_sync(_ensure_conversation_and_seed, user["id"], session_id, req.message)
 
         context, source_dicts = _build_context_and_sources(docs)
 
@@ -250,10 +257,14 @@ async def chat(request: Request, req: ChatRequest):
         raise HTTPException(status_code=503, detail="Service temporarily unavailable")
 
 
-@router.post("/chat/stream", dependencies=[Depends(require_api_key)])
+@router.post("/chat/stream")
 @limiter.limit(_rate_limit)
-async def chat_stream(request: Request, req: ChatRequest):
+async def chat_stream(request: Request, req: ChatRequest, user: dict = Depends(get_current_user)):
     session_id = req.session_id or str(uuid4())
+    if req.session_id and not await anyio.to_thread.run_sync(
+        _verify_session_owner, user["id"], session_id
+    ):
+        raise HTTPException(status_code=404, detail="Conversation not found")
 
     if _is_greeting(req.message):
         async def greeting_generator():
@@ -280,7 +291,7 @@ async def chat_stream(request: Request, req: ChatRequest):
                 yield ServerSentEvent(event="done", data="{}")
                 return
 
-            await anyio.to_thread.run_sync(_ensure_conversation_and_seed, session_id, req.message)
+            await anyio.to_thread.run_sync(_ensure_conversation_and_seed, user["id"], session_id, req.message)
 
             analysis = analyze_query(req.message, filters=filters)
             context, source_dicts = _build_context_and_sources(docs)
@@ -312,14 +323,14 @@ async def chat_stream(request: Request, req: ChatRequest):
 
             # Persist to the durable store (runs only after a full stream, so
             # an aborted turn is never written).
-            user_id, assistant_id = await anyio.to_thread.run_sync(
+            user_msg_id, assistant_msg_id = await anyio.to_thread.run_sync(
                 _persist_exchange, session_id, req.message, full_response, sources
             )
             # Tell the client the persisted message ids so it can target a
             # precise cut point for Edit/resend and Regenerate (truncate).
             yield ServerSentEvent(
                 event="persisted",
-                data=json.dumps({"user_id": user_id, "assistant_id": assistant_id}),
+                data=json.dumps({"user_id": user_msg_id, "assistant_id": assistant_msg_id}),
             )
 
             if sources:

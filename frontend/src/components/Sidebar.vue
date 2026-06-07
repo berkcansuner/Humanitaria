@@ -23,21 +23,26 @@
 
     <div class="sidebar-foot">
       <div class="who">
-        <div class="avatar">AM</div>
+        <div class="avatar">{{ initials }}</div>
         <div class="who-text">
-          <div class="who-name">Alex Morgan</div>
-          <div class="who-org">Field Coordination</div>
+          <div class="who-name">{{ displayName }}</div>
+          <div v-if="secondary" class="who-org">{{ secondary }}</div>
         </div>
       </div>
+      <button type="button" class="logout-btn" title="Log out" aria-label="Log out" @click="logout">
+        <LogOut :size="16" />
+      </button>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
-import { Plus, Search } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
+import { Plus, Search, LogOut } from 'lucide-vue-next'
 import ConversationList from './ConversationList.vue'
 import { filterConversations, groupConversationsByDate } from '../utils/conversationOps.js'
+import { auth, doLogout } from '../utils/authStore.js'
 
 const props = defineProps({
   conversations: { type: Array, default: () => [] },
@@ -52,6 +57,25 @@ const hasQuery = computed(() => query.value.trim().length > 0)
 const groups = computed(() =>
   groupConversationsByDate(filterConversations(props.conversations, query.value))
 )
+
+// Footer reflects the signed-in user (from the auth store).
+const displayName = computed(() => auth.user?.name || auth.user?.email || 'Account')
+const secondary = computed(() => (auth.user?.name ? auth.user?.email : '') || '')
+const initials = computed(() => {
+  const n = auth.user?.name?.trim()
+  if (n) {
+    const p = n.split(/\s+/)
+    return ((p[0]?.[0] || '') + (p[1]?.[0] || '')).toUpperCase() || n[0].toUpperCase()
+  }
+  const e = auth.user?.email
+  return e ? e[0].toUpperCase() : '?'
+})
+
+const router = useRouter()
+async function logout() {
+  await doLogout()
+  router.push('/')
+}
 </script>
 
 <style scoped>
@@ -149,17 +173,47 @@ const groups = computed(() =>
   font-weight: 700;
 }
 
+.who-text {
+  min-width: 0;
+}
+
 .who-name {
   font-size: 12.5px;
   font-weight: 600;
   color: var(--color-text);
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .who-org {
   font-size: 11px;
   color: var(--color-muted);
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.logout-btn {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.logout-btn:hover {
+  background-color: var(--color-surface-container-high);
+  color: var(--color-text);
 }
 
 /* ConversationList grows to fill the middle; the list itself scrolls. */

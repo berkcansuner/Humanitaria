@@ -43,7 +43,7 @@ def _patched_chat_deps():
     ]
 
 
-def test_stream_persists_conversation_and_messages(client):
+def test_stream_persists_conversation_and_messages(client, test_user_id):
     from rag import conversations as store
     patches = _patched_chat_deps()
     for p in patches:
@@ -61,7 +61,7 @@ def test_stream_persists_conversation_and_messages(client):
     assert [m["role"] for m in msgs] == ["user", "assistant"]
     assert msgs[0]["content"] == "Soru nedir?"
     # title derived from the first user message
-    assert store.list_conversations()[0]["title"] == "Soru nedir?"
+    assert store.list_conversations(test_user_id)[0]["title"] == "Soru nedir?"
 
 
 def test_cold_request_seeds_window_from_sqlite(client):

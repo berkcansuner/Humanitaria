@@ -342,40 +342,6 @@ class TestSSEEventBody:
         assert response.status_code == 422
 
 
-class TestApiKeyAuth:
-    """Optional X-API-Key auth on the chat endpoints."""
-
-    def _settings(self, api_key):
-        return MagicMock(API_KEY=api_key, RATE_LIMIT="100/minute")
-
-    def test_missing_key_rejected_when_configured(self):
-        with patch("api.routes.chat.get_settings", return_value=self._settings("secret")):
-            from api.main import app
-            from fastapi.testclient import TestClient
-            client = TestClient(app)
-            # Greeting path needs no retrieval; auth runs before the handler.
-            response = client.post("/chat", json={"message": "merhaba"})
-            assert response.status_code == 401
-
-    def test_valid_key_accepted(self):
-        with patch("api.routes.chat.get_settings", return_value=self._settings("secret")):
-            from api.main import app
-            from fastapi.testclient import TestClient
-            client = TestClient(app)
-            response = client.post(
-                "/chat", json={"message": "merhaba"}, headers={"X-API-Key": "secret"}
-            )
-            assert response.status_code == 200
-
-    def test_no_auth_when_key_empty(self):
-        with patch("api.routes.chat.get_settings", return_value=self._settings("")):
-            from api.main import app
-            from fastapi.testclient import TestClient
-            client = TestClient(app)
-            response = client.post("/chat", json={"message": "merhaba"})
-            assert response.status_code == 200
-
-
 class TestRetrieveDocsRecencyBoost:
     """_retrieve_docs'un boost AÇIK/KAPALI dallarını doğrular (anyio ile sürülür)."""
 

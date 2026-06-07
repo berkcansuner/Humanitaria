@@ -16,6 +16,12 @@ uvicorn[standard]==0.46.0
 sse-starlette==3.0.3
 slowapi==0.1.9
 
+# Auth (login/signup — httpOnly cookie session + Google OAuth)
+bcrypt==5.0.0
+authlib==1.7.2
+itsdangerous==2.2.0
+httpx==0.28.1
+
 # Ingestion / utilities
 pypdf==5.4.0
 apscheduler==3.10.4

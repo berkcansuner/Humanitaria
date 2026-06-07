@@ -4,7 +4,28 @@
 > Bu bir tarihçe değil — GÜNCEL durumu yansıtır. Eskiyen satırları sil/değiştir.
 > "Nerede kalmıştık?" sorusunun cevabı burasıdır.
 
-**Son güncelleme:** 2026-06-06
+**Son güncelleme:** 2026-06-07
+
+---
+
+## ✅ Bu seansta UYGULANAN — Auth (Login/Signup) sistemi (2026-06-07, COMMIT EDİLMEDİ)
+
+Zorunlu giriş + e-posta/şifre **ve** Google OAuth, **httpOnly cookie** oturum. TDD ile.
+Aynı zamanda **conversation IDOR açığını kapattı** (sohbetler artık kullanıcıya ait).
+
+**Backend (yeni/değişen):**
+- `rag/users.py` (YENİ) — users + sessions tabloları (aynı SQLite DB), bcrypt şifre hash, opak session token (DB'de sha256 hash'li). `get_or_create_google_user` (sub→email-link→create).
+- `api/routes/auth.py` (YENİ) — `POST /auth/signup|login|logout`, `GET /auth/me`, `GET /auth/google/login|callback` (authlib). `get_current_user` dependency (cookie→user veya 401).
+- `rag/conversations.py` — `user_id` kolonu + migration (`_ensure_schema` ALTER) + `is_owner()`; `create_conversation`/`list_conversations` artık `user_id` alır.
+- `api/routes/{chat,conversations}.py` — gating `require_api_key` → `get_current_user` (X-API-Key KALDIRILDI); tüm conv işlemleri sahiplik-kontrollü (non-owner **404**). chat'te supplied session_id sahiplik kontrolü. Mesaj-id local'leri `user_msg_id`/`assistant_msg_id` (SSE payload anahtarları aynı: frontend uyumu).
+- `api/main.py` — CORS `allow_credentials=True` + `SessionMiddleware` (authlib OAuth state).
+- `config.py` — `AUTH_SESSION_SECRET`, `SESSION_COOKIE_NAME/SECURE`, `FRONTEND_URL`, `GOOGLE_CLIENT_ID/SECRET/REDIRECT_URI`. `requirements.txt` — bcrypt, authlib, itsdangerous, httpx.
+
+**Frontend (yeni/değişen):**
+- `utils/authApi.js` + `utils/authStore.js` (YENİ, reactive — Pinia yok). `views/AuthView.vue` (YENİ, login+signup tek `mode` prop'lu view, `.mkt-scope` tasarımı, Google butonu). `router/index.js` — `/login`,`/signup` + `/app` `requiresAuth` guard (`beforeEach` → `refresh()`). `MarketingNav.vue` — authed'de Open app/Log out. `api.js` + Chat.vue SSE — `credentials:'include'`.
+
+**Test/Doğrulama:** **297 backend** (yeni: users 13, auth 10, auth_google 2 [mock], IDOR access-control 3) + **61 frontend** yeşil. Build OK. Testlerde `get_current_user` override (conftest `_auth_override` + `@pytest.mark.real_auth` opt-out). **Canlı smoke (geçici DB):** signup→HttpOnly/SameSite=lax cookie, /me 200, /conversations cookie'li 200 / cookie'siz **401**, logout→**401** (sunucu-tarafı iptal), /login SPA 200, google(yapılandırılmamış) 503.
+**Google OAuth canlı TEST EDİLMEDİ** — gerçek cred gerekir: prod/dev `.env`'e `GOOGLE_CLIENT_ID/SECRET` + Google Cloud'da OAuth client (redirect `…/auth/google/callback`).
 
 ---
 
@@ -65,8 +86,8 @@ Plan/spec: `docs/superpowers/{plans,specs}/2026-06-02-reingest-pilot-syria*` (gi
 - **Chunker:** **`RecursiveCharacterTextSplitter` ~1500 char/200 overlap** (yeni default). NOT: mevcut default-namespace verisi hâlâ ESKİ 800-kelime chunk'larda — rollout'a kadar karışık durum.
 - **Retrieval:** güncellik-farkında + alaka reranker'ı (truncate=END); recency blend ham alaka skoruyla. `RECENCY_RERANK_POOL=10`, `RECENCY_BOOST_FACTOR=0.6`.
 - **Backend:** FastAPI, port `.env`'deki `API_PORT`. SSE streaming. Vue dist'i **SPA history-mode fallback** ile sunar (`api/main.py`: `/assets` mount + index.html catch-all). Kod değişikliğinden sonra restart (`--reload` yok).
-- **Frontend:** Vue 3 + **vue-router** SPA, Humanitaria (yeşil/antrasit, dark+light), İngilizce. Rotalar: **`/` Landing** (marketing, `.mkt-scope` izole CSS, design handoff) + **`/app` Chat** (`views/ChatView.vue`). **Pricing sayfası KALDIRILDI** (route+view+CSS); navbar: Product/Sources/Use cases (Citations nav linki de kaldırıldı, sayfa bölümü+footer linki kaldı). Marketing döküman-scroll (global viewport-lock yalnız chat'e özel: `ChatView .app{height:100vh;overflow:hidden}`). `frontend/dist/` gitignore'da.
-- **Test:** **271 backend** + 51 frontend yeşil. Judge groundedness 5.0/5, relevance ~4.9-5.0/5 (judge doygun/varyanslı).
+- **Frontend:** Vue 3 + **vue-router** SPA, Humanitaria (yeşil/antrasit, dark+light), İngilizce. Rotalar: **`/` Landing** (marketing, `.mkt-scope` izole CSS) + **`/login`+`/signup`** (`views/AuthView.vue`) + **`/app` Chat** (`views/ChatView.vue`, **router guard'lı — zorunlu giriş**). **Pricing sayfası KALDIRILDI** (route+view+CSS); navbar: Product/Sources/Use cases (Citations nav linki de kaldırıldı, sayfa bölümü+footer linki kaldı). Marketing döküman-scroll (global viewport-lock yalnız chat'e özel: `ChatView .app{height:100vh;overflow:hidden}`). `frontend/dist/` gitignore'da.
+- **Test:** **297 backend** + 61 frontend yeşil. Judge groundedness 5.0/5, relevance ~4.9-5.0/5 (judge doygun/varyanslı).
 
 ## Veri Durumu (Pinecone `reliefweb-docs`, 3072-dim)
 - **default namespace (''): 31.628 vektör** — ESKİ 800-kelime chunk, 10 ülke. **App bunu kullanıyor** (cutover henüz YOK).
@@ -88,6 +109,7 @@ Plan/spec: `docs/superpowers/{plans,specs}/2026-06-02-reingest-pilot-syria*` (gi
 
 ## Commit / Push Durumu
 - **`origin/master`'a PUSH'LANDI (master = origin):** pilot+chunker+model+date-filter-fix (`…5ab02a0`), store 429-retry (`918637d`), marketing entegrasyonu — Landing/Pricing/router/SPA-fallback (`cdc4a95`), marketing scroll fix (`5810e15`), pricing kaldırma (`e81aade`), citations-nav kaldırma (`daa9e1d`) + MEMORY docs.
+- **COMMIT EDİLMEDİ (çalışma ağacında):** Auth (Login/Signup) sistemi — yukarıdaki tüm backend+frontend dosyaları. Test+build+canlı smoke yeşil; kullanıcı onayında commit'lenecek.
 - Remote: **https://github.com/berkcansuner/reliefweb-rag** (private).
 
 ## Sıradaki Adımlar (kullanıcı yönlendirir)
@@ -95,13 +117,15 @@ Plan/spec: `docs/superpowers/{plans,specs}/2026-06-02-reingest-pilot-syria*` (gi
 - [ ] v2 tamla → **CUTOVER:** `PINECONE_NAMESPACE=v2` (config default + .env) commit/push → app v2'ye geçer. Eski default rollback olarak TUT; pilot namespace temizle.
 - [ ] (Karar) "pilot" + (cutover sonrası) eski default namespace temizliği.
 - [ ] Diğer Faz 2 eksenleri: hibrit (keyword+vektör) arama; kaynak snippet/önizleme.
-- [ ] (Deploy öncesi) Conversation endpoint'lerinde kullanıcı modeli/IDOR; conv rate-limit; CORS daraltma.
+- [x] ~~Conversation kullanıcı modeli / IDOR~~ → **YAPILDI** (auth sistemi, 2026-06-07, commit bekliyor). Kalan deploy-öncesi: conv rate-limit; CORS daraltma; prod `.env`'e güçlü `AUTH_SESSION_SECRET` + Google cred'leri.
+- [ ] **İş Kolu 2 — RAG kalite & ölçüm** (etiketli eval seti recall@k/MRR + konuşma-bağlamlı sorgu yeniden yazımı). Onaylı plan: `~/.claude/plans/bunlar-d-nda-ekleyebilece-imiz-bir-drifting-cat.md`.
+- [ ] **İş Kolu 3 — Veri derinliği** (ingest metadata zenginleştirme ISO3/dil/ikincil tema + tam reindex; çalıştırma Pinecone kota reset'ine bağlı).
 
 ## Bilinen Sorunlar / Kısıtlamalar
 - **Pinecone aylık write-unit kotası (2M):** rollout bunu doldurdu → yeni yazma 429 ("write unit limit for the current month"). Sabit kota; retry çare değil. Reset/plan-upgrade gerek. Büyük ingest planlarken hesaba kat.
 - **Karışık chunk durumu:** chunker yeni default (~1500 char) ama mevcut default-namespace verisi hâlâ eski 800-kelime — cutover'a kadar böyle. Yeni ingest'ler yeni chunk üretir.
 - 1-yıl ingest penceresi tarihsel büyük olayları kaçırır (deprem) → rollout'ta ≥2-3 yıl.
-- Conversation endpoint'lerinde gerçek auth YOK → IDOR (yerel tek-kullanıcıda sorun değil, deploy öncesi şart).
+- ~~Conversation IDOR~~ → **ÇÖZÜLDÜ** (auth sistemi; sohbetler `user_id`-sahipli, non-owner 404). Mevcut conversations.db satırları migration'da `user_id=NULL` → görünmez (dev verisi; kabul).
 - Şablon/sistem mesajları (greeting, no-docs) İngilizce; yalnız LLM yanıtı çok dilli (bilinçli).
 - Session history varsayılan in-memory (restart'ta silinir); `REDIS_URL` ile kalıcı.
 - Görseller/infografikler doğrudan sorgulanamaz (246 Suriye raporu boş body → atlandı).

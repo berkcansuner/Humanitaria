@@ -52,30 +52,17 @@ def test_delete(client):
 
 def test_truncate_drops_later_messages(client):
     from rag import conversations as store
-    store.create_conversation("c1", "t")
-    first_user = store.append_message("c1", "user", "q1")
-    store.append_message("c1", "assistant", "a1")
-    store.append_message("c1", "user", "q2")
-    r = client.post("/conversations/c1/truncate", json={"keep_through_message_id": first_user})
+    # Create through the API so the conversation is owned by the authenticated
+    # (overridden) test user; the truncate route enforces ownership.
+    conv_id = client.post("/conversations", json={"title": "t"}).json()["id"]
+    first_user = store.append_message(conv_id, "user", "q1")
+    store.append_message(conv_id, "assistant", "a1")
+    store.append_message(conv_id, "user", "q2")
+    r = client.post(f"/conversations/{conv_id}/truncate", json={"keep_through_message_id": first_user})
     assert r.status_code == 204
-    assert [m["content"] for m in store.get_messages("c1")] == ["q1"]
+    assert [m["content"] for m in store.get_messages(conv_id)] == ["q1"]
 
 
 def test_truncate_404_for_unknown(client):
     r = client.post("/conversations/nope/truncate", json={"keep_through_message_id": 0})
     assert r.status_code == 404
-
-
-class TestApiKeyAuth:
-    def test_requires_key_when_configured(self, tmp_path):
-        convo_settings = MagicMock()
-        convo_settings.CONVERSATION_DB_PATH = str(tmp_path / "c.db")
-        auth_settings = MagicMock()
-        auth_settings.API_KEY = "secret"
-        with patch("rag.conversations.get_settings", return_value=convo_settings), \
-             patch("api.routes.chat.get_settings", return_value=auth_settings):
-            from api.main import app
-            client = TestClient(app)
-            assert client.get("/conversations").status_code == 401
-            ok = client.get("/conversations", headers={"X-API-Key": "secret"})
-            assert ok.status_code == 200

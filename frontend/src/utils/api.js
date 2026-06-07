@@ -5,6 +5,7 @@
 
 async function request(url, options = {}) {
   const res = await fetch(url, {
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     ...options,
   })

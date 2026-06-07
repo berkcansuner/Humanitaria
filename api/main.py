@@ -5,11 +5,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from starlette.middleware.sessions import SessionMiddleware
 from pathlib import Path
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from api.routes import chat, health, conversations
+from api.routes import chat, health, conversations, auth
 from api.routes.chat import limiter
 from config import get_settings
 
@@ -61,15 +62,21 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 settings = get_settings()
 _cors_origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
+# allow_credentials=True so the browser sends/stores the httpOnly session cookie
+# on cross-origin dev calls (frontend :5173 → API :8000). Requires an explicit
+# origin list (never "*" with credentials), which CORS_ORIGINS provides.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
-    allow_credentials=False,
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Content-Type", "X-API-Key"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type"],
 )
+# Signed cookie used by Authlib to hold the Google OAuth state/nonce mid-flow.
+app.add_middleware(SessionMiddleware, secret_key=settings.AUTH_SESSION_SECRET)
 
 app.include_router(health.router, tags=["health"])
+app.include_router(auth.router, tags=["auth"])
 app.include_router(chat.router, tags=["chat"])
 app.include_router(conversations.router, tags=["conversations"])
 

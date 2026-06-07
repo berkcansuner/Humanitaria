@@ -5,6 +5,9 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 log_cli = false
 log_level = "WARNING"
+markers = [
+    "real_auth: exercise real cookie auth (opt out of the get_current_user test override)",
+]
 
 [tool.coverage.run]
 source = ["api", "rag", "ingestion"]
