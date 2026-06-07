@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     CHUNK_SIZE: int = 1500        # characters per chunk (recursive splitter)
     CHUNK_OVERLAP: int = 200
     TOP_K_RETRIEVAL: int = 5
+    # Rewrite a follow-up message into a standalone retrieval query using chat
+    # history (resolves anaphora like "what about the north?"). Kill-switch.
+    QUERY_REWRITE_ENABLED: bool = True
     MMR_FETCH_K: int = 20          # candidate pool for MMR diversity
     MMR_LAMBDA: float = 0.5        # 0=max diversity, 1=max relevance
     # Two-stage retrieval: Pinecone hosted reranker over a larger candidate pool.

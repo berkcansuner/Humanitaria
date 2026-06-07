@@ -20,6 +20,7 @@ from rag.retriever import (
 )
 from rag.chain import build_chain
 from rag.history import get_session_history, has_session, populate_history_from_messages
+from rag.query_rewriter import rewrite_query
 from rag import conversations as convo_store
 from api.routes.auth import get_current_user
 
@@ -136,6 +137,16 @@ def _verify_session_owner(user_id: str, session_id: str) -> bool:
     return convo_store.is_owner(user_id, session_id)
 
 
+def _resolve_retrieval_query(session_id: str, message: str) -> str:
+    """Rewrite a follow-up into a standalone retrieval query using in-memory chat
+    history. Returns the original message for first turns or when disabled; the
+    answer is always generated from the original message."""
+    if not get_settings().QUERY_REWRITE_ENABLED or not has_session(session_id):
+        return message
+    prior = list(get_session_history(session_id).messages)
+    return rewrite_query(message, prior) if prior else message
+
+
 def _persist_exchange(session_id: str, user_message: str, answer: str, sources: list) -> tuple:
     """Persist a completed user+assistant exchange and return the new (user_id,
     assistant_id). Sync — offload to a thread. Only called after the chain
@@ -222,8 +233,9 @@ async def chat(request: Request, req: ChatRequest, user: dict = Depends(get_curr
         return ChatResponse(answer=_GREETING_REPLY, sources=[], session_id=session_id)
 
     try:
-        filters = extract_filters(req.message)
-        docs = await _retrieve_docs(req.message, filters)
+        retrieval_query = _resolve_retrieval_query(session_id, req.message)
+        filters = extract_filters(retrieval_query)
+        docs = await _retrieve_docs(retrieval_query, filters)
 
         if not docs:
             msg = _no_docs_message(filters)
@@ -278,8 +290,9 @@ async def chat_stream(request: Request, req: ChatRequest, user: dict = Depends(g
 
     async def event_generator():
         try:
-            filters = extract_filters(req.message)
-            docs = await _retrieve_docs(req.message, filters)
+            retrieval_query = _resolve_retrieval_query(session_id, req.message)
+            filters = extract_filters(retrieval_query)
+            docs = await _retrieve_docs(retrieval_query, filters)
 
             if not docs:
                 msg = _no_docs_message(filters)

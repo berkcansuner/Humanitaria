@@ -48,6 +48,31 @@ class TestParseReport:
         assert doc["theme"] == ""
         assert doc["doctype"] == "report"
 
+    def test_parse_report_enrichment_fields(self):
+        raw = {
+            "id": "321",
+            "fields": {
+                "title": "T", "body": "B",
+                "primary_country": {"name": "Syrian Arab Republic", "iso3": "syr"},
+                "theme": [{"name": "Health"}, {"name": "Protection and Human Rights"}],
+                "language": [{"name": "English", "code": "en"}],
+                "disaster": [{"name": "Syria Earthquake", "glide": "EQ-2023-000015-SYR"}],
+            },
+        }
+        doc = parse_report(raw)
+        assert doc["iso3"] == "SYR"                       # uppercased
+        assert doc["language"] == "English"
+        assert doc["themes"] == ["Health", "Protection and Human Rights"]  # ALL themes
+        assert doc["theme"] == "Health"                   # first kept for backward compat
+        assert doc["glide"] == "EQ-2023-000015-SYR"
+
+    def test_parse_report_enrichment_defaults_when_missing(self):
+        doc = parse_report({"id": "322", "fields": {"title": "T", "body": "B"}})
+        assert doc["iso3"] == ""
+        assert doc["language"] == ""
+        assert doc["themes"] == []
+        assert doc["glide"] == ""
+
     def test_url_prefers_alias_over_synthesized_report_path(self):
         """Regression: the synthesized /report/{numeric-id} path 404s on ReliefWeb.
 

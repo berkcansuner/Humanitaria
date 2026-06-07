@@ -8,6 +8,29 @@
 
 ---
 
+## ✅ Bu seansta UYGULANAN — İş Kolu 2 (RAG kalite & ölçüm) + İş Kolu 3 (veri derinliği) (2026-06-07, commit bekliyor)
+
+**İş Kolu 2A — Retrieval eval metrikleri (READ-only, kotadan etkilenmez):**
+- `rag/eval_metrics.py` (YENİ, TDD): recall@k / reciprocal_rank (MRR) / nDCG@k (binary relevance).
+- `scripts/build_eval_labels.py` (YENİ): default+v2'den aday havuzu + LLM relevance (TREC-tarzı pooled, silver) → `scripts/eval_data/labeled_queries.json` (15 sorgu, v2'nin 8 ülke kapsamı). Düz JSON-dizi parse + 503 retry.
+- `scripts/eval_rag.py --metrics`: etiketli sette current namespace'in recall@k/MRR/nDCG'si. `PINECONE_NAMESPACE=v2` vs `''` ile A/B.
+- **A/B SONUCU (k=5):** default recall@5=**0.208** MRR=**0.650** nDCG=**0.396** · v2 recall@5=**0.201** MRR=**0.622** nDCG=**0.370**. → **Doküman düzeyinde v2 ≈ default (regresyon YOK, belirgin kazanım YOK).** v2'nin değeri granülarite (küçük chunk → reranker/LLM %100 görür), doküman recall'u değil. **Cutover retrieval'ı bozmaz.** Caveat: 15 sorgu, silver label, iki-namespace havuz → kapsam gürültüsü.
+
+**İş Kolu 2B — Konuşma-bağlamlı sorgu yeniden yazımı:**
+- `rag/query_rewriter.py` (YENİ, TDD): follow-up'ı ("ya kuzeyde?") chat history ile standalone retrieval sorgusuna çevirir (gemini-2.5-flash, 5s, hata→orijinal). **Yanıt hâlâ orijinal mesajdan** üretilir; yalnız RETRIEVAL sorgusu yeniden yazılır.
+- `chat.py` `_resolve_retrieval_query` (her iki route, retrieval ÖNCESİ, yalnız in-memory history varsa). `config.QUERY_REWRITE_ENABLED` kill-switch. (Faz C multi-query atlandı — A/B recall açığı göstermedi.)
+
+**İş Kolu 3 — Veri derinliği (kod HAZIR; çalıştırma kota reset'inde):**
+- `parser.py` parse_report: `iso3` (upper), `language`, `themes` (TÜM temalar; `theme`=ilk, back-compat), `glide` (linked disaster).
+- `chunker.py`: bu alanları metadata'ya yazar (themes boşsa atlar — Pinecone empty-list).
+- `client.py` reports fields: +`primary_country.iso3`, `language.name`, `disaster.glide`.
+- `retriever._build_pinecone_filter`: tema filtresi `$or(theme $eq, themes $in)` → eski string + yeni liste kayıtları (eski namespace REGRESSİZ).
+- **Reindex:** yeni script GEREKMEDİ — `ingest.py` zaten delete-before-upsert ile re-index. Kota reset'inde `PINECONE_NAMESPACE=v2 ingest.py --country PSE UKR --date-from 2023-06-05` yeni chunker+zenginleştirmeyi uygular.
+
+**Test:** **318 backend** (yeni: eval_metrics 10, query_rewriter 5, parser/chunker/retriever enrichment 6) + 61 frontend yeşil.
+
+---
+
 ## ✅ Bu seansta UYGULANAN — Auth (Login/Signup) sistemi (2026-06-07, commit `2198891` → origin/master)
 
 Zorunlu giriş + e-posta/şifre **ve** Google OAuth, **httpOnly cookie** oturum. TDD ile.
@@ -87,7 +110,7 @@ Plan/spec: `docs/superpowers/{plans,specs}/2026-06-02-reingest-pilot-syria*` (gi
 - **Retrieval:** güncellik-farkında + alaka reranker'ı (truncate=END); recency blend ham alaka skoruyla. `RECENCY_RERANK_POOL=10`, `RECENCY_BOOST_FACTOR=0.6`.
 - **Backend:** FastAPI, port `.env`'deki `API_PORT`. SSE streaming. Vue dist'i **SPA history-mode fallback** ile sunar (`api/main.py`: `/assets` mount + index.html catch-all). Kod değişikliğinden sonra restart (`--reload` yok).
 - **Frontend:** Vue 3 + **vue-router** SPA, Humanitaria (yeşil/antrasit, dark+light), İngilizce. Rotalar: **`/` Landing** (marketing, `.mkt-scope` izole CSS) + **`/login`+`/signup`** (`views/AuthView.vue`) + **`/app` Chat** (`views/ChatView.vue`, **router guard'lı — zorunlu giriş**). **Pricing sayfası KALDIRILDI** (route+view+CSS); navbar: Product/Sources/Use cases (Citations nav linki de kaldırıldı, sayfa bölümü+footer linki kaldı). Marketing döküman-scroll (global viewport-lock yalnız chat'e özel: `ChatView .app{height:100vh;overflow:hidden}`). `frontend/dist/` gitignore'da.
-- **Test:** **297 backend** + 61 frontend yeşil. Judge groundedness 5.0/5, relevance ~4.9-5.0/5 (judge doygun/varyanslı).
+- **Test:** **318 backend** + 61 frontend yeşil. Judge groundedness 5.0/5 (doygun); ayrıca etiketli retrieval metrikleri (recall@k/MRR/nDCG) — bkz. İş Kolu 2A.
 
 ## Veri Durumu (Pinecone `reliefweb-docs`, 3072-dim)
 - **default namespace (''): 31.628 vektör** — ESKİ 800-kelime chunk, 10 ülke. **App bunu kullanıyor** (cutover henüz YOK).
@@ -118,8 +141,8 @@ Plan/spec: `docs/superpowers/{plans,specs}/2026-06-02-reingest-pilot-syria*` (gi
 - [ ] (Karar) "pilot" + (cutover sonrası) eski default namespace temizliği.
 - [ ] Diğer Faz 2 eksenleri: hibrit (keyword+vektör) arama; kaynak snippet/önizleme.
 - [x] ~~Conversation kullanıcı modeli / IDOR~~ → **YAPILDI** (auth sistemi, 2026-06-07, commit bekliyor). Kalan deploy-öncesi: conv rate-limit; CORS daraltma; prod `.env`'e güçlü `AUTH_SESSION_SECRET` + Google cred'leri.
-- [ ] **İş Kolu 2 — RAG kalite & ölçüm** (etiketli eval seti recall@k/MRR + konuşma-bağlamlı sorgu yeniden yazımı). Onaylı plan: `~/.claude/plans/bunlar-d-nda-ekleyebilece-imiz-bir-drifting-cat.md`.
-- [ ] **İş Kolu 3 — Veri derinliği** (ingest metadata zenginleştirme ISO3/dil/ikincil tema + tam reindex; çalıştırma Pinecone kota reset'ine bağlı).
+- [x] ~~**İş Kolu 2 — RAG kalite & ölçüm**~~ → **YAPILDI** (eval metrikleri + etiketli set + A/B + sorgu yeniden yazımı; commit bekliyor). A/B: v2≈default doküman düzeyinde.
+- [x] ~~**İş Kolu 3 — Veri derinliği** (kod)~~ → **YAPILDI** (parser/chunker/client/retriever zenginleştirme; commit bekliyor). **Çalıştırma:** kota reset'inde `ingest.py` ile re-index (yeni alanlar + chunker o zaman uygulanır).
 
 ## Bilinen Sorunlar / Kısıtlamalar
 - **Pinecone aylık write-unit kotası (2M):** rollout bunu doldurdu → yeni yazma 429 ("write unit limit for the current month"). Sabit kota; retry çare değil. Reset/plan-upgrade gerek. Büyük ingest planlarken hesaba kat.

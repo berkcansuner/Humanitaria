@@ -43,6 +43,19 @@ def _safe_list_get(items, index=0, key="name", default=""):
     return _sanitize(item.get(key, default))
 
 
+def _names(items) -> list:
+    """All non-empty 'name' values from a list of dicts (e.g. every theme)."""
+    if not isinstance(items, list):
+        return []
+    out = []
+    for it in items:
+        if isinstance(it, dict):
+            name = _sanitize(it.get("name", ""))
+            if name:
+                out.append(name)
+    return out
+
+
 def _normalize_date(value: str) -> str:
     """Normalize ReliefWeb date strings to YYYY-MM-DD.
 
@@ -82,8 +95,11 @@ def parse_report(raw: Dict[str, Any]) -> Dict[str, Any]:
     date = _normalize_date(_safe_get(date_field, "created") if isinstance(date_field, dict) else "")
     country_field = fields.get("primary_country")
     country = _normalize_country_name(_safe_get(country_field, "name")) if isinstance(country_field, dict) else ""
-    themes = fields.get("theme")
-    theme = _safe_list_get(themes, 0, "name")
+    iso3 = _safe_get(country_field, "iso3").upper() if isinstance(country_field, dict) else ""
+    themes = _names(fields.get("theme"))         # ALL sector themes (was first-only)
+    theme = themes[0] if themes else ""          # first kept for display/back-compat
+    language = _safe_list_get(fields.get("language"), 0, "name")
+    glide = _safe_list_get(fields.get("disaster"), 0, "glide")   # linked disaster's GLIDE
     formats = fields.get("format")
     fmt = _safe_list_get(formats, 0, "name")
     source_field = fields.get("source")
@@ -103,7 +119,11 @@ def parse_report(raw: Dict[str, Any]) -> Dict[str, Any]:
         "body": strip_html(_sanitize(fields.get("body", ""))),
         "date": date,
         "country": country,
+        "iso3": iso3,
         "theme": theme,
+        "themes": themes,
+        "language": language,
+        "glide": glide,
         "source": source,
         "format": fmt,
         "doctype": "report",

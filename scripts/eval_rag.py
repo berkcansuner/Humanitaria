@@ -15,6 +15,7 @@ Retrieval bir bilgi metriğidir; sonucu çıkış kodunu etkilemez (LLM/veri de�
 """
 import sys
 import argparse
+import json
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -226,6 +227,47 @@ def _judge_case(case: dict, docs: list):
         return None, str(e)
 
 
+_LABELS_PATH = Path(__file__).resolve().parent / "eval_data" / "labeled_queries.json"
+
+
+def _run_metrics():
+    """Recall@k / MRR / nDCG@k for the CURRENT namespace against the labeled set.
+
+    Run with PINECONE_NAMESPACE=v2 vs '' to get the numeric v2-vs-default A/B
+    (the labeled set is namespace-independent → a fair comparison)."""
+    from rag.eval_metrics import recall_at_k, reciprocal_rank, ndcg_at_k
+    from config import get_settings
+
+    settings = get_settings()
+    k = settings.TOP_K_RETRIEVAL
+    if not _LABELS_PATH.exists():
+        print(f"Etiketli set yok: {_LABELS_PATH}\n→ önce: python scripts/build_eval_labels.py")
+        sys.exit(1)
+    dataset = [d for d in json.loads(_LABELS_PATH.read_text(encoding="utf-8"))
+               if d.get("relevant_doc_ids")]
+    ns = settings.PINECONE_NAMESPACE or "(default)"
+    print(f"\nRetrieval metrikleri — namespace='{ns}', {len(dataset)} etiketli sorgu, k={k}\n"
+          + "=" * 70)
+    recalls, rrs, ndcgs = [], [], []
+    for d in dataset:
+        relevant = set(d["relevant_doc_ids"])
+        filters = extract_filters(d["query"])
+        try:
+            docs = anyio.run(_retrieve_docs, d["query"], filters)
+        except Exception as e:
+            print(f"  [err] {d['query']}: {e}")
+            continue
+        ranked = [doc.metadata.get("doc_id") for doc in docs]
+        r, rr, n = recall_at_k(ranked, relevant, k), reciprocal_rank(ranked, relevant), ndcg_at_k(ranked, relevant, k)
+        recalls.append(r); rrs.append(rr); ndcgs.append(n)
+        print(f"  recall@{k}={r:.2f}  RR={rr:.2f}  nDCG@{k}={n:.2f}  | {d['query']}")
+    if recalls:
+        print("=" * 70)
+        print(f"ORTALAMA ({len(recalls)} sorgu, namespace='{ns}') — "
+              f"recall@{k}={sum(recalls)/len(recalls):.3f}  "
+              f"MRR={sum(rrs)/len(rrs):.3f}  nDCG@{k}={sum(ndcgs)/len(ndcgs):.3f}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="RAG eval harness")
     parser.add_argument("--no-retrieval", action="store_true",
@@ -234,7 +276,13 @@ def main():
                         help="LLM-judge ile yanıt kalitesini puanla (groundedness+relevance, Gemini)")
     parser.add_argument("--judge-threshold", type=float, default=3.5,
                         help="--judge ile ortalama puan eşiği; altı çıkış kodunu 1 yapar (varsayılan 3.5)")
+    parser.add_argument("--metrics", action="store_true",
+                        help="Etiketli set üzerinde recall@k/MRR/nDCG@k hesapla (current namespace)")
     args = parser.parse_args()
+
+    if args.metrics:
+        _run_metrics()
+        return
 
     print(f"\nRAG Eval — {len(EVAL_CASES)} vaka\n" + "=" * 70)
     filter_pass = 0

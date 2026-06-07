@@ -12,6 +12,9 @@ ENDPOINT_CONFIG = {
         "fields": [
             "title", "body", "date.created", "source.name",
             "primary_country.name", "theme.name", "format.name", "file",
+            # Enrichment: country code, document language, and the linked
+            # disaster's GLIDE code (theme.name already returns ALL themes).
+            "primary_country.iso3", "language.name", "disaster.glide",
             # Real web URL for the displayed source link. url_alias is the
             # human-readable slug page; url is the /node/{id} redirect. The
             # synthesized /report/{id} path is NOT served by ReliefWeb (404).

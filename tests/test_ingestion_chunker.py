@@ -43,3 +43,19 @@ def test_short_body_single_chunk():
     chunks = chunk_document(_doc("Kısa bir gövde."), chunk_size=1500, chunk_overlap=200)
     assert len(chunks) == 1
     assert chunks[0]["content"] == "Kısa bir gövde."
+
+
+def test_chunk_metadata_includes_enrichment_fields():
+    doc = _doc("Bir cümle. " * 400, iso3="SYR", language="English",
+               themes=["Health", "Protection and Human Rights"], glide="EQ-2023-000015-SYR")
+    md = chunk_document(doc, chunk_size=1500, chunk_overlap=200)[0]["metadata"]
+    assert md["iso3"] == "SYR"
+    assert md["language"] == "English"
+    assert md["themes"] == ["Health", "Protection and Human Rights"]
+    assert md["glide"] == "EQ-2023-000015-SYR"
+
+
+def test_chunk_omits_empty_themes_list():
+    # No themes → the list key is omitted (Pinecone metadata dislikes empty lists).
+    md = chunk_document(_doc("Bir cümle. " * 400), chunk_size=1500, chunk_overlap=200)[0]["metadata"]
+    assert "themes" not in md

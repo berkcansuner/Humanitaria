@@ -77,6 +77,11 @@ def _build_pinecone_filter(filters: Optional[Dict[str, Any]]) -> Optional[Dict[s
                 conditions[key] = {"$in": [val, full_name]}
             else:
                 conditions[key] = {"$eq": val}
+        elif key == "theme":
+            # Legacy records store a single `theme` string; enriched records store
+            # all sector themes in a `themes` list. Match either so re-indexed data
+            # gains multi-theme recall without regressing the existing namespace.
+            conditions["$or"] = [{"theme": {"$eq": val}}, {"themes": {"$in": [val]}}]
         elif isinstance(val, dict):
             conditions[key] = val
         else:

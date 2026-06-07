@@ -90,6 +90,20 @@ class TestPineconeFilter:
             "date_ts": {"$gte": 20240601},
         }
 
+    def test_theme_matches_old_string_or_new_themes_list(self):
+        from rag.retriever import _build_pinecone_filter
+        # Old records carry `theme` (string); enriched records carry `themes` (list).
+        # $or matches both so a re-index never regresses theme filtering.
+        assert _build_pinecone_filter({"theme": "Health"}) == {
+            "$or": [{"theme": {"$eq": "Health"}}, {"themes": {"$in": ["Health"]}}]
+        }
+
+    def test_theme_combines_with_country(self):
+        from rag.retriever import _build_pinecone_filter
+        f = _build_pinecone_filter({"country": "Yemen", "theme": "Health"})
+        assert f["country"] == {"$eq": "Yemen"}
+        assert f["$or"] == [{"theme": {"$eq": "Health"}}, {"themes": {"$in": ["Health"]}}]
+
 
 class TestProviderVectorstore:
     def setup_method(self):
