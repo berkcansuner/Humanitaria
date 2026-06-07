@@ -8,7 +8,7 @@
 
 ---
 
-## ✅ Bu seansta UYGULANAN — Auth (Login/Signup) sistemi (2026-06-07, COMMIT EDİLMEDİ)
+## ✅ Bu seansta UYGULANAN — Auth (Login/Signup) sistemi (2026-06-07, commit `2198891` → origin/master)
 
 Zorunlu giriş + e-posta/şifre **ve** Google OAuth, **httpOnly cookie** oturum. TDD ile.
 Aynı zamanda **conversation IDOR açığını kapattı** (sohbetler artık kullanıcıya ait).
@@ -25,7 +25,7 @@ Aynı zamanda **conversation IDOR açığını kapattı** (sohbetler artık kull
 - `utils/authApi.js` + `utils/authStore.js` (YENİ, reactive — Pinia yok). `views/AuthView.vue` (YENİ, login+signup tek `mode` prop'lu view, `.mkt-scope` tasarımı, Google butonu). `router/index.js` — `/login`,`/signup` + `/app` `requiresAuth` guard (`beforeEach` → `refresh()`). `MarketingNav.vue` — authed'de Open app/Log out. `api.js` + Chat.vue SSE — `credentials:'include'`.
 
 **Test/Doğrulama:** **297 backend** (yeni: users 13, auth 10, auth_google 2 [mock], IDOR access-control 3) + **61 frontend** yeşil. Build OK. Testlerde `get_current_user` override (conftest `_auth_override` + `@pytest.mark.real_auth` opt-out). **Canlı smoke (geçici DB):** signup→HttpOnly/SameSite=lax cookie, /me 200, /conversations cookie'li 200 / cookie'siz **401**, logout→**401** (sunucu-tarafı iptal), /login SPA 200, google(yapılandırılmamış) 503.
-**Google OAuth canlı TEST EDİLMEDİ** — gerçek cred gerekir: prod/dev `.env`'e `GOOGLE_CLIENT_ID/SECRET` + Google Cloud'da OAuth client (redirect `…/auth/google/callback`).
+**Google OAuth canlı DOĞRULANDI** — kullanıcı Google ile giriş yaptı (redirect→accounts.google.com→/app). Cred'ler `.env`'de (gitignored): `GOOGLE_CLIENT_ID/SECRET`, `GOOGLE_REDIRECT_URI=http://localhost:8000/auth/google/callback`, `FRONTEND_URL=http://localhost:8000`, güçlü `AUTH_SESSION_SECRET`. Google consent "App name" = Console ayarı (Humanitaria). **Sidebar footer artık gerçek kullanıcıyı gösterir + Log out** (hardcoded "Alex Morgan" kaldırıldı). vite.config proxy'ye `/auth`+`/conversations` eklendi.
 
 ---
 
@@ -109,7 +109,7 @@ Plan/spec: `docs/superpowers/{plans,specs}/2026-06-02-reingest-pilot-syria*` (gi
 
 ## Commit / Push Durumu
 - **`origin/master`'a PUSH'LANDI (master = origin):** pilot+chunker+model+date-filter-fix (`…5ab02a0`), store 429-retry (`918637d`), marketing entegrasyonu — Landing/Pricing/router/SPA-fallback (`cdc4a95`), marketing scroll fix (`5810e15`), pricing kaldırma (`e81aade`), citations-nav kaldırma (`daa9e1d`) + MEMORY docs.
-- **COMMIT EDİLMEDİ (çalışma ağacında):** Auth (Login/Signup) sistemi — yukarıdaki tüm backend+frontend dosyaları. Test+build+canlı smoke yeşil; kullanıcı onayında commit'lenecek.
+- **PUSH'LANDI:** Auth (Login/Signup) sistemi — `2198891` (`6d73d9b..2198891 master→master`), 32 dosya. `.env` gitignored → Google/Gemini/Pinecone secret'ları commit'lenmedi.
 - Remote: **https://github.com/berkcansuner/reliefweb-rag** (private).
 
 ## Sıradaki Adımlar (kullanıcı yönlendirir)
