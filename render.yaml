@@ -1,0 +1,41 @@
+# Render Blueprint — one Docker web service (FastAPI API + built Vue SPA).
+# Free tier: ephemeral disk (SQLite users/conversations reset on sleep/deploy)
+# and spins down after ~15 min idle. See DEPLOY.md.
+services:
+  - type: web
+    name: reliefweb-rag
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: frankfurt
+    healthCheckPath: /health
+    envVars:
+      # Production behavior (HTTPS, same-origin SPA, no background ingestion).
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
+      - key: INGEST_SCHEDULE_HOURS   # disable scheduler (Pinecone write quota full; not needed)
+        value: "0"
+      - key: GEMINI_REASONING_EFFORT
+        value: low
+      # URLs assume the predicted host below. If Render appends a suffix to the
+      # name, update these three + the Google redirect URI (see DEPLOY.md).
+      - key: FRONTEND_URL
+        value: https://reliefweb-rag.onrender.com
+      - key: GOOGLE_REDIRECT_URI
+        value: https://reliefweb-rag.onrender.com/auth/google/callback
+      - key: CORS_ORIGINS
+        value: https://reliefweb-rag.onrender.com
+      # Render generates a strong session-signing secret automatically.
+      - key: AUTH_SESSION_SECRET
+        generateValue: true
+      # Secrets — set these in the Render dashboard (never committed).
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: RELIEFWEB_APPNAME
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false

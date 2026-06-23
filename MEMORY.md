@@ -8,6 +8,11 @@
 
 ---
 
+## 🚀 DEPLOY — Render (ücretsiz, Docker) hazırlandı (2026-06-07)
+`Dockerfile` (multi-stage: Vue build → FastAPI runtime) + `render.yaml` (Blueprint, free, frankfurt, `/health`) + `DEPLOY.md` (adım adım). Tek servis API+SPA'yı aynı origin'den sunar (CORS yok). Prod env: `SESSION_COOKIE_SECURE=true`, `INGEST_SCHEDULE_HOURS=0` (scheduler kapalı; kota dolu), `GEMINI_REASONING_EFFORT=low`, URL'ler `https://reliefweb-rag.onrender.com` varsayımıyla; `AUTH_SESSION_SECRET` Render üretir; secret'lar (GEMINI/PINECONE/RELIEFWEB/GOOGLE) dashboard'da `sync:false`. **Ücretsiz tier:** disk yok → SQLite (kullanıcı/sohbet) uyku/deploy'da SIFIRLANIR + 15dk boşta uyur (ilk istek ~30-60s). Kalıcı için: paid+disk veya Postgres göçü. Google Console'a prod redirect eklenecek. Adımlar `DEPLOY.md`'de.
+
+---
+
 ## ✅ Bu seansta UYGULANAN — Chat latency: enstrümantasyon + reasoning_effort + dayanıklılık (2026-06-07, commit bekliyor)
 
 Kullanıcı 8000'de chat'i yavaş buldu. **Ölçüm bulgusu:** Gemini o sırada hem chat

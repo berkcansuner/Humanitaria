@@ -1,0 +1,17 @@
+# Keep the build context + image lean and free of secrets/local state.
+.git
+.env
+venv/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+conversations.db
+conversations.db-wal
+conversations.db-shm
+.last_ingest.json
+frontend/node_modules/
+frontend/dist/
+tests/
+docs/
+scripts/eval_data/
+*.md
