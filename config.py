@@ -14,6 +14,15 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
     GEMINI_LLM_MODEL: str = "gemini-3.5-flash"   # chat yanıtı (GA 2026; multilingual/RAG)
+    # Thinking-budget for the chat model: "low" cuts time-to-first-token on the
+    # gemini-3.5-flash thinking model. none/low/medium/high; "" = don't send (model default).
+    GEMINI_REASONING_EFFORT: str = "low"
+    # Chat LLM resilience: bounded retry (in the chat route) on transient upstream
+    # 503 'high demand' BEFORE the first token. The OpenAI client's own retries are
+    # disabled (max_retries=0 in chain.py) so a 503 fails fast instead of hanging
+    # ~60s on its internal backoff; CHAT_LLM_TIMEOUT caps a stuck request.
+    CHAT_LLM_TIMEOUT: int = 45
+    CHAT_LLM_MAX_RETRIES: int = 2
     GEMINI_QUERY_MODEL: str = "gemini-2.5-flash"  # filtre çıkarma için hızlı/ucuz model
 
     # ReliefWeb

@@ -1,6 +1,8 @@
+import asyncio
 import json
 import logging
 import re
+import time
 from uuid import uuid4
 
 import anyio
@@ -147,6 +149,29 @@ def _resolve_retrieval_query(session_id: str, message: str) -> str:
     return rewrite_query(message, prior) if prior else message
 
 
+async def _astream_with_retry(chain, payload, retries: int, backoff: float = 1.5):
+    """Stream the chat answer, retrying ONLY before the first token.
+
+    Transient upstream errors (Gemini 503 'high demand') reject the request before
+    any token is produced, so a short bounded retry can ride them out. Once a token
+    has been emitted, a mid-stream error propagates (never duplicate output). The
+    LLM client's own retries are disabled (max_retries=0) so this is the single,
+    fast-failing retry path."""
+    attempt = 0
+    while True:
+        emitted = False
+        try:
+            async for chunk in chain.astream(payload):
+                emitted = True
+                yield chunk
+            return
+        except Exception:
+            if emitted or attempt >= retries:
+                raise
+            attempt += 1
+            await asyncio.sleep(backoff * attempt)
+
+
 def _persist_exchange(session_id: str, user_message: str, answer: str, sources: list) -> tuple:
     """Persist a completed user+assistant exchange and return the new (user_id,
     assistant_id). Sync — offload to a thread. Only called after the chain
@@ -289,10 +314,15 @@ async def chat_stream(request: Request, req: ChatRequest, user: dict = Depends(g
         return EventSourceResponse(greeting_generator())
 
     async def event_generator():
+        _t0 = time.perf_counter()
+        _filter_ms = _retrieval_ms = 0.0
+        _ttft_ms = None
         try:
             retrieval_query = _resolve_retrieval_query(session_id, req.message)
             filters = extract_filters(retrieval_query)
+            _filter_ms = (time.perf_counter() - _t0) * 1000
             docs = await _retrieve_docs(retrieval_query, filters)
+            _retrieval_ms = (time.perf_counter() - _t0) * 1000 - _filter_ms
 
             if not docs:
                 msg = _no_docs_message(filters)
@@ -315,12 +345,14 @@ async def chat_stream(request: Request, req: ChatRequest, user: dict = Depends(g
             chain = build_chain()
 
             full_response = ""
-            async for chunk in chain.astream({
+            async for chunk in _astream_with_retry(chain, {
                 "question": req.message,
                 "context": context,
                 "chat_history": chat_history,
-            }):
+            }, get_settings().CHAT_LLM_MAX_RETRIES):
                 if chunk:
+                    if _ttft_ms is None:
+                        _ttft_ms = (time.perf_counter() - _t0) * 1000
                     full_response += chunk
                     yield ServerSentEvent(
                         event="token",
@@ -367,14 +399,27 @@ async def chat_stream(request: Request, req: ChatRequest, user: dict = Depends(g
                     }, ensure_ascii=False),
                 )
 
+            logger.info(
+                "chat latency: filter=%.0fms retrieval=%.0fms ttft=%.0fms total=%.0fms ns=%s",
+                _filter_ms, _retrieval_ms, (_ttft_ms if _ttft_ms is not None else -1),
+                (time.perf_counter() - _t0) * 1000,
+                get_settings().PINECONE_NAMESPACE or "(default)",
+            )
             yield ServerSentEvent(event="session", data=json.dumps({"session_id": session_id}))
             yield ServerSentEvent(event="done", data="{}")
 
         except Exception as e:
             logger.error("Streaming error: %s", e)
+            emsg = str(e)
+            busy = "503" in emsg or "UNAVAILABLE" in emsg or "high demand" in emsg.lower()
+            friendly = (
+                "The model is busy right now (high demand). Please try again in a moment."
+                if busy else
+                "Something went wrong while generating the answer. Please try again."
+            )
             yield ServerSentEvent(
                 event="error",
-                data=json.dumps({"message": str(e)}, ensure_ascii=False),
+                data=json.dumps({"message": friendly}, ensure_ascii=False),
             )
             yield ServerSentEvent(event="done", data="{}")
 

@@ -53,14 +53,21 @@ def build_chain() -> Runnable:
         return _chain
 
     settings = get_settings()
-    llm = ChatOpenAI(
+    llm_kwargs = dict(
         model=settings.GEMINI_LLM_MODEL,
         base_url=settings.GEMINI_BASE_URL,
         api_key=settings.GEMINI_API_KEY,
         temperature=0.3,
         streaming=True,
+        timeout=settings.CHAT_LLM_TIMEOUT,
+        max_retries=0,   # retries handled in the chat route → fast-fail on 503
     )
-    logger.info("Chat LLM: gemini (%s)", settings.GEMINI_LLM_MODEL)
+    # Lower the thinking budget to cut time-to-first-token (kill-switch: "" skips it).
+    if settings.GEMINI_REASONING_EFFORT:
+        llm_kwargs["reasoning_effort"] = settings.GEMINI_REASONING_EFFORT
+    llm = ChatOpenAI(**llm_kwargs)
+    logger.info("Chat LLM: gemini (%s) reasoning_effort=%s",
+                settings.GEMINI_LLM_MODEL, settings.GEMINI_REASONING_EFFORT or "(default)")
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", _SYSTEM_PROMPT + "\n\nContext:\n{context}"),

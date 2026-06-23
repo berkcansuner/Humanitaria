@@ -8,7 +8,27 @@
 
 ---
 
-## ✅ Bu seansta UYGULANAN — İş Kolu 2 (RAG kalite & ölçüm) + İş Kolu 3 (veri derinliği) (2026-06-07, commit bekliyor)
+## ✅ Bu seansta UYGULANAN — Chat latency: enstrümantasyon + reasoning_effort + dayanıklılık (2026-06-07, commit bekliyor)
+
+Kullanıcı 8000'de chat'i yavaş buldu. **Ölçüm bulgusu:** Gemini o sırada hem chat
+(gemini-3.5-flash) hem query (gemini-2.5-flash) modelinde **503 "high demand"** veriyordu
+(dış/geçici). Ayrıca chat LLM'de timeout/retry kontrolü yoktu → OpenAI client 503'te ~60s
+iç-backoff yapıp asılıyordu.
+- **Enstrümantasyon** (`api/routes/chat.py`): her yanıtta `chat latency: filter=..ms
+  retrieval=..ms ttft=..ms total=..ms ns=..` INFO logu (ölç-önce-optimize-et).
+- **`reasoning_effort=low`** (`config.GEMINI_REASONING_EFFORT` + `chain.py`): chat thinking
+  bütçesini düşürür → TTFT azalır. Kill-switch ("" = gönderme). **Canlı DOĞRULANMADI (Gemini
+  503'teydi); Gemini düzelince logdan TTFT + 400-yok kontrolü yapılmalı** (verirse kill-switch).
+- **Dayanıklılık** (`chat.py _astream_with_retry` + `chain.py max_retries=0`/`timeout`):
+  OpenAI client'ın ~60s iç-backoff'u kapatıldı; ilk-token ÖNCESİ kısa kontrollü retry (geçici
+  503'ü atlatır), başarısızsa "model meşgul, tekrar dene" mesajı. Ölçüm: 503'te **~60s → ~19s**
+  (kalan ~19s, Gemini tümden 503'te filter+embedding retry'larından; normal çalışmada tetiklenmez).
+- Yeni config: `GEMINI_REASONING_EFFORT=low`, `CHAT_LLM_TIMEOUT=45`, `CHAT_LLM_MAX_RETRIES=2`.
+- **Test: 322 backend** (+4 stream-retry) + 61 frontend yeşil.
+
+---
+
+## ✅ Bu seansta UYGULANAN — İş Kolu 2 (RAG kalite & ölçüm) + İş Kolu 3 (veri derinliği) (2026-06-07, commit `6c7a70a` → origin/master)
 
 **İş Kolu 2A — Retrieval eval metrikleri (READ-only, kotadan etkilenmez):**
 - `rag/eval_metrics.py` (YENİ, TDD): recall@k / reciprocal_rank (MRR) / nDCG@k (binary relevance).
@@ -110,7 +130,7 @@ Plan/spec: `docs/superpowers/{plans,specs}/2026-06-02-reingest-pilot-syria*` (gi
 - **Retrieval:** güncellik-farkında + alaka reranker'ı (truncate=END); recency blend ham alaka skoruyla. `RECENCY_RERANK_POOL=10`, `RECENCY_BOOST_FACTOR=0.6`.
 - **Backend:** FastAPI, port `.env`'deki `API_PORT`. SSE streaming. Vue dist'i **SPA history-mode fallback** ile sunar (`api/main.py`: `/assets` mount + index.html catch-all). Kod değişikliğinden sonra restart (`--reload` yok).
 - **Frontend:** Vue 3 + **vue-router** SPA, Humanitaria (yeşil/antrasit, dark+light), İngilizce. Rotalar: **`/` Landing** (marketing, `.mkt-scope` izole CSS) + **`/login`+`/signup`** (`views/AuthView.vue`) + **`/app` Chat** (`views/ChatView.vue`, **router guard'lı — zorunlu giriş**). **Pricing sayfası KALDIRILDI** (route+view+CSS); navbar: Product/Sources/Use cases (Citations nav linki de kaldırıldı, sayfa bölümü+footer linki kaldı). Marketing döküman-scroll (global viewport-lock yalnız chat'e özel: `ChatView .app{height:100vh;overflow:hidden}`). `frontend/dist/` gitignore'da.
-- **Test:** **318 backend** + 61 frontend yeşil. Judge groundedness 5.0/5 (doygun); ayrıca etiketli retrieval metrikleri (recall@k/MRR/nDCG) — bkz. İş Kolu 2A.
+- **Test:** **322 backend** + 61 frontend yeşil. Judge groundedness 5.0/5 (doygun); ayrıca etiketli retrieval metrikleri (recall@k/MRR/nDCG) — bkz. İş Kolu 2A.
 
 ## Veri Durumu (Pinecone `reliefweb-docs`, 3072-dim)
 - **default namespace (''): 31.628 vektör** — ESKİ 800-kelime chunk, 10 ülke. **App bunu kullanıyor** (cutover henüz YOK).
