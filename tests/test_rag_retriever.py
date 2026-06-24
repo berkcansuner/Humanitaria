@@ -8,6 +8,45 @@ from rag.retriever import (
 from config import get_settings
 
 
+class TestApplyDateFilter:
+    """Defensive post-retrieval date filter (rag.retriever.apply_date_filter).
+
+    Pinecone already applies a server-side numeric date_ts $gte; this is the
+    in-Python backstop. Comparison is lexicographic on YYYY-MM-DD strings."""
+
+    def _doc(self, date):
+        meta = {"date": date} if date is not None else {}
+        return Document(page_content="x", metadata=meta)
+
+    def test_none_filter_returns_all_unchanged(self):
+        from rag.retriever import apply_date_filter
+        docs = [self._doc("2024-01-01"), self._doc("2020-01-01")]
+        assert apply_date_filter(docs, None) == docs
+
+    def test_non_dict_filter_returns_all(self):
+        from rag.retriever import apply_date_filter
+        docs = [self._doc("2024-01-01")]
+        assert apply_date_filter(docs, "2024-01-01") == docs  # defensive: not a dict
+
+    def test_empty_or_missing_gte_returns_all(self):
+        from rag.retriever import apply_date_filter
+        docs = [self._doc("2024-01-01"), self._doc("2019-05-05")]
+        assert apply_date_filter(docs, {"$gte": ""}) == docs
+        assert apply_date_filter(docs, {}) == docs
+
+    def test_gte_drops_older_keeps_boundary_and_newer(self):
+        from rag.retriever import apply_date_filter
+        older, boundary, newer = self._doc("2023-12-31"), self._doc("2024-01-01"), self._doc("2024-06-15")
+        out = apply_date_filter([older, boundary, newer], {"$gte": "2024-01-01"})
+        assert out == [boundary, newer]  # boundary is inclusive ($gte), older is dropped
+
+    def test_doc_missing_date_is_dropped_when_gte_set(self):
+        from rag.retriever import apply_date_filter
+        dated, undated = self._doc("2025-01-01"), self._doc(None)
+        out = apply_date_filter([dated, undated], {"$gte": "2024-01-01"})
+        assert out == [dated]  # no 'date' → treated as "0000-00-00" → below the floor
+
+
 class TestRetriever:
     def setup_method(self):
         _get_vectorstore.cache_clear()
