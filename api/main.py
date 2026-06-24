@@ -11,7 +11,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from api.routes import chat, health, conversations, auth
-from api.routes.chat import limiter
+from api.limiter import limiter
 from config import get_settings
 
 logger = logging.getLogger(__name__)

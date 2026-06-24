@@ -51,7 +51,7 @@ class TestChain:
 
 def _settings():
     s = MagicMock()
-    s.GEMINI_LLM_MODEL = "gemini-3.5-flash"
+    s.GEMINI_LLM_MODEL = "gemini-2.5-flash"
     s.GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
     s.GEMINI_API_KEY = "gemini-key"
     return s
@@ -69,7 +69,7 @@ class TestChainProvider:
         MockLLM.return_value = MagicMock(spec=ChatOpenAI)
         build_chain()
         _, kwargs = MockLLM.call_args
-        assert kwargs["model"] == "gemini-3.5-flash"
+        assert kwargs["model"] == "gemini-2.5-flash"
         assert kwargs["base_url"] == "https://generativelanguage.googleapis.com/v1beta/openai/"
         assert kwargs["api_key"] == "gemini-key"
         assert kwargs["streaming"] is True

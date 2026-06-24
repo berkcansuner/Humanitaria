@@ -13,9 +13,9 @@ class Settings(BaseSettings):
     # Google Gemini (chat üretim LLM'i — OpenAI uyumlu endpoint)
     GEMINI_API_KEY: str = ""
     GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
-    GEMINI_LLM_MODEL: str = "gemini-3.5-flash"   # chat yanıtı (GA 2026; multilingual/RAG)
+    GEMINI_LLM_MODEL: str = "gemini-2.5-flash"   # chat yanıtı (GA; multilingual/RAG). gemini-3.5-flash kronik 503 ("high demand") verdiği için geçildi.
     # Thinking-budget for the chat model: "low" cuts time-to-first-token on the
-    # gemini-3.5-flash thinking model. none/low/medium/high; "" = don't send (model default).
+    # gemini-2.5-flash thinking model. none/low/medium/high; "" = don't send (model default).
     GEMINI_REASONING_EFFORT: str = "low"
     # Chat LLM resilience: bounded retry (in the chat route) on transient upstream
     # 503 'high demand' BEFORE the first token. The OpenAI client's own retries are
@@ -73,9 +73,9 @@ class Settings(BaseSettings):
     API_RELOAD: bool = False
     # Rate limiting (slowapi) — applied per client IP to the chat endpoints.
     RATE_LIMIT: str = "20/minute"
-    # Optional API key. Empty = open (local dev); non-empty requires the
-    # X-API-Key header on the chat endpoints.
-    API_KEY: str = ""
+    # Per-IP limits on the auth endpoints (brute-force / signup-spam guard).
+    AUTH_LOGIN_RATE_LIMIT: str = "5/minute"
+    AUTH_SIGNUP_RATE_LIMIT: str = "3/minute"
 
     # Auth (login/signup — httpOnly cookie session + Google OAuth)
     AUTH_SESSION_SECRET: str = "dev-insecure-change-me"   # signs OAuth state (Starlette SessionMiddleware)
