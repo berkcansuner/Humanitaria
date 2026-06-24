@@ -2,6 +2,7 @@
  * Thin client for the conversation endpoints. Centralises JSON handling and
  * error surfacing so components don't repeat fetch boilerplate.
  */
+import { handleSessionExpired } from './authStore.js'
 
 async function request(url, options = {}) {
   const res = await fetch(url, {
@@ -10,7 +11,11 @@ async function request(url, options = {}) {
     ...options,
   })
   if (!res.ok) {
-    throw new Error(`Request failed: ${res.status} ${url}`)
+    // 401 mid-session means the cookie expired/was revoked → bounce to login.
+    if (res.status === 401) handleSessionExpired()
+    const err = new Error(`Request failed: ${res.status} ${url}`)
+    err.status = res.status
+    throw err
   }
   // 204 No Content (delete) has no body to parse.
   if (res.status === 204) return null

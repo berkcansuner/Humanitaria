@@ -6,6 +6,8 @@
         v-for="(msg, idx) in messages"
         :key="idx"
         :class="['message', msg.role]"
+        role="article"
+        :aria-label="msg.role === 'user' ? 'Your message' : 'Assistant message'"
       >
         <div class="message-row">
           <div class="message-bubble">
@@ -23,6 +25,7 @@
                   v-model="editText"
                   class="edit-textarea"
                   rows="3"
+                  aria-label="Edit your message"
                   @keydown.esc="cancelEdit"
                   @keydown.enter.exact.prevent="saveEdit"
                 ></textarea>
@@ -65,6 +68,7 @@
         type="text"
         placeholder="Ask about humanitarian documents…"
         class="chat-input"
+        aria-label="Chat message input"
         enterkeyhint="send"
       />
       <button
@@ -100,6 +104,7 @@ import { renumberCitations } from '../utils/renumberCitations.js'
 import { decorateCodeBlocks } from '../utils/codeCopy.js'
 import { findLastUserIndex, lastServerIdBefore, planResend } from '../utils/conversationOps.js'
 import { getMessages, truncateConversation } from '../utils/api.js'
+import { handleSessionExpired } from '../utils/authStore.js'
 
 const ERROR_MESSAGES = {
   connection: 'Connection lost. Please try again.',
@@ -159,6 +164,12 @@ async function sendMessage(opts = {}) {
     })
     if (!res.ok) {
       console.error(`API error: ${res.status} ${res.statusText} — POST /chat/stream`)
+      // Session expired mid-conversation → bounce to login instead of showing a
+      // generic connection error the user can't act on.
+      if (res.status === 401) {
+        handleSessionExpired()
+        return
+      }
       assistantMsg.error = ERROR_MESSAGES.connection
       messages.value[msgIndex] = { ...assistantMsg }
       return
