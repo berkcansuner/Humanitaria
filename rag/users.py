@@ -76,6 +76,13 @@ def verify_password(password: str, password_hash: str | None) -> bool:
     return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
 
 
+# A fixed bcrypt hash of a throwaway secret. login() verifies against this when an
+# email is unknown (or the account is password-less, e.g. Google-only), so a failed
+# login takes the same time whether or not the email is registered — closing the
+# timing side-channel that would otherwise let an attacker enumerate accounts.
+DUMMY_PASSWORD_HASH = hash_password("constant-time-login-placeholder")
+
+
 # --- users ------------------------------------------------------------------
 
 def create_user(

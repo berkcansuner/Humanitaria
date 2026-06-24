@@ -63,6 +63,16 @@ def test_login_unknown_email_unauthorized(client):
     assert r.status_code == 401
 
 
+def test_login_unknown_email_still_runs_password_check(client):
+    """Timing-attack guard (İK2-2b): bcrypt verification runs even when the email
+    is unknown, so login latency can't reveal which emails are registered."""
+    from unittest.mock import patch
+    with patch("api.routes.auth.users_store.verify_password", return_value=False) as vp:
+        r = client.post("/auth/login", json={"email": "ghost@example.com", "password": "whatever123"})
+    assert r.status_code == 401
+    assert vp.called  # bcrypt ran despite no such user (constant-time login)
+
+
 def test_me_requires_authentication(client):
     r = client.get("/auth/me")
     assert r.status_code == 401
@@ -80,3 +90,45 @@ def test_logout_invalidates_session(client):
     assert client.get("/auth/me").status_code == 200
     client.post("/auth/logout")
     assert client.get("/auth/me").status_code == 401
+
+
+class TestAuthRateLimit:
+    """İK2-2a: signup/login are rate-limited per client IP to blunt brute-force
+    and signup spam. Uses the shared limiter (api.limiter), enabled only for this
+    test — it is disabled by default so other tests aren't throttled."""
+
+    def test_login_is_rate_limited(self, client):
+        from unittest.mock import patch, MagicMock
+        from api.limiter import limiter
+        limiter.enabled = True
+        limiter.reset()
+        try:
+            with patch("api.routes.auth.get_settings",
+                       return_value=MagicMock(AUTH_LOGIN_RATE_LIMIT="1/minute")):
+                creds = {"email": "nobody@example.com", "password": "password123"}
+                first = client.post("/auth/login", json=creds)
+                second = client.post("/auth/login", json=creds)
+            assert first.status_code == 401   # unknown user, but the attempt still counts
+            assert second.status_code == 429  # second attempt within the window is throttled
+        finally:
+            limiter.reset()
+            limiter.enabled = False
+
+    def test_signup_is_rate_limited(self, client):
+        from unittest.mock import patch, MagicMock
+        from api.limiter import limiter
+        limiter.enabled = True
+        limiter.reset()
+        try:
+            with patch("api.routes.auth.get_settings",
+                       return_value=MagicMock(AUTH_SIGNUP_RATE_LIMIT="1/minute",
+                                              SESSION_TTL_HOURS=24,
+                                              SESSION_COOKIE_NAME="rw_session",
+                                              SESSION_COOKIE_SECURE=False)):
+                first = client.post("/auth/signup", json={"email": "rl1@example.com", "password": "password123", "name": "RL"})
+                second = client.post("/auth/signup", json={"email": "rl2@example.com", "password": "password123", "name": "RL"})
+            assert first.status_code == 200, first.text
+            assert second.status_code == 429
+        finally:
+            limiter.reset()
+            limiter.enabled = False
