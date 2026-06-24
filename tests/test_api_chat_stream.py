@@ -303,6 +303,37 @@ class TestSSEEventBody:
             assert "done" in event_types
             assert event_types[-1] == "done"
 
+    def test_stream_busy_503_emits_friendly_busy_message(self):
+        """A persistent upstream 503 ('high demand') after retries surfaces the
+        clear busy message (not the generic error) and still ends with done."""
+        doc = self._make_doc("Doc", "https://reliefweb.int/report/1", date="2026-05-01")
+        with patch("api.routes.chat.build_chain") as mock_chain_builder, \
+             patch("api.routes.chat.build_retriever") as mock_retriever_builder, \
+             patch("api.routes.chat.extract_filters", return_value={}), \
+             patch("api.routes.chat.analyze_query", return_value={"is_vague": False, "has_country": False, "has_date": False, "has_theme": False, "message": "", "suggestions": {}}), \
+             patch("asyncio.sleep", new=AsyncMock()):
+            mock_retriever = MagicMock()
+            mock_retriever.ainvoke = AsyncMock(return_value=[doc])
+            mock_retriever_builder.return_value = mock_retriever
+
+            async def busy_astream(*args, **kwargs):
+                raise Exception("Error code: 503 - high demand UNAVAILABLE")
+                yield  # unreachable; makes this an async generator
+
+            mock_chain = MagicMock()
+            mock_chain.astream = busy_astream
+            mock_chain_builder.return_value = mock_chain
+
+            from api.main import app
+            from fastapi.testclient import TestClient
+            client = TestClient(app)
+            response = client.post("/chat/stream", json={"message": "Syria situation"})
+            events = _parse_sse_events(response.text)
+            err = [e for e in events if e["event"] == "error"]
+            assert len(err) == 1
+            assert "busy" in err[0]["data"]["message"].lower()
+            assert events[-1]["event"] == "done"
+
     def test_greeting_emits_token_session_done(self):
         from api.main import app
         from fastapi.testclient import TestClient
@@ -430,7 +461,7 @@ class TestRateLimit:
         limiter.reset()
         try:
             with patch("api.routes.chat.get_settings",
-                       return_value=MagicMock(API_KEY="", RATE_LIMIT="1/minute")):
+                       return_value=MagicMock(RATE_LIMIT="1/minute")):
                 from api.main import app
                 from fastapi.testclient import TestClient
                 client = TestClient(app)
@@ -441,6 +472,88 @@ class TestRateLimit:
         finally:
             limiter.reset()
             limiter.enabled = False
+
+
+class TestNonStreamChatResilience:
+    """İK1-1b: non-stream /chat — bounded retry on transient 503 + narrow except.
+
+    The streaming route already rides out a transient Gemini 503 ('high demand')
+    via _astream_with_retry; the non-stream /chat had no app-level retry and a broad
+    except→503 that masked genuine bugs. These lock in: transient 503 is retried,
+    a persistent 503 surfaces a clear busy message, and an unexpected error is a
+    non-retried 500 (so real bugs aren't hidden as transient)."""
+
+    def _retriever_with_doc(self):
+        mock_doc = MagicMock()
+        mock_doc.page_content = "Test"
+        mock_doc.metadata = {"title": "T", "url": "http://x", "date": "2026-05-01"}
+        mock_retriever = MagicMock()
+        mock_retriever.ainvoke = AsyncMock(return_value=[mock_doc])
+        return mock_retriever
+
+    def test_transient_503_is_retried_then_succeeds(self):
+        with patch("api.routes.chat.build_chain") as mock_chain_builder, \
+             patch("api.routes.chat.build_retriever") as mock_retriever_builder, \
+             patch("api.routes.chat.extract_filters", return_value={}), \
+             patch("asyncio.sleep", new=AsyncMock()):
+            mock_retriever_builder.return_value = self._retriever_with_doc()
+            mock_chain = MagicMock()
+            mock_chain.ainvoke = AsyncMock(side_effect=[
+                Exception("Error code: 503 - high demand UNAVAILABLE"),
+                "Recovered answer",
+            ])
+            mock_chain_builder.return_value = mock_chain
+
+            from api.main import app
+            from fastapi.testclient import TestClient
+            client = TestClient(app)
+            response = client.post("/chat", json={"message": "Syria situation", "session_id": "retry-ok"})
+            assert response.status_code == 200
+            assert response.json()["answer"] == "Recovered answer"
+            assert mock_chain.ainvoke.call_count == 2  # one failure + one success
+
+    def test_persistent_503_returns_503_busy_message(self):
+        with patch("api.routes.chat.build_chain") as mock_chain_builder, \
+             patch("api.routes.chat.build_retriever") as mock_retriever_builder, \
+             patch("api.routes.chat.extract_filters", return_value={}), \
+             patch("asyncio.sleep", new=AsyncMock()):
+            mock_retriever_builder.return_value = self._retriever_with_doc()
+            mock_chain = MagicMock()
+            mock_chain.ainvoke = AsyncMock(side_effect=Exception("Error code: 503 - high demand"))
+            mock_chain_builder.return_value = mock_chain
+
+            from api.main import app
+            from fastapi.testclient import TestClient
+            client = TestClient(app)
+            response = client.post("/chat", json={"message": "Syria", "session_id": "retry-busy"})
+            assert response.status_code == 503
+            detail = response.json()["detail"].lower()
+            assert "busy" in detail or "high demand" in detail
+
+    def test_unexpected_error_returns_500_and_is_not_retried(self):
+        with patch("api.routes.chat.build_chain") as mock_chain_builder, \
+             patch("api.routes.chat.build_retriever") as mock_retriever_builder, \
+             patch("api.routes.chat.extract_filters", return_value={}), \
+             patch("asyncio.sleep", new=AsyncMock()):
+            mock_retriever_builder.return_value = self._retriever_with_doc()
+            mock_chain = MagicMock()
+            mock_chain.ainvoke = AsyncMock(side_effect=RuntimeError("boom in chain"))
+            mock_chain_builder.return_value = mock_chain
+
+            from api.main import app
+            from fastapi.testclient import TestClient
+            client = TestClient(app)
+            response = client.post("/chat", json={"message": "Syria", "session_id": "err-500"})
+            assert response.status_code == 500
+            assert mock_chain.ainvoke.call_count == 1  # a genuine bug must NOT be retried
+
+    def test_is_high_demand_helper(self):
+        from api.routes.chat import _is_high_demand
+        assert _is_high_demand(Exception("Error code: 503 - high demand"))
+        assert _is_high_demand(Exception("status UNAVAILABLE"))
+        assert _is_high_demand(Exception("the model is experiencing High Demand"))
+        assert not _is_high_demand(RuntimeError("null pointer"))
+        assert not _is_high_demand(ValueError("bad input"))
 
 
 class TestContextDateLabel:

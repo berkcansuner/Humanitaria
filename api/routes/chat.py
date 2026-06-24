@@ -11,8 +11,6 @@ from pydantic import BaseModel, Field, field_validator
 from typing import List, Literal, Optional
 from langchain_core.messages import HumanMessage, AIMessage
 from sse_starlette.sse import EventSourceResponse, ServerSentEvent
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 
 from config import get_settings
 from rag.query_processor import extract_filters, analyze_query, should_boost_recency
@@ -25,13 +23,11 @@ from rag.history import get_session_history, has_session, populate_history_from_
 from rag.query_rewriter import rewrite_query
 from rag import conversations as convo_store
 from api.routes.auth import get_current_user
+from api.limiter import limiter
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-# Per-client-IP rate limiter; the limit string is read from settings at call time.
-limiter = Limiter(key_func=get_remote_address)
 
 
 def _rate_limit() -> str:
@@ -149,6 +145,20 @@ def _resolve_retrieval_query(session_id: str, message: str) -> str:
     return rewrite_query(message, prior) if prior else message
 
 
+_BUSY_MESSAGE = "The model is busy right now (high demand). Please try again in a moment."
+_GENERIC_ERROR_MESSAGE = "Something went wrong while generating the answer. Please try again."
+
+
+def _is_high_demand(exc: Exception) -> bool:
+    """True for a transient upstream 'model busy' error (Gemini 503 'high demand').
+
+    These reject the request before any answer is produced, so a short bounded
+    retry can ride them out. A genuine bug must NOT match — otherwise it would be
+    masked as transient, silently retried, and surfaced as a misleading 503."""
+    msg = str(exc)
+    return "503" in msg or "UNAVAILABLE" in msg or "high demand" in msg.lower()
+
+
 async def _astream_with_retry(chain, payload, retries: int, backoff: float = 1.5):
     """Stream the chat answer, retrying ONLY before the first token.
 
@@ -167,6 +177,22 @@ async def _astream_with_retry(chain, payload, retries: int, backoff: float = 1.5
             return
         except Exception:
             if emitted or attempt >= retries:
+                raise
+            attempt += 1
+            await asyncio.sleep(backoff * attempt)
+
+
+async def _ainvoke_with_retry(chain, payload, retries: int, backoff: float = 1.5):
+    """Invoke the chat chain (non-streaming), retrying ONLY a transient 'high demand'
+    503. The /chat counterpart of _astream_with_retry: ainvoke is atomic (no partial
+    output), so a transient 503 is safe to retry; any other error propagates at once
+    so genuine bugs surface fast instead of being masked as transient."""
+    attempt = 0
+    while True:
+        try:
+            return await chain.ainvoke(payload)
+        except Exception as e:
+            if not _is_high_demand(e) or attempt >= retries:
                 raise
             attempt += 1
             await asyncio.sleep(backoff * attempt)
@@ -274,11 +300,11 @@ async def chat(request: Request, req: ChatRequest, user: dict = Depends(get_curr
         chat_history = list(history.messages)
 
         chain = build_chain()
-        answer = await chain.ainvoke({
+        answer = await _ainvoke_with_retry(chain, {
             "question": req.message,
             "context": context,
             "chat_history": chat_history,
-        })
+        }, get_settings().CHAT_LLM_MAX_RETRIES)
 
         history.add_message(HumanMessage(content=req.message))
         history.add_message(AIMessage(content=answer))
@@ -289,9 +315,16 @@ async def chat(request: Request, req: ChatRequest, user: dict = Depends(get_curr
         sources = [SourceDocument(**d) for d in filtered]
         return ChatResponse(answer=answer, sources=sources, session_id=session_id)
 
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error("Chat error: %s", e)
-        raise HTTPException(status_code=503, detail="Service temporarily unavailable")
+        # Transient upstream 'high demand' 503 → clear, retryable message; a genuine
+        # bug becomes a logged 500 (with stack) instead of being masked as transient.
+        if _is_high_demand(e):
+            logger.warning("Chat upstream busy: %s", e)
+            raise HTTPException(status_code=503, detail=_BUSY_MESSAGE)
+        logger.exception("Chat error")
+        raise HTTPException(status_code=500, detail=_GENERIC_ERROR_MESSAGE)
 
 
 @router.post("/chat/stream")
@@ -410,13 +443,7 @@ async def chat_stream(request: Request, req: ChatRequest, user: dict = Depends(g
 
         except Exception as e:
             logger.error("Streaming error: %s", e)
-            emsg = str(e)
-            busy = "503" in emsg or "UNAVAILABLE" in emsg or "high demand" in emsg.lower()
-            friendly = (
-                "The model is busy right now (high demand). Please try again in a moment."
-                if busy else
-                "Something went wrong while generating the answer. Please try again."
-            )
+            friendly = _BUSY_MESSAGE if _is_high_demand(e) else _GENERIC_ERROR_MESSAGE
             yield ServerSentEvent(
                 event="error",
                 data=json.dumps({"message": friendly}, ensure_ascii=False),
