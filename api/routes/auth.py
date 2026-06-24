@@ -17,10 +17,19 @@ from pydantic import BaseModel, Field, field_validator
 
 from config import get_settings
 from rag import users as users_store
+from api.limiter import limiter
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth")
+
+
+def _login_rate_limit() -> str:
+    return get_settings().AUTH_LOGIN_RATE_LIMIT
+
+
+def _signup_rate_limit() -> str:
+    return get_settings().AUTH_SIGNUP_RATE_LIMIT
 
 # Google OIDC client. Registration is network-free (metadata is fetched lazily on
 # the first authorize call), so it is safe even when the credentials are unset.
@@ -95,7 +104,8 @@ async def get_current_user(request: Request) -> dict:
 # --- endpoints --------------------------------------------------------------
 
 @router.post("/signup", response_model=UserOut)
-async def signup(body: SignupIn, response: Response):
+@limiter.limit(_signup_rate_limit)
+async def signup(request: Request, body: SignupIn, response: Response):
     try:
         uid = await anyio.to_thread.run_sync(
             users_store.create_user, body.email, body.name.strip(), body.password
@@ -110,9 +120,14 @@ async def signup(body: SignupIn, response: Response):
 
 
 @router.post("/login", response_model=UserOut)
-async def login(body: LoginIn, response: Response):
+@limiter.limit(_login_rate_limit)
+async def login(request: Request, body: LoginIn, response: Response):
     user = await anyio.to_thread.run_sync(users_store.get_user_by_email, body.email)
-    if not user or not users_store.verify_password(body.password, user["password_hash"]):
+    # Always run bcrypt — against the real hash, or a dummy when the email is unknown
+    # or password-less — so response time never reveals whether an email is registered.
+    stored_hash = user["password_hash"] if (user and user["password_hash"]) else users_store.DUMMY_PASSWORD_HASH
+    valid = await anyio.to_thread.run_sync(users_store.verify_password, body.password, stored_hash)
+    if not user or not valid:
         raise HTTPException(status_code=401, detail="Invalid email or password")
     token = await anyio.to_thread.run_sync(
         users_store.create_session, user["id"], get_settings().SESSION_TTL_HOURS
