@@ -26,6 +26,10 @@
         <div class="topbar-spacer"></div>
         <ThemeToggle />
       </header>
+      <div v-if="actionError" class="action-error" role="alert">
+        <span>{{ actionError }}</span>
+        <button class="action-error-dismiss" aria-label="Dismiss" @click="actionError = null">×</button>
+      </div>
       <main class="content">
         <Chat :conversation-id="activeId" @session="onSession" />
       </main>
@@ -49,12 +53,23 @@ import {
 const conversations = ref([])
 const activeId = ref(null)
 const sidebarOpen = ref(false)
+const actionError = ref(null)
+let errorTimer = null
+
+// Surface a transient, dismissible error for sidebar actions that previously
+// failed silently (the old behaviour only logged to the console).
+function showActionError(message) {
+  actionError.value = message
+  if (errorTimer) clearTimeout(errorTimer)
+  errorTimer = setTimeout(() => { actionError.value = null }, 5000)
+}
 
 async function loadConversations() {
   try {
     conversations.value = await listConversations()
   } catch (e) {
     console.error('Failed to load conversations:', e)
+    showActionError('Could not load your conversations. Please try again.')
   }
 }
 
@@ -81,6 +96,7 @@ async function onRename(id, title) {
     await loadConversations()
   } catch (e) {
     console.error('Rename failed:', e)
+    showActionError('Could not rename the conversation.')
   }
 }
 
@@ -91,6 +107,7 @@ async function onDelete(id) {
     await loadConversations()
   } catch (e) {
     console.error('Delete failed:', e)
+    showActionError('Could not delete the conversation.')
   }
 }
 
@@ -111,6 +128,31 @@ onMounted(loadConversations)
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.action-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: var(--space-3) var(--space-5) 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-md);
+  background-color: var(--color-error-bg);
+  color: var(--color-error-accent);
+  font-size: var(--text-sm);
+}
+
+.action-error-dismiss {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: var(--text-lg);
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 var(--space-1);
 }
 
 .topbar {

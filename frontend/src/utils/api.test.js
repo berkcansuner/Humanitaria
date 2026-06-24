@@ -8,6 +8,8 @@ import {
   truncateConversation,
 } from './api.js'
 
+vi.mock('./authStore.js', () => ({ handleSessionExpired: vi.fn() }))
+
 describe('conversation api client', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
@@ -65,5 +67,13 @@ describe('conversation api client', () => {
   it('throws on a non-ok response', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }))
     await expect(listConversations()).rejects.toThrow()
+  })
+
+  it('on 401 triggers session-expiry handling and throws with status', async () => {
+    const { handleSessionExpired } = await import('./authStore.js')
+    handleSessionExpired.mockClear()
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 401 }))
+    await expect(listConversations()).rejects.toMatchObject({ status: 401 })
+    expect(handleSessionExpired).toHaveBeenCalledTimes(1)
   })
 })

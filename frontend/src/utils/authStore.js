@@ -43,3 +43,18 @@ export async function doLogout() {
     auth.user = null
   }
 }
+
+/**
+ * Called when an API call returns 401 mid-session (the session cookie expired or
+ * was invalidated server-side). Clears local auth state and bounces the user to
+ * the login page — the router guard alone can't catch this because no navigation
+ * happens while the user sits on /app. The router is imported lazily to avoid a
+ * static import cycle (router/index.js imports this module).
+ */
+export async function handleSessionExpired() {
+  auth.user = null
+  const { router } = await import('../router/index.js')
+  if (router.currentRoute.value.name !== 'login') {
+    router.push({ path: '/login', query: { redirect: '/app' } })
+  }
+}
