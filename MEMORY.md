@@ -8,7 +8,7 @@
 
 ---
 
-## ✅ Bu seansta UYGULANAN — Canlı test + 8 iş kolu geliştirme (2026-06-24, COMMIT BEKLİYOR)
+## ✅ Bu seansta UYGULANAN — Canlı test + 8 iş kolu geliştirme (2026-06-24, MERGED → origin/master, PR #1)
 
 Kullanıcı "canlı test et → geliştir" dedi. **Canlı test P0 buldu:** chat modeli `gemini-3.5-flash`
 kronik **503 "high demand"** → uygulama hiçbir RAG sorusuna cevap veremiyordu (embedding/Pinecone/
@@ -35,7 +35,7 @@ query-proc sağlıklıydı; tek kırılma chat modeliydi; MEMORY'de 17 gün önc
   api.js request() + Chat.vue stream); sessiz sidebar hataları → görünür banner (ChatView); a11y aria-label'ları
   (chat input, mesaj balonu role/aria, edit textarea). EmptyState i18n ATLANDI (UI bilinçli İngilizce).
 
-**Test: 335 backend (+13) + 62 frontend (+1) yeşil. Build OK.** **HENÜZ COMMIT/PUSH YOK.**
+**Test: 335 backend (+13) + 62 frontend (+1) yeşil. Build OK.** **MERGED → origin/master** ([PR #1](https://github.com/berkcansuner/reliefweb-rag/pull/1), rebase; commit'ler `acba6fe..1a0f21e`). `.env` değişiklikleri (model + CHUNK_SIZE 1500/200 + ölü anahtar temizliği) gitignored → yerel; `.env.example` commit'lendi.
 Canlı test kullanıcısı `claude_smoke@test.local` + birkaç sohbet conversations.db'de kaldı (zararsız).
 
 ---
