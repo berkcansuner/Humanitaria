@@ -4,7 +4,39 @@
 > Bu bir tarihçe değil — GÜNCEL durumu yansıtır. Eskiyen satırları sil/değiştir.
 > "Nerede kalmıştık?" sorusunun cevabı burasıdır.
 
-**Son güncelleme:** 2026-06-07
+**Son güncelleme:** 2026-06-24
+
+---
+
+## ✅ Bu seansta UYGULANAN — Canlı test + 8 iş kolu geliştirme (2026-06-24, COMMIT BEKLİYOR)
+
+Kullanıcı "canlı test et → geliştir" dedi. **Canlı test P0 buldu:** chat modeli `gemini-3.5-flash`
+kronik **503 "high demand"** → uygulama hiçbir RAG sorusuna cevap veremiyordu (embedding/Pinecone/
+query-proc sağlıklıydı; tek kırılma chat modeliydi; MEMORY'de 17 gün önce de aynı 503). Plan onaylandı
+(4 alan), 8 iş kolu uygulandı (hepsi test + canlı doğrulandı):
+
+- **İK1 Güvenilirlik (P0):** chat modeli → **`gemini-2.5-flash`** (config.py + .env + tüm docs;
+  reasoning_effort=low 2.5-flash'te çalışıyor). Non-stream `/chat`'e `_ainvoke_with_retry` (transient
+  503 retry) + `_is_high_demand` helper (stream+non-stream paylaşır). Geniş `except→503` daraltıldı:
+  busy→503 net mesaj, beklenmeyen→`logger.exception`+**500**. **Canlı: EN+TR chat 200 + 5 kaynak.**
+- **İK2 Güvenlik:** auth signup/login **rate-limit** (yeni paylaşılan `api/limiter.py` — chat↔auth
+  circular import'tan kaçınmak için; `AUTH_LOGIN_RATE_LIMIT=5/min`, `AUTH_SIGNUP_RATE_LIMIT=3/min`).
+  **Canlı: login #6→429.** Login **timing-attack** fix (`users.DUMMY_PASSWORD_HASH` — kullanıcı yoksa da
+  bcrypt çalışır). Ölü config temizliği (.env'den CHROMA_*/OLLAMA_*/*_PROVIDER; config'ten kullanılmayan
+  `API_KEY`). **+ yan-bug:** `.env` `CHUNK_SIZE=800/100` eski word-count kalıntısıydı → **1500/200** (config
+  intent'i; ingest kotada bloklu, anlık etki yok ama gelecekteki ingest doğru chunk üretir).
+- **İK3 RAG kalitesi:** MMR/aday-havuzu/truncate A/B (`eval_rag.py --metrics`, 15 etiketli sorgu).
+  **3 varyant da baseline'dan KÖTÜ** (havuz×8+fetch40 → nDCG 0.351; fetch40 MMR-div → 0.273; truncate=START
+  → recall düştü). → **KOD DEĞİŞİKLİĞİ YOK; default'lar optimal** (baseline recall@5=**0.224** MRR=**0.672**
+  nDCG=**0.426**). Audit'in "büyük havuz→recall" hipotezi YANLIŞ; reranker dar/alaka-odaklı havuzla daha iyi.
+  Gerçek lever hâlâ v2 namespace cutover (Pinecone kotası bloklu).
+- **İK4 Test & UX:** `apply_date_filter` (testsizdi, 5 test) + `chat_stream` busy-503 testi + non-stream
+  resilience testleri. **Frontend:** session-expiry **401→/login yönlendirme** (`authStore.handleSessionExpired`,
+  api.js request() + Chat.vue stream); sessiz sidebar hataları → görünür banner (ChatView); a11y aria-label'ları
+  (chat input, mesaj balonu role/aria, edit textarea). EmptyState i18n ATLANDI (UI bilinçli İngilizce).
+
+**Test: 335 backend (+13) + 62 frontend (+1) yeşil. Build OK.** **HENÜZ COMMIT/PUSH YOK.**
+Canlı test kullanıcısı `claude_smoke@test.local` + birkaç sohbet conversations.db'de kaldı (zararsız).
 
 ---
 
@@ -129,13 +161,13 @@ Plan/spec: `docs/superpowers/{plans,specs}/2026-06-02-reingest-pilot-syria*` (gi
 
 ## Mevcut Durum (çalışıyor)
 - **Mimari:** Gemini (chat/query/embed) + Pinecone — tek sağlayıcı, provider flag YOK. Tamamen bulut.
-- **Chat LLM:** Gemini **`gemini-3.5-flash`** (GA, çok dilli; thinking modeli — streaming latency kötüyse `reasoning_effort="low"` düşünülebilir, `chain.py`). System prompt İngilizce; yanıt kullanıcının dilinde. Rule 9 = recency.
+- **Chat LLM:** Gemini **`gemini-2.5-flash`** (GA, çok dilli; thinking modeli, `reasoning_effort="low"`). `gemini-3.5-flash`'ten geçildi (kronik 503 "high demand"). Transient 503'e karşı bounded retry: non-stream `_ainvoke_with_retry` + stream `_astream_with_retry` (ortak `_is_high_demand`); `except` busy→503/beklenmeyen→500. System prompt İngilizce; yanıt kullanıcının dilinde. Rule 9 = recency.
 - **Query processor:** Gemini `gemini-2.5-flash` (DEĞİŞMEDİ). **Embedding:** `gemini-embedding-001` (3072-dim).
 - **Chunker:** **`RecursiveCharacterTextSplitter` ~1500 char/200 overlap** (yeni default). NOT: mevcut default-namespace verisi hâlâ ESKİ 800-kelime chunk'larda — rollout'a kadar karışık durum.
 - **Retrieval:** güncellik-farkında + alaka reranker'ı (truncate=END); recency blend ham alaka skoruyla. `RECENCY_RERANK_POOL=10`, `RECENCY_BOOST_FACTOR=0.6`.
 - **Backend:** FastAPI, port `.env`'deki `API_PORT`. SSE streaming. Vue dist'i **SPA history-mode fallback** ile sunar (`api/main.py`: `/assets` mount + index.html catch-all). Kod değişikliğinden sonra restart (`--reload` yok).
 - **Frontend:** Vue 3 + **vue-router** SPA, Humanitaria (yeşil/antrasit, dark+light), İngilizce. Rotalar: **`/` Landing** (marketing, `.mkt-scope` izole CSS) + **`/login`+`/signup`** (`views/AuthView.vue`) + **`/app` Chat** (`views/ChatView.vue`, **router guard'lı — zorunlu giriş**). **Pricing sayfası KALDIRILDI** (route+view+CSS); navbar: Product/Sources/Use cases (Citations nav linki de kaldırıldı, sayfa bölümü+footer linki kaldı). Marketing döküman-scroll (global viewport-lock yalnız chat'e özel: `ChatView .app{height:100vh;overflow:hidden}`). `frontend/dist/` gitignore'da.
-- **Test:** **322 backend** + 61 frontend yeşil. Judge groundedness 5.0/5 (doygun); ayrıca etiketli retrieval metrikleri (recall@k/MRR/nDCG) — bkz. İş Kolu 2A.
+- **Test:** **335 backend** + 62 frontend yeşil. Judge groundedness 5.0/5 (doygun); etiketli retrieval metrikleri baseline recall@5=0.224/MRR=0.672/nDCG=0.426 (MMR/havuz tuning A/B'de baseline optimal çıktı — bkz. 2026-06-24 İK3).
 
 ## Veri Durumu (Pinecone `reliefweb-docs`, 3072-dim)
 - **default namespace (''): 31.628 vektör** — ESKİ 800-kelime chunk, 10 ülke. **App bunu kullanıyor** (cutover henüz YOK).

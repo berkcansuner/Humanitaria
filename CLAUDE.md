@@ -18,7 +18,7 @@ Kullanıcı → Vue 3 Frontend → FastAPI (localhost:8001) → RAG Engine (Lang
                   + query processor (gemini-2.5-flash)
 ```
 
-- **Chat yanıtı:** Google Gemini `gemini-3.5-flash` (OpenAI-uyumlu endpoint).
+- **Chat yanıtı:** Google Gemini `gemini-2.5-flash` (OpenAI-uyumlu endpoint).
 - **Query processor + embedding:** Google Gemini (`gemini-2.5-flash` + `gemini-embedding-001`).
 - **Vector DB:** Pinecone serverless (`reliefweb-docs`).
 
@@ -28,7 +28,7 @@ Kullanıcı → Vue 3 Frontend → FastAPI (localhost:8001) → RAG Engine (Lang
 
 | Katman | Teknoloji | Notlar |
 |--------|-----------|--------|
-| Chat LLM | Google Gemini `gemini-3.5-flash` | OpenAI-uyumlu endpoint |
+| Chat LLM | Google Gemini `gemini-2.5-flash` | OpenAI-uyumlu endpoint |
 | Query processor LLM | Google Gemini `gemini-2.5-flash` | Filtre çıkarma (json_mode) + rule-based fallback |
 | Embedding | Google Gemini `gemini-embedding-001` | 3072 boyut |
 | Vector DB | Pinecone serverless | Bulut; `reliefweb-docs` index |
@@ -57,7 +57,7 @@ Kullanıcı → Vue 3 Frontend → FastAPI (localhost:8001) → RAG Engine (Lang
 # Google Gemini (chat + sorgu işleme + embedding — OpenAI-uyumlu endpoint)
 GEMINI_API_KEY=xxx
 GEMINI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
-GEMINI_LLM_MODEL=gemini-3.5-flash      # chat yanıtı
+GEMINI_LLM_MODEL=gemini-2.5-flash      # chat yanıtı
 GEMINI_QUERY_MODEL=gemini-2.5-flash    # filtre çıkarma
 GEMINI_EMBED_MODEL=gemini-embedding-001
 
