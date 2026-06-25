@@ -81,13 +81,21 @@ const validSources = computed(() => (props.sources || []).filter(isValidSource))
   gap: var(--space-1);
   font-size: var(--text-xs);
   line-height: 1.5;
+  padding-left: var(--space-2);
+  border-left: 2px solid transparent;
   border-radius: var(--radius-md);
-  transition: background-color 0.3s;
+  transition: background-color 0.3s, border-color 0.2s;
 }
 
-/* Briefly highlight a source when its [n] citation chip is clicked. */
+/* Briefly pulse a source's background when its [n] citation chip is activated. */
 .source-item.flash {
   background-color: var(--color-accent-soft);
+}
+
+/* Persistent marker for the last-activated source, so the [n] ↔ source link
+   stays legible after the flash fades (until another citation is activated). */
+.source-item.active {
+  border-left-color: var(--color-accent);
 }
 
 .source-index {
