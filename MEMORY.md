@@ -8,11 +8,24 @@
 
 ---
 
-## ✅ Bu seansta UYGULANAN — Frontend denetimi + yol haritası P0/P1 UYGULANDI (2026-06-25, branch `feat/frontend-roadmap-p0`)
+## 📍 NEREDE KALMIŞTIK (10 saniyelik özet)
+
+**Uygulama sağlıklı ve çalışıyor.** Gemini `gemini-2.5-flash` (chat) + `gemini-embedding-001` (3072) + Pinecone (default namespace, **31.628 vektör**) — tamamen bulut. Vue 3 SPA, zorunlu giriş, **Humanitaria** markası. GitHub repo: **`berkcansuner/Humanitaria`** (eski `reliefweb-rag`; `origin` güncel).
+
+**Bu seansta (2026-06-25) bitirilen:** Frontend uçtan-uca denetim → **tüm P0/P1/P2 yol haritası uygulandı ve master'a MERGE edildi** (PR #2, rebase). Atıf render bug'ları (B1/B2), a11y (focus halkaları/klavye/modal), çok-satır composer, `color-scheme`/`theme-color`, reduced-motion, `:active`, diacritic arama, aktif-kaynak vurgusu. **74 frontend testi yeşil.** Çalışan ağaç temiz, branch silindi, sunucu kapalı. Detay: `docs/frontend-audit-roadmap-2026-06-25.md` + aşağıdaki seans kaydı.
+
+**SIRADAKİ — açık başlıklar (öncelik sırasıyla):**
+1. **🔴 EN BÜYÜK AÇIK İŞ — Pinecone aylık write-kotası TIKALI.** v2 namespace rollout **8/10 ülkede** kaldı (Palestine + Ukraine eksik). Kota reset olunca v2'yi tamamla → **cutover** (`PINECONE_NAMESPACE=v2`). Tarif aşağıda "SONRAKİ SEANS — Rollout" bölümünde.
+2. **Ertelenen frontend yapısal P2'ler** (cila değil, ayrı tur): self-host font, token sistemlerini birleştirme (L refactor), liste/geçmiş skeleton, `/auth/me` 401→200 (backend+test).
+3. **Deploy** — Render (Docker) hazır ama yapılmadı (`DEPLOY.md`). Kota dolu olduğu için scheduler kapalı.
+
+---
+
+## ✅ Bu seansta UYGULANAN — Frontend denetimi + yol haritası P0/P1/P2 (2026-06-25, MERGED → master PR #2)
 
 Kullanıcı "MCP + skill'lerle frontend'i test et, geliştirmeleri incele, yol haritası çıkar" dedi.
 Playwright (fonksiyonel) + Chrome DevTools Lighthouse/CWV (ölçüm) + skill tabanlı UX denetimi (web-design-guidelines,
-emil-design-eng) yürütüldü. **Çıktı:** `docs/frontend-audit-roadmap-2026-06-25.md` (P0/P1/P2, efor/etki, sıralama). **Kod değişmedi.**
+emil-design-eng) yürütüldü. Önce salt-denetim → yol haritası dokümanı (`docs/frontend-audit-roadmap-2026-06-25.md`, P0/P1/P2, efor/etki); sonra aşağıdaki turlarda uygulandı.
 
 - **Sağlık:** Tüm çekirdek akışlar PASS — landing light/dark, auth guard/signup/login, EN+TR chat (SSE, kaynaklar,
   çok dillilik), mobil 390px reflow, greeting (retrieval atlanıyor). Lighthouse **a11y 100 + BP 100** (desktop+mobile,
@@ -24,9 +37,9 @@ emil-design-eng) yürütüldü. **Çıktı:** `docs/frontend-audit-roadmap-2026-
 - **En yüksek getirili işler:** atıf bütünlüğü (P0) · görünür `:focus-visible` halkaları (P0, S, en yüksek ROI) · atıf
   klavye erişimi (P0) · çok-satır composer Shift+Enter (P1) · `:active`/reduced-motion/`color-scheme` (P1) · self-host font (perf).
 - **Perf:** render-blocking ana CSS + Google Fonts (~1181ms tahmini LCP); React adası `SuggestionCardIsland` 150KB/48.5KB-gzip ama lazy (ilk yükü bloklamıyor).
-- Artefakt: `01-08*.png` repo kökünde (commit ETME); uvicorn:8000 arka planda kalmış olabilir. Test kullanıcısı `frontend_audit@test.local`.
+- Temizlik tamam: kanıt screenshot'ları + `.playwright-mcp/` silindi, uvicorn durduruldu, çalışan ağaç temiz. Test kullanıcısı `frontend_audit@test.local` `conversations.db`'de kaldı (zararsız dev verisi).
 
-**Yol haritası UYGULANDI (branch `feat/frontend-roadmap-p0`, yerel commit, PUSH YOK):**
+**Yol haritası UYGULANDI → MERGED master (PR #2, rebase; branch `feat/frontend-roadmap-p0` silindi):**
 - **Tur 1 P0 (`3375e63`):** atıf bütünlüğü (`renderMarkdown`/`renumberCitations` grup genişletme + yeni `utils/sources.js` paylaşılan `isValidSource` → gruplar çip, dangling düz metin) · atıf klavye (`onCiteKeydown`) · global `:focus-visible` halkaları (`--focus-ring`). TDD +11 test. Canlı: 0 ham grup, 0 dangling çip, 24 çip→3 kaynak, Enter→flash.
 - **Tur 2 P1 (`edb5fb7`):** çok-satır `<textarea>` composer (Enter gönder/Shift+Enter satır, `autoGrow`) · `theme.js` `colorScheme` + `theme-color` meta · `prefers-reduced-motion` bloğu + streaming `role="status"` + typing `scale(0)→0.6`. Canlı doğrulandı.
 - **P2:** asistan `max-width:70ch`. **Item 8 (mobil-dismiss) GEREKSİZ** — backdrop zaten kapatıyor.
