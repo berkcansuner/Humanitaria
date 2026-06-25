@@ -16,9 +16,12 @@ target) **ölçümle gevşetildi** (aşağıda).
 
 - **Tur 1 (P0) — commit `3375e63`:** ① atıf bütünlüğü (gruplar→çip, dangling→düz metin) · ② atıf klavye erişimi (Enter/Space) · ③ `:focus-visible` halkaları. TDD +11 test; canlı doğrulandı.
 - **Tur 2 (P1) — commit `edb5fb7`:** ④ çok-satır composer (Enter gönder / Shift+Enter satır, auto-grow) · ⑤ reduced-motion + streaming `role="status"` + typing `scale(0)→scale(0.6)` · ⑦ `color-scheme` + `theme-color`. Canlı doğrulandı.
+- **Tur 2 ek — commit `c85c8ba`, `9231254`:** ⑥ `:active` basış geri bildirimi (butonlar + prompt kartları) · diacritic-duyarsız konuşma araması (TDD +1 test, "guvenligi"→"güvenliği").
 - **P2 cila:** ⑨ asistan yanıtı `max-width: 70ch` (okuma ölçüsü).
 - **Item 8 (mobil sidebar dismiss):** GEREKSİZ — `.sidebar-backdrop` drawer'ı kullanıcı composer'a/prompt'a ulaşmadan zaten kapatıyor. P1-8 düşürüldü.
-- **Kalan (sonraki tur):** ⑥ `:active` basış geri bildirimi (component-bazlı, scoped-CSS specificity gerektirir) + Tur 3 P2'lerin çoğu (skeleton, **self-host font**, ölü footer linkleri, token birleştirme, diacritic arama, marketing modal a11y).
+- **Kalan (hepsi P2 cila, sonraki tur):** skeleton + yük-hatası banner oto-kapatmayı kaldırma · **self-host font** (perf+gizlilik) · ölü footer linkleri (About/Privacy/Contact → `#`) · token sistemlerini birleştirme + off-grid px · aktif kaynak vurgusunu kalıcılaştırma · `/auth/me` console-401 gürültüsü · marketing modal a11y · React adası belgeleme.
+
+**Tüm tur testleri yeşil: 74 frontend.** PR: [Humanitaria#2](https://github.com/berkcansuner/Humanitaria/pull/2).
 
 ---
 
