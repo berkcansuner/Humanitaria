@@ -32,7 +32,7 @@ emil-design-eng) yürütüldü. **Çıktı:** `docs/frontend-audit-roadmap-2026-
 - **P2:** asistan `max-width:70ch`. **Item 8 (mobil-dismiss) GEREKSİZ** — backdrop zaten kapatıyor.
 - **Tur 2 ek (`c85c8ba`,`9231254`):** ⑥ `:active` press feedback (global ikon-buton kuralı + send-btn scale) + diacritic-duyarsız konuşma araması (`conversationOps._fold`, NFD+strip, TDD).
 - **Test: 74 frontend** yeşil (62→74). Yol haritası: `docs/frontend-audit-roadmap-2026-06-25.md`.
-- **PUSH'LANDI → [PR #2](https://github.com/berkcansuner/Humanitaria/pull/2).** Repo **`reliefweb-rag`→`Humanitaria`** yeniden adlandırıldı; `origin` URL **Humanitaria'ya güncellendi** (`git remote set-url`) + docs/render.yaml referansları da. Branch `feat/frontend-roadmap-p0`; master'a MERGE kullanıcı kararı.
+- **PUSH'LANDI → [PR #2](https://github.com/berkcansuner/Humanitaria/pull/2).** Repo **`reliefweb-rag`→`Humanitaria`** yeniden adlandırıldı; `origin` URL **Humanitaria'ya güncellendi** (`git remote set-url`) + docs/render.yaml referansları da. **MERGED → master** (PR #2, rebase, 2026-06-25). Yukarıdaki commit ref'leri branch-öncesi SHA'lar; rebase'de master'da yeni SHA aldılar.
 - **Tur 3 P2 cila (`16af40e`,`5f3c4a3`):** ölü footer linkleri→gerçek route, marketing modal a11y (`aria-hidden` açık-durumu yansıtır + focus + Tab trap), **kalıcı aktif-kaynak sol-accent bar** (SourceList `.active` + Chat scrollToCitedSource), React adası belgelendi. Test **74** yeşil.
 - **Bilinçli ERTELENEN (yapısal, "cila" değil):** self-host font (binary asset), token sistemlerini birleştirme (L refactor), liste/geçmiş skeleton, `/auth/me` 401→200 (backend+test değişikliği).
 
