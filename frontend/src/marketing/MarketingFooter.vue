@@ -24,10 +24,9 @@
         </div>
         <div class="foot-col">
           <h5>Company</h5>
-          <a href="#">About</a>
-          <a href="#">Privacy</a>
-          <a href="#">Contact</a>
-          <router-link to="/app">Log in</router-link>
+          <router-link to="/app">Open app</router-link>
+          <router-link to="/login">Log in</router-link>
+          <router-link to="/signup">Sign up</router-link>
         </div>
       </div>
       <div class="foot-base">
