@@ -4,7 +4,34 @@
 > Bu bir tarihçe değil — GÜNCEL durumu yansıtır. Eskiyen satırları sil/değiştir.
 > "Nerede kalmıştık?" sorusunun cevabı burasıdır.
 
-**Son güncelleme:** 2026-06-24
+**Son güncelleme:** 2026-06-25
+
+---
+
+## ✅ Bu seansta UYGULANAN — Frontend denetimi + yol haritası P0/P1 UYGULANDI (2026-06-25, branch `feat/frontend-roadmap-p0`)
+
+Kullanıcı "MCP + skill'lerle frontend'i test et, geliştirmeleri incele, yol haritası çıkar" dedi.
+Playwright (fonksiyonel) + Chrome DevTools Lighthouse/CWV (ölçüm) + skill tabanlı UX denetimi (web-design-guidelines,
+emil-design-eng) yürütüldü. **Çıktı:** `docs/frontend-audit-roadmap-2026-06-25.md` (P0/P1/P2, efor/etki, sıralama). **Kod değişmedi.**
+
+- **Sağlık:** Tüm çekirdek akışlar PASS — landing light/dark, auth guard/signup/login, EN+TR chat (SSE, kaynaklar,
+  çok dillilik), mobil 390px reflow, greeting (retrieval atlanıyor). Lighthouse **a11y 100 + BP 100** (desktop+mobile,
+  gerçek dark yanıt dahil); `color-contrast` & `target-size` ölçümle GEÇTİ. CWV: LCP 389ms / CLS 0.00 (localhost).
+- **2 GERÇEK BUG (canlı bulundu, P0):** (B1) çoklu atıf grupları `[1, 3, 4]` çipe DÖNÜŞMÜYOR, düz metin kalıyor
+  (`renderMarkdown.js:11` regex `/\[(\d+)\]/g` yalnız tek sayı yakalıyor); (B2) **sarkan atıflar** — yanıt `[4]`/`[5]`'e
+  atıf ama 3 kaynak (B1 besliyor; aralıklı — Ukrayna 5/5 sağlıklıydı). Fix: `renderMarkdown.js`+`renumberCitations.js`+`isValidSource`.
+- **Audit'in 2 iddiası ölçümle DÜŞÜRÜLDÜ:** dark contrast (ölçüm geçti → yalnız izle); 44px touch target (axe AA 24px geçti → P2 konfor).
+- **En yüksek getirili işler:** atıf bütünlüğü (P0) · görünür `:focus-visible` halkaları (P0, S, en yüksek ROI) · atıf
+  klavye erişimi (P0) · çok-satır composer Shift+Enter (P1) · `:active`/reduced-motion/`color-scheme` (P1) · self-host font (perf).
+- **Perf:** render-blocking ana CSS + Google Fonts (~1181ms tahmini LCP); React adası `SuggestionCardIsland` 150KB/48.5KB-gzip ama lazy (ilk yükü bloklamıyor).
+- Artefakt: `01-08*.png` repo kökünde (commit ETME); uvicorn:8000 arka planda kalmış olabilir. Test kullanıcısı `frontend_audit@test.local`.
+
+**Yol haritası UYGULANDI (branch `feat/frontend-roadmap-p0`, yerel commit, PUSH YOK):**
+- **Tur 1 P0 (`3375e63`):** atıf bütünlüğü (`renderMarkdown`/`renumberCitations` grup genişletme + yeni `utils/sources.js` paylaşılan `isValidSource` → gruplar çip, dangling düz metin) · atıf klavye (`onCiteKeydown`) · global `:focus-visible` halkaları (`--focus-ring`). TDD +11 test. Canlı: 0 ham grup, 0 dangling çip, 24 çip→3 kaynak, Enter→flash.
+- **Tur 2 P1 (`edb5fb7`):** çok-satır `<textarea>` composer (Enter gönder/Shift+Enter satır, `autoGrow`) · `theme.js` `colorScheme` + `theme-color` meta · `prefers-reduced-motion` bloğu + streaming `role="status"` + typing `scale(0)→0.6`. Canlı doğrulandı.
+- **P2:** asistan `max-width:70ch`. **Item 8 (mobil-dismiss) GEREKSİZ** — backdrop zaten kapatıyor.
+- **Test: 73 frontend** yeşil (62→73). Yol haritası dokümanı: `docs/frontend-audit-roadmap-2026-06-25.md`.
+- **KALAN:** Item 6 `:active` press feedback (component-bazlı, scoped-CSS) + Tur 3 P2 çoğu (skeleton, self-host font, ölü footer linkleri, token birleştirme). **PUSH + branch merge kullanıcı kararı.**
 
 ---
 
