@@ -151,6 +151,32 @@ select:focus-visible {
   border-color: var(--color-accent);
 }
 
+/* Visually-hidden text exposed only to assistive tech (e.g. streaming status). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Honor a reduced-motion preference: drop the typing bounce, smooth auto-scroll
+   and hover lifts for users who are sensitive to movement. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Copy button injected into rendered code blocks (decorateCodeBlocks).
    Lives in global CSS because the element is created in v-html content,
    which scoped component styles don't reach. */

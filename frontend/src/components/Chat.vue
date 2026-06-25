@@ -12,10 +12,11 @@
         <div class="message-row">
           <div class="message-bubble">
             <template v-if="msg.role === 'assistant' && !msg.content && !msg.error && !msg.clarification">
-              <div class="typing-indicator">
+              <div class="typing-indicator" role="status">
                 <span></span>
                 <span></span>
                 <span></span>
+                <span class="sr-only">Generating response…</span>
               </div>
             </template>
             <template v-else>
@@ -62,15 +63,17 @@
       </div>
     </div>
     <form class="input-area" @submit.prevent="sendMessage">
-      <input
+      <textarea
         ref="chatInput"
         v-model="input"
-        type="text"
+        rows="1"
         placeholder="Ask about humanitarian documents…"
         class="chat-input"
         aria-label="Chat message input"
         enterkeyhint="send"
-      />
+        @input="autoGrow"
+        @keydown.enter.exact.prevent="sendMessage"
+      ></textarea>
       <button
         v-if="loading"
         type="button"
@@ -141,7 +144,10 @@ async function sendMessage(opts = {}) {
   if (!opts.silent) {
     messages.value.push({ role: 'user', content: text, error: null, serverId: null })
   }
-  if (opts.text == null) input.value = ''
+  if (opts.text == null) {
+    input.value = ''
+    nextTick(autoGrow)
+  }
   loading.value = true
 
   const assistantMsg = { role: 'assistant', content: '', sources: null, error: null, clarification: null, serverId: null }
@@ -391,6 +397,15 @@ function scrollToBottom() {
       messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
     }
   })
+}
+
+// Grow the composer textarea with its content up to a few lines, then scroll
+// internally. Reset to one line when the field is cleared after sending.
+function autoGrow() {
+  const el = chatInput.value
+  if (!el) return
+  el.style.height = 'auto'
+  el.style.height = Math.min(el.scrollHeight, 160) + 'px'
 }
 
 function onSuggestionApply(msg, values) {
@@ -686,13 +701,13 @@ watch(() => props.conversationId, async (newId) => {
 .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
 
 @keyframes bounce {
-  0%, 80%, 100% { transform: scale(0); opacity: 0.3; }
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.3; }
   40% { transform: scale(1); opacity: 1; }
 }
 
 .input-area {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: var(--space-3);
   padding-top: var(--space-5);
   border-top: 1px solid var(--color-border);
@@ -700,14 +715,19 @@ watch(() => props.conversationId, async (newId) => {
 
 .chat-input {
   flex: 1;
-  padding: var(--space-4) var(--space-5);
+  display: block;
+  padding: var(--space-3) var(--space-5);
   font-family: var(--font-body);
   font-size: var(--text-base);
+  line-height: 1.5;
   border: 1px solid var(--color-outline);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-lg);
   background-color: var(--color-surface);
   color: var(--color-text);
   outline: none;
+  resize: none;
+  max-height: 160px;
+  overflow-y: auto;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
