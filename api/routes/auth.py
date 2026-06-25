@@ -161,18 +161,31 @@ async def google_login(request: Request):
 
 @router.get("/google/callback")
 async def google_callback(request: Request):
-    token = await oauth.google.authorize_access_token(request)
+    s = get_settings()
+    # The token exchange depends entirely on external state: a wrong
+    # GOOGLE_CLIENT_SECRET surfaces as OAuthError(invalid_client), a lost state
+    # cookie as MismatchingStateError, a denied consent as access_denied — and a
+    # raw token-endpoint failure can even bubble up as a transport error. Any of
+    # these would otherwise reach the user as a blank 500. Fail closed instead:
+    # log the real cause (visible in the server logs) and send the user back to
+    # the login page with an error flag.
+    try:
+        token = await oauth.google.authorize_access_token(request)
+    except Exception as exc:  # external OAuth boundary — degrade gracefully, never 500
+        logger.warning("Google OAuth callback failed: %r", exc)
+        return RedirectResponse(url=f"{s.FRONTEND_URL}/login?error=google")
     info = token.get("userinfo") or {}
     sub, email = info.get("sub"), info.get("email")
     name = info.get("name") or email
     if not sub or not email:
-        raise HTTPException(status_code=400, detail="Google login failed")
+        logger.warning("Google OAuth callback returned no userinfo")
+        return RedirectResponse(url=f"{s.FRONTEND_URL}/login?error=google")
     user = await anyio.to_thread.run_sync(
         users_store.get_or_create_google_user, sub, email, name
     )
     session_token = await anyio.to_thread.run_sync(
-        users_store.create_session, user["id"], get_settings().SESSION_TTL_HOURS
+        users_store.create_session, user["id"], s.SESSION_TTL_HOURS
     )
-    resp = RedirectResponse(url=f"{get_settings().FRONTEND_URL}/app")
+    resp = RedirectResponse(url=f"{s.FRONTEND_URL}/app")
     _set_session_cookie(resp, session_token)
     return resp

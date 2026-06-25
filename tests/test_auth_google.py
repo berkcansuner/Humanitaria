@@ -30,3 +30,16 @@ def test_google_login_returns_503_when_unconfigured(client):
     with patch("api.routes.auth.get_settings", return_value=MagicMock(GOOGLE_CLIENT_ID="")):
         r = client.get("/auth/google/login", follow_redirects=False)
         assert r.status_code == 503
+
+
+def test_google_callback_failure_redirects_to_login_not_500(client):
+    """A failed token exchange (e.g. wrong client secret) must degrade to a
+    friendly redirect, not a blank 500."""
+    from authlib.integrations.starlette_client import OAuthError
+
+    with patch("api.routes.auth.oauth.google.authorize_access_token",
+               new=AsyncMock(side_effect=OAuthError("invalid_client", "bad secret"))):
+        r = client.get("/auth/google/callback?code=x&state=y", follow_redirects=False)
+    assert r.status_code in (302, 307)
+    assert "/login" in r.headers["location"]
+    assert "error=google" in r.headers["location"]
