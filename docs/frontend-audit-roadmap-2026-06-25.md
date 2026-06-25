@@ -19,7 +19,8 @@ target) **ölçümle gevşetildi** (aşağıda).
 - **Tur 2 ek — commit `c85c8ba`, `9231254`:** ⑥ `:active` basış geri bildirimi (butonlar + prompt kartları) · diacritic-duyarsız konuşma araması (TDD +1 test, "guvenligi"→"güvenliği").
 - **P2 cila:** ⑨ asistan yanıtı `max-width: 70ch` (okuma ölçüsü).
 - **Item 8 (mobil sidebar dismiss):** GEREKSİZ — `.sidebar-backdrop` drawer'ı kullanıcı composer'a/prompt'a ulaşmadan zaten kapatıyor. P1-8 düşürüldü.
-- **Kalan (hepsi P2 cila, sonraki tur):** skeleton + yük-hatası banner oto-kapatmayı kaldırma · **self-host font** (perf+gizlilik) · ölü footer linkleri (About/Privacy/Contact → `#`) · token sistemlerini birleştirme + off-grid px · aktif kaynak vurgusunu kalıcılaştırma · `/auth/me` console-401 gürültüsü · marketing modal a11y · React adası belgeleme.
+- **Tur 3 (P2 cila) — commit `16af40e`, `5f3c4a3`:** ölü footer linkleri → gerçek route'lar (Open app/Log in/Sign up) · marketing `SampleAnswerModal` a11y (`aria-hidden` artık açık-durumu yansıtır + odak yönetimi + Tab trap) · **kalıcı aktif-kaynak vurgusu** (sol accent bar, flash'tan ayrı) · React adası "tek bilinçli ada" olarak belgelendi.
+- **Bilinçli ertelenen (yapısal — "cila" değil, ayrı tur):** self-host font (binary asset ekler) · token sistemlerini birleştirme (L refactor, regresyon riski) · liste/geçmiş skeleton'ları · `/auth/me` 401→200 (backend + test değişikliği gerektirir, salt-frontend değil).
 
 **Tüm tur testleri yeşil: 74 frontend.** PR: [Humanitaria#2](https://github.com/berkcansuner/Humanitaria/pull/2).
 
