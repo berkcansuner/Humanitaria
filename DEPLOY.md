@@ -6,8 +6,8 @@ origin, so no CORS in the browser). Config lives in `render.yaml` + `Dockerfile`
 ## Steps
 
 1. **Render → New → Blueprint** and connect the GitHub repo
-   `berkcansuner/reliefweb-rag`. Render reads `render.yaml` and creates the
-   `reliefweb-rag` web service.
+   `berkcansuner/Humanitaria`. Render reads `render.yaml` and creates the
+   `humanitaria` web service.
 
 2. **Set the secret env vars** when prompted (these are `sync:false`, never in
    the repo):
@@ -24,7 +24,7 @@ origin, so no CORS in the browser). Config lives in `render.yaml` + `Dockerfile`
 3. **Deploy.** First build is a Docker build (frontend `npm ci`+build, then pip
    install) → ~5–10 min. Watch the build logs.
 
-4. **Note the live URL.** If it is exactly `https://reliefweb-rag.onrender.com`,
+4. **Note the live URL.** If it is exactly `https://humanitaria.onrender.com`,
    you're set. If Render appended a suffix (name taken), update these env vars in
    the dashboard to the real URL and redeploy:
    `FRONTEND_URL`, `GOOGLE_REDIRECT_URI` (`<url>/auth/google/callback`), `CORS_ORIGINS`.

@@ -3,7 +3,7 @@
 # and spins down after ~15 min idle. See DEPLOY.md.
 services:
   - type: web
-    name: reliefweb-rag
+    name: humanitaria
     runtime: docker
     dockerfilePath: ./Dockerfile
     plan: free
@@ -20,11 +20,11 @@ services:
       # URLs assume the predicted host below. If Render appends a suffix to the
       # name, update these three + the Google redirect URI (see DEPLOY.md).
       - key: FRONTEND_URL
-        value: https://reliefweb-rag.onrender.com
+        value: https://humanitaria.onrender.com
       - key: GOOGLE_REDIRECT_URI
-        value: https://reliefweb-rag.onrender.com/auth/google/callback
+        value: https://humanitaria.onrender.com/auth/google/callback
       - key: CORS_ORIGINS
-        value: https://reliefweb-rag.onrender.com
+        value: https://humanitaria.onrender.com
       # Render generates a strong session-signing secret automatically.
       - key: AUTH_SESSION_SECRET
         generateValue: true

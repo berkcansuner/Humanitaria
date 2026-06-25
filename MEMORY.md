@@ -32,7 +32,7 @@ emil-design-eng) yürütüldü. **Çıktı:** `docs/frontend-audit-roadmap-2026-
 - **P2:** asistan `max-width:70ch`. **Item 8 (mobil-dismiss) GEREKSİZ** — backdrop zaten kapatıyor.
 - **Tur 2 ek (`c85c8ba`,`9231254`):** ⑥ `:active` press feedback (global ikon-buton kuralı + send-btn scale) + diacritic-duyarsız konuşma araması (`conversationOps._fold`, NFD+strip, TDD).
 - **Test: 74 frontend** yeşil (62→74). Yol haritası: `docs/frontend-audit-roadmap-2026-06-25.md`.
-- **PUSH'LANDI → [PR #2](https://github.com/berkcansuner/Humanitaria/pull/2).** ⚠️ Repo `reliefweb-rag`→**`Humanitaria`** yeniden adlandırılmış; `origin` URL hâlâ eski ama GitHub redirect ediyor (gh `--repo berkcansuner/Humanitaria` ile). Branch `feat/frontend-roadmap-p0`; master'a MERGE kullanıcı kararı.
+- **PUSH'LANDI → [PR #2](https://github.com/berkcansuner/Humanitaria/pull/2).** Repo **`reliefweb-rag`→`Humanitaria`** yeniden adlandırıldı; `origin` URL **Humanitaria'ya güncellendi** (`git remote set-url`) + docs/render.yaml referansları da. Branch `feat/frontend-roadmap-p0`; master'a MERGE kullanıcı kararı.
 - **KALAN (hepsi P2 cila):** skeleton + yük-hatası oto-kapatma kaldırma, self-host font, ölü footer linkleri (`#`), token birleştirme + off-grid px, aktif kaynak vurgusu kalıcılaştırma, `/auth/me` console-401 gürültüsü, marketing modal a11y.
 
 ---
@@ -64,13 +64,13 @@ query-proc sağlıklıydı; tek kırılma chat modeliydi; MEMORY'de 17 gün önc
   api.js request() + Chat.vue stream); sessiz sidebar hataları → görünür banner (ChatView); a11y aria-label'ları
   (chat input, mesaj balonu role/aria, edit textarea). EmptyState i18n ATLANDI (UI bilinçli İngilizce).
 
-**Test: 335 backend (+13) + 62 frontend (+1) yeşil. Build OK.** **MERGED → origin/master** ([PR #1](https://github.com/berkcansuner/reliefweb-rag/pull/1), rebase; commit'ler `acba6fe..1a0f21e`). `.env` değişiklikleri (model + CHUNK_SIZE 1500/200 + ölü anahtar temizliği) gitignored → yerel; `.env.example` commit'lendi.
+**Test: 335 backend (+13) + 62 frontend (+1) yeşil. Build OK.** **MERGED → origin/master** ([PR #1](https://github.com/berkcansuner/Humanitaria/pull/1), rebase; commit'ler `acba6fe..1a0f21e`). `.env` değişiklikleri (model + CHUNK_SIZE 1500/200 + ölü anahtar temizliği) gitignored → yerel; `.env.example` commit'lendi.
 Canlı test kullanıcısı `claude_smoke@test.local` + birkaç sohbet conversations.db'de kaldı (zararsız).
 
 ---
 
 ## 🚀 DEPLOY — Render (ücretsiz, Docker) hazırlandı (2026-06-07)
-`Dockerfile` (multi-stage: Vue build → FastAPI runtime) + `render.yaml` (Blueprint, free, frankfurt, `/health`) + `DEPLOY.md` (adım adım). Tek servis API+SPA'yı aynı origin'den sunar (CORS yok). Prod env: `SESSION_COOKIE_SECURE=true`, `INGEST_SCHEDULE_HOURS=0` (scheduler kapalı; kota dolu), `GEMINI_REASONING_EFFORT=low`, URL'ler `https://reliefweb-rag.onrender.com` varsayımıyla; `AUTH_SESSION_SECRET` Render üretir; secret'lar (GEMINI/PINECONE/RELIEFWEB/GOOGLE) dashboard'da `sync:false`. **Ücretsiz tier:** disk yok → SQLite (kullanıcı/sohbet) uyku/deploy'da SIFIRLANIR + 15dk boşta uyur (ilk istek ~30-60s). Kalıcı için: paid+disk veya Postgres göçü. Google Console'a prod redirect eklenecek. Adımlar `DEPLOY.md`'de.
+`Dockerfile` (multi-stage: Vue build → FastAPI runtime) + `render.yaml` (Blueprint, free, frankfurt, `/health`) + `DEPLOY.md` (adım adım). Tek servis API+SPA'yı aynı origin'den sunar (CORS yok). Prod env: `SESSION_COOKIE_SECURE=true`, `INGEST_SCHEDULE_HOURS=0` (scheduler kapalı; kota dolu), `GEMINI_REASONING_EFFORT=low`, URL'ler `https://humanitaria.onrender.com` varsayımıyla; `AUTH_SESSION_SECRET` Render üretir; secret'lar (GEMINI/PINECONE/RELIEFWEB/GOOGLE) dashboard'da `sync:false`. **Ücretsiz tier:** disk yok → SQLite (kullanıcı/sohbet) uyku/deploy'da SIFIRLANIR + 15dk boşta uyur (ilk istek ~30-60s). Kalıcı için: paid+disk veya Postgres göçü. Google Console'a prod redirect eklenecek. Adımlar `DEPLOY.md`'de.
 
 ---
 
@@ -219,7 +219,7 @@ Plan/spec: `docs/superpowers/{plans,specs}/2026-06-02-reingest-pilot-syria*` (gi
 ## Commit / Push Durumu
 - **`origin/master`'a PUSH'LANDI (master = origin):** pilot+chunker+model+date-filter-fix (`…5ab02a0`), store 429-retry (`918637d`), marketing entegrasyonu — Landing/Pricing/router/SPA-fallback (`cdc4a95`), marketing scroll fix (`5810e15`), pricing kaldırma (`e81aade`), citations-nav kaldırma (`daa9e1d`) + MEMORY docs.
 - **PUSH'LANDI:** Auth (Login/Signup) sistemi — `2198891` (`6d73d9b..2198891 master→master`), 32 dosya. `.env` gitignored → Google/Gemini/Pinecone secret'ları commit'lenmedi.
-- Remote: **https://github.com/berkcansuner/reliefweb-rag** (private).
+- Remote: **https://github.com/berkcansuner/Humanitaria** (private).
 
 ## Sıradaki Adımlar (kullanıcı yönlendirir)
 - [ ] **Kotayı çöz** (aylık reset bekle VEYA Pinecone plan upgrade) → `PINECONE_NAMESPACE=v2 ingest --country PSE UKR --date-from 2023-06-05 --limit 2000` ile v2'yi tamamla.
