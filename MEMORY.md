@@ -30,8 +30,10 @@ emil-design-eng) yürütüldü. **Çıktı:** `docs/frontend-audit-roadmap-2026-
 - **Tur 1 P0 (`3375e63`):** atıf bütünlüğü (`renderMarkdown`/`renumberCitations` grup genişletme + yeni `utils/sources.js` paylaşılan `isValidSource` → gruplar çip, dangling düz metin) · atıf klavye (`onCiteKeydown`) · global `:focus-visible` halkaları (`--focus-ring`). TDD +11 test. Canlı: 0 ham grup, 0 dangling çip, 24 çip→3 kaynak, Enter→flash.
 - **Tur 2 P1 (`edb5fb7`):** çok-satır `<textarea>` composer (Enter gönder/Shift+Enter satır, `autoGrow`) · `theme.js` `colorScheme` + `theme-color` meta · `prefers-reduced-motion` bloğu + streaming `role="status"` + typing `scale(0)→0.6`. Canlı doğrulandı.
 - **P2:** asistan `max-width:70ch`. **Item 8 (mobil-dismiss) GEREKSİZ** — backdrop zaten kapatıyor.
-- **Test: 73 frontend** yeşil (62→73). Yol haritası dokümanı: `docs/frontend-audit-roadmap-2026-06-25.md`.
-- **KALAN:** Item 6 `:active` press feedback (component-bazlı, scoped-CSS) + Tur 3 P2 çoğu (skeleton, self-host font, ölü footer linkleri, token birleştirme). **PUSH + branch merge kullanıcı kararı.**
+- **Tur 2 ek (`c85c8ba`,`9231254`):** ⑥ `:active` press feedback (global ikon-buton kuralı + send-btn scale) + diacritic-duyarsız konuşma araması (`conversationOps._fold`, NFD+strip, TDD).
+- **Test: 74 frontend** yeşil (62→74). Yol haritası: `docs/frontend-audit-roadmap-2026-06-25.md`.
+- **PUSH'LANDI → [PR #2](https://github.com/berkcansuner/Humanitaria/pull/2).** ⚠️ Repo `reliefweb-rag`→**`Humanitaria`** yeniden adlandırılmış; `origin` URL hâlâ eski ama GitHub redirect ediyor (gh `--repo berkcansuner/Humanitaria` ile). Branch `feat/frontend-roadmap-p0`; master'a MERGE kullanıcı kararı.
+- **KALAN (hepsi P2 cila):** skeleton + yük-hatası oto-kapatma kaldırma, self-host font, ölü footer linkleri (`#`), token birleştirme + off-grid px, aktif kaynak vurgusu kalıcılaştırma, `/auth/me` console-401 gürültüsü, marketing modal a11y.
 
 ---
 
