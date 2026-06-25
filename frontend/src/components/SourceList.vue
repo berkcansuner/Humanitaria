@@ -27,6 +27,7 @@
 import { computed } from 'vue'
 import { ExternalLink } from 'lucide-vue-next'
 import { safeUrl } from '../utils/parseSSE.js'
+import { isValidSource } from '../utils/sources.js'
 
 const props = defineProps({
   sources: {
@@ -43,12 +44,6 @@ function formatDate(iso) {
   } catch {
     return iso
   }
-}
-
-function isValidSource(src) {
-  if (!src || !src.url) return false
-  if (src.doctype === 'country' && src.title === src.country) return false
-  return true
 }
 
 const validSources = computed(() => (props.sources || []).filter(isValidSource))

@@ -76,4 +76,17 @@ describe('renumberCitations', () => {
       sources: [],
     })
   })
+
+  it('remaps citation numbers inside a comma-separated group', () => {
+    // The model grouped two citations: "[5, 2]". After expansion + remap, [5]
+    // appears first -> [1], [2] -> [2], and the group becomes adjacent chips.
+    const content = 'Both sources [5, 2] agree.'
+    const sources = [
+      { index: 2, title: 'B', url: 'https://x/2' },
+      { index: 5, title: 'A', url: 'https://x/5' },
+    ]
+    const result = renumberCitations(content, sources)
+    expect(result.content).toBe('Both sources [1][2] agree.')
+    expect(result.sources.map(s => s.index)).toEqual([1, 2])
+  })
 })
