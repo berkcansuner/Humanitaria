@@ -151,6 +151,22 @@ select:focus-visible {
   border-color: var(--color-accent);
 }
 
+/* Press feedback: pressable controls dip slightly while active so taps and
+   clicks feel responsive. Icon buttons here use background-only hovers, so a
+   global :active transform applies without fighting a hover transform. */
+.action-btn:active,
+.conv-action:active,
+.new-chat-btn:active,
+.logout-btn:active,
+.theme-toggle:active,
+.hamburger:active {
+  transform: scale(0.94);
+}
+
+.prompt-card:active {
+  transform: scale(0.98);
+}
+
 /* Visually-hidden text exposed only to assistive tech (e.g. streaming status). */
 .sr-only {
   position: absolute;

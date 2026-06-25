@@ -776,7 +776,7 @@ watch(() => props.conversationId, async (newId) => {
 }
 
 .send-btn:active:not(:disabled) {
-  transform: translateY(0);
+  transform: scale(0.94);
 }
 
 .send-btn:disabled {
