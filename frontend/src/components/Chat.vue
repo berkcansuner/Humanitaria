@@ -534,6 +534,11 @@ watch(() => props.conversationId, async (newId) => {
   line-height: 1.6;
 }
 
+/* Cap answer line length at a comfortable reading measure on wide screens. */
+.message.assistant .message-content {
+  max-width: 70ch;
+}
+
 .message-content :deep(p) {
   margin: 0 0 0.6em 0;
 }
