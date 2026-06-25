@@ -10,7 +10,7 @@ import logging
 import sqlite3
 
 import anyio
-from authlib.integrations.starlette_client import OAuth
+from authlib.integrations.starlette_client import OAuth, OAuthError
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field, field_validator
@@ -159,22 +159,45 @@ async def google_login(request: Request):
     return await oauth.google.authorize_redirect(request, s.GOOGLE_REDIRECT_URI)
 
 
+async def _google_userinfo(request: Request) -> dict:
+    """Resolve the OAuth callback to a Google profile dict (sub/email/name).
+
+    Mirrors authlib's ``authorize_access_token`` (state check + code→token
+    exchange) but reads the profile from the ``userinfo`` endpoint instead of
+    verifying the ``id_token`` locally. Local verification fetches Google's JWKS
+    from ``www.googleapis.com/oauth2/v3/certs``, which this deploy's region gets
+    HTTP 403 from — that is what surfaced as a blank 500. The token endpoint and
+    the userinfo endpoint (``openidconnect.googleapis.com``) are both reachable.
+    Raises on any error/invalid-state/exchange failure.
+    """
+    if request.query_params.get("error"):
+        raise OAuthError(error=request.query_params["error"])
+    state = request.query_params.get("state")
+    state_data = await oauth.google.framework.get_state_data(request.session, state)
+    if not state_data:
+        raise OAuthError(description='Invalid "state" parameter')
+    await oauth.google.framework.clear_state_data(request.session, state)
+    params = {"code": request.query_params.get("code"), "state": state}
+    if state_data.get("redirect_uri"):
+        params["redirect_uri"] = state_data["redirect_uri"]
+    if state_data.get("code_verifier"):
+        params["code_verifier"] = state_data["code_verifier"]
+    token = await oauth.google.fetch_access_token(**params)
+    return dict(await oauth.google.userinfo(token=token))
+
+
 @router.get("/google/callback")
 async def google_callback(request: Request):
     s = get_settings()
-    # The token exchange depends entirely on external state: a wrong
-    # GOOGLE_CLIENT_SECRET surfaces as OAuthError(invalid_client), a lost state
-    # cookie as MismatchingStateError, a denied consent as access_denied — and a
-    # raw token-endpoint failure can even bubble up as a transport error. Any of
-    # these would otherwise reach the user as a blank 500. Fail closed instead:
-    # log the real cause (visible in the server logs) and send the user back to
-    # the login page with an error flag.
+    # The OAuth exchange depends on external Google state (wrong secret, lost
+    # state cookie, denied consent, an unreachable Google host). Any failure
+    # would otherwise reach the user as a blank 500 — fail closed instead: log
+    # the real cause (visible in the server logs) and bounce back to login.
     try:
-        token = await oauth.google.authorize_access_token(request)
+        info = await _google_userinfo(request)
     except Exception as exc:  # external OAuth boundary — degrade gracefully, never 500
         logger.warning("Google OAuth callback failed: %r", exc)
         return RedirectResponse(url=f"{s.FRONTEND_URL}/login?error=google")
-    info = token.get("userinfo") or {}
     sub, email = info.get("sub"), info.get("email")
     name = info.get("name") or email
     if not sub or not email:

@@ -13,10 +13,18 @@ def client():
 
 
 def test_google_callback_creates_user_and_logs_in(client):
-    fake_token = {"userinfo": {"sub": "google-123", "email": "guser@example.com", "name": "G User"}}
-    with patch("api.routes.auth.oauth.google.authorize_access_token",
-               new=AsyncMock(return_value=fake_token)):
-        r = client.get("/auth/google/callback", follow_redirects=False)
+    # Exercise the real _google_userinfo glue, mocking only authlib's leaf calls:
+    # state lookup + code→token exchange + the userinfo endpoint (NOT id_token /
+    # JWKS, which we deliberately stopped using).
+    fake_userinfo = {"sub": "google-123", "email": "guser@example.com", "name": "G User"}
+    with patch("api.routes.auth.oauth.google.framework.get_state_data",
+               new=AsyncMock(return_value={"redirect_uri": "http://test/auth/google/callback"})), \
+         patch("api.routes.auth.oauth.google.framework.clear_state_data", new=AsyncMock()), \
+         patch("api.routes.auth.oauth.google.fetch_access_token",
+               new=AsyncMock(return_value={"access_token": "tok"})), \
+         patch("api.routes.auth.oauth.google.userinfo",
+               new=AsyncMock(return_value=fake_userinfo)):
+        r = client.get("/auth/google/callback?code=abc&state=xyz", follow_redirects=False)
         assert r.status_code in (302, 307)
         assert "/app" in r.headers["location"]
 
@@ -33,11 +41,11 @@ def test_google_login_returns_503_when_unconfigured(client):
 
 
 def test_google_callback_failure_redirects_to_login_not_500(client):
-    """A failed token exchange (e.g. wrong client secret) must degrade to a
-    friendly redirect, not a blank 500."""
+    """A failed OAuth exchange (wrong secret, lost state, unreachable Google host)
+    must degrade to a friendly redirect, not a blank 500."""
     from authlib.integrations.starlette_client import OAuthError
 
-    with patch("api.routes.auth.oauth.google.authorize_access_token",
+    with patch("api.routes.auth._google_userinfo",
                new=AsyncMock(side_effect=OAuthError("invalid_client", "bad secret"))):
         r = client.get("/auth/google/callback?code=x&state=y", follow_redirects=False)
     assert r.status_code in (302, 307)
