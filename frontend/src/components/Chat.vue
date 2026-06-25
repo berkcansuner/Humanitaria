@@ -97,9 +97,11 @@ import { Send, Loader2, AlertCircle, Square } from 'lucide-vue-next'
 import SourceList from './SourceList.vue'
 import EmptyState from './EmptyState.vue'
 import MessageActions from './MessageActions.vue'
-// Lazy-loaded: the React island (React + react-dom + lucide-react) is only
-// needed when a clarification card is shown, so it is split into its own async
-// chunk and kept out of the initial bundle.
+// The one intentional React island in this otherwise-Vue app: the clarification
+// card (React + react-dom + lucide-react). Lazy-loaded so its runtime stays out
+// of the initial bundle (only needed when a clarification is shown). Its CSS
+// (react/SuggestionCard.css) is the reference for our focus-ring + reduced-motion
+// conventions. A future Vue port would remove the second runtime.
 const SuggestionCardIsland = defineAsyncComponent(() => import('./SuggestionCardIsland.vue'))
 import { renderMarkdown } from '../utils/renderMarkdown.js'
 import { parseSSE } from '../utils/parseSSE.js'
@@ -318,6 +320,9 @@ function scrollToCitedSource(cite) {
   const message = cite.closest('.message')
   const item = message?.querySelector(`.source-item[data-srcid="${id}"]`)
   if (!item) return
+  // Persistent active marker (one per message) + a brief flash pulse.
+  message.querySelectorAll('.source-item.active').forEach((el) => el.classList.remove('active'))
+  item.classList.add('active')
   item.scrollIntoView({ behavior: 'smooth', block: 'center' })
   item.classList.add('flash')
   setTimeout(() => item.classList.remove('flash'), 1500)
