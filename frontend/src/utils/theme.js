@@ -21,7 +21,22 @@ export function getInitialTheme() {
 
 /** Reflect the theme on <html> so the CSS variable overrides take effect. */
 export function applyTheme(theme) {
-  document.documentElement.dataset.theme = theme
+  const root = document.documentElement
+  root.dataset.theme = theme
+  // Native UI (scrollbars, caret, form widgets) follows this; without it dark
+  // mode leaves light-mode scrollbars and a hard-to-see caret.
+  root.style.colorScheme = theme
+  // Keep the mobile browser chrome in sync with the page background.
+  const bg = getComputedStyle(root).getPropertyValue('--color-bg').trim()
+  if (bg) {
+    let meta = document.querySelector('meta[name="theme-color"]')
+    if (!meta) {
+      meta = document.createElement('meta')
+      meta.setAttribute('name', 'theme-color')
+      document.head.appendChild(meta)
+    }
+    meta.setAttribute('content', bg)
+  }
 }
 
 /** Persist the chosen theme and apply it immediately. */
