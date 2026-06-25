@@ -1,8 +1,8 @@
 <template>
-  <div class="modal" :class="{ open }" aria-hidden="true">
+  <div class="modal" :class="{ open }" :aria-hidden="!open">
     <div class="modal-backdrop" @click="$emit('close')"></div>
     <div class="modal-card" role="dialog" aria-modal="true" aria-label="Sample answer">
-      <button class="modal-x" aria-label="Close" @click="$emit('close')">
+      <button ref="closeBtn" class="modal-x" aria-label="Close" @click="$emit('close')">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
       </button>
       <div class="modal-head">
@@ -37,7 +37,7 @@
 </template>
 
 <script setup>
-import { watch, onUnmounted } from 'vue'
+import { ref, watch, nextTick, onUnmounted } from 'vue'
 import HandMark from './HandMark.vue'
 
 const props = defineProps({
@@ -45,16 +45,30 @@ const props = defineProps({
 })
 const emit = defineEmits(['close'])
 
+const closeBtn = ref(null)
+let lastFocused = null
+
 function onKey(e) {
   if (e.key === 'Escape') emit('close')
+  // The dialog's only focusable is the close button, so keep Tab inside it.
+  else if (e.key === 'Tab') {
+    e.preventDefault()
+    closeBtn.value?.focus()
+  }
 }
 
 watch(
   () => props.open,
   (isOpen) => {
     document.body.style.overflow = isOpen ? 'hidden' : ''
-    if (isOpen) document.addEventListener('keydown', onKey)
-    else document.removeEventListener('keydown', onKey)
+    if (isOpen) {
+      lastFocused = document.activeElement
+      document.addEventListener('keydown', onKey)
+      nextTick(() => closeBtn.value?.focus())
+    } else {
+      document.removeEventListener('keydown', onKey)
+      lastFocused?.focus?.()
+    }
   }
 )
 
