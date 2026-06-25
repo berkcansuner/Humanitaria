@@ -1,6 +1,6 @@
 <template>
   <div class="chat">
-    <div class="messages" ref="messagesContainer" role="log" aria-live="polite" @click="onCiteClick">
+    <div class="messages" ref="messagesContainer" role="log" aria-live="polite" @click="onCiteClick" @keydown="onCiteKeydown">
       <EmptyState v-if="messages.length === 0" @select="sendMessage({ text: $event })" />
       <div
         v-for="(msg, idx) in messages"
@@ -35,7 +35,7 @@
                 </div>
               </div>
               <template v-else>
-                <div class="message-content" v-html="renderMarkdown(msg.content)"></div>
+                <div class="message-content" v-html="renderMarkdown(msg.content, msg.sources)"></div>
                 <div v-if="msg.error" class="error-banner">
                   <AlertCircle :size="16" class="error-icon" />
                   {{ msg.error }}
@@ -305,12 +305,9 @@ function stopGenerating() {
   controller.value?.abort()
 }
 
-// Clicking a [n] citation chip scrolls to its source within the same message
-// and briefly highlights it. The chips are injected by renderMarkdown().
-function onCiteClick(e) {
-  const cite = e.target.closest('.cite')
-  if (!cite) return
-  e.preventDefault()
+// Scroll to a citation chip's source within the same message and briefly
+// highlight it. The chips are <a> elements injected by renderMarkdown().
+function scrollToCitedSource(cite) {
   const id = cite.getAttribute('data-cite')
   const message = cite.closest('.message')
   const item = message?.querySelector(`.source-item[data-srcid="${id}"]`)
@@ -318,6 +315,23 @@ function onCiteClick(e) {
   item.scrollIntoView({ behavior: 'smooth', block: 'center' })
   item.classList.add('flash')
   setTimeout(() => item.classList.remove('flash'), 1500)
+}
+
+function onCiteClick(e) {
+  const cite = e.target.closest('.cite')
+  if (!cite) return
+  e.preventDefault()
+  scrollToCitedSource(cite)
+}
+
+// Keyboard parity: the chips are focusable <a>s, but the scroll + highlight only
+// ran on mouse click before — Enter/Space now triggers the same behavior.
+function onCiteKeydown(e) {
+  if (e.key !== 'Enter' && e.key !== ' ') return
+  const cite = e.target.closest?.('.cite')
+  if (!cite) return
+  e.preventDefault()
+  scrollToCitedSource(cite)
 }
 
 async function resendFrom(targetIndex, text) {

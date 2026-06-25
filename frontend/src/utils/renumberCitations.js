@@ -1,3 +1,5 @@
+import { expandCitationGroups } from './renderMarkdown.js'
+
 /**
  * Renumber inline [n] citation markers and their source list to a contiguous
  * 1..M sequence, ordered by each source's first appearance in the answer text.
@@ -17,6 +19,10 @@
  */
 export function renumberCitations(content, sources) {
   if (!sources || sources.length === 0) return { content, sources }
+
+  // Expand "[1, 3]" groups into "[1][3]" so the single-[n] remap below reaches
+  // every cited number (otherwise grouped citations keep stale indices).
+  content = expandCitationGroups(content)
 
   const firstPos = (idx) => {
     const at = content.indexOf(`[${idx}]`)
