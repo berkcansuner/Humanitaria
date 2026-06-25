@@ -131,6 +131,11 @@ describe('filterConversations', () => {
   it('returns empty when nothing matches', () => {
     expect(filterConversations(convs, 'xyz')).toEqual([])
   })
+
+  it('folds diacritics so an ASCII query matches accented titles', () => {
+    // "güvenliği" (ü, ğ) should be found by the plain query "guvenligi".
+    expect(filterConversations(convs, 'guvenligi').map(c => c.id)).toEqual(['2'])
+  })
 })
 
 describe('groupConversationsByDate', () => {

@@ -54,11 +54,20 @@ export function planResend(messages, targetIndex, truncateOk, errorMessage) {
   return { messages: truncateAt(messages, targetIndex - 1), resend: true }
 }
 
-/** Filter conversations by a case-insensitive title substring. Blank query → all. */
+/** Lower-case and strip diacritics so "guvenligi" matches "güvenliği". */
+function _fold(s) {
+  return (s || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
+}
+
+/**
+ * Filter conversations by a diacritic-insensitive, case-insensitive title
+ * substring. Blank query → all. Folding both sides lets an ASCII query find
+ * accented titles (common with multilingual humanitarian report names).
+ */
 export function filterConversations(conversations, query) {
-  const q = (query || '').trim().toLowerCase()
+  const q = _fold((query || '').trim())
   if (!q) return conversations
-  return conversations.filter((c) => (c.title || '').toLowerCase().includes(q))
+  return conversations.filter((c) => _fold(c.title).includes(q))
 }
 
 /** Bucket key for a conversation's updated_at relative to `now`. */
