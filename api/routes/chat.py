@@ -66,13 +66,33 @@ def _no_docs_message(filters: dict) -> str:
 _CITATION_PATTERN = re.compile(r"\[(\d+)\]")
 
 
-def _build_context_and_sources(docs):
-    """Number retrieved docs [1..N] for the prompt and build matching source dicts.
+def _is_displayable_source(doc) -> bool:
+    """Whether a retrieved doc can become a clickable [n] source on the client.
 
-    The index is the doc's 1-based position so an inline [n] marker in the answer
-    maps back to the same source. Docs without a url/title still consume an index
-    (keeping numbering aligned) but are not surfaced as sources.
+    Mirrors the frontend's isValidSource (frontend/src/utils/sources.js): the doc
+    needs a url + title and must not be a country-index artefact (a 'country'
+    doctype whose title is just the country name). Kept in sync so the model is
+    never handed a context entry it can cite but that has no clickable source —
+    which is what left bracketed [3][4] markers as dead plain text.
     """
+    md = doc.metadata
+    if not md.get("url") or not md.get("title"):
+        return False
+    if md.get("doctype") == "country" and md.get("title") == md.get("country"):
+        return False
+    return True
+
+
+def _build_context_and_sources(docs):
+    """Number displayable docs [1..M] for the prompt and build matching source dicts.
+
+    Only displayable docs (see _is_displayable_source) are numbered, so every
+    inline [n] the model can cite maps to a source the client renders as a
+    clickable chip. Falls back to the raw docs only if filtering would leave no
+    context at all (rare: a query that matched nothing but index artefacts).
+    """
+    displayable = [d for d in docs if _is_displayable_source(d)]
+    docs = displayable or docs
     context = "\n\n---\n\n".join(
         f"[{i}] ({doc.metadata.get('date') or 'tarih yok'}) {doc.page_content}"
         for i, doc in enumerate(docs, 1)

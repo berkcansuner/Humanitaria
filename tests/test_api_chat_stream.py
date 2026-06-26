@@ -583,3 +583,31 @@ class TestContextDateLabel:
         doc = self._doc(title="T", url="https://x/1", date="")  # boş tarih
         context, _ = _build_context_and_sources([doc])
         assert "tarih yok" in context
+
+    def test_country_artifact_excluded_and_numbering_contiguous(self):
+        # A country-index artefact (doctype=country, title==country) is dropped, so
+        # the two real reports number [1],[2] — no dead [3] the client can't link.
+        from api.routes.chat import _build_context_and_sources
+        real1 = self._doc(title="Syria Sitrep", url="https://x/1", doctype="report")
+        artifact = self._doc(title="Syria", url="https://x/2", country="Syria", doctype="country")
+        real2 = self._doc(title="Aid Update", url="https://x/3", doctype="report")
+        context, sources = _build_context_and_sources([real1, artifact, real2])
+        assert [s["index"] for s in sources] == [1, 2]
+        assert [s["title"] for s in sources] == ["Syria Sitrep", "Aid Update"]
+        assert "[1]" in context and "[2]" in context and "[3]" not in context
+
+    def test_urlless_doc_excluded_from_context(self):
+        from api.routes.chat import _build_context_and_sources
+        real1 = self._doc(title="R1", url="https://x/1")
+        urlless = self._doc(title="No URL")  # url yok → kaynak olamaz
+        real2 = self._doc(title="R2", url="https://x/2")
+        context, sources = _build_context_and_sources([real1, urlless, real2])
+        assert [s["index"] for s in sources] == [1, 2]
+        assert "[3]" not in context
+
+    def test_all_artifacts_falls_back_to_nonempty_context(self):
+        # Rare: nothing displayable → fall back so the model still gets context.
+        from api.routes.chat import _build_context_and_sources
+        artifact = self._doc(title="Syria", url="https://x/1", country="Syria", doctype="country")
+        context, _ = _build_context_and_sources([artifact])
+        assert "[1]" in context
