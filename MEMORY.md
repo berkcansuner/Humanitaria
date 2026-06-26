@@ -4,20 +4,36 @@
 > Bu bir tarihçe değil — GÜNCEL durumu yansıtır. Eskiyen satırları sil/değiştir.
 > "Nerede kalmıştık?" sorusunun cevabı burasıdır.
 
-**Son güncelleme:** 2026-06-25
+**Son güncelleme:** 2026-06-26
 
 ---
 
 ## 📍 NEREDE KALMIŞTIK (10 saniyelik özet)
 
-**Uygulama sağlıklı ve çalışıyor.** Gemini `gemini-2.5-flash` (chat) + `gemini-embedding-001` (3072) + Pinecone (default namespace, **31.628 vektör**) — tamamen bulut. Vue 3 SPA, zorunlu giriş, **Humanitaria** markası. GitHub repo: **`berkcansuner/Humanitaria`** (eski `reliefweb-rag`; `origin` güncel).
+**🌐 ARTIK CANLI YAYINDA: https://humanitaria.onrender.com** (Render ücretsiz Docker; servis adı `humanitaria`, id `srv-d8uo70ernols73fgenr0`, bölge frankfurt). Uygulama sağlıklı: Gemini `gemini-2.5-flash` (chat) + `gemini-embedding-001` (3072) + Pinecone (default namespace, **31.628 vektör**) — tamamen bulut. Vue 3 SPA, zorunlu giriş (Google + e-posta/şifre), **Humanitaria** markası. GitHub: **`berkcansuner/Humanitaria`** (master = origin, güncel).
 
-**Bu seansta (2026-06-25) bitirilen:** Frontend uçtan-uca denetim → **tüm P0/P1/P2 yol haritası uygulandı ve master'a MERGE edildi** (PR #2, rebase). Atıf render bug'ları (B1/B2), a11y (focus halkaları/klavye/modal), çok-satır composer, `color-scheme`/`theme-color`, reduced-motion, `:active`, diacritic arama, aktif-kaynak vurgusu. **74 frontend testi yeşil.** Çalışan ağaç temiz, branch silindi, sunucu kapalı. Detay: `docs/frontend-audit-roadmap-2026-06-25.md` + aşağıdaki seans kaydı.
+**Bu seansta (2026-06-26) bitirilen — production'da 4 canlı bug fix + temizlik:** Kullanıcı canlı deploy'da Google girişinde "Internal Server Error" aldı; arkasından 4 AYRI kök neden çıktı, her biri logdan/canlı testten kanıtlanıp çözüldü: **(1)** Google login 500 → callback `authorize_access_token` Google JWKS'i `www.googleapis.com`'dan çekiyordu (Render bölgesinden **403**); callback **userinfo endpoint**'ine çevrildi (`acba8a9`). **(2)** "Google login is not configured" 503 → yanlış/bayat servise deploy; doğru servise (id ile) redeploy. **(3)** chat "No response received" → **Render Frankfurt IP'si Gemini host'undan engelli** (anahtar geçerli, IP engelli); **Cloudflare AI Gateway** ile aşıldı (`GEMINI_BASE_URL` env, kod değişmez). **(4)** ölü `[2][3][4][5]` atıflar → kaynağı olmayan `[n]`'ler artık siliniyor (`11a4f23`+`dbd4f5c`). **Kopya `reliefweb-rag` servisi (srv-d8te) SİLİNDİ** → tek temiz servis kaldı. Detay: aşağıdaki 2026-06-26 bölümü. (Önceki seans 2026-06-25: frontend yol haritası P0/P1/P2 merge, PR #2.)
 
 **SIRADAKİ — açık başlıklar (öncelik sırasıyla):**
-1. **🔴 EN BÜYÜK AÇIK İŞ — Pinecone aylık write-kotası TIKALI.** v2 namespace rollout **8/10 ülkede** kaldı (Palestine + Ukraine eksik). Kota reset olunca v2'yi tamamla → **cutover** (`PINECONE_NAMESPACE=v2`). Tarif aşağıda "SONRAKİ SEANS — Rollout" bölümünde.
-2. **Ertelenen frontend yapısal P2'ler** (cila değil, ayrı tur): self-host font, token sistemlerini birleştirme (L refactor), liste/geçmiş skeleton, `/auth/me` 401→200 (backend+test).
-3. **Deploy** — Render (Docker) hazır ama yapılmadı (`DEPLOY.md`). Kota dolu olduğu için scheduler kapalı.
+1. **🔴 KULLANICININ MANUEL İŞİ — sızan kimlikleri rotate et:** **Render API key** + **Google client secret** (bu seansta sohbete düz metin yapıştırıldı; değerler memory'ye YAZILMADI). Kullanıcı "Render key'i sonra manuel değiştireceğim" dedi → Render Dashboard → API Keys revoke+yeni; Google Console'da yeni secret → Render `GOOGLE_CLIENT_SECRET` güncelle.
+2. **🔴 EN BÜYÜK AÇIK DEV İŞİ — Pinecone aylık write-kotası TIKALI.** v2 namespace rollout **8/10 ülkede** kaldı (Palestine + Ukraine eksik). Kota reset olunca v2'yi tamamla → **cutover** (`PINECONE_NAMESPACE=v2`). Tarif: "SONRAKİ SEANS — Rollout".
+3. **Ertelenen frontend yapısal P2'ler** (ayrı tur): self-host font, token birleştirme (L refactor), liste/geçmiş skeleton, `/auth/me` 401→200.
+4. **(Opsiyonel)** citation için "yalnız sağlanan kaynakları atıfla, uydurma numara verme" prompt iyileştirmesi (model over-citing yapıyor); Cloudflare gateway'e `cf-aig-authorization` ekleme.
+
+---
+
+## ✅ Bu seansta UYGULANAN — Production'a alış + 4 canlı bug fix (2026-06-26, master'a PUSH + Render canlı)
+
+Kullanıcı **canlı Render deploy**'unda (ilk kez bu seansta devreye alındı) Google girişinde "Internal Server Error" raporladı. Tek belirti **4 ayrı kök neden**di; sırayla çözüldü. **Teşhis yöntemi (tekrar kullan):** Render `/v1/logs` API'sinden gerçek traceback çek (`ownerId`+`resource=srv-...`); şüpheli host'u **kendi IP'nden** anahtarla test et → IP-engeli mi key/proje mi ayrılır.
+
+**İki servis tuzağı:** Hesapta neredeyse aynı isimli İKİ servis vardı — `humanitaria` (srv-d8uo → humanitaria.onrender.com) ve `Humanitaria` (srv-d8te → reliefweb-rag.onrender.com). İlk düzeltme yanlışlıkla yanlış servise gitti (script `name -match` + `First 1`). **Ders: çok servis varsa id ile hedefle.** Sonunda kullanıcı **humanitaria.onrender.com**'u seçti → env'ler srv-d8uo'ya taşındı, srv-d8te SİLİNDİ.
+
+1. **Google login 500** (`c540850` callback hardening + `acba8a9` userinfo): `api/routes/auth.py` `authorize_access_token()` token exchange'i başarıyla yapıyor AMA sonra `id_token` imzasını doğrulamak için Google JWKS'i (`www.googleapis.com/oauth2/v3/certs`) çekiyor → Render bölgesinden **403** → ham 500. Fix: yeni `_google_userinfo()` helper — state doğrula + kod→token exchange + profili **userinfo endpoint**'inden (`openidconnect.googleapis.com`, erişilebilir) al, JWKS'i TAMAMEN atla. Callback artık `try/except` ile 500 yerine `/login?error=google`'a düşer + sebebi loglar.
+2. **"Google login is not configured" 503:** doğru servisteki çalışan instance bayattı (OAuth client import anında `get_settings()` lru_cache ile okunuyor; env bir an boşken başlamış). Fix: doğru servisi redeploy → taze instance.
+3. **Chat "No response received"** (frontend `Chat.vue` `empty_response`): Render logunda Google'ın GENEL 403 HTML'i (`/v1beta/openai/embeddings`+`/chat/completions`). Aynı GEMINI_API_KEY benim IP'mden 200, Render'dan 403 → **Render Frankfurt çıkış IP'si `generativelanguage.googleapis.com`'dan engelli** (anahtar/proje değil; auth host'ları engelli değildi, o yüzden login çalıştı). **Fix: Cloudflare AI Gateway (transparent proxy).** Render env'e tek değişken: `GEMINI_BASE_URL=https://gateway.ai.cloudflare.com/v1/<ACCT>/gemini/google-ai-studio/v1beta/openai/` (model adları AYNI; **kod değişmez; YEREL dev hâlâ doğrudan Gemini URL'sini kullanır**). `/compat` endpoint'i de çalışıyor ama `model: google-ai-studio/<m>` prefix'i gerektirir → transparent proxy seçildi.
+4. **Ölü `[n]` atıflar** (`11a4f23` backend + `dbd4f5c` frontend): model, gösterilebilir kaynağı olmayan numara atıyordu (over-citation/hallucination veya country-artifact/url'siz doc). Backend `_build_context_and_sources` artık yalnız **gösterilebilir** doc'ları (`_is_displayable_source` = url+title, country-index-artifact değil) numaralıyor; frontend `renumberCitations`+`renderMarkdown` kaynağı olmayan `[n]`'leri **siliyor** (boşluğuyla) + history-load'da da renumber. **339 backend + 75 frontend test yeşil.**
+
+**Sonuç:** dört sorun da çözüldü, kopya servis silindi, tek canlı servis humanitaria.onrender.com. **Kullanıcının manuel işi:** Render API key + Google secret rotate (sızdı).
 
 ---
 
@@ -83,7 +99,10 @@ Canlı test kullanıcısı `claude_smoke@test.local` + birkaç sohbet conversati
 
 ---
 
-## 🚀 DEPLOY — Render (ücretsiz, Docker) hazırlandı (2026-06-07)
+## 🚀 DEPLOY — Render (ücretsiz, Docker) — ✅ CANLI (2026-06-26)
+
+**CANLI: https://humanitaria.onrender.com** — servis `humanitaria` / **srv-d8uo70ernols73fgenr0** / frankfurt. Tek kalan servis (kopya `reliefweb-rag` / srv-d8te SİLİNDİ). **Render auto-deploy AÇIK** (master'a push → otomatik Docker build; frontend dist'i build'de üretilir). Dashboard env render.yaml'a EK olarak: **`GEMINI_BASE_URL` = Cloudflare AI Gateway** (Gemini IP engeli için; bkz. 2026-06-26 bölümü) + tüm `sync:false` secret'lar. Google Console "Authorized redirect URIs"e `https://humanitaria.onrender.com/auth/google/callback` eklendi. ⚠️ Ücretsiz tier: SQLite (kullanıcı/sohbet) deploy/uykuda SIFIRLANIR + 15dk boşta uyur.
+
 `Dockerfile` (multi-stage: Vue build → FastAPI runtime) + `render.yaml` (Blueprint, free, frankfurt, `/health`) + `DEPLOY.md` (adım adım). Tek servis API+SPA'yı aynı origin'den sunar (CORS yok). Prod env: `SESSION_COOKIE_SECURE=true`, `INGEST_SCHEDULE_HOURS=0` (scheduler kapalı; kota dolu), `GEMINI_REASONING_EFFORT=low`, URL'ler `https://humanitaria.onrender.com` varsayımıyla; `AUTH_SESSION_SECRET` Render üretir; secret'lar (GEMINI/PINECONE/RELIEFWEB/GOOGLE) dashboard'da `sync:false`. **Ücretsiz tier:** disk yok → SQLite (kullanıcı/sohbet) uyku/deploy'da SIFIRLANIR + 15dk boşta uyur (ilk istek ~30-60s). Kalıcı için: paid+disk veya Postgres göçü. Google Console'a prod redirect eklenecek. Adımlar `DEPLOY.md`'de.
 
 ---
@@ -233,6 +252,7 @@ Plan/spec: `docs/superpowers/{plans,specs}/2026-06-02-reingest-pilot-syria*` (gi
 ## Commit / Push Durumu
 - **`origin/master`'a PUSH'LANDI (master = origin):** pilot+chunker+model+date-filter-fix (`…5ab02a0`), store 429-retry (`918637d`), marketing entegrasyonu — Landing/Pricing/router/SPA-fallback (`cdc4a95`), marketing scroll fix (`5810e15`), pricing kaldırma (`e81aade`), citations-nav kaldırma (`daa9e1d`) + MEMORY docs.
 - **PUSH'LANDI:** Auth (Login/Signup) sistemi — `2198891` (`6d73d9b..2198891 master→master`), 32 dosya. `.env` gitignored → Google/Gemini/Pinecone secret'ları commit'lenmedi.
+- **PUSH'LANDI (2026-06-26, production fix'leri → master, Render auto-deploy):** `c540850` (google callback hardening: 500 yerine `/login?error=google` + log) · `acba8a9` (callback → **userinfo akışı**, JWKS host engelini atlar) · `11a4f23` (backend: `_build_context_and_sources` yalnız gösterilebilir doc'ları numaralar) · `dbd4f5c` (frontend: kaynağı olmayan `[n]` işaretlerini siler + history-load renumber). Gemini IP engeli fix'i **kodda değil** — Render dashboard env `GEMINI_BASE_URL`=Cloudflare gateway.
 - Remote: **https://github.com/berkcansuner/Humanitaria** (private).
 
 ## Sıradaki Adımlar (kullanıcı yönlendirir)
