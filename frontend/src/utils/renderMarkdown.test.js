@@ -28,17 +28,18 @@ describe('renderMarkdown citations', () => {
     expect(renderMarkdown('See [2].')).toContain('data-cite="2"')
   })
 
-  it('does not create a clickable chip for a citation with no matching source (dangling)', () => {
-    // sources only carries index 1; [4] is dangling -> stays plain text, no chip
+  it('strips a citation with no matching source (dangling) instead of leaving dead text', () => {
+    // sources only carries index 1; [4] is dangling -> dropped entirely, no chip, no [4]
     const html = renderMarkdown('Valid [1] and dangling [4].', [{ index: 1, url: 'https://x/1' }])
     expect(html).toContain('data-cite="1"')
     expect(html).not.toContain('data-cite="4"')
-    expect(html).toContain('[4]')
+    expect(html).not.toContain('[4]')
   })
 
-  it('chips only the in-source members of a group, leaving dangling ones plain', () => {
+  it('chips the in-source members of a group and strips dangling ones', () => {
     const html = renderMarkdown('Multi [1, 4].', [{ index: 1, url: 'https://x/1' }])
     expect(html).toContain('data-cite="1"')
     expect(html).not.toContain('data-cite="4"')
+    expect(html).not.toContain('[4]')
   })
 })

@@ -442,14 +442,17 @@ watch(() => props.conversationId, async (newId) => {
   }
   try {
     const rows = await getMessages(newId)
-    messages.value = rows.map(m => ({
-      role: m.role,
-      content: m.content,
-      sources: m.sources || null,
-      error: null,
-      clarification: null,
-      serverId: m.id,
-    }))
+    messages.value = rows.map(m => {
+      let content = m.content
+      let sources = m.sources || null
+      // Persisted answers keep the backend's original [n] numbering; renumber to
+      // a contiguous 1..M (and drop dead markers) just like the live stream so a
+      // reloaded conversation reads identically.
+      if (m.role === 'assistant' && sources && sources.length) {
+        ;({ content, sources } = renumberCitations(content, sources))
+      }
+      return { role: m.role, content, sources, error: null, clarification: null, serverId: m.id }
+    })
     sessionId.value = newId
     nextTick(() => decorateCodeBlocks(messagesContainer.value))
   } catch (e) {

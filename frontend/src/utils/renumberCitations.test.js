@@ -61,12 +61,21 @@ describe('renumberCitations', () => {
     expect(result.sources.map(s => s.index)).toEqual([1, 2])
   })
 
-  it('leaves a dangling marker with no matching source untouched', () => {
-    // LLM cited [7] but doc 7 had no url/title, so it never became a source.
+  it('strips a dangling marker that has no matching source', () => {
+    // LLM cited [7] but doc 7 never became a source, so the dead bracket is dropped.
     const content = 'Var olan [3]. Eksik [7].'
     const sources = [{ index: 3, title: 'C', url: 'https://x/3' }]
     const result = renumberCitations(content, sources)
-    expect(result.content).toBe('Var olan [1]. Eksik [7].')
+    expect(result.content).toBe('Var olan [1]. Eksik.')
+    expect(result.sources.map(s => s.index)).toEqual([1])
+  })
+
+  it('strips multiple dangling markers, keeping the one valid source', () => {
+    // Model over-cited: only [1] maps to a source; [2][3][4][5] are dropped.
+    const content = 'Durum kötü [1] ve [2][3] ayrıca [4][5].'
+    const sources = [{ index: 1, title: 'A', url: 'https://x/1' }]
+    const result = renumberCitations(content, sources)
+    expect(result.content).toBe('Durum kötü [1] ve ayrıca.')
     expect(result.sources.map(s => s.index)).toEqual([1])
   })
 

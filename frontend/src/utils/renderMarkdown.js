@@ -40,8 +40,11 @@ export function renderMarkdown(text, sources = null) {
     sources && sources.length
       ? new Set(sources.filter(isValidSource).map((s) => s.index))
       : null
-  return expanded.replace(/\[(\d+)\]/g, (full, n) => {
-    if (validIndexes && !validIndexes.has(Number(n))) return full
-    return `<a class="cite" data-cite="${n}" href="#src-${n}">${n}</a>`
+  return expanded.replace(/( ?)\[(\d+)\]/g, (_full, space, n) => {
+    // A citation with no displayed source is dropped (with a leading space) rather
+    // than left as a dead [n] the reader can't click. During streaming (no sources
+    // yet) every [n] is chipped, then re-rendered once sources arrive.
+    if (validIndexes && !validIndexes.has(Number(n))) return ''
+    return `${space}<a class="cite" data-cite="${n}" href="#src-${n}">${n}</a>`
   })
 }

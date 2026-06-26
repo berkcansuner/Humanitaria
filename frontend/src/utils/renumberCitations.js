@@ -1,4 +1,5 @@
 import { expandCitationGroups } from './renderMarkdown.js'
+import { isValidSource } from './sources.js'
 
 /**
  * Renumber inline [n] citation markers and their source list to a contiguous
@@ -24,6 +25,10 @@ export function renumberCitations(content, sources) {
   // every cited number (otherwise grouped citations keep stale indices).
   content = expandCitationGroups(content)
 
+  // Only sources that render as clickable chips earn a number; markers with no
+  // such source are dropped below so the reader never sees a dead [n].
+  const valid = sources.filter(isValidSource)
+
   const firstPos = (idx) => {
     const at = content.indexOf(`[${idx}]`)
     return at === -1 ? Infinity : at
@@ -31,16 +36,19 @@ export function renumberCitations(content, sources) {
 
   // Sources cited in the text come first (in reading order); any uncited
   // sources (the no-citation fallback) keep their relative order at the end.
-  const ordered = [...sources].sort((a, b) => firstPos(a.index) - firstPos(b.index))
+  const ordered = [...valid].sort((a, b) => firstPos(a.index) - firstPos(b.index))
 
   const remap = new Map()
   ordered.forEach((s, i) => remap.set(s.index, i + 1))
 
   // Single pass over the original text: each [old] reads its number and writes
-  // the new one, so there is no double-remapping. Unknown markers stay as-is.
-  const newContent = content.replace(/\[(\d+)\]/g, (full, n) => {
+  // the new one. A marker with no valid source (the model cited a doc that never
+  // became a shown source, or hallucinated a number) is stripped — along with a
+  // leading space — so it neither lingers as a dead bracket nor collides with a
+  // renumbered marker that happens to reuse its old number.
+  const newContent = content.replace(/( ?)\[(\d+)\]/g, (_full, space, n) => {
     const mapped = remap.get(Number(n))
-    return mapped != null ? `[${mapped}]` : full
+    return mapped != null ? `${space}[${mapped}]` : ''
   })
 
   const newSources = ordered.map((s) => ({ ...s, index: remap.get(s.index) }))
