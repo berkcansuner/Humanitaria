@@ -18,7 +18,7 @@
 
 **SIRADAKİ — açık başlıklar (öncelik sırasıyla):**
 1. **🔴 KULLANICININ MANUEL İŞİ — sızan kimlikleri rotate et:** **Render API key** + **Google client secret** (bu seansta sohbete düz metin yapıştırıldı; değerler memory'ye YAZILMADI). Kullanıcı "Render key'i sonra manuel değiştireceğim" dedi → Render Dashboard → API Keys revoke+yeni; Google Console'da yeni secret → Render `GOOGLE_CLIENT_SECRET` güncelle.
-2. **🔴 EN BÜYÜK AÇIK DEV İŞİ — Pinecone aylık write-kotası TIKALI.** v2 namespace rollout **8/10 ülkede** kaldı (Palestine + Ukraine eksik). Kota reset olunca v2'yi tamamla → **cutover** (`PINECONE_NAMESPACE=v2`). Tarif: "SONRAKİ SEANS — Rollout".
+2. **🔴 EN BÜYÜK AÇIK DEV İŞİ — Pinecone write-kotası TIKALI; kota 2026-07-01'de yenilenir** (dashboard-onaylı: "Writes paused until July 1, 2026"). v2 rollout **8/10 ülkede** kaldı (Palestine + Ukraine eksik); index 3 namespace birden tutuyor (v2 68.936 + default 31.628 + pilot 4.892 = ~1.51 GB / 2 GB free, **~%75**). **1 Temmuz'da/sonrasında:** v2'yi tamamla → 10-ülke A/B → **cutover** (`PINECONE_NAMESPACE=v2`) → eski `default`+`pilot` temizliği (depolama ~%55'e iner). **Tam prosedür plan dosyasında park edildi** (`~/.claude/plans/nerede-kalm-t-k-noble-star.md`); 1 Temmuz hatırlatıcısı kuruldu.
 3. **Ertelenen frontend yapısal P2 — token birleştirme (L refactor):** iki token sistemini (chat `--color-*` + marketing `.mkt-scope`) tek isimlendirmeye taşı + marketing.css 200+ hardcoded px→token. **(Diğer 3 P2 — self-host font, skeleton, `/auth/me` — 2026-06-27'de YAPILDI, PR #3.)**
 4. **(Opsiyonel)** Cloudflare gateway'e `cf-aig-authorization` ekleme. **(Citation prompt cilası — menzil-dışı `[n]` kısıtı — 2026-06-27'de YAPILDI, PR #3.)**
 
@@ -196,7 +196,7 @@ AMA son 2 ülke (**Palestine kısmi, Ukraine 0**) yazılamadı: **Pinecone AYLIK
 **v2 EKSİK: 8/10 ülke.** Cutover YAPILMADI (eksik v2'ye geçersek default'taki Ukrayna+Filistin kaybolur → regresyon).
 **Veri kaybı yok:** default 31.628 + pilot 4.892 + v2 68.936 sağlam, izole.
 
-**KARAR (2026-06-06): Aylık write-unit reset'i BEKLE** (gelecek fatura döngüsü — kesin tarih için Pinecone dashboard). Bu arada app default'ta çalışıyor.
+**KARAR (2026-06-27 güncel): kota 2026-07-01'de yenilenir (Pinecone dashboard onayladı: "Writes paused until July 1, 2026"). O tarihe kadar BEKLE.** Bu arada app default'ta çalışıyor; 1 Temmuz'da plan dosyasındaki cutover prosedürü koşulacak (hatırlatıcı kuruldu).
 
 **RESUME TARİFİ (reset gelince, sırayla):**
 1. `PINECONE_NAMESPACE=v2 ./venv/Scripts/python.exe scripts/ingest.py --country PSE UKR --date-from 2023-06-05 --limit 2000` → v2 = 10/10 olur (store'da artık 429-retry var; aynı 2023-06-05 penceresi = diğer 8 ülkeyle tutarlı). Önce stats al; kota gerçekten resetlendi mi diye tek-vektör test upsert ile kontrol et.
