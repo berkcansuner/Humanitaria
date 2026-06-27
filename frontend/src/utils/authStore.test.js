@@ -25,8 +25,18 @@ describe('authStore', () => {
     expect(isAuthenticated()).toBe(true)
   })
 
-  it('refresh sets the user to null when me() rejects (unauthenticated)', async () => {
-    me.mockRejectedValue(Object.assign(new Error('unauth'), { status: 401 }))
+  it('refresh leaves the user null when me() resolves null (anonymous visitor)', async () => {
+    // /auth/me now answers 200 + null for anonymous visitors, so me() resolves
+    // (rather than rejecting) and refresh() simply records the null user.
+    me.mockResolvedValue(null)
+    await refresh()
+    expect(auth.user).toBeNull()
+    expect(auth.ready).toBe(true)
+    expect(isAuthenticated()).toBe(false)
+  })
+
+  it('refresh sets the user to null when me() rejects (network/server error)', async () => {
+    me.mockRejectedValue(new Error('network down'))
     await refresh()
     expect(auth.user).toBeNull()
     expect(auth.ready).toBe(true)
