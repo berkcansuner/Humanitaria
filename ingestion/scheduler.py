@@ -1,6 +1,5 @@
 import json
 import logging
-from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -39,16 +38,11 @@ def _save_watermark(timestamp: str) -> None:
 
 
 def _run_scheduled_ingest() -> None:
-    """Scheduled ingest job: fetch only documents newer than the last run."""
-    run_start = datetime.now().strftime("%Y-%m-%d")
-    date_from = _load_watermark()
-    logger.info("Scheduled ingest starting (date_from=%s)", date_from or "full")
-    try:
-        run_pipeline(date_from=date_from)
-        _save_watermark(run_start)
-        logger.info("Scheduled ingest complete, watermark updated to %s", run_start)
-    except Exception as e:
-        logger.error("Scheduled ingest failed (watermark NOT updated): %s", e)
+    """Scheduled ingest job: delegate to the shared runner so a scheduled run and a
+    manually-triggered run can never overlap (both pass through the same lock)."""
+    from ingestion.runner import run_ingest_once
+    if not run_ingest_once("scheduled"):
+        logger.info("Scheduled ingest skipped: a run is already in progress")
 
 
 def start_scheduler() -> BackgroundScheduler:

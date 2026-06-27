@@ -4,7 +4,7 @@
  */
 import { handleSessionExpired } from './authStore.js'
 
-async function request(url, options = {}) {
+export async function request(url, options = {}) {
   const res = await fetch(url, {
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
