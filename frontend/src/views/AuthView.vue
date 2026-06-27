@@ -120,21 +120,21 @@ async function submit() {
 .auth-card {
   width: 100%;
   max-width: 420px;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 16px;
   padding: 40px 36px;
   box-shadow: 0 18px 48px -24px rgba(0, 0, 0, 0.28);
 }
 .auth-title {
-  font-family: var(--font);
+  font-family: var(--font-display);
   font-size: 26px;
   font-weight: 700;
   letter-spacing: -0.02em;
   margin: 0;
 }
 .auth-sub {
-  color: var(--text-2);
+  color: var(--color-text-secondary);
   font-size: 14.5px;
   margin: 8px 0 28px;
   line-height: 1.5;
@@ -147,9 +147,9 @@ async function submit() {
 .auth-divider {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   margin: 22px 0;
-  color: var(--muted);
+  color: var(--color-muted);
   font-size: 12px;
 }
 .auth-divider::before,
@@ -157,12 +157,12 @@ async function submit() {
   content: "";
   flex: 1;
   height: 1px;
-  background: var(--border);
+  background: var(--color-border);
 }
 .auth-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 .auth-label {
   display: flex;
@@ -170,31 +170,31 @@ async function submit() {
   gap: 6px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-2);
+  color: var(--color-text-secondary);
 }
 .auth-input {
-  font-family: var(--body);
+  font-family: var(--font-body);
   font-size: 15px;
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
   border-radius: 10px;
   padding: 11px 13px;
   outline: none;
   transition: border-color 0.18s, box-shadow 0.18s;
 }
 .auth-input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 18%, transparent);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-accent) 18%, transparent);
 }
 .auth-submit {
   width: 100%;
-  margin-top: 4px;
+  margin-top: var(--space-1);
 }
 .auth-error {
   color: #ba1a1a;
   background: color-mix(in oklch, #ba1a1a 10%, transparent);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   padding: 9px 12px;
   font-size: 13px;
   margin: 0;
@@ -203,10 +203,10 @@ async function submit() {
   margin: 24px 0 0;
   text-align: center;
   font-size: 14px;
-  color: var(--text-2);
+  color: var(--color-text-secondary);
 }
 .auth-switch a {
-  color: var(--accent);
+  color: var(--color-accent);
   font-weight: 600;
 }
 .auth-switch a:hover {
