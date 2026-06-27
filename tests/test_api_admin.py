@@ -54,7 +54,11 @@ def test_status_unauthenticated(client):
 
 def test_status_ok_for_admin(client, tmp_path):
     mock_store = MagicMock()
-    mock_store.index.describe_index_stats.return_value = {"total_vector_count": 123}
+    mock_store.namespace = ""   # the namespace the app queries (default)
+    mock_store.index.describe_index_stats.return_value = {
+        "total_vector_count": 123,
+        "namespaces": {"": {"vector_count": 100}, "v2": {"vector_count": 23}},
+    }
     wm = tmp_path / ".last_ingest.json"
     with patch("api.routes.auth.get_settings", return_value=_admin_settings("test@example.com")), \
          patch("api.routes.admin.get_store", return_value=mock_store), \
@@ -62,11 +66,14 @@ def test_status_ok_for_admin(client, tmp_path):
         r = client.get("/admin/ingest/status")
     assert r.status_code == 200
     body = r.json()
+    assert body["namespace"] == ""
+    assert body["namespace_vectors"] == 100   # active namespace, not the 123 index-wide total
     assert body["total_vectors"] == 123
     assert body["vector_count_error"] is None
     assert body["scheduler_active"] is False        # lifespan not run under TestClient()
     assert set(body) >= {"last_ingest", "next_scheduled_run", "scheduler_active",
-                         "total_vectors", "vector_count_error", "run"}
+                         "namespace", "namespace_vectors", "total_vectors",
+                         "vector_count_error", "run"}
     assert body["run"]["running"] is False
 
 
@@ -79,6 +86,7 @@ def test_status_vector_error_does_not_500(client, tmp_path):
     assert r.status_code == 200
     body = r.json()
     assert body["total_vectors"] is None
+    assert body["namespace_vectors"] is None
     assert "pinecone down" in body["vector_count_error"]
 
 
