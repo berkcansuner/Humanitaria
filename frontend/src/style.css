@@ -51,7 +51,7 @@
   --shadow-lg: 0 8px 24px rgba(0,0,0,0.06);
 
   /* Typography */
-  --font-display: 'DM Sans', system-ui, -apple-system, sans-serif;
+  --font-display: 'DM Sans Variable', system-ui, -apple-system, sans-serif;
   --font-body: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, monospace;
 

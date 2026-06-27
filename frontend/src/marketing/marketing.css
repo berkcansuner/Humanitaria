@@ -15,7 +15,7 @@
   --accent:oklch(0.47 0.12 152); --accent-strong:oklch(0.40 0.12 152); --accent-soft:oklch(0.94 0.03 152);
   --on-accent:#ffffff;
   --ink:oklch(0.205 0.012 165); --ink-2:oklch(0.255 0.013 167);
-  --font:'DM Sans',system-ui,sans-serif; --body:'Inter',system-ui,sans-serif; --mono:'IBM Plex Mono',monospace;
+  --font:'DM Sans Variable',system-ui,sans-serif; --body:'Inter',system-ui,sans-serif; --mono:'IBM Plex Mono',monospace;
   --maxw:1160px;
 
   background:var(--bg);
