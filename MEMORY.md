@@ -4,7 +4,7 @@
 > Bu bir tarihçe değil — GÜNCEL durumu yansıtır. Eskiyen satırları sil/değiştir.
 > "Nerede kalmıştık?" sorusunun cevabı burasıdır.
 
-**Son güncelleme:** 2026-06-26
+**Son güncelleme:** 2026-06-27
 
 ---
 
@@ -12,13 +12,27 @@
 
 **🌐 ARTIK CANLI YAYINDA: https://humanitaria.onrender.com** (Render ücretsiz Docker; servis adı `humanitaria`, id `srv-d8uo70ernols73fgenr0`, bölge frankfurt). Uygulama sağlıklı: Gemini `gemini-2.5-flash` (chat) + `gemini-embedding-001` (3072) + Pinecone (default namespace, **31.628 vektör**) — tamamen bulut. Vue 3 SPA, zorunlu giriş (Google + e-posta/şifre), **Humanitaria** markası. GitHub: **`berkcansuner/Humanitaria`** (master = origin, güncel).
 
+**Bu seansta (2026-06-27) bitirilen — frontend P2 cilası + citation prompt (PR #3, merge BEKLİYOR):** self-host font (`@fontsource`, Google Fonts `<link>` kaldırıldı) · liste/geçmiş skeleton (paylaşılan `.skeleton` shimmer) · `/auth/me` 401→200 (anonim'de 200+`null`) · citation menzil-dışı `[n]` kısıtı. 4 commit (`6d20c73`,`2874796`,`ce47b9b`,`8ae82f7`), TDD, **340 backend + 76 frontend yeşil**, canlı doğrulandı (Chrome DevTools). **Token birleştirme bilinçli ERTELENDİ** (L refactor, ayrı PR). Detay: aşağıdaki 2026-06-27 bölümü.
+
 **Bu seansta (2026-06-26) bitirilen — production'da 4 canlı bug fix + temizlik:** Kullanıcı canlı deploy'da Google girişinde "Internal Server Error" aldı; arkasından 4 AYRI kök neden çıktı, her biri logdan/canlı testten kanıtlanıp çözüldü: **(1)** Google login 500 → callback `authorize_access_token` Google JWKS'i `www.googleapis.com`'dan çekiyordu (Render bölgesinden **403**); callback **userinfo endpoint**'ine çevrildi (`acba8a9`). **(2)** "Google login is not configured" 503 → yanlış/bayat servise deploy; doğru servise (id ile) redeploy. **(3)** chat "No response received" → **Render Frankfurt IP'si Gemini host'undan engelli** (anahtar geçerli, IP engelli); **Cloudflare AI Gateway** ile aşıldı (`GEMINI_BASE_URL` env, kod değişmez). **(4)** ölü `[2][3][4][5]` atıflar → kaynağı olmayan `[n]`'ler artık siliniyor (`11a4f23`+`dbd4f5c`). **Kopya `reliefweb-rag` servisi (srv-d8te) SİLİNDİ** → tek temiz servis kaldı. Detay: aşağıdaki 2026-06-26 bölümü. (Önceki seans 2026-06-25: frontend yol haritası P0/P1/P2 merge, PR #2.)
 
 **SIRADAKİ — açık başlıklar (öncelik sırasıyla):**
 1. **🔴 KULLANICININ MANUEL İŞİ — sızan kimlikleri rotate et:** **Render API key** + **Google client secret** (bu seansta sohbete düz metin yapıştırıldı; değerler memory'ye YAZILMADI). Kullanıcı "Render key'i sonra manuel değiştireceğim" dedi → Render Dashboard → API Keys revoke+yeni; Google Console'da yeni secret → Render `GOOGLE_CLIENT_SECRET` güncelle.
 2. **🔴 EN BÜYÜK AÇIK DEV İŞİ — Pinecone aylık write-kotası TIKALI.** v2 namespace rollout **8/10 ülkede** kaldı (Palestine + Ukraine eksik). Kota reset olunca v2'yi tamamla → **cutover** (`PINECONE_NAMESPACE=v2`). Tarif: "SONRAKİ SEANS — Rollout".
-3. **Ertelenen frontend yapısal P2'ler** (ayrı tur): self-host font, token birleştirme (L refactor), liste/geçmiş skeleton, `/auth/me` 401→200.
-4. **(Opsiyonel)** citation için "yalnız sağlanan kaynakları atıfla, uydurma numara verme" prompt iyileştirmesi (model over-citing yapıyor); Cloudflare gateway'e `cf-aig-authorization` ekleme.
+3. **Ertelenen frontend yapısal P2 — token birleştirme (L refactor):** iki token sistemini (chat `--color-*` + marketing `.mkt-scope`) tek isimlendirmeye taşı + marketing.css 200+ hardcoded px→token. **(Diğer 3 P2 — self-host font, skeleton, `/auth/me` — 2026-06-27'de YAPILDI, PR #3.)**
+4. **(Opsiyonel)** Cloudflare gateway'e `cf-aig-authorization` ekleme. **(Citation prompt cilası — menzil-dışı `[n]` kısıtı — 2026-06-27'de YAPILDI, PR #3.)**
+
+---
+
+## ✅ Bu seansta UYGULANAN — Frontend P2 cilası + citation prompt (2026-06-27, branch `feat/frontend-p2-polish` → PR #3, merge BEKLİYOR)
+
+Kullanıcı "nerede kalmıştık" → frontend yol haritası P2'lerinden 3'ü + citation prompt (item 3→4). **Token birleştirme bilinçli ERTELENDİ** (kullanıcı kararı: L refactor, ~%80 çakışan iki token sistemi + marketing.css 200+ hardcoded px, yüksek görsel regresyon riski, sıfır kullanıcı-görünür değişiklik → kendi PR'ına). 4 commit, TDD'li, hepsi canlı doğrulandı (**340 backend + 76 frontend yeşil**):
+- **`6d20c73` /auth/me 401→200:** yeni `get_optional_user` (raise YOK); `get_current_user` ona delege eder → diğer route'lar 401'de kalır; `/me` → `Optional[UserOut]`, anonim'de 200+`null`. Frontend `refresh()` zaten null'u doğru işliyordu → yalnız test güncellendi (TDD red→green). Canlı: `curl /auth/me` → 200 + null.
+- **`2874796` self-host font:** Google Fonts `<link>` (+2 preconnect) `index.html`'den kaldırıldı → `@fontsource-variable/dm-sans` + `@fontsource/inter` (400/600) + `@fontsource/ibm-plex-mono` (400/500/600), main.js import. DM Sans family **"DM Sans Variable"** (style.css + marketing.css 2 token rename); Inter/IBM statik (family aynı). DM Sans italic kullanılmıyor + Inter italic zaten faux → italic import yok. Canlı: **0 googleapis isteği**, lokal woff2; opsz size-responsive bırakıldı (weight'ler tam).
+- **`ce47b9b` skeleton:** paylaşılan `.skeleton` shimmer utility (style.css; `--color-surface-container*` ile tema-duyarlı; global reduced-motion bloğu otomatik durdurur). Liste: `ChatView.isLoadingConversations` → Sidebar → ConversationList (`v-if="loading && !groups.length"` → yalnız ilk yük, refresh flicker yok). Mesaj geçmişi: `Chat.vue.isLoadingMessages` (watcher stale mesajları temizler). Canlı: liste shimmer screenshot'ta yakalandı (initScript ile /conversations geciktirildi).
+- **`8ae82f7` citation prompt:** `chain.py` kural 6a'ya "yalnız Context'te görünen [n]'leri kullan, menzil dışı yazma" eklendi + guard test (rule-9 testi deseni). Canlı: Syria sorgusu → yanıt **[1]-[5] hepsi 5 kaynağa eşleşiyor, ölü/uydurma atıf yok**.
+
+**Doğrulama:** uvicorn :8010 + Chrome DevTools MCP (signup→/app→gerçek RAG sorgusu). Dev test kullanıcısı `p2verify@test.local` + 1 sohbet lokal `conversations.db`'de (zararsız). **[PR #3](https://github.com/berkcansuner/Humanitaria/pull/3) açıldı — merge bekliyor** (master'a merge → Render auto-deploy tetiklenir).
 
 ---
 
