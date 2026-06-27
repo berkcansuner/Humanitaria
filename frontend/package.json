@@ -10,6 +10,9 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@fontsource-variable/dm-sans": "^5.2.8",
+    "@fontsource/ibm-plex-mono": "^5.2.7",
+    "@fontsource/inter": "^5.2.8",
     "dompurify": "^3.4.2",
     "lucide-react": "^1.17.0",
     "lucide-vue-next": "^1.0.0",
