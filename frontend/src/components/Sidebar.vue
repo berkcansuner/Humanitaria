@@ -16,6 +16,7 @@
       :groups="groups"
       :active-id="activeId"
       :has-query="hasQuery"
+      :loading="loading"
       @select="$emit('select', $event)"
       @rename="(id, title) => $emit('rename', id, title)"
       @delete="$emit('delete', $event)"
@@ -48,6 +49,7 @@ const props = defineProps({
   conversations: { type: Array, default: () => [] },
   activeId: { type: String, default: null },
   open: { type: Boolean, default: false },
+  loading: { type: Boolean, default: false }, // initial conversation fetch in flight
 })
 
 defineEmits(['select', 'new-chat', 'rename', 'delete'])

@@ -1,6 +1,11 @@
 <template>
   <ul class="conv-list">
-    <template v-if="groups.length">
+    <template v-if="loading && !groups.length">
+      <li v-for="n in 6" :key="'sk-' + n" class="conv-skeleton-item" aria-hidden="true">
+        <span class="skeleton conv-skeleton-bar"></span>
+      </li>
+    </template>
+    <template v-else-if="groups.length">
       <template v-for="group in groups" :key="group.key">
         <li class="conv-section-label">{{ group.label }}</li>
         <li
@@ -47,6 +52,7 @@ defineProps({
   groups: { type: Array, default: () => [] },
   activeId: { type: String, default: null },
   hasQuery: { type: Boolean, default: false },
+  loading: { type: Boolean, default: false }, // initial fetch in flight → show skeletons
 })
 
 const emit = defineEmits(['select', 'rename', 'delete'])
@@ -102,6 +108,20 @@ function cancelRename() {
   text-transform: none;
   letter-spacing: 0;
 }
+
+.conv-skeleton-item {
+  padding: var(--space-2) var(--space-3);
+}
+
+.conv-skeleton-bar {
+  display: block;
+  height: 13px;
+}
+
+/* Slight width variation reads as a natural list rather than a uniform grid. */
+.conv-skeleton-item:nth-child(3n) .conv-skeleton-bar { width: 64%; }
+.conv-skeleton-item:nth-child(3n + 1) .conv-skeleton-bar { width: 86%; }
+.conv-skeleton-item:nth-child(3n + 2) .conv-skeleton-bar { width: 72%; }
 
 .conv-item {
   display: flex;
