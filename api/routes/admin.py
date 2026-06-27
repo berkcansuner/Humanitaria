@@ -35,13 +35,15 @@ async def ingest_status(request: Request, admin: dict = Depends(get_admin_user))
             scheduler_active = True
             next_run = job.next_run_time.isoformat()
 
-    total_vectors, vector_error = None, None
+    namespace, namespace_vectors, total_vectors, vector_error = None, None, None, None
     try:
         store = get_store()
+        namespace = store.namespace or ""   # the namespace retrieval actually queries
         stats = await anyio.to_thread.run_sync(store.index.describe_index_stats)
-        # Index-wide count. Correct for the default (empty) PINECONE_NAMESPACE the
-        # app uses; a non-default namespace would make this an over-count.
-        total_vectors = stats.get("total_vector_count")
+        total_vectors = stats.get("total_vector_count")          # index-wide (all namespaces)
+        ns_summary = (stats.get("namespaces") or {}).get(namespace)
+        if ns_summary is not None:
+            namespace_vectors = ns_summary.get("vector_count")   # what the app queries
     except Exception as exc:  # Pinecone network call — never fail the whole status
         vector_error = str(exc)
         logger.warning("Failed to read Pinecone index stats: %s", exc)
@@ -50,6 +52,8 @@ async def ingest_status(request: Request, admin: dict = Depends(get_admin_user))
         "last_ingest": sched._load_watermark(),
         "next_scheduled_run": next_run,
         "scheduler_active": scheduler_active,
+        "namespace": namespace,
+        "namespace_vectors": namespace_vectors,
         "total_vectors": total_vectors,
         "vector_count_error": vector_error,
         "run": runner.get_state(),

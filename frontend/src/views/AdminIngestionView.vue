@@ -46,10 +46,13 @@
               <dd>{{ status?.scheduler_active ? 'Active' : 'Inactive' }}</dd>
             </div>
             <div>
-              <dt>Total vectors</dt>
+              <dt>Vectors (active namespace)</dt>
               <dd>
                 <span v-if="status?.vector_count_error" title="Pinecone unavailable">unavailable</span>
-                <span v-else>{{ formatNumber(status?.total_vectors) }}</span>
+                <template v-else>
+                  {{ formatNumber(status?.namespace_vectors) }}
+                  <span class="dd-note">{{ namespaceLabel }} · {{ formatNumber(status?.total_vectors) }} in index</span>
+                </template>
               </dd>
             </div>
           </dl>
@@ -116,6 +119,10 @@ const running = computed(() => run.value.running === true)
 const lastStatsRows = computed(() =>
   Object.entries(run.value.last_stats || {}).map(([endpoint, s]) => ({ endpoint, ...s }))
 )
+const namespaceLabel = computed(() => {
+  const ns = status.value?.namespace
+  return ns ? `“${ns}” namespace` : 'default namespace'
+})
 
 function formatNumber(n) {
   return typeof n === 'number' ? n.toLocaleString('en-US') : '—'
@@ -290,6 +297,14 @@ onUnmounted(stopPolling)
   font-weight: 600;
   color: var(--color-text);
   font-variant-numeric: tabular-nums;
+}
+
+.dd-note {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--text-xs);
+  font-weight: 400;
+  color: var(--color-muted);
 }
 
 .pill {
