@@ -11,6 +11,7 @@ import anyio
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from api.routes.auth import get_admin_user
+from ingestion import analytics
 from ingestion import runner
 from ingestion import scheduler as sched
 from ingestion.store import get_store
@@ -71,6 +72,28 @@ async def trigger_ingest(admin: dict = Depends(get_admin_user)):
     if runner.is_running():
         raise HTTPException(status_code=409, detail="An ingest is already running")
     task = asyncio.create_task(anyio.to_thread.run_sync(runner.run_ingest_once, "manual"))
+    _bg_tasks.add(task)
+    task.add_done_callback(_bg_tasks.discard)
+    return {"status": "started"}
+
+
+@router.get("/ingest/breakdown")
+async def ingest_breakdown(admin: dict = Depends(get_admin_user)):
+    """Cached indexed-data breakdown for the active namespace (admin-only).
+
+    Never triggers a scan — returns the last computed result (``data`` is null
+    until the first refresh). Use POST /admin/ingest/breakdown/refresh to recompute.
+    """
+    return analytics.get_breakdown()
+
+
+@router.post("/ingest/breakdown/refresh", status_code=202)
+async def refresh_breakdown(admin: dict = Depends(get_admin_user)):
+    """Recompute the breakdown in the background (admin-only). 409 if a scan is
+    already running; the runner-style lock is the real overlap guard."""
+    if analytics.is_computing():
+        raise HTTPException(status_code=409, detail="A breakdown scan is already running")
+    task = asyncio.create_task(anyio.to_thread.run_sync(analytics.compute_breakdown))
     _bg_tasks.add(task)
     task.add_done_callback(_bg_tasks.discard)
     return {"status": "started"}

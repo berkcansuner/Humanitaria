@@ -12,3 +12,11 @@ export function getIngestStatus() {
 export function triggerIngest() {
   return request('/admin/ingest/trigger', { method: 'POST' })
 }
+
+export function getIngestBreakdown() {
+  return request('/admin/ingest/breakdown', { method: 'GET' })
+}
+
+export function refreshIngestBreakdown() {
+  return request('/admin/ingest/breakdown/refresh', { method: 'POST' })
+}

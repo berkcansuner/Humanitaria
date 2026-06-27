@@ -67,6 +67,12 @@ def run_ingest_once(source: str) -> bool:
                      "failed": s.failed, "skipped": s.skipped}
                 for ep, s in (stats or {}).items()
             }
+            # New data landed — the cached breakdown is now stale (recompute on demand).
+            try:
+                from ingestion import analytics
+                analytics.mark_stale()
+            except Exception:
+                pass
             logger.info("Ingest complete (source=%s), watermark=%s", source, run_start)
         except Exception as exc:
             _state.last_error = str(exc)

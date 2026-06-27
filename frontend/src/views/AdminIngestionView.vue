@@ -95,6 +95,108 @@
             </table>
           </div>
         </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2>Data breakdown</h2>
+            <span :class="['pill', bdComputing ? 'pill-run' : 'pill-idle']">
+              <span class="dot"></span>{{ bdComputing ? 'Scanning' : 'Idle' }}
+            </span>
+          </div>
+          <p class="muted">
+            Distinct reports in the active namespace, by source, date, country, theme and format.
+            Full Pinecone scan (~3–5 min); the result is cached until you refresh.
+          </p>
+
+          <div class="bd-actions">
+            <button class="primary-btn" :disabled="bdComputing || refreshingBd" @click="onRefreshBreakdown">
+              <RefreshCw :size="16" :class="{ spin: bdComputing }" />
+              {{ bdComputing ? 'Scanning namespace…' : 'Refresh breakdown' }}
+            </button>
+            <span v-if="bdData" class="bd-meta">
+              {{ formatNumber(bdData.total_documents) }} reports · updated {{ formatDateTime(bdData.computed_at) }}
+            </span>
+            <span v-if="bdStale" class="stale-chip">stale — refresh to update</span>
+          </div>
+
+          <div v-if="breakdown?.last_error" class="error-box" role="alert">
+            Last scan failed: {{ breakdown.last_error }}
+          </div>
+
+          <p v-if="!bdData && !bdComputing" class="muted bd-empty">
+            No breakdown yet — click “Refresh breakdown” to scan the index.
+          </p>
+
+          <template v-if="bdData">
+            <div class="bd-block">
+              <h3>By source</h3>
+              <div v-for="row in bdData.by_source" :key="'s-' + row.key" class="bar-row">
+                <span class="bar-label" :title="row.key">{{ row.key }}</span>
+                <span class="bar-track"><span class="bar-fill" :style="{ width: barWidth(row.count, bdSourceMax) }"></span></span>
+                <span class="bar-count">{{ formatNumber(row.count) }}</span>
+              </div>
+            </div>
+
+            <div class="bd-block">
+              <h3>By country</h3>
+              <div v-for="row in bdData.by_country" :key="'c-' + row.key" class="bar-row">
+                <span class="bar-label" :title="row.key">{{ row.key }}</span>
+                <span class="bar-track"><span class="bar-fill" :style="{ width: barWidth(row.count, bdCountryMax) }"></span></span>
+                <span class="bar-count">{{ formatNumber(row.count) }}</span>
+              </div>
+            </div>
+
+            <div class="bd-block">
+              <h3>By month</h3>
+              <div class="histogram">
+                <span
+                  v-for="b in bdData.by_month"
+                  :key="'m-' + b.month"
+                  class="hist-col"
+                  :style="{ height: barWidth(b.count, bdMonthMax) }"
+                  :title="`${b.month}: ${b.count}`"
+                ></span>
+              </div>
+              <div v-if="bdData.by_month.length" class="hist-axis">
+                <span>{{ bdData.by_month[0].month }}</span>
+                <span>{{ bdData.by_month[bdData.by_month.length - 1].month }}</span>
+              </div>
+            </div>
+
+            <div class="bd-tables">
+              <div class="bd-block">
+                <h3>By theme</h3>
+                <table>
+                  <tbody>
+                    <tr v-for="row in bdData.by_theme" :key="'t-' + row.key">
+                      <td>{{ row.key }}</td><td>{{ formatNumber(row.count) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="bd-block">
+                <h3>By format</h3>
+                <table>
+                  <tbody>
+                    <tr v-for="row in bdData.by_format" :key="'f-' + row.key">
+                      <td>{{ row.key }}</td><td>{{ formatNumber(row.count) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="bd-block">
+                <h3>By year</h3>
+                <table>
+                  <tbody>
+                    <tr v-for="row in bdData.by_year" :key="'y-' + row.year">
+                      <td>{{ row.year }}</td><td>{{ formatNumber(row.count) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </template>
+        </section>
       </template>
     </main>
   </div>
@@ -105,7 +207,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ArrowLeft, RefreshCw } from 'lucide-vue-next'
 import HelpingHandLogo from '../components/HelpingHandLogo.vue'
 import ThemeToggle from '../components/ThemeToggle.vue'
-import { getIngestStatus, triggerIngest } from '../utils/adminApi.js'
+import { getIngestStatus, triggerIngest, getIngestBreakdown, refreshIngestBreakdown } from '../utils/adminApi.js'
 
 const status = ref(null)
 const loading = ref(true)
@@ -123,6 +225,22 @@ const namespaceLabel = computed(() => {
   const ns = status.value?.namespace
   return ns ? `“${ns}” namespace` : 'default namespace'
 })
+
+// --- breakdown (indexed-data analytics) ---
+const breakdown = ref(null)
+const refreshingBd = ref(false)
+let bdPollTimer = null
+
+const bdData = computed(() => breakdown.value?.data || null)
+const bdComputing = computed(() => breakdown.value?.computing === true)
+const bdStale = computed(() => breakdown.value?.stale === true)
+const bdSourceMax = computed(() => Math.max(1, ...(bdData.value?.by_source || []).map((r) => r.count)))
+const bdCountryMax = computed(() => Math.max(1, ...(bdData.value?.by_country || []).map((r) => r.count)))
+const bdMonthMax = computed(() => Math.max(1, ...(bdData.value?.by_month || []).map((r) => r.count)))
+
+function barWidth(count, max) {
+  return max > 0 ? `${(count / max) * 100}%` : '0%'
+}
 
 function formatNumber(n) {
   return typeof n === 'number' ? n.toLocaleString('en-US') : '—'
@@ -174,8 +292,44 @@ function stopPolling() {
   if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
 }
 
-onMounted(fetchStatus)
-onUnmounted(stopPolling)
+async function fetchBreakdown() {
+  try {
+    breakdown.value = await getIngestBreakdown()
+    forbidden.value = false
+    if (bdComputing.value) startBdPolling()
+    else stopBdPolling()
+  } catch (e) {
+    if (e.status === 403) { forbidden.value = true; stopBdPolling() }
+    else actionError.value = 'Could not load the data breakdown.'
+  }
+}
+
+async function onRefreshBreakdown() {
+  refreshingBd.value = true
+  actionError.value = null
+  try {
+    await refreshIngestBreakdown()
+    await fetchBreakdown()
+    startBdPolling()
+  } catch (e) {
+    if (e.status === 409) await fetchBreakdown()        // a scan is already running — just sync
+    else if (e.status === 403) { forbidden.value = true; stopBdPolling() }
+    else actionError.value = 'Could not start the breakdown scan.'
+  } finally {
+    refreshingBd.value = false
+  }
+}
+
+function startBdPolling() {
+  if (!bdPollTimer) bdPollTimer = setInterval(fetchBreakdown, 4000)
+}
+
+function stopBdPolling() {
+  if (bdPollTimer) { clearInterval(bdPollTimer); bdPollTimer = null }
+}
+
+onMounted(() => { fetchStatus(); fetchBreakdown() })
+onUnmounted(() => { stopPolling(); stopBdPolling() })
 </script>
 
 <style scoped>
@@ -446,6 +600,127 @@ onUnmounted(stopPolling)
   font-size: var(--text-xs);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+.bd-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.bd-meta {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.stale-chip {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-error-accent);
+  background-color: var(--color-error-bg);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.bd-empty {
+  margin-top: var(--space-4);
+  margin-bottom: 0;
+}
+
+.bd-block {
+  margin-top: var(--space-5);
+}
+
+.bd-block h3 {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  color: var(--color-text);
+  margin-bottom: var(--space-3);
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: 140px 1fr 56px;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.bar-label {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bar-track {
+  height: 10px;
+  background-color: var(--color-surface-container-high);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.bar-fill {
+  display: block;
+  height: 100%;
+  background-color: var(--color-accent);
+  border-radius: var(--radius-full);
+}
+
+.bar-count {
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--color-text);
+}
+
+.histogram {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 80px;
+  padding: var(--space-2) 0;
+}
+
+.hist-col {
+  flex: 1;
+  min-width: 2px;
+  min-height: 1px;
+  background-color: var(--color-accent);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+.hist-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.bd-tables {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-5);
+}
+
+.bd-tables table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.bd-tables td {
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  font-variant-numeric: tabular-nums;
+}
+
+.bd-tables td:last-child {
+  text-align: right;
+  color: var(--color-text-secondary);
 }
 
 @media (max-width: 640px) {
