@@ -75,6 +75,21 @@ class UserOut(BaseModel):
     id: str
     email: str
     name: str
+    is_admin: bool = False
+
+
+def _is_admin_email(email: str) -> bool:
+    """True if *email* is in the ADMIN_EMAILS allowlist (case-insensitive)."""
+    admins = {e.strip().lower() for e in get_settings().ADMIN_EMAILS.split(",") if e.strip()}
+    return bool(email) and email.strip().lower() in admins
+
+
+def _user_out(user: dict) -> UserOut:
+    """Public user payload; computes is_admin from the ADMIN_EMAILS allowlist."""
+    return UserOut(
+        id=user["id"], email=user["email"], name=user["name"],
+        is_admin=_is_admin_email(user["email"]),
+    )
 
 
 # --- cookie helpers ---------------------------------------------------------
@@ -112,6 +127,13 @@ async def get_current_user(request: Request) -> dict:
     return user
 
 
+async def get_admin_user(user: dict = Depends(get_current_user)) -> dict:
+    """FastAPI dependency: require an authenticated user in ADMIN_EMAILS, else 403."""
+    if not _is_admin_email(user.get("email", "")):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user
+
+
 # --- endpoints --------------------------------------------------------------
 
 @router.post("/signup", response_model=UserOut)
@@ -127,7 +149,7 @@ async def signup(request: Request, body: SignupIn, response: Response):
         users_store.create_session, uid, get_settings().SESSION_TTL_HOURS
     )
     _set_session_cookie(response, token)
-    return UserOut(id=uid, email=body.email, name=body.name.strip())
+    return _user_out({"id": uid, "email": body.email, "name": body.name.strip()})
 
 
 @router.post("/login", response_model=UserOut)
@@ -144,7 +166,7 @@ async def login(request: Request, body: LoginIn, response: Response):
         users_store.create_session, user["id"], get_settings().SESSION_TTL_HOURS
     )
     _set_session_cookie(response, token)
-    return UserOut(id=user["id"], email=user["email"], name=user["name"])
+    return _user_out(user)
 
 
 @router.post("/logout", status_code=204)
@@ -159,7 +181,7 @@ async def logout(request: Request, response: Response):
 async def me(user: Optional[dict] = Depends(get_optional_user)):
     if user is None:
         return None
-    return UserOut(id=user["id"], email=user["email"], name=user["name"])
+    return _user_out(user)
 
 
 # --- Google OAuth -----------------------------------------------------------

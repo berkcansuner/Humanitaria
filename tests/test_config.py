@@ -31,3 +31,4 @@ def test_provider_and_ingest_defaults():
     assert s.INGEST_WATERMARK_PATH == "./.last_ingest.json"
     assert s.INGEST_LOOKBACK_YEARS == 3
     assert s.GEMINI_LLM_MODEL == "gemini-2.5-flash"
+    assert s.ADMIN_EMAILS == ""

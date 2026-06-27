@@ -30,6 +30,15 @@
           <div v-if="secondary" class="who-org">{{ secondary }}</div>
         </div>
       </div>
+      <router-link
+        v-if="auth.user?.is_admin"
+        to="/admin/ingestion"
+        class="admin-link"
+        title="Ingestion admin"
+        aria-label="Ingestion admin"
+      >
+        <Shield :size="16" />
+      </router-link>
       <button type="button" class="logout-btn" title="Log out" aria-label="Log out" @click="logout">
         <LogOut :size="16" />
       </button>
@@ -40,7 +49,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { Plus, Search, LogOut } from 'lucide-vue-next'
+import { Plus, Search, LogOut, Shield } from 'lucide-vue-next'
 import ConversationList from './ConversationList.vue'
 import { filterConversations, groupConversationsByDate } from '../utils/conversationOps.js'
 import { auth, doLogout } from '../utils/authStore.js'
@@ -216,6 +225,30 @@ async function logout() {
 .logout-btn:hover {
   background-color: var(--color-surface-container-high);
   color: var(--color-text);
+}
+
+.admin-link {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.admin-link:hover {
+  background-color: var(--color-surface-container-high);
+  color: var(--color-text);
+}
+
+/* When the admin link is present it owns the right-alignment; the logout button
+   then sits beside it instead of grabbing its own margin-left:auto. */
+.admin-link + .logout-btn {
+  margin-left: var(--space-1);
 }
 
 /* ConversationList grows to fill the middle; the list itself scrolls. */

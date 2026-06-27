@@ -10,7 +10,7 @@ from pathlib import Path
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from api.routes import chat, health, conversations, auth
+from api.routes import chat, health, conversations, auth, admin
 from api.limiter import limiter
 from config import get_settings
 
@@ -47,6 +47,10 @@ async def lifespan(app: FastAPI):
         except Exception as exc:
             logger.warning("Ingestion scheduler failed to start (non-fatal): %s", exc)
 
+    # Expose the scheduler to routes (the admin panel reads its next run time);
+    # stays None when scheduling is disabled or startup failed.
+    app.state.ingest_scheduler = scheduler
+
     yield
 
     if scheduler is not None:
@@ -79,6 +83,7 @@ app.include_router(health.router, tags=["health"])
 app.include_router(auth.router, tags=["auth"])
 app.include_router(chat.router, tags=["chat"])
 app.include_router(conversations.router, tags=["conversations"])
+app.include_router(admin.router, tags=["admin"])
 
 frontend_dir = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 if frontend_dir.exists():

@@ -85,6 +85,8 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
     GOOGLE_REDIRECT_URI: str = "http://localhost:8000/auth/google/callback"
+    # Comma-separated emails granted the admin ingestion panel (empty = no admins).
+    ADMIN_EMAILS: str = ""
 
     # Session history
     HISTORY_WINDOW_K: int = 5         # number of exchanges (user+assistant pairs) to keep
