@@ -4,7 +4,8 @@ Sessions are httpOnly cookies holding an opaque token (stored hashed in SQLite).
 ``get_current_user`` is the dependency that gates the chat/conversation routes;
 it returns the authenticated user dict or raises 401.
 
-Google OAuth routes are added in auth_google.py / registered separately.
+Google OAuth routes (``/auth/google/login`` + ``/auth/google/callback``) are
+defined below in this module.
 """
 import logging
 import sqlite3
