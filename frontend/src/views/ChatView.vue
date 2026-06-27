@@ -4,6 +4,7 @@
       :conversations="conversations"
       :active-id="activeId"
       :open="sidebarOpen"
+      :loading="isLoadingConversations"
       @select="selectConversation"
       @new-chat="newChat"
       @rename="onRename"
@@ -54,6 +55,7 @@ const conversations = ref([])
 const activeId = ref(null)
 const sidebarOpen = ref(false)
 const actionError = ref(null)
+const isLoadingConversations = ref(false)
 let errorTimer = null
 
 // Surface a transient, dismissible error for sidebar actions that previously
@@ -65,11 +67,14 @@ function showActionError(message) {
 }
 
 async function loadConversations() {
+  isLoadingConversations.value = true
   try {
     conversations.value = await listConversations()
   } catch (e) {
     console.error('Failed to load conversations:', e)
     showActionError('Could not load your conversations. Please try again.')
+  } finally {
+    isLoadingConversations.value = false
   }
 }
 

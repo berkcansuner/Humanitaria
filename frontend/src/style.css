@@ -193,6 +193,27 @@ select:focus-visible {
   }
 }
 
+/* Loading skeleton — a shimmering placeholder block. Shared utility used by the
+   conversation list and the message history while their fetches are in flight.
+   Adapts to the theme via surface tokens; the shimmer is automatically stilled
+   by the reduced-motion block above. */
+.skeleton {
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-container) 25%,
+    var(--color-surface-container-high) 37%,
+    var(--color-surface-container) 63%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
 /* Copy button injected into rendered code blocks (decorateCodeBlocks).
    Lives in global CSS because the element is created in v-html content,
    which scoped component styles don't reach. */

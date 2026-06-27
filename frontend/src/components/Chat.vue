@@ -1,7 +1,22 @@
 <template>
   <div class="chat">
     <div class="messages" ref="messagesContainer" role="log" aria-live="polite" @click="onCiteClick" @keydown="onCiteKeydown">
-      <EmptyState v-if="messages.length === 0" @select="sendMessage({ text: $event })" />
+      <template v-if="isLoadingMessages">
+        <div
+          v-for="n in 3"
+          :key="'msk-' + n"
+          :class="['message', n % 2 ? 'assistant' : 'user']"
+          aria-hidden="true"
+        >
+          <div class="message-row">
+            <div class="message-bubble msg-skeleton">
+              <span class="skeleton skel-line"></span>
+              <span class="skeleton skel-line short"></span>
+            </div>
+          </div>
+        </div>
+      </template>
+      <EmptyState v-else-if="messages.length === 0" @select="sendMessage({ text: $event })" />
       <div
         v-for="(msg, idx) in messages"
         :key="idx"
@@ -125,7 +140,8 @@ const emit = defineEmits(['session'])
 
 const messages = ref([])
 const input = ref('')
-const loading = ref(false)
+const loading = ref(false)            // a response is streaming
+const isLoadingMessages = ref(false) // past conversation's history is being fetched
 const sessionId = ref(null)
 const messagesContainer = ref(null)
 const chatInput = ref(null)
@@ -441,6 +457,8 @@ watch(() => props.conversationId, async (newId) => {
     return
   }
   try {
+    isLoadingMessages.value = true
+    messages.value = []  // drop stale history so only the skeleton shows while fetching
     const rows = await getMessages(newId)
     messages.value = rows.map(m => {
       let content = m.content
@@ -457,6 +475,8 @@ watch(() => props.conversationId, async (newId) => {
     nextTick(() => decorateCodeBlocks(messagesContainer.value))
   } catch (e) {
     console.error('Failed to load conversation:', e)
+  } finally {
+    isLoadingMessages.value = false
   }
 })
 </script>
@@ -534,6 +554,34 @@ watch(() => props.conversationId, async (newId) => {
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm) var(--radius-xl) var(--radius-xl) var(--radius-xl);
+}
+
+/* Message-history skeleton: neutral placeholder bubbles with shimmering lines,
+   alternating sides to echo a real conversation. Override the user side's solid
+   fill (defined above) so the shimmer lines stay legible. */
+.msg-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 150px;
+}
+
+.message.user .msg-skeleton,
+.message.assistant .msg-skeleton {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: none;
+}
+
+.skel-line {
+  display: block;
+  height: 11px;
+  width: 240px;
+  max-width: 52vw;
+}
+
+.skel-line.short {
+  width: 55%;
 }
 
 .message-content {
