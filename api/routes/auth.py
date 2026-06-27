@@ -8,6 +8,7 @@ Google OAuth routes are added in auth_google.py / registered separately.
 """
 import logging
 import sqlite3
+from typing import Optional
 
 import anyio
 from authlib.integrations.starlette_client import OAuth, OAuthError
@@ -90,12 +91,21 @@ def _set_session_cookie(response: Response, token: str) -> None:
     )
 
 
-async def get_current_user(request: Request) -> dict:
-    """FastAPI dependency: resolve the session cookie to a user or 401."""
+async def get_optional_user(request: Request) -> Optional[dict]:
+    """Resolve the session cookie to a user, or None when absent/invalid.
+
+    Used by the anonymous-friendly /auth/me probe: it never raises, so a visitor
+    without a session gets a 200 + null body instead of a 401 error.
+    """
     token = request.cookies.get(get_settings().SESSION_COOKIE_NAME)
     if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    user = await anyio.to_thread.run_sync(users_store.get_user_by_session, token)
+        return None
+    return await anyio.to_thread.run_sync(users_store.get_user_by_session, token)
+
+
+async def get_current_user(request: Request) -> dict:
+    """FastAPI dependency: resolve the session cookie to a user or 401."""
+    user = await get_optional_user(request)
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
     return user
@@ -144,8 +154,10 @@ async def logout(request: Request, response: Response):
     response.delete_cookie(get_settings().SESSION_COOKIE_NAME, path="/")
 
 
-@router.get("/me", response_model=UserOut)
-async def me(user: dict = Depends(get_current_user)):
+@router.get("/me", response_model=Optional[UserOut])
+async def me(user: Optional[dict] = Depends(get_optional_user)):
+    if user is None:
+        return None
     return UserOut(id=user["id"], email=user["email"], name=user["name"])
 
 

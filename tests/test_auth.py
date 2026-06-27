@@ -73,9 +73,12 @@ def test_login_unknown_email_still_runs_password_check(client):
     assert vp.called  # bcrypt ran despite no such user (constant-time login)
 
 
-def test_me_requires_authentication(client):
+def test_me_returns_null_when_unauthenticated(client):
+    # /auth/me is the app's initial auth probe: it answers 200 with a null body
+    # for anonymous visitors so a hard refresh doesn't surface a 401 as an error.
     r = client.get("/auth/me")
-    assert r.status_code == 401
+    assert r.status_code == 200, r.text
+    assert r.json() is None
 
 
 def test_me_returns_current_user_after_signup(client):
@@ -87,9 +90,11 @@ def test_me_returns_current_user_after_signup(client):
 
 def test_logout_invalidates_session(client):
     client.post("/auth/signup", json=SIGNUP)
-    assert client.get("/auth/me").status_code == 200
+    assert client.get("/auth/me").json()["email"] == SIGNUP["email"]
     client.post("/auth/logout")
-    assert client.get("/auth/me").status_code == 401
+    after = client.get("/auth/me")
+    assert after.status_code == 200
+    assert after.json() is None
 
 
 class TestAuthRateLimit:
