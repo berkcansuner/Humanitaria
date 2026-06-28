@@ -74,8 +74,19 @@ def main():
         help="Restrict to one or more primary-country ISO3 codes (e.g. SDN SYR). "
              "Runs the pipeline once per country so --limit applies per country.",
     )
+    parser.add_argument(
+        "--all-countries",
+        action="store_true",
+        help="Ingest every ReliefWeb country (ISO3 list from /countries), per country "
+             "so --limit becomes the per-country cap. Fetch is date.created:desc, so the "
+             "cap keeps each country's newest reports.",
+    )
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
+    if args.all_countries:
+        from ingestion.client import ReliefWebClient
+        args.country = ReliefWebClient().list_country_codes()
+        logger.info("--all-countries: resolved %d ISO3 codes from ReliefWeb", len(args.country))
     date_from = _resolve_date_from(args.date_from, get_settings().INGEST_LOOKBACK_YEARS)
     if date_from and not args.date_from:
         logger.info("No --date-from given; applying freshness floor %s "

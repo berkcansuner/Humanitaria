@@ -138,3 +138,11 @@ class ReliefWebClient:
         fields: Optional[List[str]] = None,
     ) -> List[Dict[str, Any]]:
         return self.fetch("reports", limit=limit, offset=offset, sort=sort, fields=fields)
+
+    def list_country_codes(self) -> List[str]:
+        """All ReliefWeb country ISO3 codes (uppercased, deduped, sorted). Used by the
+        ``--all-countries`` backfill to ingest every country with a per-country cap.
+        ReliefWeb has ~249 countries, so one page (limit 300) covers them all."""
+        items = self.fetch("countries", limit=300, fields=["iso3"])
+        codes = {((it.get("fields") or {}).get("iso3") or "").upper() for it in items}
+        return sorted(c for c in codes if c)

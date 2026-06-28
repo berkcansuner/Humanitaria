@@ -67,11 +67,12 @@ def run_ingest_once(source: str) -> bool:
                      "failed": s.failed, "skipped": s.skipped}
                 for ep, s in (stats or {}).items()
             }
-            # New data landed — rebuild the cached reports list (and re-persist it)
-            # so the admin panel reflects it without a manual refresh.
+            # New data landed — rebuild the cached reports list (and re-persist it),
+            # and apply the rolling-window retention (drop >RETENTION_DAYS old and
+            # per-country-cap overflow) in the same scan. Both off by default → inert.
             try:
                 from ingestion import analytics
-                analytics.rebuild_documents()
+                analytics.rebuild_documents(apply_retention=True)
             except Exception:
                 pass
             logger.info("Ingest complete (source=%s), watermark=%s", source, run_start)

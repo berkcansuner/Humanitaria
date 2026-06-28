@@ -29,6 +29,10 @@ def test_provider_and_ingest_defaults():
     assert s.PINECONE_INDEX == "reliefweb-docs"
     assert s.EMBED_DIM == 3072
     assert s.INGEST_WATERMARK_PATH == "./.last_ingest.json"
-    assert s.INGEST_LOOKBACK_YEARS == 5
+    assert s.INGEST_LOOKBACK_YEARS == 1   # rolling 1-year strategy (was 5)
     assert s.GEMINI_LLM_MODEL == "gemini-2.5-flash"
     assert s.ADMIN_EMAILS == ""
+    # Rolling-window retention is OFF by default (enabled in prod env at cutover).
+    assert s.RETENTION_DAYS == 0
+    assert s.RETENTION_PER_COUNTRY_CAP == 0
+    assert s.INGEST_TRIGGER_TOKEN == ""

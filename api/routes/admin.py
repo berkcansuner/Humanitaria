@@ -6,11 +6,13 @@ and a manual "run now" trigger that reuses the shared ingest runner.
 """
 import asyncio
 import logging
+import secrets
 
 import anyio
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 
 from api.routes.auth import get_admin_user
+from config import get_settings
 from ingestion import analytics
 from ingestion import runner
 from ingestion import scheduler as sched
@@ -97,3 +99,21 @@ async def ingest_documents(
         page["computing"] = True   # the scan was just scheduled; tell the UI to poll
         return page
     return analytics.get_documents(q=q, offset=offset, limit=limit)
+
+
+@router.post("/ingest/cron")
+async def cron_ingest(x_cron_token: str = Header(default="", alias="X-Cron-Token")):
+    """Token-gated automation trigger (called daily by the Cloudflare Worker cron).
+
+    Runs ONE ingest + rolling-retention pass SYNCHRONOUSLY so the caller stays
+    connected until it finishes — that keeps a sleeping free-tier instance awake for
+    the whole (small) daily job. Gated by ``INGEST_TRIGGER_TOKEN`` (constant-time
+    compare); 403 if the token is unset or mismatched. Not session-gated — automation
+    has no cookie. The session-cookie UI trigger (/ingest/trigger) is unaffected."""
+    token = get_settings().INGEST_TRIGGER_TOKEN
+    if not token or not secrets.compare_digest(x_cron_token or "", token):
+        raise HTTPException(status_code=403, detail="Invalid or missing cron token")
+    if runner.is_running():
+        return {"status": "already-running", "run": runner.get_state()}
+    ran = await anyio.to_thread.run_sync(runner.run_ingest_once, "cron")
+    return {"status": "ok" if ran else "skipped", "run": runner.get_state()}

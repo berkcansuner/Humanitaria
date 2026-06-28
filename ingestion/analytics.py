@@ -152,11 +152,16 @@ def _collect_metadata(index, namespace) -> List[dict]:
     return metadatas
 
 
-def rebuild_documents() -> bool:
+def rebuild_documents(apply_retention: bool = False) -> bool:
     """Scan the active namespace, rebuild the cached reports list and persist it to
     disk. Returns False immediately if a scan is already running (no overlap); True
     once this call has run (success or handled error). On error the previously
-    cached list is left intact."""
+    cached list is left intact.
+
+    When *apply_retention* is True (set only by the ingest flow — never the admin
+    lazy GET), the SAME scan also drives a rolling-window trim: documents older than
+    RETENTION_DAYS and per-country-cap overflow are deleted, then excluded from the
+    cached list. Both rules off (the default config) → no deletion."""
     if not _lock.acquire(blocking=False):
         return False
     try:
@@ -164,8 +169,15 @@ def rebuild_documents() -> bool:
         _state.last_error = None
         store = get_store()
         namespace = store.namespace
-        logger.info("Reports scan starting (namespace=%r)", namespace)
+        logger.info("Reports scan starting (namespace=%r, retention=%s)", namespace, apply_retention)
         documents = build_documents(_collect_metadata(store.index, namespace))
+        if apply_retention:
+            from ingestion import retention
+            s = get_settings()
+            deleted = set(retention.apply_retention(
+                store, documents, s.RETENTION_DAYS, s.RETENTION_PER_COUNTRY_CAP))
+            if deleted:
+                documents = [d for d in documents if d["doc_id"] not in deleted]
         _state.documents = documents
         _state.namespace = namespace or ""
         _state.computed_at = datetime.now(timezone.utc).isoformat()

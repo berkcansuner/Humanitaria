@@ -1,0 +1,12 @@
+name = "humanitaria-daily-cron"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+# Daily at 03:00 UTC — trigger the app's ingest + rolling-retention pass.
+[triggers]
+crons = ["0 3 * * *"]
+
+[vars]
+# Update to the custom domain when it goes live.
+APP_URL = "https://humanitaria.onrender.com"
+# INGEST_TRIGGER_TOKEN is a secret (NOT a var): `wrangler secret put INGEST_TRIGGER_TOKEN`

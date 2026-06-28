@@ -18,6 +18,17 @@ class TestReliefWebClient:
         assert "Authorization" not in client.headers
         assert client.headers["Content-Type"] == "application/json"
 
+    def test_list_country_codes(self):
+        client = ReliefWebClient()
+        with patch.object(client, "fetch", return_value=[
+            {"id": "1", "fields": {"iso3": "sdn"}},
+            {"id": "2", "fields": {"iso3": "UKR"}},
+            {"id": "3", "fields": {}},          # missing iso3 → skipped
+        ]) as mock_fetch:
+            codes = client.list_country_codes()
+        assert codes == ["SDN", "UKR"]          # uppercased, deduped, sorted, blanks dropped
+        mock_fetch.assert_called_once_with("countries", limit=300, fields=["iso3"])
+
     def test_fetch_reports_pagination(self):
         client = ReliefWebClient()
         mock_data = {

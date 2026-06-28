@@ -104,7 +104,15 @@ class Settings(BaseSettings):
     # Default freshness floor for manual ingest: when --date-from is not given,
     # ingest.py only pulls documents from the last N years (0 = no floor / full history).
     # Prevents re-pulling ancient ReliefWeb history (e.g. a country's reports back to the 1990s).
-    INGEST_LOOKBACK_YEARS: int = 5
+    INGEST_LOOKBACK_YEARS: int = 1
+    # Rolling-window retention, applied after each ingest (0 = OFF). Keeps a current,
+    # quota-friendly dataset: drop docs older than RETENTION_DAYS, and per country keep
+    # only the newest RETENTION_PER_COUNTRY_CAP docs (0 = no per-country cap).
+    RETENTION_DAYS: int = 0
+    RETENTION_PER_COUNTRY_CAP: int = 0
+    # Shared secret for the automation trigger POST /admin/ingest/cron (empty = endpoint
+    # disabled). Set in prod env; the Cloudflare Worker cron sends it as X-Cron-Token.
+    INGEST_TRIGGER_TOKEN: str = ""
 
 
 @lru_cache

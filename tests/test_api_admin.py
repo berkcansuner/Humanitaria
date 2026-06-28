@@ -30,6 +30,12 @@ def _admin_settings(emails):
     return s
 
 
+def _cron_settings(token):
+    s = MagicMock()
+    s.INGEST_TRIGGER_TOKEN = token
+    return s
+
+
 # --- auth helpers -----------------------------------------------------------
 
 def test_is_admin_email_allowlist():
@@ -228,3 +234,60 @@ def test_documents_paging_and_search_from_cache(client):
         assert [d["doc_id"] for d in page2["items"]] == ["c"]       # partial last page
         by_country = client.get("/admin/ingest/documents?q=sudan").json()
         assert [d["doc_id"] for d in by_country["items"]] == ["a", "c"]
+
+
+# --- /admin/ingest/cron (token-gated automation trigger) --------------------
+
+def test_cron_forbidden_without_token(client):
+    # INGEST_TRIGGER_TOKEN empty → endpoint disabled (403) even with a header.
+    with patch("api.routes.admin.get_settings", return_value=_cron_settings("")):
+        assert client.post("/admin/ingest/cron").status_code == 403
+        assert client.post("/admin/ingest/cron", headers={"X-Cron-Token": "x"}).status_code == 403
+
+
+def test_cron_forbidden_wrong_token(client):
+    with patch("api.routes.admin.get_settings", return_value=_cron_settings("secret")):
+        r = client.post("/admin/ingest/cron", headers={"X-Cron-Token": "nope"})
+    assert r.status_code == 403
+
+
+def test_cron_runs_with_valid_token(client):
+    # Hold the runner lock so the spawned run_ingest_once is a guaranteed no-op.
+    assert runner._lock.acquire(blocking=False)
+    try:
+        runner._state.running = False
+        with patch("api.routes.admin.get_settings", return_value=_cron_settings("secret")):
+            r = client.post("/admin/ingest/cron", headers={"X-Cron-Token": "secret"})
+        assert r.status_code == 200
+        assert r.json()["status"] in ("ok", "skipped")
+    finally:
+        runner._lock.release()
+
+
+# --- rebuild_documents + retention integration ------------------------------
+
+def test_rebuild_documents_applies_retention(tmp_path):
+    mock_store = MagicMock()
+    mock_store.namespace = ""
+    mock_store.index.list.return_value = [["old_0", "new_0"]]
+    meta = {
+        "old_0": {"doc_id": "old", "date": "2020-01-01", "country": "Sudan"},
+        "new_0": {"doc_id": "new", "date": "2026-06-01", "country": "Sudan"},
+    }
+
+    def _fetch(ids, namespace):
+        return SimpleNamespace(vectors={i: SimpleNamespace(metadata=meta[i]) for i in ids})
+
+    mock_store.index.fetch.side_effect = _fetch
+    s = MagicMock()
+    s.RETENTION_DAYS = 365
+    s.RETENTION_PER_COUNTRY_CAP = 0
+    cache = tmp_path / ".reports_cache.json"
+    with patch("ingestion.analytics.get_store", return_value=mock_store), \
+         patch("ingestion.analytics.get_settings", return_value=s), \
+         patch.object(analytics, "_cache_path", return_value=cache):
+        assert analytics.rebuild_documents(apply_retention=True) is True
+
+    # 'old' (2020) is past the 1-year window → its chunks deleted, cache keeps only 'new'.
+    mock_store.delete_document_chunks.assert_any_call("old")
+    assert [d["doc_id"] for d in analytics._state.documents] == ["new"]
