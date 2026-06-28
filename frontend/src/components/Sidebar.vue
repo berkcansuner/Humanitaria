@@ -7,6 +7,11 @@
       </button>
     </div>
 
+    <router-link to="/reports" class="reports-nav-link" title="M&amp;E Reports">
+      <FileText :size="16" />
+      M&amp;E Reports
+    </router-link>
+
     <div class="conv-search">
       <Search :size="15" />
       <input v-model="query" type="text" placeholder="Search conversations" />
@@ -31,9 +36,6 @@
         </div>
       </div>
       <div class="foot-actions">
-        <router-link to="/reports" class="admin-link" title="M&amp;E reports" aria-label="M&amp;E reports">
-          <FileText :size="16" />
-        </router-link>
         <router-link
           v-if="auth.user?.is_admin"
           to="/admin/ingestion"
@@ -131,6 +133,34 @@ async function logout() {
 
 .new-chat-btn:hover {
   background-color: var(--color-accent);
+}
+
+/* Prominent nav entry to the M&E Reports page, just under New chat. */
+.reports-nav-link {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.reports-nav-link:hover {
+  background-color: var(--color-surface-container);
+  color: var(--color-text);
+}
+
+.reports-nav-link.router-link-active {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
 }
 
 .conv-search {

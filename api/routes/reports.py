@@ -7,7 +7,6 @@ in rag.report_service, the LLM chain in rag.chain, persistence in rag.reports.
 """
 import json
 import logging
-import threading
 from uuid import uuid4
 
 import anyio
@@ -64,6 +63,38 @@ THEMES = [
     "Water Sanitation Hygiene",
 ]
 
+# Static fallback country list — the canonical country names as they appear in the
+# Pinecone metadata (snapshot of the indexed `country` values), so the $eq/$in filter
+# matches. Used when the scan cache is cold (e.g. a fresh deploy on Render's ephemeral
+# filesystem wipes .reports_cache.json) so the form's country dropdown is never empty.
+COUNTRIES = [
+    "Afghanistan", "Albania", "Algeria", "Angola", "Antigua and Barbuda", "Argentina",
+    "Armenia", "Azerbaijan", "Bahamas", "Bangladesh", "Barbados", "Belarus", "Belgium",
+    "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil",
+    "Brunei Darussalam", "Bulgaria", "Burkina Faso", "Burundi", "Cambodia", "Cameroon",
+    "Central African Republic", "Chad", "Chile", "China", "China - Taiwan Province",
+    "Colombia", "Comoros", "Costa Rica", "Croatia", "Cuba", "Cyprus", "Czechia",
+    "Côte d'Ivoire", "Democratic People's Republic of Korea",
+    "Democratic Republic of the Congo", "Djibouti", "Dominican Republic", "Ecuador",
+    "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Ethiopia", "Fiji",
+    "Gabon", "Gambia", "Georgia", "Ghana", "Greece", "Guam", "Guatemala", "Guinea",
+    "Guinea-Bissau", "Guyana", "Haiti", "Honduras", "Hungary", "India", "Indonesia", "Iran",
+    "Iraq", "Ireland", "Israel", "Italy", "Jamaica", "Japan", "Jordan", "Kazakhstan",
+    "Kenya", "Kyrgyzstan", "Lao People's Democratic Republic", "Latvia", "Lebanon",
+    "Lesotho", "Libya", "Lithuania", "Madagascar", "Malawi", "Malaysia", "Mali",
+    "Mauritania", "Mexico", "Micronesia", "Moldova", "Mongolia", "Montenegro", "Morocco",
+    "Mozambique", "Myanmar", "Namibia", "Nepal", "Niger", "Nigeria", "Norway", "Oman",
+    "Pakistan", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland",
+    "Republic of Korea", "Romania", "Russian Federation", "Rwanda",
+    "Saint Vincent and the Grenadines", "Sao Tome and Principe", "Saudi Arabia", "Senegal",
+    "Serbia", "Sierra Leone", "Slovakia", "Solomon Islands", "Somalia", "South Africa",
+    "South Sudan", "Sri Lanka", "Sudan", "Suriname", "Syrian Arab Republic", "Tajikistan",
+    "Thailand", "Timor-Leste", "Togo", "Tonga", "Trinidad and Tobago", "Türkiye", "Uganda",
+    "Ukraine", "United Republic of Tanzania", "United States of America", "Uruguay",
+    "Uzbekistan", "Vanuatu", "Venezuela", "Viet Nam", "World", "Yemen", "Zambia", "Zimbabwe",
+    "occupied Palestinian territory", "the Republic of North Macedonia",
+]
+
 
 class ReportRequest(BaseModel):
     country: str = Field(..., min_length=1, max_length=120)
@@ -88,13 +119,11 @@ def _no_docs_message(req: ReportRequest) -> str:
 
 
 def _countries() -> list[str]:
-    """Distinct indexed countries for the form. Lazily kicks off a one-off scan if
-    the cache is empty (e.g. fresh start), returning empty this call — populated on
-    a later request. The scan is lock-guarded so concurrent calls don't overlap."""
-    countries = analytics.distinct_countries()
-    if not countries and not analytics.is_computing():
-        threading.Thread(target=analytics.rebuild_documents, daemon=True).start()
-    return countries
+    """Country options for the form. Prefer the indexed-derived list when the scan
+    cache is warm (precise, data-backed); fall back to the static COUNTRIES snapshot
+    when the cache is cold — e.g. a fresh deploy on Render's ephemeral filesystem — so
+    the dropdown is never empty and report generation is never blocked."""
+    return analytics.distinct_countries() or COUNTRIES
 
 
 @router.get("/reports/options")

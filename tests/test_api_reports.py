@@ -189,6 +189,16 @@ class TestReportEndpoints:
         assert body["countries"] == ["Sudan", "Yemen"]
         assert "Health" in body["themes"]
 
+    def test_options_cold_cache_falls_back_to_static(self):
+        # Fresh deploy: scan cache empty → distinct_countries() == [] → the dropdown
+        # must still be populated from the static COUNTRIES snapshot (never empty).
+        with patch("ingestion.analytics.distinct_countries", return_value=[]):
+            r = _client().get("/reports/options")
+        assert r.status_code == 200
+        countries = r.json()["countries"]
+        assert len(countries) > 100
+        assert "Sudan" in countries and "Yemen" in countries
+
     def test_stream_then_persist_and_list(self):
         async def mock_astream(*args, **kwargs):
             yield "## Summary\n"
