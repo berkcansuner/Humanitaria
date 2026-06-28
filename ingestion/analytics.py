@@ -26,7 +26,6 @@ logger = logging.getLogger(__name__)
 
 TOP_N = 15
 UNKNOWN = "(unknown)"
-OTHER = "(other)"
 # fetch() puts ids in the request URI; ~1000 ids → HTTP 414 (backfill_source_urls.py:40).
 _FETCH_BATCH = 50
 # The scan is latency-bound (one fetch per 50 docs, hundreds of batches), so run the
@@ -38,36 +37,45 @@ _lock = threading.Lock()
 
 # --- pure aggregation (no Pinecone — fully unit-testable) --------------------
 
-def _rank(counter: Counter) -> List[dict]:
-    """Top-N by count desc then key asc (deterministic), with the remainder folded
-    into a single trailing ``(other)`` row."""
+def _rank(counter: Counter) -> dict:
+    """Top-N entries by count desc then key asc, plus a long-tail summary. No
+    catch-all ``(other)`` bar — the caller shows a 'top N of M' caption instead."""
     ordered = sorted(counter.items(), key=lambda kv: (-kv[1], kv[0]))
-    rows = [{"key": k, "count": c} for k, c in ordered[:TOP_N]]
-    remainder = sum(c for _, c in ordered[TOP_N:])
-    if remainder:
-        rows.append({"key": OTHER, "count": remainder})
-    return rows
-
-
-def _chrono(counter: Counter, key_name: str) -> List[dict]:
-    """Full series sorted chronologically by key, with ``(unknown)`` pushed last."""
-    items = sorted(counter.items(), key=lambda kv: (kv[0] == UNKNOWN, kv[0]))
-    return [{key_name: k, "count": c} for k, c in items]
-
-
-def _month_of(date: str) -> str:
-    return date[:7] if (len(date) >= 7 and date[4] == "-") else UNKNOWN
+    return {
+        "items": [{"key": k, "count": c} for k, c in ordered[:TOP_N]],
+        "distinct": len(ordered),
+        "tail_count": sum(c for _, c in ordered[TOP_N:]),
+    }
 
 
 def _year_of(date: str) -> str:
     return date[:4] if (len(date) >= 4 and date[:4].isdigit()) else UNKNOWN
 
 
-def aggregate_breakdown(metadatas: Iterable[dict]) -> dict:
+def _years(counter: Counter, min_year: Optional[int]) -> List[dict]:
+    """Year rows newest-first. Years before *min_year* fold into one
+    'before {min_year}' row; ``(unknown)`` trails. min_year=None shows every year."""
+    recent, earlier, unknown = {}, 0, 0
+    for year, count in counter.items():
+        if year == UNKNOWN:
+            unknown += count
+        elif min_year is not None and int(year) < min_year:
+            earlier += count
+        else:
+            recent[year] = count
+    rows = [{"year": y, "count": recent[y]} for y in sorted(recent, reverse=True)]
+    if earlier:
+        rows.append({"year": f"before {min_year}", "count": earlier})
+    if unknown:
+        rows.append({"year": UNKNOWN, "count": unknown})
+    return rows
+
+
+def aggregate_breakdown(metadatas: Iterable[dict], min_year: Optional[int] = None) -> dict:
     """Tally distinct-report breakdowns. Each input is ONE document's metadata
-    (already deduped to its ``_0`` chunk)."""
+    (already deduped to its ``_0`` chunk). Years before *min_year* are grouped."""
     by_source, by_country, by_theme, by_format = Counter(), Counter(), Counter(), Counter()
-    by_month, by_year = Counter(), Counter()
+    by_year: Counter = Counter()
     total = 0
     for md in metadatas:
         md = md or {}
@@ -76,17 +84,14 @@ def aggregate_breakdown(metadatas: Iterable[dict]) -> dict:
         by_country[md.get("country") or UNKNOWN] += 1
         by_theme[md.get("theme") or UNKNOWN] += 1
         by_format[md.get("format") or UNKNOWN] += 1
-        date = md.get("date") or ""
-        by_month[_month_of(date)] += 1
-        by_year[_year_of(date)] += 1
+        by_year[_year_of(md.get("date") or "")] += 1
     return {
         "total_documents": total,
         "by_source": _rank(by_source),
         "by_country": _rank(by_country),
         "by_theme": _rank(by_theme),
         "by_format": _rank(by_format),
-        "by_month": _chrono(by_month, "month"),
-        "by_year": _chrono(by_year, "year"),
+        "by_year": _years(by_year, min_year),
     }
 
 
@@ -151,7 +156,8 @@ def compute_breakdown() -> bool:
         store = get_store()
         namespace = store.namespace
         logger.info("Breakdown scan starting (namespace=%r)", namespace)
-        data = aggregate_breakdown(_collect_metadata(store.index, namespace))
+        data = aggregate_breakdown(_collect_metadata(store.index, namespace),
+                                   min_year=datetime.now(timezone.utc).year - 5)
         data["namespace"] = namespace or ""
         data["computed_at"] = datetime.now(timezone.utc).isoformat()
         _state.data = data

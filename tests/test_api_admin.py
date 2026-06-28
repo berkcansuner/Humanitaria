@@ -195,7 +195,7 @@ def test_compute_breakdown_scans_zero_chunks_and_caches():
     assert state["data"]["total_documents"] == 3
     assert state["computed_at"] is not None
     assert state["last_error"] is None
-    assert {r["key"]: r["count"] for r in state["data"]["by_source"]} == {"OCHA": 2, "WFP": 1}
+    assert {r["key"]: r["count"] for r in state["data"]["by_source"]["items"]} == {"OCHA": 2, "WFP": 1}
 
 
 def test_compute_breakdown_records_error_and_keeps_data():
