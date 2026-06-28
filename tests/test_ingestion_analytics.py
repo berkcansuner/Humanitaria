@@ -1,74 +1,124 @@
-"""Tests for the pure breakdown aggregation (ingestion/analytics.py)."""
-from ingestion.analytics import aggregate_breakdown, TOP_N, UNKNOWN
+"""Tests for the pure reports-list helpers + cache persistence (ingestion/analytics.py)."""
+from unittest.mock import patch
+
+import pytest
+
+from ingestion import analytics
+from ingestion.analytics import (
+    build_documents, slice_documents, DOC_FIELDS, DEFAULT_PAGE, MAX_PAGE,
+)
 
 
-def test_counts_per_dimension():
-    docs = [
-        {"source": "OCHA", "country": "Sudan", "theme": "Health", "format": "Situation Report", "date": "2024-03-10"},
-        {"source": "OCHA", "country": "Sudan", "theme": "Food", "format": "News", "date": "2024-03-22"},
-        {"source": "WFP", "country": "Yemen", "theme": "Food", "format": "News", "date": "2023-11-01"},
-    ]
-    out = aggregate_breakdown(docs)
-    assert out["total_documents"] == 3
-    assert {r["key"]: r["count"] for r in out["by_source"]["items"]} == {"OCHA": 2, "WFP": 1}
-    assert {r["key"]: r["count"] for r in out["by_country"]["items"]} == {"Sudan": 2, "Yemen": 1}
-    assert {r["key"]: r["count"] for r in out["by_format"]["items"]} == {"News": 2, "Situation Report": 1}
-    assert {r["year"]: r["count"] for r in out["by_year"]} == {"2024": 2, "2023": 1}
+@pytest.fixture(autouse=True)
+def _reset_state():
+    """The reports cache is a module global; give each test a clean slate."""
+    analytics._state = analytics.ReportsCache()
+    yield
+    analytics._state = analytics.ReportsCache()
 
 
-def test_rank_summary_replaces_other_bar():
-    # 17 distinct sources, 1 doc each → top 15 items + tail summary, NO synthetic (other) row.
-    docs = [{"source": f"org{i:02d}", "date": "2024-01-01"} for i in range(17)]
-    rank = aggregate_breakdown(docs)["by_source"]
-    assert len(rank["items"]) == TOP_N
-    assert rank["distinct"] == 17
-    assert rank["tail_count"] == 2
-    assert all(r["key"].startswith("org") for r in rank["items"])  # no "(other)" key
+# --- build_documents (reports list rows, newest-first) ----------------------
+
+def test_build_documents_newest_first():
+    docs = build_documents([
+        {"date": "2024-01-05", "title": "A"},
+        {"date": "2024-03-22", "title": "B"},
+        {"date": "2023-11-01", "title": "C"},
+    ])
+    assert [d["date"] for d in docs] == ["2024-03-22", "2024-01-05", "2023-11-01"]
 
 
-def test_rank_no_tail_when_within_top_n():
-    docs = [{"source": f"org{i}", "date": "2024-01-01"} for i in range(5)]
-    rank = aggregate_breakdown(docs)["by_source"]
-    assert rank["distinct"] == 5
-    assert rank["tail_count"] == 0
-    assert len(rank["items"]) == 5
+def test_build_documents_tie_break_title_case_insensitive():
+    docs = build_documents([
+        {"date": "2024-01-01", "title": "banana"},
+        {"date": "2024-01-01", "title": "Apple"},
+        {"date": "2024-01-01", "title": "cherry"},
+    ])
+    assert [d["title"] for d in docs] == ["Apple", "banana", "cherry"]
 
 
-def test_missing_fields_go_to_unknown():
-    out = aggregate_breakdown([{"date": ""}, {"source": "", "country": None}])
-    assert {r["key"]: r["count"] for r in out["by_source"]["items"]}[UNKNOWN] == 2
-    assert {r["key"]: r["count"] for r in out["by_country"]["items"]}[UNKNOWN] == 2
-    assert {r["year"]: r["count"] for r in out["by_year"]}[UNKNOWN] == 2
+def test_build_documents_missing_date_sorts_last():
+    docs = build_documents([
+        {"date": "", "title": "no date"},
+        {"date": "2024-01-01", "title": "dated"},
+    ])
+    assert [d["title"] for d in docs] == ["dated", "no date"]
 
 
-def test_years_newest_first_and_grouped_before_min_year():
-    docs = (
-        [{"date": "2026-01-01"}] * 2
-        + [{"date": "2024-05-01"}] * 3
-        + [{"date": "2019-01-01"}] * 4   # before min_year 2021 → grouped
-        + [{"date": "2010-01-01"}]       # before min_year → grouped
+def test_build_documents_keeps_only_doc_fields_and_coerces_none():
+    [row] = build_documents([{
+        "date": "2024-01-01", "title": "T", "url": "u", "source": "S",
+        "country": None, "doc_id": "id1", "theme": "Health", "date_ts": 20240101,
+    }])
+    assert set(row) == set(DOC_FIELDS)          # no theme/date_ts leak
+    assert row["country"] == ""                 # None → ""
+
+
+# --- slice_documents (filter + paginate) ------------------------------------
+
+def _rows(n):
+    return build_documents(
+        [{"title": f"t{i:02d}", "date": "2024-01-01", "doc_id": f"d{i}"} for i in range(n)]
     )
-    years = aggregate_breakdown(docs, min_year=2021)["by_year"]
-    assert years == [
-        {"year": "2026", "count": 2},
-        {"year": "2024", "count": 3},
-        {"year": "before 2021", "count": 5},
-    ]
 
 
-def test_years_ungrouped_when_no_min_year():
-    docs = [{"date": "2026-01-01"}, {"date": "2010-01-01"}]
-    years = aggregate_breakdown(docs)["by_year"]
-    assert years == [{"year": "2026", "count": 1}, {"year": "2010", "count": 1}]
+def test_slice_documents_paginates_with_full_total():
+    rows = _rows(10)
+    page = slice_documents(rows, offset=0, limit=3)
+    assert page["total"] == 10
+    assert len(page["items"]) == 3
+    assert [r["doc_id"] for r in page["items"]] == ["d0", "d1", "d2"]
+    last = slice_documents(rows, offset=9, limit=3)
+    assert last["total"] == 10
+    assert [r["doc_id"] for r in last["items"]] == ["d9"]   # partial last page
 
 
-def test_deterministic_tie_break_by_key_asc():
-    items = aggregate_breakdown([{"source": "b"}, {"source": "a"}])["by_source"]["items"]
-    assert [r["key"] for r in items] == ["a", "b"]
+def test_slice_documents_search_filters_title_source_country():
+    rows = build_documents([
+        {"title": "Flood report", "source": "OCHA", "country": "Sudan", "date": "2024-03-01", "doc_id": "a"},
+        {"title": "Drought update", "source": "WFP", "country": "Yemen", "date": "2024-02-01", "doc_id": "b"},
+    ])
+    assert [r["doc_id"] for r in slice_documents(rows, q="FLOOD")["items"]] == ["a"]   # title, case-insensitive
+    assert [r["doc_id"] for r in slice_documents(rows, q="wfp")["items"]] == ["b"]     # source
+    assert [r["doc_id"] for r in slice_documents(rows, q="yemen")["items"]] == ["b"]   # country
+    assert slice_documents(rows, q="zzz")["total"] == 0
 
 
-def test_empty_input():
-    out = aggregate_breakdown([])
-    assert out["total_documents"] == 0
-    assert out["by_source"] == {"items": [], "distinct": 0, "tail_count": 0}
-    assert out["by_year"] == []
+def test_slice_documents_clamps_offset_and_limit():
+    rows = _rows(5)
+    out = slice_documents(rows, offset=-5, limit=9999)
+    assert out["offset"] == 0
+    assert out["limit"] == MAX_PAGE
+    assert slice_documents(rows, limit=0)["limit"] == 1
+
+
+def test_slice_documents_empty_query_returns_all():
+    out = slice_documents(_rows(7), q="", limit=DEFAULT_PAGE)
+    assert out["total"] == 7
+    assert len(out["items"]) == 7
+
+
+# --- disk persistence round-trip --------------------------------------------
+
+def test_cache_persist_round_trip(tmp_path):
+    cache = tmp_path / ".reports_cache.json"
+    docs = build_documents([
+        {"date": "2024-02-01", "title": "B", "doc_id": "b"},
+        {"date": "2024-03-01", "title": "A", "doc_id": "a"},
+    ])
+    with patch.object(analytics, "_cache_path", return_value=cache):
+        analytics._state = analytics.ReportsCache(
+            documents=docs, computed_at="2024-03-02T00:00:00+00:00", namespace="ns")
+        analytics._save_cache()
+        assert cache.exists()
+        analytics._state = analytics.ReportsCache()   # simulate a restart
+        analytics.load_persisted()
+    assert [d["doc_id"] for d in analytics._state.documents] == ["a", "b"]   # newest-first preserved
+    assert analytics._state.computed_at == "2024-03-02T00:00:00+00:00"
+    assert analytics._state.namespace == "ns"
+
+
+def test_load_persisted_missing_file_is_noop(tmp_path):
+    with patch.object(analytics, "_cache_path", return_value=tmp_path / "nope.json"):
+        analytics.load_persisted()
+    assert analytics._state.documents is None

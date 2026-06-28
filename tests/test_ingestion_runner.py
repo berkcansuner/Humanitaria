@@ -20,9 +20,11 @@ def test_run_ingest_once_runs_and_writes_watermark(tmp_path):
     wm = tmp_path / ".last_ingest.json"
     stats = {"reports": IngestionStats(endpoint="reports", total=5, succeeded=4, failed=0, skipped=1)}
     with patch("ingestion.scheduler._watermark_path", return_value=wm), \
-         patch("ingestion.scheduler.run_pipeline", return_value=stats) as mock_pipeline:
+         patch("ingestion.scheduler.run_pipeline", return_value=stats) as mock_pipeline, \
+         patch("ingestion.analytics.rebuild_documents") as mock_rebuild:
         assert runner.run_ingest_once("manual") is True
         mock_pipeline.assert_called_once()
+        mock_rebuild.assert_called_once()   # a successful ingest refreshes the reports list
         assert wm.exists()
     state = runner.get_state()
     assert state["running"] is False

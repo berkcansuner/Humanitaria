@@ -98,88 +98,64 @@
 
         <section class="card">
           <div class="card-head">
-            <h2>Data breakdown</h2>
-            <span :class="['pill', bdComputing ? 'pill-run' : 'pill-idle']">
-              <span class="dot"></span>{{ bdComputing ? 'Scanning' : 'Idle' }}
+            <h2>Reports</h2>
+            <span :class="['pill', docComputing ? 'pill-run' : 'pill-idle']">
+              <span class="dot"></span>{{ docComputing ? 'Building' : 'Idle' }}
             </span>
           </div>
           <p class="muted">
-            Distinct reports in the active namespace, by source, date, country, theme and format.
-            Full Pinecone scan (~3–5 min); the result is cached until you refresh.
+            Indexed reports in the active namespace, newest first. The list builds
+            automatically and refreshes after each ingest.
           </p>
 
           <div class="bd-actions">
-            <button class="primary-btn" :disabled="bdComputing || refreshingBd" @click="onRefreshBreakdown">
-              <RefreshCw :size="16" :class="{ spin: bdComputing }" />
-              {{ bdComputing ? 'Scanning namespace…' : 'Refresh breakdown' }}
-            </button>
-            <span v-if="bdData" class="bd-meta">
-              {{ formatNumber(bdData.total_documents) }} reports · updated {{ formatDateTime(bdData.computed_at) }}
+            <input
+              v-model="docQuery"
+              class="doc-search"
+              type="search"
+              placeholder="Search title, source, country…"
+              aria-label="Search reports"
+              @input="onSearchInput"
+            />
+            <span v-if="docComputedAt" class="bd-meta">
+              {{ formatNumber(docTotal) }} reports · updated {{ formatDateTime(docComputedAt) }}
             </span>
-            <span v-if="bdStale" class="stale-chip">stale — refresh to update</span>
           </div>
 
-          <div v-if="breakdown?.last_error" class="error-box" role="alert">
-            Last scan failed: {{ breakdown.last_error }}
+          <div v-if="docError" class="error-box" role="alert">
+            Last scan failed: {{ docError }}
           </div>
 
-          <p v-if="!bdData && !bdComputing" class="muted bd-empty">
-            No breakdown yet — click “Refresh breakdown” to scan the index.
+          <p v-if="docComputing && !docItems.length" class="muted bd-empty">
+            Building the report list… this can take up to a minute.
+          </p>
+          <p v-else-if="!docItems.length" class="muted bd-empty">
+            <template v-if="docQuery.trim()">No reports match “{{ docQuery }}”.</template>
+            <template v-else>No reports found.</template>
           </p>
 
-          <template v-if="bdData">
-            <div class="bd-block">
-              <h3>By source</h3>
-              <div v-for="row in bdData.by_source.items" :key="'s-' + row.key" class="bar-row">
-                <span class="bar-label" :title="row.key">{{ row.key }}</span>
-                <span class="bar-track"><span class="bar-fill" :style="{ width: barWidth(row.count, bdSourceMax) }"></span></span>
-                <span class="bar-count">{{ formatNumber(row.count) }}</span>
-              </div>
-              <p v-if="tailNote(bdData.by_source, 'sources')" class="bd-tail">{{ tailNote(bdData.by_source, 'sources') }}</p>
-            </div>
+          <template v-if="docItems.length">
+            <table class="doc-table">
+              <thead>
+                <tr><th>Date</th><th>Title</th><th>Source</th><th>Country</th></tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in docItems" :key="row.doc_id">
+                  <td class="doc-date">{{ formatDate(row.date) }}</td>
+                  <td class="doc-title">
+                    <a v-if="row.url" :href="row.url" target="_blank" rel="noopener">{{ row.title || '(untitled)' }}</a>
+                    <span v-else>{{ row.title || '(untitled)' }}</span>
+                  </td>
+                  <td>{{ row.source || '—' }}</td>
+                  <td>{{ row.country || '—' }}</td>
+                </tr>
+              </tbody>
+            </table>
 
-            <div class="bd-block">
-              <h3>By country</h3>
-              <div v-for="row in bdData.by_country.items" :key="'c-' + row.key" class="bar-row">
-                <span class="bar-label" :title="row.key">{{ row.key }}</span>
-                <span class="bar-track"><span class="bar-fill" :style="{ width: barWidth(row.count, bdCountryMax) }"></span></span>
-                <span class="bar-count">{{ formatNumber(row.count) }}</span>
-              </div>
-              <p v-if="tailNote(bdData.by_country, 'countries')" class="bd-tail">{{ tailNote(bdData.by_country, 'countries') }}</p>
-            </div>
-
-            <div class="bd-block">
-              <h3>By year</h3>
-              <div v-for="row in bdData.by_year" :key="'y-' + row.year" class="bar-row">
-                <span class="bar-label" :title="row.year">{{ row.year }}</span>
-                <span class="bar-track"><span class="bar-fill" :style="{ width: barWidth(row.count, bdYearMax) }"></span></span>
-                <span class="bar-count">{{ formatNumber(row.count) }}</span>
-              </div>
-            </div>
-
-            <div class="bd-tables">
-              <div class="bd-block">
-                <h3>By theme</h3>
-                <table>
-                  <tbody>
-                    <tr v-for="row in bdData.by_theme.items" :key="'t-' + row.key">
-                      <td>{{ row.key }}</td><td>{{ formatNumber(row.count) }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-                <p v-if="tailNote(bdData.by_theme, 'themes')" class="bd-tail">{{ tailNote(bdData.by_theme, 'themes') }}</p>
-              </div>
-              <div class="bd-block">
-                <h3>By format</h3>
-                <table>
-                  <tbody>
-                    <tr v-for="row in bdData.by_format.items" :key="'f-' + row.key">
-                      <td>{{ row.key }}</td><td>{{ formatNumber(row.count) }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-                <p v-if="tailNote(bdData.by_format, 'formats')" class="bd-tail">{{ tailNote(bdData.by_format, 'formats') }}</p>
-              </div>
+            <div class="doc-pager">
+              <button class="pager-btn" :disabled="docOffset === 0" @click="prevPage">Prev</button>
+              <span class="pager-info">Page {{ docPage }} of {{ docPageCount }}</span>
+              <button class="pager-btn" :disabled="docPage >= docPageCount" @click="nextPage">Next</button>
             </div>
           </template>
         </section>
@@ -193,7 +169,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ArrowLeft, RefreshCw } from 'lucide-vue-next'
 import HelpingHandLogo from '../components/HelpingHandLogo.vue'
 import ThemeToggle from '../components/ThemeToggle.vue'
-import { getIngestStatus, triggerIngest, getIngestBreakdown, refreshIngestBreakdown } from '../utils/adminApi.js'
+import { getIngestStatus, triggerIngest, getIngestDocuments } from '../utils/adminApi.js'
 
 const status = ref(null)
 const loading = ref(true)
@@ -212,26 +188,21 @@ const namespaceLabel = computed(() => {
   return ns ? `“${ns}” namespace` : 'default namespace'
 })
 
-// --- breakdown (indexed-data analytics) ---
-const breakdown = ref(null)
-const refreshingBd = ref(false)
-let bdPollTimer = null
+// --- reports list (indexed documents, newest-first) ---
+const docState = ref(null)        // last /admin/ingest/documents response
+const docOffset = ref(0)
+const docLimit = ref(50)
+const docQuery = ref('')
+let docPollTimer = null
+let searchTimer = null
 
-const bdData = computed(() => breakdown.value?.data || null)
-const bdComputing = computed(() => breakdown.value?.computing === true)
-const bdStale = computed(() => breakdown.value?.stale === true)
-const bdSourceMax = computed(() => Math.max(1, ...(bdData.value?.by_source?.items || []).map((r) => r.count)))
-const bdCountryMax = computed(() => Math.max(1, ...(bdData.value?.by_country?.items || []).map((r) => r.count)))
-const bdYearMax = computed(() => Math.max(1, ...(bdData.value?.by_year || []).map((r) => r.count)))
-
-function barWidth(count, max) {
-  return max > 0 ? `${(count / max) * 100}%` : '0%'
-}
-
-function tailNote(rank, noun) {
-  if (!rank || rank.distinct <= rank.items.length) return ''
-  return `Top ${rank.items.length} of ${rank.distinct} ${noun} · ${formatNumber(rank.tail_count)} reports in the rest`
-}
+const docItems = computed(() => docState.value?.items || [])
+const docTotal = computed(() => docState.value?.total || 0)
+const docComputing = computed(() => docState.value?.computing === true)
+const docComputedAt = computed(() => docState.value?.computed_at || null)
+const docError = computed(() => docState.value?.last_error || null)
+const docPage = computed(() => Math.floor(docOffset.value / docLimit.value) + 1)
+const docPageCount = computed(() => Math.max(1, Math.ceil(docTotal.value / docLimit.value)))
 
 function formatNumber(n) {
   return typeof n === 'number' ? n.toLocaleString('en-US') : '—'
@@ -241,6 +212,12 @@ function formatDateTime(iso) {
   if (!iso) return '—'
   const d = new Date(iso)
   return isNaN(d.getTime()) ? '—' : d.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })
+}
+
+function formatDate(iso) {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  return isNaN(d.getTime()) ? iso : d.toLocaleDateString('en-GB', { dateStyle: 'medium' })
 }
 
 async function fetchStatus() {
@@ -283,44 +260,51 @@ function stopPolling() {
   if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
 }
 
-async function fetchBreakdown() {
+async function fetchDocuments() {
   try {
-    breakdown.value = await getIngestBreakdown()
+    docState.value = await getIngestDocuments({
+      q: docQuery.value, offset: docOffset.value, limit: docLimit.value,
+    })
     forbidden.value = false
-    if (bdComputing.value) startBdPolling()
-    else stopBdPolling()
+    // Poll only while a scan is rebuilding the list; stop once it settles.
+    if (docComputing.value) startDocPolling()
+    else stopDocPolling()
   } catch (e) {
-    if (e.status === 403) { forbidden.value = true; stopBdPolling() }
-    else actionError.value = 'Could not load the data breakdown.'
+    if (e.status === 403) { forbidden.value = true; stopDocPolling() }
+    else actionError.value = 'Could not load the reports list.'
   }
 }
 
-async function onRefreshBreakdown() {
-  refreshingBd.value = true
-  actionError.value = null
-  try {
-    await refreshIngestBreakdown()
-    await fetchBreakdown()
-    startBdPolling()
-  } catch (e) {
-    if (e.status === 409) await fetchBreakdown()        // a scan is already running — just sync
-    else if (e.status === 403) { forbidden.value = true; stopBdPolling() }
-    else actionError.value = 'Could not start the breakdown scan.'
-  } finally {
-    refreshingBd.value = false
-  }
+function onSearchInput() {
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    docOffset.value = 0          // a new query starts from the first page
+    fetchDocuments()
+  }, 300)
 }
 
-function startBdPolling() {
-  if (!bdPollTimer) bdPollTimer = setInterval(fetchBreakdown, 4000)
+function nextPage() {
+  if (docPage.value >= docPageCount.value) return
+  docOffset.value += docLimit.value
+  fetchDocuments()
 }
 
-function stopBdPolling() {
-  if (bdPollTimer) { clearInterval(bdPollTimer); bdPollTimer = null }
+function prevPage() {
+  if (docOffset.value === 0) return
+  docOffset.value = Math.max(0, docOffset.value - docLimit.value)
+  fetchDocuments()
 }
 
-onMounted(() => { fetchStatus(); fetchBreakdown() })
-onUnmounted(() => { stopPolling(); stopBdPolling() })
+function startDocPolling() {
+  if (!docPollTimer) docPollTimer = setInterval(fetchDocuments, 4000)
+}
+
+function stopDocPolling() {
+  if (docPollTimer) { clearInterval(docPollTimer); docPollTimer = null }
+}
+
+onMounted(() => { fetchStatus(); fetchDocuments() })
+onUnmounted(() => { stopPolling(); stopDocPolling(); if (searchTimer) clearTimeout(searchTimer) })
 </script>
 
 <style scoped>
@@ -605,95 +589,94 @@ onUnmounted(() => { stopPolling(); stopBdPolling() })
   color: var(--color-text-secondary);
 }
 
-.stale-chip {
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--color-error-accent);
-  background-color: var(--color-error-bg);
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
-}
-
 .bd-empty {
   margin-top: var(--space-4);
   margin-bottom: 0;
 }
 
-.bd-block {
-  margin-top: var(--space-5);
-}
-
-.bd-block h3 {
-  font-family: var(--font-display);
-  font-size: var(--text-base);
-  color: var(--color-text);
-  margin-bottom: var(--space-3);
-}
-
-.bar-row {
-  display: grid;
-  grid-template-columns: 140px 1fr 56px;
-  align-items: center;
-  gap: var(--space-3);
-  margin-bottom: var(--space-2);
-}
-
-.bar-label {
+.doc-search {
+  flex: 1;
+  min-width: 180px;
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-body);
   font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.bar-track {
-  height: 10px;
-  background-color: var(--color-surface-container-high);
-  border-radius: var(--radius-full);
-  overflow: hidden;
-}
-
-.bar-fill {
-  display: block;
-  height: 100%;
-  background-color: var(--color-accent);
-  border-radius: var(--radius-full);
-}
-
-.bar-count {
-  font-size: var(--text-sm);
-  font-variant-numeric: tabular-nums;
-  text-align: right;
   color: var(--color-text);
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
 }
 
-.bd-tail {
-  margin-top: var(--space-3);
-  font-size: var(--text-xs);
-  color: var(--color-muted);
+.doc-search:focus {
+  outline: none;
+  border-color: var(--color-accent);
 }
 
-.bd-tables {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: var(--space-5);
-}
-
-.bd-tables table {
+.doc-table {
   width: 100%;
   border-collapse: collapse;
+  margin-top: var(--space-4);
   font-size: var(--text-sm);
 }
 
-.bd-tables td {
-  padding: var(--space-1) var(--space-2);
+.doc-table th,
+.doc-table td {
+  text-align: left;
+  padding: var(--space-2);
   border-bottom: 1px solid var(--color-border);
+}
+
+.doc-table th {
+  color: var(--color-muted);
+  font-weight: 600;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.doc-date {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
+
+.doc-title a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.doc-title a:hover {
+  text-decoration: underline;
+}
+
+.doc-pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.pager-info {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
-.bd-tables td:last-child {
-  text-align: right;
-  color: var(--color-text-secondary);
+.pager-btn {
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  background-color: var(--color-surface-container-high);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.pager-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 @media (max-width: 640px) {

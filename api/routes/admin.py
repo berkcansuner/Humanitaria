@@ -8,7 +8,7 @@ import asyncio
 import logging
 
 import anyio
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from api.routes.auth import get_admin_user
 from ingestion import analytics
@@ -77,23 +77,23 @@ async def trigger_ingest(admin: dict = Depends(get_admin_user)):
     return {"status": "started"}
 
 
-@router.get("/ingest/breakdown")
-async def ingest_breakdown(admin: dict = Depends(get_admin_user)):
-    """Cached indexed-data breakdown for the active namespace (admin-only).
-
-    Never triggers a scan — returns the last computed result (``data`` is null
-    until the first refresh). Use POST /admin/ingest/breakdown/refresh to recompute.
-    """
-    return analytics.get_breakdown()
-
-
-@router.post("/ingest/breakdown/refresh", status_code=202)
-async def refresh_breakdown(admin: dict = Depends(get_admin_user)):
-    """Recompute the breakdown in the background (admin-only). 409 if a scan is
-    already running; the runner-style lock is the real overlap guard."""
-    if analytics.is_computing():
-        raise HTTPException(status_code=409, detail="A breakdown scan is already running")
-    task = asyncio.create_task(anyio.to_thread.run_sync(analytics.compute_breakdown))
-    _bg_tasks.add(task)
-    task.add_done_callback(_bg_tasks.discard)
-    return {"status": "started"}
+@router.get("/ingest/documents")
+async def ingest_documents(
+    admin: dict = Depends(get_admin_user),
+    q: str = Query("", max_length=200),
+    offset: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+):
+    """Paginated, optionally-filtered list of indexed reports for the active
+    namespace, newest-first (admin-only). The list auto-builds: if nothing is
+    cached yet (first visit / after an error) and no scan is running, a background
+    rebuild is kicked off and ``computing`` returns True so the UI can poll until
+    it lands. Afterwards each ingest refreshes the cache automatically."""
+    if analytics._state.documents is None and not analytics.is_computing():
+        task = asyncio.create_task(anyio.to_thread.run_sync(analytics.rebuild_documents))
+        _bg_tasks.add(task)
+        task.add_done_callback(_bg_tasks.discard)
+        page = analytics.get_documents(q=q, offset=offset, limit=limit)
+        page["computing"] = True   # the scan was just scheduled; tell the UI to poll
+        return page
+    return analytics.get_documents(q=q, offset=offset, limit=limit)

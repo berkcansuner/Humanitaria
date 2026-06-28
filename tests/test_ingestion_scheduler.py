@@ -29,7 +29,8 @@ class TestScheduledIngest:
     def test_scheduled_ingest_updates_watermark_on_success(self, tmp_path):
         wm_path = tmp_path / ".last_ingest.json"
         with patch("ingestion.scheduler._watermark_path", return_value=wm_path), \
-             patch("ingestion.scheduler.run_pipeline") as mock_pipeline:
+             patch("ingestion.scheduler.run_pipeline") as mock_pipeline, \
+             patch("ingestion.analytics.rebuild_documents"):
             mock_pipeline.return_value = {}
             from ingestion.scheduler import _run_scheduled_ingest
             _run_scheduled_ingest()
@@ -40,7 +41,8 @@ class TestScheduledIngest:
         wm_path = tmp_path / ".last_ingest.json"
         wm_path.write_text(json.dumps({"last_ingest": "2026-04-01"}), encoding="utf-8")
         with patch("ingestion.scheduler._watermark_path", return_value=wm_path), \
-             patch("ingestion.scheduler.run_pipeline") as mock_pipeline:
+             patch("ingestion.scheduler.run_pipeline") as mock_pipeline, \
+             patch("ingestion.analytics.rebuild_documents"):
             mock_pipeline.return_value = {}
             from ingestion.scheduler import _run_scheduled_ingest
             _run_scheduled_ingest()

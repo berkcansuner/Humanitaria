@@ -100,6 +100,7 @@ class Settings(BaseSettings):
     # Ingestion
     FETCH_PDF_CONTENT: bool = False   # download and index PDF attachments (slow, opt-in)
     INGEST_WATERMARK_PATH: str = "./.last_ingest.json"   # incremental ingest watermark
+    REPORTS_CACHE_PATH: str = "./.reports_cache.json"    # admin reports list (persisted scan)
     # Default freshness floor for manual ingest: when --date-from is not given,
     # ingest.py only pulls documents from the last N years (0 = no floor / full history).
     # Prevents re-pulling ancient ReliefWeb history (e.g. a country's reports back to the 1990s).

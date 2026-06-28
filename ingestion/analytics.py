@@ -1,31 +1,36 @@
-"""Indexed-data breakdowns for the admin panel.
+"""Indexed reports list for the admin panel.
 
-Counts DISTINCT REPORTS in the active Pinecone namespace, grouped by source,
-date (month + year), country, theme and format. Pinecone serverless can't
-aggregate server-side, so we scan the namespace (``index.list`` ids → keep one
-``_0`` chunk per doc → ``index.fetch`` metadata) and tally in Python. Mirrors the
-in-repo scan in ``scripts/backfill_source_urls.py`` (list + fetch, batch 50 to
-stay under the fetch-URI length limit / HTTP 414).
+Builds a newest-first list of the DISTINCT REPORTS in the active Pinecone
+namespace. Pinecone serverless can't sort/aggregate server-side, so we scan the
+namespace (``index.list`` ids → keep one ``_0`` chunk per doc → ``index.fetch``
+metadata) and order in Python. Mirrors the in-repo scan in
+``scripts/backfill_source_urls.py`` (list + fetch, batch 50 to stay under the
+fetch-URI length limit / HTTP 414).
 
 The scan is slow (~20-30s for ~30K vectors), so it runs in a background thread,
-caches the result in memory (lost on restart), and is exposed via a manual
-refresh. Concurrency is guarded by a non-blocking ``threading.Lock``, mirroring
+caches the result in memory AND on disk (``REPORTS_CACHE_PATH``) so a restart
+serves the list instantly, and is rebuilt automatically after each ingest.
+Concurrency is guarded by a non-blocking ``threading.Lock``, mirroring
 ``ingestion/runner.py``.
 """
+import json
 import logging
 import threading
-from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Iterable, List, Optional
 
+from config import get_settings
 from ingestion.store import get_store
 
 logger = logging.getLogger(__name__)
 
-TOP_N = 15
-UNKNOWN = "(unknown)"
+# Reports list (admin panel): lean per-document row, sorted newest-first.
+DOC_FIELDS = ("date", "title", "url", "source", "country", "doc_id")
+DEFAULT_PAGE = 50
+MAX_PAGE = 200
 # fetch() puts ids in the request URI; ~1000 ids → HTTP 414 (backfill_source_urls.py:40).
 _FETCH_BATCH = 50
 # The scan is latency-bound (one fetch per 50 docs, hundreds of batches), so run the
@@ -35,93 +40,96 @@ _FETCH_WORKERS = 32
 _lock = threading.Lock()
 
 
-# --- pure aggregation (no Pinecone — fully unit-testable) --------------------
+# --- pure list builders (no Pinecone — fully unit-testable) ------------------
 
-def _rank(counter: Counter) -> dict:
-    """Top-N entries by count desc then key asc, plus a long-tail summary. No
-    catch-all ``(other)`` bar — the caller shows a 'top N of M' caption instead."""
-    ordered = sorted(counter.items(), key=lambda kv: (-kv[1], kv[0]))
-    return {
-        "items": [{"key": k, "count": c} for k, c in ordered[:TOP_N]],
-        "distinct": len(ordered),
-        "tail_count": sum(c for _, c in ordered[TOP_N:]),
-    }
+def build_documents(metadatas: Iterable[dict]) -> List[dict]:
+    """One lean row per document for the admin Reports list, newest-first.
 
-
-def _year_of(date: str) -> str:
-    return date[:4] if (len(date) >= 4 and date[:4].isdigit()) else UNKNOWN
-
-
-def _years(counter: Counter, min_year: Optional[int]) -> List[dict]:
-    """Year rows newest-first. Years before *min_year* fold into one
-    'before {min_year}' row; ``(unknown)`` trails. min_year=None shows every year."""
-    recent, earlier, unknown = {}, 0, 0
-    for year, count in counter.items():
-        if year == UNKNOWN:
-            unknown += count
-        elif min_year is not None and int(year) < min_year:
-            earlier += count
-        else:
-            recent[year] = count
-    rows = [{"year": y, "count": recent[y]} for y in sorted(recent, reverse=True)]
-    if earlier:
-        rows.append({"year": f"before {min_year}", "count": earlier})
-    if unknown:
-        rows.append({"year": UNKNOWN, "count": unknown})
+    Each input is ONE document's metadata (already deduped to its ``_0`` chunk).
+    Rows carry only ``DOC_FIELDS`` (None → ""); sorted by ISO ``date`` descending
+    (missing dates sort last) then title ascending (case-insensitive)."""
+    rows = [{f: ((md or {}).get(f) or "") for f in DOC_FIELDS} for md in metadatas]
+    rows.sort(key=lambda r: r["title"].lower())          # stable secondary key
+    rows.sort(key=lambda r: r["date"], reverse=True)     # primary: newest first
     return rows
 
 
-def aggregate_breakdown(metadatas: Iterable[dict], min_year: Optional[int] = None) -> dict:
-    """Tally distinct-report breakdowns. Each input is ONE document's metadata
-    (already deduped to its ``_0`` chunk). Years before *min_year* are grouped."""
-    by_source, by_country, by_theme, by_format = Counter(), Counter(), Counter(), Counter()
-    by_year: Counter = Counter()
-    total = 0
-    for md in metadatas:
-        md = md or {}
-        total += 1
-        by_source[md.get("source") or UNKNOWN] += 1
-        by_country[md.get("country") or UNKNOWN] += 1
-        by_theme[md.get("theme") or UNKNOWN] += 1
-        by_format[md.get("format") or UNKNOWN] += 1
-        by_year[_year_of(md.get("date") or "")] += 1
-    return {
-        "total_documents": total,
-        "by_source": _rank(by_source),
-        "by_country": _rank(by_country),
-        "by_theme": _rank(by_theme),
-        "by_format": _rank(by_format),
-        "by_year": _years(by_year, min_year),
-    }
+def slice_documents(docs: List[dict], q: str = "", offset: int = 0,
+                    limit: int = DEFAULT_PAGE) -> dict:
+    """Filter *docs* by case-insensitive substring *q* over title/source/country,
+    then return the ``[offset, offset+limit)`` window plus the pre-window match
+    total. ``offset`` clamps to ≥0 and ``limit`` to ``[1, MAX_PAGE]``."""
+    q = (q or "").strip().lower()
+    if q:
+        docs = [d for d in docs
+                if q in d["title"].lower() or q in d["source"].lower() or q in d["country"].lower()]
+    total = len(docs)
+    offset = max(0, offset)
+    limit = max(1, min(limit, MAX_PAGE))
+    return {"total": total, "offset": offset, "limit": limit, "items": docs[offset:offset + limit]}
 
 
 # --- scan + cache + lock controller (mirrors ingestion/runner.py) ------------
 
 @dataclass
-class BreakdownState:
+class ReportsCache:
     computing: bool = False
-    stale: bool = False
     namespace: Optional[str] = None
-    computed_at: Optional[str] = None   # ISO8601 UTC of the last SUCCESSFUL compute
+    computed_at: Optional[str] = None   # ISO8601 UTC of the last SUCCESSFUL rebuild
     last_error: Optional[str] = None
-    data: Optional[dict] = None         # aggregate payload; None until first success
+    documents: Optional[list] = None    # newest-first per-doc rows; None until first success
 
 
-_state = BreakdownState()
+_state = ReportsCache()
 
 
 def is_computing() -> bool:
     return _state.computing
 
 
-def get_breakdown() -> dict:
-    return asdict(_state)
+def get_documents(q: str = "", offset: int = 0, limit: int = DEFAULT_PAGE) -> dict:
+    """Paginated, optionally-filtered slice of the cached document list. Never
+    scans (``items`` is empty until the first rebuild populates the cache)."""
+    page = slice_documents(_state.documents or [], q=q, offset=offset, limit=limit)
+    page.update(computed_at=_state.computed_at, computing=_state.computing,
+                namespace=_state.namespace, last_error=_state.last_error)
+    return page
 
 
-def mark_stale() -> None:
-    """Flag the cached breakdown as out-of-date (e.g. after an ingest). The
-    last-known data is kept so the UI can still show it; a refresh recomputes."""
-    _state.stale = True
+# --- disk persistence (mirrors the watermark helpers in scheduler.py) --------
+
+def _cache_path() -> Path:
+    return Path(get_settings().REPORTS_CACHE_PATH)
+
+
+def _save_cache() -> None:
+    path = _cache_path()
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({
+            "computed_at": _state.computed_at,
+            "namespace": _state.namespace,
+            "documents": _state.documents or [],
+        }), encoding="utf-8")
+    except Exception as exc:
+        logger.error("Failed to save reports cache: %s", exc)
+
+
+def load_persisted() -> None:
+    """Load the on-disk reports cache into memory (called at startup) so the list
+    is served instantly after a restart. Missing/corrupt file is a no-op."""
+    path = _cache_path()
+    if not path.exists():
+        return
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        _state.documents = data.get("documents")
+        _state.computed_at = data.get("computed_at")
+        _state.namespace = data.get("namespace")
+        logger.info("Loaded persisted reports cache: %d documents",
+                    len(_state.documents or []))
+    except Exception as exc:
+        logger.warning("Failed to load reports cache: %s", exc)
 
 
 def _collect_metadata(index, namespace) -> List[dict]:
@@ -144,10 +152,11 @@ def _collect_metadata(index, namespace) -> List[dict]:
     return metadatas
 
 
-def compute_breakdown() -> bool:
-    """Scan the active namespace and cache the breakdown. Returns False immediately
-    if a scan is already running (no overlap); True once this call has run (success
-    or handled error). On error the previously cached data is left intact."""
+def rebuild_documents() -> bool:
+    """Scan the active namespace, rebuild the cached reports list and persist it to
+    disk. Returns False immediately if a scan is already running (no overlap); True
+    once this call has run (success or handled error). On error the previously
+    cached list is left intact."""
     if not _lock.acquire(blocking=False):
         return False
     try:
@@ -155,20 +164,17 @@ def compute_breakdown() -> bool:
         _state.last_error = None
         store = get_store()
         namespace = store.namespace
-        logger.info("Breakdown scan starting (namespace=%r)", namespace)
-        data = aggregate_breakdown(_collect_metadata(store.index, namespace),
-                                   min_year=datetime.now(timezone.utc).year - 5)
-        data["namespace"] = namespace or ""
-        data["computed_at"] = datetime.now(timezone.utc).isoformat()
-        _state.data = data
-        _state.namespace = data["namespace"]
-        _state.computed_at = data["computed_at"]
-        _state.stale = False
-        logger.info("Breakdown scan complete: %d documents", data["total_documents"])
+        logger.info("Reports scan starting (namespace=%r)", namespace)
+        documents = build_documents(_collect_metadata(store.index, namespace))
+        _state.documents = documents
+        _state.namespace = namespace or ""
+        _state.computed_at = datetime.now(timezone.utc).isoformat()
+        _save_cache()
+        logger.info("Reports scan complete: %d documents", len(documents))
         return True
     except Exception as exc:
         _state.last_error = str(exc)
-        logger.error("Breakdown scan failed: %s", exc)
+        logger.error("Reports scan failed: %s", exc)
         return True
     finally:
         _state.computing = False

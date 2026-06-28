@@ -16,12 +16,12 @@ def client():
 
 
 @pytest.fixture(autouse=True)
-def _reset_breakdown_state():
-    """The analytics cache is a module global (like runner._state); give each test a
-    clean slate so breakdown cases don't leak into one another."""
-    analytics._state = analytics.BreakdownState()
+def _reset_reports_cache():
+    """The reports cache is a module global (like runner._state); give each test a
+    clean slate so cases don't leak into one another."""
+    analytics._state = analytics.ReportsCache()
     yield
-    analytics._state = analytics.BreakdownState()
+    analytics._state = analytics.ReportsCache()
 
 
 def _admin_settings(emails):
@@ -131,80 +131,100 @@ def test_trigger_starts_when_idle(client):
         runner._lock.release()
 
 
-# --- /admin/ingest/breakdown ------------------------------------------------
+# --- ingestion.rebuild_documents (the reports scan) -------------------------
 
-def test_breakdown_forbidden_for_non_admin(client):
-    with patch("api.routes.auth.get_settings", return_value=_admin_settings("")):
-        assert client.get("/admin/ingest/breakdown").status_code == 403
-        assert client.post("/admin/ingest/breakdown/refresh").status_code == 403
-
-
-def test_breakdown_empty_before_any_scan(client):
-    with patch("api.routes.auth.get_settings", return_value=_admin_settings("test@example.com")):
-        r = client.get("/admin/ingest/breakdown")
-    assert r.status_code == 200
-    body = r.json()
-    assert body["data"] is None
-    assert body["computing"] is False
-
-
-def test_breakdown_refresh_conflict_when_computing(client):
-    with patch("api.routes.auth.get_settings", return_value=_admin_settings("test@example.com")), \
-         patch("api.routes.admin.analytics.is_computing", return_value=True):
-        r = client.post("/admin/ingest/breakdown/refresh")
-    assert r.status_code == 409
-
-
-def test_breakdown_refresh_starts_when_idle(client):
-    # Hold the analytics lock so the spawned compute is a guaranteed no-op (returns
-    # False without scanning Pinecone) whenever the loop runs it — off the network.
-    assert analytics._lock.acquire(blocking=False)
-    try:
-        analytics._state.computing = False
-        with patch("api.routes.auth.get_settings", return_value=_admin_settings("test@example.com")):
-            r = client.post("/admin/ingest/breakdown/refresh")
-        assert r.status_code == 202
-        assert r.json() == {"status": "started"}
-    finally:
-        analytics._lock.release()
-
-
-def test_compute_breakdown_scans_zero_chunks_and_caches():
+def test_rebuild_documents_scans_zero_chunks_and_caches(tmp_path):
     mock_store = MagicMock()
     mock_store.namespace = ""
     mock_store.index.list.return_value = [["docA_0", "docA_1", "docB_0"], ["docC_0"]]
     meta = {
-        "docA_0": {"source": "OCHA", "country": "Sudan", "date": "2024-01-05"},
-        "docB_0": {"source": "WFP", "country": "Yemen", "date": "2024-02-10"},
-        "docC_0": {"source": "OCHA", "country": "Sudan", "date": "2023-12-01"},
+        "docA_0": {"source": "OCHA", "country": "Sudan", "date": "2024-01-05", "doc_id": "docA"},
+        "docB_0": {"source": "WFP", "country": "Yemen", "date": "2024-02-10", "doc_id": "docB"},
+        "docC_0": {"source": "OCHA", "country": "Sudan", "date": "2023-12-01", "doc_id": "docC"},
     }
 
     def _fetch(ids, namespace):
         return SimpleNamespace(vectors={i: SimpleNamespace(metadata=meta[i]) for i in ids})
 
     mock_store.index.fetch.side_effect = _fetch
-    with patch("ingestion.analytics.get_store", return_value=mock_store):
-        assert analytics.compute_breakdown() is True
+    cache = tmp_path / ".reports_cache.json"
+    with patch("ingestion.analytics.get_store", return_value=mock_store), \
+         patch.object(analytics, "_cache_path", return_value=cache):
+        assert analytics.rebuild_documents() is True
 
     # Only the _0 chunk of each doc is fetched (docA_1 is filtered out before fetch).
     fetched = [i for call in mock_store.index.fetch.call_args_list for i in call.kwargs["ids"]]
     assert "docA_1" not in fetched
     assert set(fetched) == {"docA_0", "docB_0", "docC_0"}
 
-    state = analytics.get_breakdown()
-    assert state["data"]["total_documents"] == 3
-    assert state["computed_at"] is not None
-    assert state["last_error"] is None
-    assert {r["key"]: r["count"] for r in state["data"]["by_source"]["items"]} == {"OCHA": 2, "WFP": 1}
+    # One scan (index.list once), list newest-first, cache persisted to disk.
+    assert mock_store.index.list.call_count == 1
+    assert [d["doc_id"] for d in analytics._state.documents] == ["docB", "docA", "docC"]
+    assert analytics._state.computed_at is not None
+    assert analytics._state.last_error is None
+    assert cache.exists()
 
 
-def test_compute_breakdown_records_error_and_keeps_data():
+def test_rebuild_documents_records_error_and_keeps_data(tmp_path):
     mock_store = MagicMock()
     mock_store.namespace = ""
     mock_store.index.list.side_effect = RuntimeError("pinecone list failed")
-    with patch("ingestion.analytics.get_store", return_value=mock_store):
-        assert analytics.compute_breakdown() is True
-    state = analytics.get_breakdown()
-    assert "pinecone list failed" in state["last_error"]
-    assert state["data"] is None
-    assert state["computing"] is False
+    with patch("ingestion.analytics.get_store", return_value=mock_store), \
+         patch.object(analytics, "_cache_path", return_value=tmp_path / "c.json"):
+        assert analytics.rebuild_documents() is True
+    assert "pinecone list failed" in analytics._state.last_error
+    assert analytics._state.documents is None
+    assert analytics._state.computing is False
+
+
+# --- /admin/ingest/documents ------------------------------------------------
+
+def test_documents_forbidden_for_non_admin(client):
+    with patch("api.routes.auth.get_settings", return_value=_admin_settings("")):
+        assert client.get("/admin/ingest/documents").status_code == 403
+
+
+def test_documents_lazy_triggers_build_when_empty(client):
+    # Empty cache + idle → the GET schedules a background build and reports computing.
+    # Hold the analytics lock so the scheduled rebuild is a guaranteed no-op (returns
+    # False without scanning Pinecone) whenever the loop runs it — off the network.
+    assert analytics._lock.acquire(blocking=False)
+    try:
+        with patch("api.routes.auth.get_settings", return_value=_admin_settings("test@example.com")):
+            r = client.get("/admin/ingest/documents")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["computing"] is True
+        assert body["items"] == []
+        assert body["total"] == 0
+    finally:
+        analytics._lock.release()
+
+
+def test_documents_no_trigger_when_already_computing(client):
+    analytics._state.computing = True   # a scan is already running
+    with patch("api.routes.auth.get_settings", return_value=_admin_settings("test@example.com")), \
+         patch("api.routes.admin.analytics.rebuild_documents") as mock_rebuild:
+        r = client.get("/admin/ingest/documents")
+    assert r.status_code == 200
+    assert r.json()["computing"] is True
+    mock_rebuild.assert_not_called()
+
+
+def test_documents_paging_and_search_from_cache(client):
+    # Seed the cache directly so the lazy trigger does not fire (documents is not None).
+    analytics._state.documents = analytics.build_documents([
+        {"title": "Flood report", "source": "OCHA", "country": "Sudan", "date": "2024-03-01", "doc_id": "a", "url": "https://x/a"},
+        {"title": "Drought update", "source": "WFP", "country": "Yemen", "date": "2024-02-01", "doc_id": "b", "url": ""},
+        {"title": "Cholera brief", "source": "WHO", "country": "Sudan", "date": "2024-01-01", "doc_id": "c", "url": ""},
+    ])
+    analytics._state.computed_at = "2024-03-02T00:00:00+00:00"
+    with patch("api.routes.auth.get_settings", return_value=_admin_settings("test@example.com")):
+        page = client.get("/admin/ingest/documents?offset=0&limit=2").json()
+        assert page["total"] == 3
+        assert page["computing"] is False                          # cache present → no rebuild
+        assert [d["doc_id"] for d in page["items"]] == ["a", "b"]   # newest-first window
+        page2 = client.get("/admin/ingest/documents?offset=2&limit=2").json()
+        assert [d["doc_id"] for d in page2["items"]] == ["c"]       # partial last page
+        by_country = client.get("/admin/ingest/documents?q=sudan").json()
+        assert [d["doc_id"] for d in by_country["items"]] == ["a", "c"]

@@ -38,6 +38,14 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning("Startup warmup failed (non-fatal, will retry on first request): %s", exc)
 
+    # Load the persisted reports cache so the admin list is served instantly after
+    # a restart (the first-ever build is kicked off lazily by the documents route).
+    try:
+        from ingestion import analytics
+        analytics.load_persisted()
+    except Exception as exc:
+        logger.warning("Failed to load reports cache (non-fatal): %s", exc)
+
     # Start background ingestion scheduler
     scheduler = None
     if settings.INGEST_SCHEDULE_HOURS > 0:

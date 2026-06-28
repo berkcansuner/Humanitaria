@@ -13,10 +13,7 @@ export function triggerIngest() {
   return request('/admin/ingest/trigger', { method: 'POST' })
 }
 
-export function getIngestBreakdown() {
-  return request('/admin/ingest/breakdown', { method: 'GET' })
-}
-
-export function refreshIngestBreakdown() {
-  return request('/admin/ingest/breakdown/refresh', { method: 'POST' })
+export function getIngestDocuments({ q = '', offset = 0, limit = 50 } = {}) {
+  const params = new URLSearchParams({ q, offset, limit })
+  return request(`/admin/ingest/documents?${params}`, { method: 'GET' })
 }

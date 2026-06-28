@@ -26,6 +26,9 @@ chroma_db/
 # Ingest watermark
 .last_ingest.json
 
+# Admin reports list cache (persisted Pinecone scan)
+.reports_cache.json
+
 # SQLite conversation store
 conversations.db
 conversations.db-wal
