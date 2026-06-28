@@ -247,8 +247,9 @@ select:focus-visible {
 }
 
 /* Citation chips ([n]) injected into rendered markdown by renderMarkdown().
-   Global because the element is created in v-html content. */
-.message-content .cite {
+   Global because the element is created in v-html content — used by both the chat
+   answers (.message-content) and the M&E reports (.report-content). */
+.cite {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -268,7 +269,7 @@ select:focus-visible {
   transition: background-color 0.15s, color 0.15s;
 }
 
-.message-content .cite:hover {
+.cite:hover {
   background-color: var(--color-accent);
   color: var(--color-on-accent);
 }

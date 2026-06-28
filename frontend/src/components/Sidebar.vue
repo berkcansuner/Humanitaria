@@ -30,18 +30,23 @@
           <div v-if="secondary" class="who-org">{{ secondary }}</div>
         </div>
       </div>
-      <router-link
-        v-if="auth.user?.is_admin"
-        to="/admin/ingestion"
-        class="admin-link"
-        title="Ingestion admin"
-        aria-label="Ingestion admin"
-      >
-        <Shield :size="16" />
-      </router-link>
-      <button type="button" class="logout-btn" title="Log out" aria-label="Log out" @click="logout">
-        <LogOut :size="16" />
-      </button>
+      <div class="foot-actions">
+        <router-link to="/reports" class="admin-link" title="M&amp;E reports" aria-label="M&amp;E reports">
+          <FileText :size="16" />
+        </router-link>
+        <router-link
+          v-if="auth.user?.is_admin"
+          to="/admin/ingestion"
+          class="admin-link"
+          title="Ingestion admin"
+          aria-label="Ingestion admin"
+        >
+          <Shield :size="16" />
+        </router-link>
+        <button type="button" class="logout-btn" title="Log out" aria-label="Log out" @click="logout">
+          <LogOut :size="16" />
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -49,7 +54,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { Plus, Search, LogOut, Shield } from 'lucide-vue-next'
+import { Plus, Search, LogOut, Shield, FileText } from 'lucide-vue-next'
 import ConversationList from './ConversationList.vue'
 import { filterConversations, groupConversationsByDate } from '../utils/conversationOps.js'
 import { auth, doLogout } from '../utils/authStore.js'
@@ -208,7 +213,6 @@ async function logout() {
 }
 
 .logout-btn {
-  margin-left: auto;
   flex-shrink: 0;
   display: grid;
   place-items: center;
@@ -228,7 +232,6 @@ async function logout() {
 }
 
 .admin-link {
-  margin-left: auto;
   flex-shrink: 0;
   display: grid;
   place-items: center;
@@ -245,10 +248,12 @@ async function logout() {
   color: var(--color-text);
 }
 
-/* When the admin link is present it owns the right-alignment; the logout button
-   then sits beside it instead of grabbing its own margin-left:auto. */
-.admin-link + .logout-btn {
-  margin-left: var(--space-1);
+/* Footer action icons (reports, admin, logout) right-align as one group. */
+.foot-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
 }
 
 /* ConversationList grows to fill the middle; the list itself scrolls. */

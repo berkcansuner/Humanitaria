@@ -10,7 +10,7 @@ from pathlib import Path
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from api.routes import chat, health, conversations, auth, admin
+from api.routes import chat, health, conversations, auth, admin, reports
 from api.limiter import limiter
 from config import get_settings
 
@@ -92,6 +92,7 @@ app.include_router(auth.router, tags=["auth"])
 app.include_router(chat.router, tags=["chat"])
 app.include_router(conversations.router, tags=["conversations"])
 app.include_router(admin.router, tags=["admin"])
+app.include_router(reports.router, tags=["reports"])
 
 frontend_dir = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 if frontend_dir.exists():

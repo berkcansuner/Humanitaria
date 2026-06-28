@@ -63,6 +63,9 @@ class Settings(BaseSettings):
     # daha geniş bir alaka havuzunu recency ile yeniden sıralayıp en yeni raporları top-k'ya taşır.
     RECENCY_RERANK_POOL: int = 10      # boost'ta ara alaka havuzu (sonra recency ile top-k'ya inilir)
     RECENCY_BOOST_FACTOR: float = 0.6  # boost'ta recency ağırlığı (varsayılan DATE_DECAY_FACTOR 0.3'e karşı)
+    # M&E durum raporu: tek bir brief'e sentezlenecek doküman sayısı. Chat'in
+    # TOP_K_RETRIEVAL'ından yüksek — bir rapor birden çok kaynağı kapsar.
+    REPORT_TOP_K: int = 12
 
     # CORS — comma-separated allowed origins
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000,http://localhost:8000"

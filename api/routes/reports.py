@@ -1,0 +1,195 @@
+"""M&E situation-report endpoints.
+
+Generate a structured situation brief from multiple ReliefWeb documents (streamed
+over SSE, then auto-saved), and manage the user's saved reports. Reuses the chat
+retrieval/context/streaming primitives; report-specific retrieval + directive live
+in rag.report_service, the LLM chain in rag.chain, persistence in rag.reports.
+"""
+import json
+import logging
+import threading
+from uuid import uuid4
+
+import anyio
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, Field
+from typing import Literal, Optional
+from sse_starlette.sse import EventSourceResponse, ServerSentEvent
+
+from config import get_settings
+from ingestion import analytics
+from rag import reports as report_store
+from rag.chain import build_report_chain
+from rag.rag_context import _build_context_and_sources, _filter_cited_sources
+from rag.report_service import (
+    build_report_directive, report_title, retrieve_for_report,
+)
+from api.routes.auth import get_current_user
+from api.routes.chat import (
+    _BUSY_MESSAGE, _GENERIC_ERROR_MESSAGE, _astream_with_retry, _is_high_demand,
+)
+from api.limiter import limiter
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter()
+
+
+def _rate_limit() -> str:
+    return get_settings().RATE_LIMIT
+
+
+# ReliefWeb 'theme' facet (canonical theme.name strings — must match the indexed
+# metadata for the $or(theme/themes) filter to hit). Stable, small, curated list.
+THEMES = [
+    "Agriculture",
+    "Camp Coordination and Camp Management",
+    "Climate Change and Environment",
+    "Contributions",
+    "Coordination",
+    "Disaster Management",
+    "Education",
+    "Food and Nutrition",
+    "Gender",
+    "Health",
+    "HIV/Aids",
+    "Humanitarian Financing",
+    "Logistics and Telecommunications",
+    "Mine Action",
+    "Peacekeeping and Peacebuilding",
+    "Protection and Human Rights",
+    "Recovery and Reconstruction",
+    "Safety and Security",
+    "Shelter and Non-Food Items",
+    "Water Sanitation Hygiene",
+]
+
+
+class ReportRequest(BaseModel):
+    country: str = Field(..., min_length=1, max_length=120)
+    theme: Optional[str] = None
+    date_from: Optional[str] = None
+    date_to: Optional[str] = None
+    language: Literal["tr", "en"] = "en"
+
+
+def _no_docs_message(req: ReportRequest) -> str:
+    scope = req.theme or ("tüm sektörler" if req.language == "tr" else "all sectors")
+    window = f"{req.date_from or '…'}–{req.date_to or '…'}"
+    if req.language == "tr":
+        return (
+            f"**{req.country}** · {scope} · {window} için eşleşen belge bulunamadı.\n\n"
+            "Farklı bir ülke, tema veya tarih aralığı deneyin."
+        )
+    return (
+        f"No matching documents were found for **{req.country}** · {scope} · {window}.\n\n"
+        "Try a different country, theme, or date range."
+    )
+
+
+def _countries() -> list[str]:
+    """Distinct indexed countries for the form. Lazily kicks off a one-off scan if
+    the cache is empty (e.g. fresh start), returning empty this call — populated on
+    a later request. The scan is lock-guarded so concurrent calls don't overlap."""
+    countries = analytics.distinct_countries()
+    if not countries and not analytics.is_computing():
+        threading.Thread(target=analytics.rebuild_documents, daemon=True).start()
+    return countries
+
+
+@router.get("/reports/options")
+async def report_options(user: dict = Depends(get_current_user)):
+    countries = await anyio.to_thread.run_sync(_countries)
+    return {"countries": countries, "themes": THEMES}
+
+
+@router.post("/reports/stream")
+@limiter.limit(_rate_limit)
+async def report_stream(request: Request, req: ReportRequest, user: dict = Depends(get_current_user)):
+    async def event_generator():
+        try:
+            docs = await retrieve_for_report(req.country, req.theme, req.date_from, req.date_to)
+            if not docs:
+                yield ServerSentEvent(
+                    event="token",
+                    data=json.dumps({"content": _no_docs_message(req)}, ensure_ascii=False),
+                )
+                yield ServerSentEvent(event="done", data="{}")
+                return
+
+            context, source_dicts = _build_context_and_sources(docs)
+            directive = build_report_directive(
+                req.country, req.theme, req.date_from, req.date_to, len(docs), req.language
+            )
+            chain = build_report_chain()
+
+            full = ""
+            async for chunk in _astream_with_retry(
+                chain, {"question": directive, "context": context},
+                get_settings().CHAT_LLM_MAX_RETRIES,
+            ):
+                if chunk:
+                    full += chunk
+                    yield ServerSentEvent(
+                        event="token",
+                        data=json.dumps({"content": chunk}, ensure_ascii=False),
+                    )
+
+            sources = _filter_cited_sources(full, source_dicts)
+
+            # Auto-save only after a full stream (an aborted report is never written).
+            report_id = str(uuid4())
+            title = report_title(req.country, req.theme, req.date_from, req.date_to)
+            await anyio.to_thread.run_sync(
+                lambda: report_store.create_report(
+                    report_id, user["id"], country=req.country, theme=req.theme,
+                    date_from=req.date_from, date_to=req.date_to, language=req.language,
+                    title=title, content=full, sources=sources, doc_count=len(docs),
+                )
+            )
+
+            if sources:
+                yield ServerSentEvent(
+                    event="sources",
+                    data=json.dumps({"sources": sources}, ensure_ascii=False),
+                )
+            yield ServerSentEvent(
+                event="saved",
+                data=json.dumps({"report_id": report_id, "title": title}, ensure_ascii=False),
+            )
+            yield ServerSentEvent(event="done", data="{}")
+
+        except Exception as e:
+            logger.error("Report stream error: %s", e)
+            friendly = _BUSY_MESSAGE if _is_high_demand(e) else _GENERIC_ERROR_MESSAGE
+            yield ServerSentEvent(
+                event="error",
+                data=json.dumps({"message": friendly}, ensure_ascii=False),
+            )
+            yield ServerSentEvent(event="done", data="{}")
+
+    return EventSourceResponse(event_generator())
+
+
+# NB: the bare "/reports" path is the SPA client route (served by the catch-all in
+# api/main.py). Keeping the list under "/reports/list" avoids the API shadowing the
+# page — mirrors the admin split (client "/admin/ingestion" vs API "/admin/ingest/*").
+@router.get("/reports/list")
+async def list_reports(user: dict = Depends(get_current_user)):
+    rows = await anyio.to_thread.run_sync(report_store.list_reports, user["id"])
+    return {"reports": rows}
+
+
+@router.get("/reports/{report_id}")
+async def get_report(report_id: str, user: dict = Depends(get_current_user)):
+    if not await anyio.to_thread.run_sync(report_store.is_owner, user["id"], report_id):
+        raise HTTPException(status_code=404, detail="Report not found")
+    return await anyio.to_thread.run_sync(report_store.get_report, report_id)
+
+
+@router.delete("/reports/{report_id}")
+async def delete_report(report_id: str, user: dict = Depends(get_current_user)):
+    if not await anyio.to_thread.run_sync(report_store.is_owner, user["id"], report_id):
+        raise HTTPException(status_code=404, detail="Report not found")
+    await anyio.to_thread.run_sync(report_store.delete_report, report_id)
+    return {"ok": True}

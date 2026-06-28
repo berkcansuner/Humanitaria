@@ -67,10 +67,18 @@ def _build_pinecone_filter(filters: Optional[Dict[str, Any]]) -> Optional[Dict[s
     conditions: Dict[str, Any] = {}
     for key, val in filters.items():
         if key == "date":
-            date_from = val.get("$gte") if isinstance(val, dict) else None
-            ts = _date_to_int(date_from) if date_from else None
-            if ts is not None:
-                conditions["date_ts"] = {"$gte": ts}
+            # Lower bound ($gte) and optional upper bound ($lte) → numeric date_ts
+            # range. Report queries pass a full from–to window; chat passes $gte only.
+            rng: Dict[str, Any] = {}
+            if isinstance(val, dict):
+                ts_from = _date_to_int(val["$gte"]) if val.get("$gte") else None
+                ts_to = _date_to_int(val["$lte"]) if val.get("$lte") else None
+                if ts_from is not None:
+                    rng["$gte"] = ts_from
+                if ts_to is not None:
+                    rng["$lte"] = ts_to
+            if rng:
+                conditions["date_ts"] = rng
         elif key == "country":
             full_name = _COUNTRY_RELIEFWEB_ALIASES.get(val)
             if full_name:
@@ -177,9 +185,19 @@ def apply_date_filter(docs: List[Document], date_filter: Optional[Dict[str, Any]
     if not date_filter or not isinstance(date_filter, dict):
         return docs
     date_from = date_filter.get("$gte", "")
-    if not date_from:
+    date_to = date_filter.get("$lte", "")
+    if not date_from and not date_to:
         return docs
-    return [d for d in docs if d.metadata.get("date", "0000-00-00") >= date_from]
+
+    def _in_range(d) -> bool:
+        dt = d.metadata.get("date", "0000-00-00")
+        if date_from and dt < date_from:
+            return False
+        if date_to and dt > date_to:
+            return False
+        return True
+
+    return [d for d in docs if _in_range(d)]
 
 
 def rerank_by_recency(docs: List[Document], decay_factor: Optional[float] = None) -> List[Document]:

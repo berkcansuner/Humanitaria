@@ -78,3 +78,62 @@ def build_chain() -> Runnable:
 
     _chain = prompt | llm | StrOutputParser()
     return _chain
+
+
+_REPORT_SYSTEM_PROMPT = (
+    "You are a humanitarian monitoring & evaluation (M&E) analyst. You write a concise "
+    "situation report by synthesizing the supplied ReliefWeb documents.\n"
+    "Rules:\n"
+    "1. Use ONLY information from the documents in the Context. Never fabricate, infer beyond "
+    "the text, or use outside knowledge.\n"
+    "2. Write the ENTIRE report — including section headings — in the language requested in the "
+    "instruction (Turkish or English).\n"
+    "3. Structure the report in Markdown with these sections, in order:\n"
+    "   - A level-2 heading ('## ') for the executive summary: 3-5 sentences on the overall situation.\n"
+    "   - A level-2 heading ('## ') for key findings. When the report covers multiple sectors, group "
+    "findings under level-3 ('### ') sector subheadings (e.g. Health, Food security, Protection, "
+    "Displacement, WASH, Education); for a single sector use a flat bullet list. Use concise bullets.\n"
+    "4. Each document in the Context starts with an [n] number. Append [n] at the end of each statement "
+    "drawn from a document (e.g. '... were displaced [2].'). Cite ONLY numbers that actually appear as "
+    "[n] in the Context; never invent a citation number. Cite the documents you actually used.\n"
+    "5. Do NOT add a 'Sources' section — sources are shown separately in the interface.\n"
+    "6. Be factual and neutral; prefer concrete figures, dates, and locations when present. If the "
+    "documents conflict or coverage is thin, note it briefly."
+)
+
+_report_chain: Runnable | None = None
+
+
+def build_report_chain() -> Runnable:
+    """Cached LCEL chain for M&E situation reports (prompt | llm | StrOutputParser).
+
+    Mirrors build_chain but with a report-specific system prompt and no chat
+    history (each report is a one-shot synthesis). Input keys:
+      - question: str  — the report directive (country / sector / period / language)
+      - context:  str  — the numbered retrieved document text
+    """
+    global _report_chain
+    if _report_chain is not None:
+        return _report_chain
+
+    settings = get_settings()
+    llm_kwargs = dict(
+        model=settings.GEMINI_LLM_MODEL,
+        base_url=settings.GEMINI_BASE_URL,
+        api_key=settings.GEMINI_API_KEY,
+        temperature=0.2,
+        streaming=True,
+        timeout=settings.CHAT_LLM_TIMEOUT,
+        max_retries=0,
+    )
+    if settings.GEMINI_REASONING_EFFORT:
+        llm_kwargs["reasoning_effort"] = settings.GEMINI_REASONING_EFFORT
+    llm = ChatOpenAI(**llm_kwargs)
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", _REPORT_SYSTEM_PROMPT + "\n\nContext:\n{context}"),
+        ("human", "{question}"),
+    ])
+
+    _report_chain = prompt | llm | StrOutputParser()
+    return _report_chain

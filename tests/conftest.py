@@ -23,7 +23,8 @@ def _isolate_conversation_db(tmp_path):
     settings = MagicMock()
     settings.CONVERSATION_DB_PATH = str(tmp_path / "conversations.db")
     with patch("rag.conversations.get_settings", return_value=settings), \
-         patch("rag.users.get_settings", return_value=settings):
+         patch("rag.users.get_settings", return_value=settings), \
+         patch("rag.reports.get_settings", return_value=settings):
         yield
 
 
@@ -85,4 +86,5 @@ def _reset():
     _session_histories.clear()
     _llm_cache.clear()
     _chain_mod._chain = None
+    _chain_mod._report_chain = None
     _qp._llm_extractor = None

@@ -96,6 +96,15 @@ def get_documents(q: str = "", offset: int = 0, limit: int = DEFAULT_PAGE) -> di
     return page
 
 
+def distinct_countries() -> List[str]:
+    """Sorted distinct non-empty country names from the cached reports list.
+
+    Powers the M&E report form's country dropdown so it offers only countries that
+    actually have indexed data. Empty until the first scan populates the cache."""
+    seen = {(d.get("country") or "").strip() for d in (_state.documents or [])}
+    return sorted(c for c in seen if c)
+
+
 # --- disk persistence (mirrors the watermark helpers in scheduler.py) --------
 
 def _cache_path() -> Path:
