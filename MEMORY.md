@@ -4,13 +4,15 @@
 > Bu bir tarihçe değil — GÜNCEL durumu yansıtır. Eskiyen satırları sil/değiştir.
 > "Nerede kalmıştık?" sorusunun cevabı burasıdır.
 
-**Son güncelleme:** 2026-06-28
+**Son güncelleme:** 2026-06-28 (admin breakdown → otomatik Reports listesi + chat header çizgisi)
 
 ---
 
 ## 📍 NEREDE KALMIŞTIK (10 saniyelik özet)
 
 **🌐 ARTIK CANLI YAYINDA: https://humanitaria.onrender.com** (Render ücretsiz Docker; servis adı `humanitaria`, id `srv-d8uo70ernols73fgenr0`, bölge frankfurt). Uygulama sağlıklı: Gemini `gemini-2.5-flash` (chat) + `gemini-embedding-001` (3072) + Pinecone (default namespace, **31.628 vektör**) — tamamen bulut. Vue 3 SPA, zorunlu giriş (Google + e-posta/şifre), **Humanitaria** markası. GitHub: **`berkcansuner/Humanitaria`** (master = origin, güncel).
+
+**Bu seansta (2026-06-28) — admin breakdown SÖKÜLDÜ → otomatik Reports listesi + chat header çizgisi (master'a push → Render canlı):** 2 UI iterasyonu (plan-mode). (1) Chat header'daki "Humanitaria/Humanitarian Information Assistant" altı çizgisi kaldırıldı (`ChatView.vue` `.topbar border-bottom`; yalnız chat). (2) Admin "Data breakdown" çubuk grafikleri **TAMAMEN KALDIRILDI** → yerine **en güncelden eskiye, aranabilir, sayfalı Reports listesi** (Tarih·Başlık[ReliefWeb link]·Kaynak·Ülke), **manuel Refresh butonu YOK** (otomatik yüklenir). `aggregate_breakdown`+`GET/POST /admin/ingest/breakdown*` silindi → yeni `GET /admin/ingest/documents`; liste `.reports_cache.json`'a kalıcı yazılır (restart sonrası anında) + ingest sonrası otomatik tazelenir; tarama **OKUMA** birimi (dolu YAZMA kotasından etkilenmez). **368 backend** + build yeşil. Detay: aşağıdaki bölüm.
 
 **Bu seansta (2026-06-27) bitirilen — frontend P2 cilası + citation prompt (PR #3 MERGED → master, Render deploy):** self-host font (`@fontsource`, Google Fonts `<link>` kaldırıldı) · liste/geçmiş skeleton (paylaşılan `.skeleton` shimmer) · `/auth/me` 401→200 (anonim'de 200+`null`) · citation menzil-dışı `[n]` kısıtı. 4 commit (`6d20c73`,`2874796`,`ce47b9b`,`8ae82f7`), TDD, **340 backend + 76 frontend yeşil**, canlı doğrulandı (Chrome DevTools). **Token birleştirme ARTIK YAPILDI** (ayrı seans, commit `608a043` → master'a merge+push, Render auto-deploy — bkz. aşağıdaki CSS token isim birliği bölümü). Detay: aşağıdaki 2026-06-27 bölümü.
 
@@ -25,6 +27,22 @@
 2. **🔴 EN BÜYÜK AÇIK DEV İŞİ — Pinecone write-kotası TIKALI; kota 2026-07-01'de yenilenir** (dashboard-onaylı: "Writes paused until July 1, 2026"). v2 rollout **8/10 ülkede** kaldı (Palestine + Ukraine eksik); index 3 namespace birden tutuyor (v2 68.936 + default 31.628 + pilot 4.892 = ~1.51 GB / 2 GB free, **~%75**). **1 Temmuz'da/sonrasında:** v2'yi tamamla → 10-ülke A/B → **cutover** (`PINECONE_NAMESPACE=v2`) → eski `default`+`pilot` temizliği (depolama ~%55'e iner). **Tam prosedür plan dosyasında park edildi** (`~/.claude/plans/nerede-kalm-t-k-noble-star.md`); 1 Temmuz hatırlatıcısı kuruldu.
 3. ~~**Ertelenen frontend yapısal P2 — token birleştirme**~~ → **YAPILDI (2026-06-27, commit `608a043` → master'a MERGE+PUSH, Render auto-deploy):** marketing `.mkt-scope` token'ları chat `--color-*`/`--font-*` adlandırmasına taşındı, farklı değerler scoped override olarak KORUNDU → **sıfır görsel değişiklik** (computed-value ile kanıtlandı). Yalnız `marketing.css`+`AuthView.vue`; chat dokunulmadı. 76 frontend test yeşil. ("200+ px" notu abartıydı → gerçekte ~30 tam-eşleşen tek-değer çevrildi.)
 4. **(Opsiyonel)** Cloudflare gateway'e `cf-aig-authorization` ekleme. **(Citation prompt cilası — menzil-dışı `[n]` kısıtı — 2026-06-27'de YAPILDI, PR #3.)**
+
+---
+
+## ✅ UYGULANAN — Admin breakdown → otomatik Reports listesi + chat header çizgisi (2026-06-28, master'a push → Render canlı)
+
+Kullanıcı 2 UI isteği (2 iterasyon, plan-mode + AskUserQuestion ile kararlar):
+1. **Chat header çizgisi kaldırıldı** — `frontend/src/views/ChatView.vue` `.topbar` `border-bottom` silindi (YALNIZ chat; `AdminIngestionView.vue`'deki aynı çizgi korundu).
+2. **Admin "Data breakdown" → otomatik "Reports" listesi.** Kaynak/ülke/yıl/tema/format çubuk grafikleri TAMAMEN KALDIRILDI (kullanıcı "beğenmiyorum"); yerine **en güncelden eskiye, aranabilir, sayfalı (50/sayfa) rapor listesi** — Tarih · Başlık (ReliefWeb url'sine link) · Kaynak · Ülke. **Manuel "Refresh" butonu YOK** (kullanıcı isteği) → liste otomatik gelir.
+
+**Backend (`ingestion/analytics.py` reports'a sadeleşti):**
+- **SİLİNDİ (ölü kod):** `aggregate_breakdown`, `_rank`, `_year_of`, `_years`, `TOP_N`, `UNKNOWN`, `get_breakdown`, `mark_stale`. `BreakdownState`→**`ReportsCache`**, `compute_breakdown`→**`rebuild_documents`**. Saf `build_documents` (newest-first, DOC_FIELDS) + `slice_documents` (q/offset/limit) korundu.
+- `api/routes/admin.py`: `GET/POST /admin/ingest/breakdown*` **SİLİNDİ** → yeni **`GET /admin/ingest/documents?q=&offset=&limit=`** (sayfalı/aramalı, salt-okuma, admin-gated). **Lazy-build:** cache boş & tarama yoksa GET arka planda `rebuild_documents` tetikler + `computing=true` döner (buton gerekmez; hata sonrası tekrar dener).
+- **Kalıcılık (watermark deseni):** tarama sonucu `.reports_cache.json`'a yazılır (`REPORTS_CACHE_PATH`, gitignore'da). `api/main.py` lifespan'da `load_persisted()` → restart sonrası liste ANINDA. `ingestion/runner.py`: ingest başarısı sonrası `mark_stale()` yerine `rebuild_documents()` → otomatik tazeleme + diske yaz.
+- **Kota güvenli:** Reports taraması `index.list`+`fetch` = **OKUMA** birimi → dolu olan YAZMA kotasından (bkz. 1 Temmuz) etkilenmez, şimdi canlıda çalışır.
+
+**Doğrulama:** **368 backend** (breakdown aggregate testleri kaldırıldı; reports build/slice/persistence round-trip + lazy-trigger + ingest-sonrası rebuild eklendi; runner/scheduler başarı-yolu testlerine `rebuild_documents` mock'u — yoksa gerçek Pinecone taramasında ASILIYORDU) + `npm run build` temiz. Yerel e2e: uvicorn **:8000** (`.env` 8000 portu — `FRONTEND_URL`/`GOOGLE_REDIRECT_URI` localhost:8000; 8001 DEĞİL), `/admin/ingest/breakdown`→text/html SPA fallback (route gitti ✓), `/admin/ingest/documents`→401 (gate ✓). Canlı veri sağlam: default 31.628 + v2 68.936 + pilot 4.892 = 105.456. Commit+push master → Render auto-deploy.
 
 ---
 
@@ -234,7 +252,7 @@ AMA son 2 ülke (**Palestine kısmi, Ukraine 0**) yazılamadı: **Pinecone AYLIK
 **KARAR (2026-06-27 güncel): kota 2026-07-01'de yenilenir (Pinecone dashboard onayladı: "Writes paused until July 1, 2026"). O tarihe kadar BEKLE.** Bu arada app default'ta çalışıyor; 1 Temmuz'da plan dosyasındaki cutover prosedürü koşulacak (hatırlatıcı kuruldu).
 
 **RESUME TARİFİ (reset gelince, sırayla):**
-0. **(YENİ, kullanıcı isteği) Default namespace'i son-5-yıla indir:** `venv/Scripts/python.exe scripts/prune_old_vectors.py --before 2021-06-28 --apply` → 2021-06-28 öncesi ~7.197 chunk (~5.910 rapor) siler. Kota dolu olduğu için 1 Temmuz öncesi 429 verir; reset sonrası çalışır. Sonra panelde "Refresh breakdown" + vektör sayısı ~24.4K'ya düşer.
+0. **(YENİ, kullanıcı isteği) Default namespace'i son-5-yıla indir:** `venv/Scripts/python.exe scripts/prune_old_vectors.py --before 2021-06-28 --apply` → 2021-06-28 öncesi ~7.197 chunk (~5.910 rapor) siler. Kota dolu olduğu için 1 Temmuz öncesi 429 verir; reset sonrası çalışır. Prune sonrası admin Reports listesi sonraki ingest'te (veya cache silinince) otomatik tazelenir; vektör sayısı ~24.4K'ya düşer.
 1. `PINECONE_NAMESPACE=v2 ./venv/Scripts/python.exe scripts/ingest.py --country PSE UKR --date-from 2023-06-05 --limit 2000` → v2 = 10/10 olur (store'da artık 429-retry var; aynı 2023-06-05 penceresi = diğer 8 ülkeyle tutarlı). Önce stats al; kota gerçekten resetlendi mi diye tek-vektör test upsert ile kontrol et.
 2. v2 stats doğrula (PSE/UKR 0 failed) + 10-ülke A/B (v2 vs default).
 3. **CUTOVER:** `PINECONE_NAMESPACE=v2` → `config.py` default + `.env` → commit/push → app v2'ye geçer.
