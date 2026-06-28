@@ -174,6 +174,7 @@ onMounted(loadConversations)
   align-items: center;
   gap: 10px;
   min-width: 0;
+  text-decoration: none;
 }
 
 .brand-text {
