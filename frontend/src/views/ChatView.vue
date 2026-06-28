@@ -222,7 +222,7 @@ onMounted(loadConversations)
 .content {
   flex: 1;
   width: 100%;
-  max-width: var(--content-max-width);
+  max-width: 820px;
   margin: 0 auto;
   padding: var(--space-4) var(--space-5);
   overflow: hidden;

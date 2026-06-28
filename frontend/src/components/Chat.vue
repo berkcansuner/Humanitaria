@@ -426,7 +426,7 @@ function autoGrow() {
   const el = chatInput.value
   if (!el) return
   el.style.height = 'auto'
-  el.style.height = Math.min(el.scrollHeight, 160) + 'px'
+  el.style.height = Math.min(el.scrollHeight, 140) + 'px'
 }
 
 function onSuggestionApply(msg, values) {
@@ -530,9 +530,8 @@ watch(() => props.conversationId, async (newId) => {
 }
 
 .message-bubble {
-  padding: var(--space-4) var(--space-5);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-md);
+  padding: 12px 16px;
+  border-radius: 16px;
   line-height: 1.6;
 }
 
@@ -546,14 +545,13 @@ watch(() => props.conversationId, async (newId) => {
 .message.user .message-bubble {
   background-color: var(--color-tertiary);
   color: var(--color-on-tertiary);
-  border-radius: var(--radius-xl) var(--radius-sm) var(--radius-xl) var(--radius-xl);
-  box-shadow: none;
+  border-radius: 16px 4px 16px 16px;
 }
 
 .message.assistant .message-bubble {
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm) var(--radius-xl) var(--radius-xl) var(--radius-xl);
+  border-radius: 4px 16px 16px 16px;
 }
 
 /* Message-history skeleton: neutral placeholder bubbles with shimmering lines,
@@ -769,32 +767,33 @@ watch(() => props.conversationId, async (newId) => {
 .input-area {
   display: flex;
   align-items: flex-end;
-  gap: var(--space-3);
-  padding-top: var(--space-5);
-  border-top: 1px solid var(--color-border);
+  gap: 6px;
+  padding: 6px 6px 6px 16px;
+  border: 1px solid var(--color-outline);
+  border-radius: 16px;
+  background-color: var(--color-surface);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.input-area:focus-within {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-accent) 16%, transparent);
 }
 
 .chat-input {
   flex: 1;
   display: block;
-  padding: var(--space-3) var(--space-5);
+  padding: 8px 4px;
   font-family: var(--font-body);
-  font-size: var(--text-base);
+  font-size: 15px;
   line-height: 1.5;
-  border: 1px solid var(--color-outline);
-  border-radius: var(--radius-lg);
-  background-color: var(--color-surface);
+  border: none;
+  background-color: transparent;
   color: var(--color-text);
   outline: none;
   resize: none;
-  max-height: 160px;
+  max-height: 140px;
   overflow-y: auto;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.chat-input:focus {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-accent) 18%, transparent);
 }
 
 .chat-input::placeholder {
@@ -804,24 +803,25 @@ watch(() => props.conversationId, async (newId) => {
 
 .composer-hint {
   text-align: center;
-  font-size: var(--text-xs);
+  font-size: 11px;
   color: var(--color-muted);
   margin-top: var(--space-2);
   font-family: var(--font-mono);
   letter-spacing: 0.02em;
+  opacity: 0.75;
 }
 
 .send-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
+  width: 36px;
+  height: 36px;
   flex-shrink: 0;
   background-color: var(--color-accent-container);
   color: var(--color-on-accent);
   border: none;
-  border-radius: var(--radius-full);
+  border-radius: 10px;
   cursor: pointer;
   transition: background-color 0.2s, transform 0.15s;
 }
