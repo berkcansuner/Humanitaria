@@ -92,9 +92,12 @@
       <main class="report-main" ref="viewer" @click="onCiteClick">
         <template v-if="current">
           <div v-if="current.id" class="report-toolbar">
-            <a :href="`/reports/${current.id}/pdf`" class="pdf-btn" download>
-              <FileDown :size="15" /> Download PDF
-            </a>
+            <button type="button" class="pdf-btn" :disabled="pdfLoading" @click="downloadPdf">
+              <Loader2 v-if="pdfLoading" :size="15" class="spin" />
+              <FileDown v-else :size="15" />
+              {{ pdfLoading ? 'Preparing…' : 'Download PDF' }}
+            </button>
+            <span v-if="pdfError" class="pdf-error">{{ pdfError }}</span>
           </div>
           <div v-if="!current.content && generating" class="report-loading">
             <span class="skeleton skel-line"></span>
@@ -141,6 +144,9 @@ const generating = ref(false)
 const genError = ref('')
 const viewer = ref(null)
 const controller = ref(null)
+
+const pdfLoading = ref(false)
+const pdfError = ref('')
 
 const _iso = (d) => d.toISOString().slice(0, 10)
 
@@ -199,6 +205,38 @@ async function onDelete(id) {
     await loadList()
   } catch (e) {
     console.error('Failed to delete report:', e)
+  }
+}
+
+// Fetch the PDF as a blob (not a bare <a download>): shows a loading state while
+// the server renders / a cold free-tier instance wakes, and surfaces a clear error
+// instead of the browser's opaque "network error" download failure.
+async function downloadPdf() {
+  if (!current.value || !current.value.id || pdfLoading.value) return
+  pdfLoading.value = true
+  pdfError.value = ''
+  try {
+    const res = await fetch(`/reports/${current.value.id}/pdf`, { credentials: 'include' })
+    if (!res.ok) {
+      if (res.status === 401) { handleSessionExpired(); return }
+      throw new Error(`HTTP ${res.status}`)
+    }
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download =
+      ('Humanitaria_' + (current.value.title || 'report'))
+        .replace(/[^\w.-]+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '') + '.pdf'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 1500)
+  } catch (e) {
+    console.error('PDF download failed:', e)
+    pdfError.value = 'Could not download the PDF. Please try again.'
+  } finally {
+    pdfLoading.value = false
   }
 }
 
@@ -489,26 +527,38 @@ function onCiteClick(e) {
   max-width: 75ch;
   margin: 0 auto var(--space-3);
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: var(--space-2);
 }
 .pdf-btn {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
   padding: var(--space-2) var(--space-3);
+  font-family: var(--font-body);
   font-size: var(--text-sm);
   font-weight: 600;
   color: var(--color-text-secondary);
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
+  cursor: pointer;
   text-decoration: none;
   transition: background-color 0.15s, color 0.15s, border-color 0.15s;
 }
-.pdf-btn:hover {
+.pdf-btn:hover:not(:disabled) {
   background-color: var(--color-surface-container);
   color: var(--color-accent);
   border-color: var(--color-accent);
+}
+.pdf-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.pdf-error {
+  font-size: var(--text-xs);
+  color: var(--color-error);
 }
 
 .report-content {
