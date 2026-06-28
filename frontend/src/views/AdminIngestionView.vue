@@ -130,36 +130,30 @@
           <template v-if="bdData">
             <div class="bd-block">
               <h3>By source</h3>
-              <div v-for="row in bdData.by_source" :key="'s-' + row.key" class="bar-row">
+              <div v-for="row in bdData.by_source.items" :key="'s-' + row.key" class="bar-row">
                 <span class="bar-label" :title="row.key">{{ row.key }}</span>
                 <span class="bar-track"><span class="bar-fill" :style="{ width: barWidth(row.count, bdSourceMax) }"></span></span>
                 <span class="bar-count">{{ formatNumber(row.count) }}</span>
               </div>
+              <p v-if="tailNote(bdData.by_source, 'sources')" class="bd-tail">{{ tailNote(bdData.by_source, 'sources') }}</p>
             </div>
 
             <div class="bd-block">
               <h3>By country</h3>
-              <div v-for="row in bdData.by_country" :key="'c-' + row.key" class="bar-row">
+              <div v-for="row in bdData.by_country.items" :key="'c-' + row.key" class="bar-row">
                 <span class="bar-label" :title="row.key">{{ row.key }}</span>
                 <span class="bar-track"><span class="bar-fill" :style="{ width: barWidth(row.count, bdCountryMax) }"></span></span>
                 <span class="bar-count">{{ formatNumber(row.count) }}</span>
               </div>
+              <p v-if="tailNote(bdData.by_country, 'countries')" class="bd-tail">{{ tailNote(bdData.by_country, 'countries') }}</p>
             </div>
 
             <div class="bd-block">
-              <h3>By month</h3>
-              <div class="histogram">
-                <span
-                  v-for="b in bdData.by_month"
-                  :key="'m-' + b.month"
-                  class="hist-col"
-                  :style="{ height: barWidth(b.count, bdMonthMax) }"
-                  :title="`${b.month}: ${b.count}`"
-                ></span>
-              </div>
-              <div v-if="bdData.by_month.length" class="hist-axis">
-                <span>{{ bdData.by_month[0].month }}</span>
-                <span>{{ bdData.by_month[bdData.by_month.length - 1].month }}</span>
+              <h3>By year</h3>
+              <div v-for="row in bdData.by_year" :key="'y-' + row.year" class="bar-row">
+                <span class="bar-label" :title="row.year">{{ row.year }}</span>
+                <span class="bar-track"><span class="bar-fill" :style="{ width: barWidth(row.count, bdYearMax) }"></span></span>
+                <span class="bar-count">{{ formatNumber(row.count) }}</span>
               </div>
             </div>
 
@@ -168,31 +162,23 @@
                 <h3>By theme</h3>
                 <table>
                   <tbody>
-                    <tr v-for="row in bdData.by_theme" :key="'t-' + row.key">
+                    <tr v-for="row in bdData.by_theme.items" :key="'t-' + row.key">
                       <td>{{ row.key }}</td><td>{{ formatNumber(row.count) }}</td>
                     </tr>
                   </tbody>
                 </table>
+                <p v-if="tailNote(bdData.by_theme, 'themes')" class="bd-tail">{{ tailNote(bdData.by_theme, 'themes') }}</p>
               </div>
               <div class="bd-block">
                 <h3>By format</h3>
                 <table>
                   <tbody>
-                    <tr v-for="row in bdData.by_format" :key="'f-' + row.key">
+                    <tr v-for="row in bdData.by_format.items" :key="'f-' + row.key">
                       <td>{{ row.key }}</td><td>{{ formatNumber(row.count) }}</td>
                     </tr>
                   </tbody>
                 </table>
-              </div>
-              <div class="bd-block">
-                <h3>By year</h3>
-                <table>
-                  <tbody>
-                    <tr v-for="row in bdData.by_year" :key="'y-' + row.year">
-                      <td>{{ row.year }}</td><td>{{ formatNumber(row.count) }}</td>
-                    </tr>
-                  </tbody>
-                </table>
+                <p v-if="tailNote(bdData.by_format, 'formats')" class="bd-tail">{{ tailNote(bdData.by_format, 'formats') }}</p>
               </div>
             </div>
           </template>
@@ -234,12 +220,17 @@ let bdPollTimer = null
 const bdData = computed(() => breakdown.value?.data || null)
 const bdComputing = computed(() => breakdown.value?.computing === true)
 const bdStale = computed(() => breakdown.value?.stale === true)
-const bdSourceMax = computed(() => Math.max(1, ...(bdData.value?.by_source || []).map((r) => r.count)))
-const bdCountryMax = computed(() => Math.max(1, ...(bdData.value?.by_country || []).map((r) => r.count)))
-const bdMonthMax = computed(() => Math.max(1, ...(bdData.value?.by_month || []).map((r) => r.count)))
+const bdSourceMax = computed(() => Math.max(1, ...(bdData.value?.by_source?.items || []).map((r) => r.count)))
+const bdCountryMax = computed(() => Math.max(1, ...(bdData.value?.by_country?.items || []).map((r) => r.count)))
+const bdYearMax = computed(() => Math.max(1, ...(bdData.value?.by_year || []).map((r) => r.count)))
 
 function barWidth(count, max) {
   return max > 0 ? `${(count / max) * 100}%` : '0%'
+}
+
+function tailNote(rank, noun) {
+  if (!rank || rank.distinct <= rank.items.length) return ''
+  return `Top ${rank.items.length} of ${rank.distinct} ${noun} · ${formatNumber(rank.tail_count)} reports in the rest`
 }
 
 function formatNumber(n) {
@@ -676,28 +667,10 @@ onUnmounted(() => { stopPolling(); stopBdPolling() })
   color: var(--color-text);
 }
 
-.histogram {
-  display: flex;
-  align-items: flex-end;
-  gap: 2px;
-  height: 80px;
-  padding: var(--space-2) 0;
-}
-
-.hist-col {
-  flex: 1;
-  min-width: 2px;
-  min-height: 1px;
-  background-color: var(--color-accent);
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-}
-
-.hist-axis {
-  display: flex;
-  justify-content: space-between;
+.bd-tail {
+  margin-top: var(--space-3);
   font-size: var(--text-xs);
   color: var(--color-muted);
-  font-variant-numeric: tabular-nums;
 }
 
 .bd-tables {

@@ -103,7 +103,7 @@ class Settings(BaseSettings):
     # Default freshness floor for manual ingest: when --date-from is not given,
     # ingest.py only pulls documents from the last N years (0 = no floor / full history).
     # Prevents re-pulling ancient ReliefWeb history (e.g. a country's reports back to the 1990s).
-    INGEST_LOOKBACK_YEARS: int = 3
+    INGEST_LOOKBACK_YEARS: int = 5
 
 
 @lru_cache
