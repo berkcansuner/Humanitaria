@@ -1,16 +1,16 @@
 <template>
   <div :class="['sidebar', { open }]">
+    <router-link to="/reports" class="reports-nav-link" title="M&amp;E Reports">
+      <FileText :size="16" />
+      M&amp;E Reports
+    </router-link>
+
     <div class="sidebar-header">
       <button type="button" class="new-chat-btn" @click="$emit('new-chat')">
         <Plus :size="16" />
         New chat
       </button>
     </div>
-
-    <router-link to="/reports" class="reports-nav-link" title="M&amp;E Reports">
-      <FileText :size="16" />
-      M&amp;E Reports
-    </router-link>
 
     <div class="conv-search">
       <Search :size="15" />
