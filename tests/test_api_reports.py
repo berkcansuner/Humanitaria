@@ -256,3 +256,51 @@ class TestReportEndpoints:
         client = _client()
         assert client.delete("/reports/rD").status_code == 200
         assert client.get("/reports/rD").status_code == 404
+
+
+class TestReportPdf:
+    _CONTENT = ("## Executive Summary\nConflict worsened [1].\n\n"
+                "## Key Findings\n### Health\n- Outbreak reported [2].")
+    _SOURCES = [
+        {"index": 1, "title": "WFP Report", "url": "https://reliefweb.int/r/1", "source": "WFP", "date": "2026-01-01"},
+        {"index": 2, "title": "WHO Report", "url": "https://reliefweb.int/r/2", "source": "WHO", "date": "2026-02-01"},
+    ]
+
+    def test_render_pdf_bytes(self):
+        from rag.report_pdf import render_report_pdf
+        pdf = render_report_pdf({
+            "country": "Sudan", "theme": None, "date_from": "2026-01-01", "date_to": "2026-06-30",
+            "doc_count": 2, "content": self._CONTENT, "sources": self._SOURCES,
+        })
+        assert pdf[:4] == b"%PDF"
+        assert len(pdf) > 1000
+
+    def test_render_pdf_turkish(self):
+        from rag.report_pdf import render_report_pdf
+        pdf = render_report_pdf({
+            "country": "Sudan", "theme": "Sağlık", "date_from": None, "date_to": None,
+            "doc_count": 1, "content": "## Yönetici Özeti\nÇatışma ve güvensizlik şiddetli [1].",
+            "sources": None,
+        })
+        assert pdf[:4] == b"%PDF"
+
+    def test_pdf_endpoint_owner(self):
+        from rag import reports as store
+        store.create_report(
+            "rpdf", "test-user", country="Sudan", theme=None, date_from="2026-01-01",
+            date_to="2026-06-30", language="en", title="t", content=self._CONTENT,
+            sources=self._SOURCES, doc_count=2,
+        )
+        r = _client().get("/reports/rpdf/pdf")
+        assert r.status_code == 200
+        assert r.headers["content-type"] == "application/pdf"
+        assert "attachment" in r.headers.get("content-disposition", "")
+        assert r.content[:4] == b"%PDF"
+
+    def test_pdf_endpoint_not_owner_404(self):
+        from rag import reports as store
+        store.create_report(
+            "rpdf2", "someone-else", country="Sudan", theme=None, date_from=None,
+            date_to=None, language="en", title="t", content="c", sources=None, doc_count=1,
+        )
+        assert _client().get("/reports/rpdf2/pdf").status_code == 404

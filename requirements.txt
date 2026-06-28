@@ -23,13 +23,18 @@ itsdangerous==2.2.0
 httpx==0.28.1
 
 # Ingestion / utilities
-pypdf==5.4.0
+pypdf==6.14.2
 apscheduler==3.10.4
 redis==5.2.1
 requests==2.32.3
 python-dotenv==1.1.0
 python-dateutil==2.9.0
 pydantic-settings==2.9.1
+
+# PDF export (M&E situation report → styled PDF; pulls reportlab/lxml/Pillow transitively)
+xhtml2pdf==0.2.17
+markdown==3.10.2
+reportlab==4.5.1
 
 # Testing
 pytest==8.3.5

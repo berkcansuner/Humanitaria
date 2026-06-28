@@ -91,6 +91,11 @@
 
       <main class="report-main" ref="viewer" @click="onCiteClick">
         <template v-if="current">
+          <div v-if="current.id" class="report-toolbar">
+            <a :href="`/reports/${current.id}/pdf`" class="pdf-btn" download>
+              <FileDown :size="15" /> Download PDF
+            </a>
+          </div>
           <div v-if="!current.content && generating" class="report-loading">
             <span class="skeleton skel-line"></span>
             <span class="skeleton skel-line"></span>
@@ -113,7 +118,7 @@
 
 <script setup>
 import { ref, onMounted, nextTick } from 'vue'
-import { MessageSquare, FileText, Trash2, Loader2, AlertCircle } from 'lucide-vue-next'
+import { MessageSquare, FileText, Trash2, Loader2, AlertCircle, FileDown } from 'lucide-vue-next'
 import ThemeToggle from '../components/ThemeToggle.vue'
 import HelpingHandLogo from '../components/HelpingHandLogo.vue'
 import SourceList from '../components/SourceList.vue'
@@ -478,6 +483,32 @@ function onCiteClick(e) {
   overflow-y: auto;
   padding: var(--space-6) var(--space-8);
   scroll-behavior: smooth;
+}
+
+.report-toolbar {
+  max-width: 75ch;
+  margin: 0 auto var(--space-3);
+  display: flex;
+  justify-content: flex-end;
+}
+.pdf-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+.pdf-btn:hover {
+  background-color: var(--color-surface-container);
+  color: var(--color-accent);
+  border-color: var(--color-accent);
 }
 
 .report-content {

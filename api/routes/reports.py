@@ -7,10 +7,12 @@ in rag.report_service, the LLM chain in rag.chain, persistence in rag.reports.
 """
 import json
 import logging
+import re
 from uuid import uuid4
 
 import anyio
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from typing import Literal, Optional
 from sse_starlette.sse import EventSourceResponse, ServerSentEvent
@@ -20,6 +22,7 @@ from ingestion import analytics
 from rag import reports as report_store
 from rag.chain import build_report_chain
 from rag.rag_context import _build_context_and_sources, _filter_cited_sources
+from rag.report_pdf import render_report_pdf
 from rag.report_service import (
     build_report_directive, report_title, retrieve_for_report,
 )
@@ -222,3 +225,23 @@ async def delete_report(report_id: str, user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Report not found")
     await anyio.to_thread.run_sync(report_store.delete_report, report_id)
     return {"ok": True}
+
+
+def _pdf_filename(report: dict) -> str:
+    parts = [report.get("country") or "report", report.get("date_from"), report.get("date_to")]
+    base = "_".join(str(p) for p in parts if p)
+    safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", base).strip("_") or "report"
+    return f"Humanitaria_{safe}.pdf"
+
+
+@router.get("/reports/{report_id}/pdf")
+async def report_pdf(report_id: str, user: dict = Depends(get_current_user)):
+    if not await anyio.to_thread.run_sync(report_store.is_owner, user["id"], report_id):
+        raise HTTPException(status_code=404, detail="Report not found")
+    report = await anyio.to_thread.run_sync(report_store.get_report, report_id)
+    pdf = await anyio.to_thread.run_sync(render_report_pdf, report)
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{_pdf_filename(report)}"'},
+    )
