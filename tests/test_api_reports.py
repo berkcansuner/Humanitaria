@@ -45,6 +45,16 @@ def _doc(i: int = 1) -> Document:
     )
 
 
+_EN_TEXT = ("The humanitarian situation continues to deteriorate as conflict and "
+            "displacement increase across the affected regions, leaving millions in need.")
+_FR_TEXT = ("La situation humanitaire continue de se détériorer alors que le conflit et les "
+            "déplacements augmentent dans les régions touchées, laissant des millions dans le besoin.")
+
+
+def _doc_text(text: str) -> Document:
+    return Document(page_content=text, metadata={"title": "t", "url": "u"})
+
+
 # --- persistence (rag/reports.py) -------------------------------------------
 
 class TestReportStore:
@@ -155,6 +165,25 @@ class TestReportService:
         assert captured["filter"]["date"] == {"$gte": "2026-01-01", "$lte": "2026-06-30"}
         assert captured["k"] == 12 * 4  # top_k * RERANK_CANDIDATE_MULTIPLIER
         assert len(docs) == 1
+
+    def test_prefer_english_filters_when_english_dominant(self):
+        # Anglophone crisis: candidates ≥ 60% English → cite English sources only.
+        from rag.report_service import _prefer_english
+        docs = [_doc_text(_EN_TEXT)] * 4 + [_doc_text(_FR_TEXT)]   # 4/5 = 0.8 EN
+        out = _prefer_english(docs)
+        assert len(out) == 4
+        assert all(d.page_content == _EN_TEXT for d in out)
+
+    def test_prefer_english_keeps_all_when_french_dominant(self):
+        # Francophone crisis: English a minority → keep the French-majority set intact.
+        from rag.report_service import _prefer_english
+        docs = [_doc_text(_EN_TEXT)] * 2 + [_doc_text(_FR_TEXT)] * 3   # 2/5 = 0.4 EN
+        out = _prefer_english(docs)
+        assert out == docs
+
+    def test_prefer_english_empty_is_noop(self):
+        from rag.report_service import _prefer_english
+        assert _prefer_english([]) == []
 
 
 # --- analytics distinct countries -------------------------------------------
@@ -352,8 +381,8 @@ class TestCitationNormalization:
         sources = [{"index": i, "title": f"S{i}", "url": f"u{i}"} for i in range(1, 8)]
         c, s = normalize_citations(content, sources)
         run = _re.findall(r"(?:\[\d+\])+", c)[0]
-        assert run.count("[") == 3   # pile capped to 3
-        assert len(s) == 3           # overflow sources drop out
+        assert run.count("[") == 4   # runaway pile capped to 4 (prompt drives one-per-fact)
+        assert len(s) == 4           # overflow sources drop out
 
     def test_stream_stores_normalized_report(self):
         async def mock_astream(*a, **k):

@@ -10,6 +10,7 @@ import logging
 from typing import List, Optional
 
 from langchain_core.documents import Document
+from langdetect import DetectorFactory, detect
 
 from config import get_settings
 from rag.retriever import (
@@ -19,7 +20,43 @@ from rag.retriever import (
 
 logger = logging.getLogger(__name__)
 
+# Deterministic language detection (langdetect is randomised by default).
+DetectorFactory.seed = 0
+
 _LANG_NAMES = {"tr": "Turkish", "en": "English"}
+
+# Share-of-candidates threshold above which English is treated as dominant and the
+# source set is filtered to English only. Tuned from ReliefWeb's language mix:
+# anglophone crises (Sudan/Yemen/Afghanistan/Ukraine) sit at ~0.97-0.99 English, so
+# they filter to English sources; francophone crises (DRC/Mali/Niger/CAR…) sit at
+# ~0.43-0.56 English, so they fall below the bar and keep their French-majority set.
+_ENGLISH_DOMINANCE = 0.6
+
+
+def _detect_lang(text: str) -> str:
+    """Best-effort ISO-639-1 code for *text* ('unknown' on failure/empty). Detect on a
+    prefix — enough signal, and far cheaper than scanning a full report body."""
+    try:
+        return detect((text or "")[:1000])
+    except Exception:
+        return "unknown"
+
+
+def _prefer_english(docs: List[Document]) -> List[Document]:
+    """Adaptive source-language filter, decided from the candidate set's own mix.
+
+    The index carries no usable language metadata, so language is detected from each
+    document's content. When English clearly dominates (≥ _ENGLISH_DOMINANCE), keep
+    only the English documents so an anglophone-crisis report cites English sources;
+    otherwise return the candidates untouched so a francophone-crisis report keeps its
+    French-majority sources instead of being gutted. No country list — purely the data.
+    """
+    if not docs:
+        return docs
+    english = [d for d in docs if _detect_lang(d.page_content) == "en"]
+    if english and len(english) / len(docs) >= _ENGLISH_DOMINANCE:
+        return english
+    return docs
 
 
 def _retrieval_query(country: str, theme: Optional[str]) -> str:
@@ -62,6 +99,7 @@ async def retrieve_for_report(country: str, theme: Optional[str],
     candidate_k = top_k * settings.RERANK_CANDIDATE_MULTIPLIER
     retriever = build_retriever(filter=filters, k=candidate_k)
     docs = await retriever.ainvoke(query)
+    docs = _prefer_english(docs)
     docs = apply_date_filter(docs, filters.get("date"))
     docs = dedupe_by_document(docs)
     docs = rerank_by_relevance(query, docs, top_k)

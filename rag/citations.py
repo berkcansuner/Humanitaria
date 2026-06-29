@@ -19,7 +19,10 @@ _SINGLE_RE = re.compile(r"( ?)\[(\d+)\]")
 # to the most relevant few, since RAG models tend to over-cite (one statement can
 # arrive carrying 5-7 markers, which reads as clutter in a prose report).
 _RUN_RE = re.compile(r"(?:\[\d+\]){2,}")
-_MAX_CITES_PER_SPOT = 3
+# Runaway guard only: the prompt now drives one-source-per-fact, so legitimate
+# multi-fact synthesis (2-3 distinct sources) must not be truncated; 4 just stops
+# a model regression from piling the same fact across many sources.
+_MAX_CITES_PER_SPOT = 4
 
 
 def expand_citation_groups(text: str) -> str:
