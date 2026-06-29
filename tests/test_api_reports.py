@@ -428,8 +428,8 @@ class TestCitationNormalization:
             {"index": 3, "title": "C", "url": "u3"},
         ]
         c, s = normalize_citations(content, sources)
-        assert {x["index"] for x in s} == {1, 2, 3}
-        assert "[1][2][3]" in c
+        assert {x["index"] for x in s} == {1, 2, 3}   # 3 survives via the separate "Confirmed [3]"
+        assert "[1][2]" in c                          # expanded group, then capped to 2
 
     def test_renumbers_by_first_appearance_and_drops_uncited(self):
         from rag.citations import normalize_citations
@@ -459,8 +459,8 @@ class TestCitationNormalization:
         sources = [{"index": i, "title": f"S{i}", "url": f"u{i}"} for i in range(1, 8)]
         c, s = normalize_citations(content, sources)
         run = _re.findall(r"(?:\[\d+\])+", c)[0]
-        assert run.count("[") == 4   # runaway pile capped to 4 (prompt drives one-per-fact)
-        assert len(s) == 4           # overflow sources drop out
+        assert run.count("[") == 2   # consecutive pile capped to 2 (prompt drives one-per-fact)
+        assert len(s) == 2           # overflow sources drop out
 
     def test_stream_stores_normalized_report(self):
         async def mock_astream(*a, **k):
@@ -477,4 +477,4 @@ class TestCitationNormalization:
             rid = next(e for e in events if e["event"] == "saved")["data"]["report_id"]
             rep = client.get(f"/reports/{rid}").json()
             assert len(rep["sources"]) == 3            # grouped citation no longer drops sources
-            assert "[1][2][3]" in rep["content"]       # stored content is normalised
+            assert "[1][2]" in rep["content"]          # group expanded, capped to 2, normalised
