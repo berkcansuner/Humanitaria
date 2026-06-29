@@ -106,6 +106,44 @@ class TestReportStore:
         from rag import reports as store
         assert store.get_report("nope") is None
 
+    def test_key_figures_roundtrip(self):
+        from rag import reports as store
+        figs = [{"label": "People in IPC3+", "value": "19.5M"},
+                {"label": "Children with SAM", "value": "825k"}]
+        store.create_report(
+            "rkf", "u", country="Sudan", theme=None, date_from=None, date_to=None,
+            language="en", title="t", content="c", sources=None, doc_count=1, key_figures=figs,
+        )
+        assert store.get_report("rkf")["key_figures"] == figs
+
+    def test_key_figures_default_none(self):
+        from rag import reports as store
+        store.create_report(
+            "rkf2", "u", country="S", theme=None, date_from=None, date_to=None,
+            language="en", title="t", content="c", sources=None, doc_count=1,
+        )
+        assert store.get_report("rkf2")["key_figures"] is None
+
+    def test_schema_migration_adds_key_figures_column(self):
+        # A DB created before the panel (no key_figures_json) gains the column on connect.
+        import os, sqlite3, tempfile
+        from rag import reports as store
+        fd, path = tempfile.mkstemp(suffix=".db"); os.close(fd)
+        try:
+            conn = sqlite3.connect(path)
+            conn.execute(
+                "CREATE TABLE reports (id TEXT PRIMARY KEY, user_id TEXT, country TEXT, theme TEXT, "
+                "date_from TEXT, date_to TEXT, language TEXT, title TEXT NOT NULL, content TEXT NOT NULL, "
+                "sources_json TEXT, doc_count INTEGER, created_at TEXT NOT NULL)"
+            )
+            conn.commit()
+            store._ensure_schema(conn)
+            cols = {r[1] for r in conn.execute("PRAGMA table_info(reports)").fetchall()}
+            conn.close()
+            assert "key_figures_json" in cols
+        finally:
+            os.remove(path)
+
 
 # --- retriever date range ($lte) --------------------------------------------
 
@@ -239,6 +277,44 @@ class TestReportService:
         assert _collapse_near_duplicates(one) == one
 
 
+# --- key figures extraction --------------------------------------------------
+
+class TestKeyFigures:
+    def test_extract_parses_and_caps_to_six(self):
+        from rag import key_figures as kf
+        from rag.key_figures import KeyFigure, KeyFigures
+        fake = KeyFigures(figures=[KeyFigure(label=f"L{i}", value=f"{i}M") for i in range(8)])
+        extractor = MagicMock()
+        extractor.ainvoke = AsyncMock(return_value=fake)
+        with patch("rag.key_figures._get_extractor", return_value=extractor):
+            out = anyio.run(kf.extract_key_figures, "Report content [1].", "Sudan", "Food")
+        assert len(out) == 6                                  # capped to 6
+        assert out[0] == {"label": "L0", "value": "0M"}
+
+    def test_extract_drops_blank_entries(self):
+        from rag import key_figures as kf
+        from rag.key_figures import KeyFigure, KeyFigures
+        fake = KeyFigures(figures=[KeyFigure(label="Good", value="1M"),
+                                   KeyFigure(label="  ", value="2M"),
+                                   KeyFigure(label="NoVal", value="  ")])
+        extractor = MagicMock()
+        extractor.ainvoke = AsyncMock(return_value=fake)
+        with patch("rag.key_figures._get_extractor", return_value=extractor):
+            out = anyio.run(kf.extract_key_figures, "content", "S", "")
+        assert out == [{"label": "Good", "value": "1M"}]
+
+    def test_extract_empty_content_noop(self):
+        from rag.key_figures import extract_key_figures
+        assert anyio.run(extract_key_figures, "   ", "Sudan", "") == []
+
+    def test_extract_graceful_on_error(self):
+        from rag import key_figures as kf
+        extractor = MagicMock()
+        extractor.ainvoke = AsyncMock(side_effect=RuntimeError("api down"))
+        with patch("rag.key_figures._get_extractor", return_value=extractor):
+            assert anyio.run(kf.extract_key_figures, "content", "Sudan", "Food") == []
+
+
 # --- analytics distinct countries -------------------------------------------
 
 class TestDistinctCountries:
@@ -290,7 +366,8 @@ class TestReportEndpoints:
         mock_chain.astream = mock_astream
 
         with patch("api.routes.reports.retrieve_for_report", new=AsyncMock(return_value=[_doc(1)])), \
-             patch("api.routes.reports.build_report_chain", return_value=mock_chain):
+             patch("api.routes.reports.build_report_chain", return_value=mock_chain), \
+             patch("api.routes.reports.extract_key_figures", new=AsyncMock(return_value=[])):
             client = _client()
             resp = client.post("/reports/stream", json={
                 "country": "Sudan", "date_from": "2026-01-01", "date_to": "2026-06-30", "language": "en",
@@ -318,6 +395,24 @@ class TestReportEndpoints:
             assert events[0]["event"] == "token"
             assert "bulunamadı" in events[0]["data"]["content"] or "No matching" in events[0]["data"]["content"]
             assert events[-1]["event"] == "done"
+
+    def test_stream_emits_and_stores_key_figures(self):
+        async def mock_astream(*a, **k):
+            yield "## Summary\nConflict worsened [1]."
+        mock_chain = MagicMock()
+        mock_chain.astream = mock_astream
+        figs = [{"label": "People in IPC3+", "value": "19.5M"}]
+        with patch("api.routes.reports.retrieve_for_report", new=AsyncMock(return_value=[_doc(1)])), \
+             patch("api.routes.reports.build_report_chain", return_value=mock_chain), \
+             patch("api.routes.reports.extract_key_figures", new=AsyncMock(return_value=figs)):
+            client = _client()
+            resp = client.post("/reports/stream", json={"country": "Sudan", "language": "en"})
+            events = _parse_sse_events(resp.text)
+            assert "key_figures" in [e["event"] for e in events]
+            kf = next(e for e in events if e["event"] == "key_figures")
+            assert kf["data"]["figures"] == figs
+            rid = next(e for e in events if e["event"] == "saved")["data"]["report_id"]
+            assert client.get(f"/reports/{rid}").json()["key_figures"] == figs
 
     def test_get_report_not_owner_404(self):
         from rag import reports as store
@@ -400,6 +495,23 @@ class TestReportPdf:
         })
         assert pdf[:4] == b"%PDF"
 
+    def test_render_pdf_with_key_figures(self):
+        from rag.report_pdf import render_report_pdf
+        pdf = render_report_pdf({
+            "country": "Sudan", "theme": None, "date_from": None, "date_to": None,
+            "doc_count": 2, "content": "## Executive Summary\nText [1].", "sources": self._SOURCES,
+            "key_figures": [{"label": "People in IPC3+", "value": "19.5M"},
+                            {"label": "Children with SAM", "value": "825k"}],
+        })
+        assert pdf[:4] == b"%PDF"
+
+    def test_key_figures_band_empty_when_absent_or_invalid(self):
+        from rag.report_pdf import _key_figures_band
+        assert _key_figures_band(None) == ""
+        assert _key_figures_band([]) == ""
+        assert _key_figures_band([{"value": "x"}]) == ""              # missing label → dropped
+        assert "kfig" in _key_figures_band([{"label": "L", "value": "1M"}])
+
     def test_valid_sources_drives_cover_count(self):
         # The cover "Source reports" count is len(_valid_sources): entries missing a title/url are
         # excluded, so the cover number always equals the number of listed references.
@@ -470,7 +582,8 @@ class TestCitationNormalization:
         mock_chain.astream = mock_astream
         with patch("api.routes.reports.retrieve_for_report",
                    new=AsyncMock(return_value=[_doc(1), _doc(2), _doc(3)])), \
-             patch("api.routes.reports.build_report_chain", return_value=mock_chain):
+             patch("api.routes.reports.build_report_chain", return_value=mock_chain), \
+             patch("api.routes.reports.extract_key_figures", new=AsyncMock(return_value=[])):
             client = _client()
             resp = client.post("/reports/stream", json={"country": "Sudan", "language": "en"})
             events = _parse_sse_events(resp.text)

@@ -23,6 +23,7 @@ from rag import reports as report_store
 from rag.chain import build_report_chain
 from rag.rag_context import _build_context_and_sources
 from rag.citations import normalize_citations
+from rag.key_figures import extract_key_figures
 from rag.report_pdf import render_report_pdf
 from rag.report_service import (
     build_report_directive, report_title, retrieve_for_report,
@@ -173,6 +174,10 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
             # and the on-screen Sources list all stay in sync.
             clean_content, sources = normalize_citations(full, source_dicts)
 
+            # Pull the at-a-glance headline numbers from the finished prose (decoupled,
+            # graceful — [] on any failure, so the panel is simply omitted).
+            key_figures = await extract_key_figures(clean_content, req.country, req.theme or "")
+
             # Auto-save only after a full stream (an aborted report is never written).
             report_id = str(uuid4())
             title = report_title(req.country, req.theme, req.date_from, req.date_to)
@@ -181,9 +186,15 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                     report_id, user["id"], country=req.country, theme=req.theme,
                     date_from=req.date_from, date_to=req.date_to, language=req.language,
                     title=title, content=clean_content, sources=sources, doc_count=len(docs),
+                    key_figures=key_figures,
                 )
             )
 
+            if key_figures:
+                yield ServerSentEvent(
+                    event="key_figures",
+                    data=json.dumps({"figures": key_figures}, ensure_ascii=False),
+                )
             if sources:
                 yield ServerSentEvent(
                     event="sources",
