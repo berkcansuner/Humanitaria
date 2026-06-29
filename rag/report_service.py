@@ -7,6 +7,8 @@ directive. The route layer (api/routes/reports.py) streams the report chain and
 persists the result. Pure rag layer — no FastAPI/route imports.
 """
 import logging
+import re
+from collections import defaultdict
 from typing import List, Optional
 
 from langchain_core.documents import Document
@@ -24,6 +26,10 @@ logger = logging.getLogger(__name__)
 DetectorFactory.seed = 0
 
 _LANG_NAMES = {"tr": "Turkish", "en": "English"}
+
+# Minimum shared-prefix length (chars) before two same-source titles count as a
+# republished/companion pair — guards against short coincidental shared openings.
+_DUP_MIN_PREFIX = 25
 
 # Share-of-candidates threshold above which English is treated as dominant and the
 # source set is filtered to English only. Tuned from ReliefWeb's language mix:
@@ -57,6 +63,83 @@ def _prefer_english(docs: List[Document]) -> List[Document]:
     if english and len(english) / len(docs) >= _ENGLISH_DOMINANCE:
         return english
     return docs
+
+
+def _norm_title(t: str) -> str:
+    """Lowercase a title and collapse every run of non-alphanumerics to a single space."""
+    return re.sub(r"[^a-z0-9]+", " ", (t or "").lower()).strip()
+
+
+def _is_prefix_title_dup(a: str, b: str) -> bool:
+    """True when two normalised titles are equal, or the shorter is a word-boundary prefix of the
+    longer — a base report and its extended '… : Insights and recommendations' companion. The length
+    guard avoids collapsing reports that merely share a short opening; a monthly series whose titles
+    differ only in the month (… ICSM Mars 2026 / … ICSM Avril 2026) is NOT a prefix of itself, so it
+    is correctly left intact."""
+    na, nb = _norm_title(a), _norm_title(b)
+    if not na or not nb:
+        return False
+    short, long_ = sorted((na, nb), key=len)
+    if short == long_:
+        return True
+    return len(short) >= _DUP_MIN_PREFIX and long_.startswith(short + " ")
+
+
+def _collapse_near_duplicates(docs: List[Document]) -> List[Document]:
+    """Collapse near-duplicate documents from the SAME organisation to one representative, so the LLM
+    never sees — and never double-cites — the same underlying report twice. Within a source, two
+    documents are duplicates when EITHER:
+      (A) translation pair — same publication date but different detected content language (e.g. a WFP
+          press release posted in both English and French); or
+      (B) republished/companion — one title is a prefix of the other (see _is_prefix_title_dup).
+    Distinct same-source reports survive: a monthly market series has different dates AND non-prefix
+    titles, so neither rule fires. The kept representative prefers English, then the most recent date,
+    then the fuller text — matching the single-citation rule's 'most authoritative/original, else most
+    recent'. This is the retrieval-layer counterpart to the prompt's one-source-per-fact rule."""
+    n = len(docs)
+    if n < 2:
+        return docs
+
+    langs = [_detect_lang(d.page_content) for d in docs]
+    parent = list(range(n))
+
+    def find(x: int) -> int:
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def union(a: int, b: int) -> None:
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[max(ra, rb)] = min(ra, rb)
+
+    by_source: dict = defaultdict(list)
+    for i, d in enumerate(docs):
+        src = (d.metadata.get("source") or "").strip().lower()
+        if src:
+            by_source[src].append(i)
+
+    for idxs in by_source.values():
+        for p in range(len(idxs)):
+            for q in range(p + 1, len(idxs)):
+                i, j = idxs[p], idxs[q]
+                di, dj = docs[i], docs[j]
+                same_date = bool(di.metadata.get("date")) and di.metadata.get("date") == dj.metadata.get("date")
+                diff_lang = langs[i] != "unknown" and langs[j] != "unknown" and langs[i] != langs[j]
+                if _is_prefix_title_dup(di.metadata.get("title"), dj.metadata.get("title")) or (same_date and diff_lang):
+                    union(i, j)
+
+    clusters: dict = defaultdict(list)
+    for i in range(n):
+        clusters[find(i)].append(i)
+
+    def rep_key(i: int):
+        d = docs[i]
+        return (1 if langs[i] == "en" else 0, d.metadata.get("date") or "", len(d.page_content or ""), -i)
+
+    keep = {max(members, key=rep_key) for members in clusters.values()}
+    return [d for i, d in enumerate(docs) if i in keep]
 
 
 def _retrieval_query(country: str, theme: Optional[str]) -> str:
@@ -102,6 +185,7 @@ async def retrieve_for_report(country: str, theme: Optional[str],
     docs = _prefer_english(docs)
     docs = apply_date_filter(docs, filters.get("date"))
     docs = dedupe_by_document(docs)
+    docs = _collapse_near_duplicates(docs)
     docs = rerank_by_relevance(query, docs, top_k)
     docs = rerank_by_recency(docs)
     return docs[:top_k]

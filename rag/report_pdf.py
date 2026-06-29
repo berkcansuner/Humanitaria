@@ -83,21 +83,26 @@ table.scopebox .lbl {{ color: {_GREEN_DARK}; font-weight: bold; font-size: 7pt; 
 .cite {{ color: {_GREEN}; font-weight: bold; }}
 
 h2.sources-h {{ font-size: 11pt; color: {_GREEN_DARK}; border-bottom: 0.75pt solid {_BORDER}; padding-bottom: 2pt; margin: 16pt 0 6pt 0; }}
+table.sources {{ table-layout: fixed; }}
 table.sources td {{ padding: 3pt 4pt; font-size: 8pt; vertical-align: top; }}
-table.sources .num {{ color: {_GREEN}; font-weight: bold; width: 22pt; }}
+table.sources .num {{ color: {_GREEN}; font-weight: bold; width: 24pt; }}
 table.sources .title {{ color: {_INK}; }}
 table.sources .meta {{ color: {_MUTED}; }}
-table.sources .url {{ color: {_GREEN}; font-size: 7.5pt; }}
+table.sources .url {{ color: {_GREEN}; font-size: 7.5pt; -pdf-word-wrap: CJK; }}
 
 #footerContent {{ color: {_MUTED}; font-size: 7.5pt; text-align: center; }}
 """
 
 
+def _valid_sources(sources) -> list:
+    """The sources that actually render as a listed reference (have a title + url). The cover count
+    and the Sources list are both derived from this, so the two can never disagree."""
+    return [s for s in (sources or []) if s.get("title") and s.get("url")]
+
+
 def _sources_rows(sources) -> str:
     rows = []
-    for s in (sources or []):
-        if not s.get("title") or not s.get("url"):
-            continue
+    for s in _valid_sources(sources):
         n = s.get("index", "")
         title = html.escape(str(s.get("title", "")))
         meta_bits = [b for b in (s.get("source"), s.get("date")) if b]
@@ -105,7 +110,7 @@ def _sources_rows(sources) -> str:
         url = html.escape(str(s.get("url", "")))
         rows.append(
             f'<tr><td class="num">[{n}]</td>'
-            f'<td><span class="title">{title}</span>'
+            f'<td class="ref"><span class="title">{title}</span>'
             + (f'<br/><span class="meta">{meta}</span>' if meta else "")
             + f'<br/><span class="url">{url}</span></td></tr>'
         )
@@ -125,7 +130,9 @@ def render_report_pdf(report: dict) -> bytes:
     date_from = report.get("date_from") or "…"
     date_to = report.get("date_to") or "…"
     period = html.escape(f"{date_from} – {date_to}")
-    doc_count = report.get("doc_count") or 0
+    # Cover count = the sources actually listed below, so the cover can never advertise more
+    # reports than the reader can see (doc_count is the retrieved set; not all of it gets cited).
+    source_count = len(_valid_sources(report.get("sources")))
     generated = datetime.now(timezone.utc).strftime("%d %b %Y")
 
     doc = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>{_CSS}</style></head><body>
@@ -140,7 +147,7 @@ def render_report_pdf(report: dict) -> bytes:
 <table class="scopebox" width="100%"><tr>
   <td width="32%"><span class="lbl">Period</span><br/>{period}</td>
   <td width="30%"><span class="lbl">Sectors</span><br/>{sector}</td>
-  <td width="20%"><span class="lbl">Source reports</span><br/>{doc_count}</td>
+  <td width="20%"><span class="lbl">Source reports</span><br/>{source_count}</td>
   <td width="18%"><span class="lbl">Generated</span><br/>{html.escape(generated)}</td>
 </tr></table>
 

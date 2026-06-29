@@ -55,6 +55,10 @@ def _doc_text(text: str) -> Document:
     return Document(page_content=text, metadata={"title": "t", "url": "u"})
 
 
+def _src_doc(title: str, source: str, date: str, text: str) -> Document:
+    return Document(page_content=text, metadata={"title": title, "source": source, "date": date, "url": "u"})
+
+
 # --- persistence (rag/reports.py) -------------------------------------------
 
 class TestReportStore:
@@ -184,6 +188,55 @@ class TestReportService:
     def test_prefer_english_empty_is_noop(self):
         from rag.report_service import _prefer_english
         assert _prefer_english([]) == []
+
+    def test_collapse_translation_pair_keeps_english(self):
+        # Same WFP press release in English + French (same org, same date) → one English representative.
+        from rag.report_service import _collapse_near_duplicates
+        en = _src_doc("WFP scales up emergency Ebola response in eastern DRC",
+                      "World Food Programme", "2026-05-22", _EN_TEXT)
+        fr = _src_doc("Le PAM intensifie sa réponse d'urgence contre Ebola dans l'est de la RDC",
+                      "World Food Programme", "2026-05-22", _FR_TEXT)
+        out = _collapse_near_duplicates([en, fr])
+        assert len(out) == 1
+        assert out[0].metadata["title"].startswith("WFP scales up")
+
+    def test_collapse_prefix_companion_keeps_most_recent(self):
+        # Base report + its "… : Insights and recommendations" companion (same org) → keep most recent.
+        from rag.report_service import _collapse_near_duplicates
+        base = _src_doc("How the conduct of conflict affects food security and health care in Sudan",
+                        "Insecurity Insight", "2026-04-20", _EN_TEXT)
+        companion = _src_doc("How the conduct of conflict affects food security and health care in Sudan: "
+                             "Insights and recommendations to enhance civilian protection",
+                             "Insecurity Insight", "2026-04-14", _EN_TEXT + " More detail.")
+        out = _collapse_near_duplicates([base, companion])
+        assert len(out) == 1
+        assert out[0].metadata["date"] == "2026-04-20"
+
+    def test_collapse_keeps_distinct_monthly_series(self):
+        # A monthly market series (Mars vs Avril, different dates) must NOT be collapsed.
+        from rag.report_service import _collapse_near_duplicates
+        mar = _src_doc("République démocratique du Congo - Initiative conjointe de suivi des marchés (ICSM) - Mars 2026",
+                       "REACH Initiative", "2026-04-27", _FR_TEXT)
+        avr = _src_doc("République démocratique du Congo - Initiative conjointe de suivi des marchés (ICSM) - Avril 2026",
+                       "REACH Initiative", "2026-06-02", _FR_TEXT)
+        out = _collapse_near_duplicates([mar, avr])
+        assert len(out) == 2
+
+    def test_collapse_keeps_different_source_same_date(self):
+        # Two distinct SMART surveys, same date but different orgs → not grouped, not collapsed.
+        from rag.report_service import _collapse_near_duplicates
+        a = _src_doc("Enquête nutritionnelle SMART Rapide - Fataki, Ituri",
+                     "Action contre la Faim France", "2026-05-08", _FR_TEXT)
+        b = _src_doc("Enquête nutritionnelle et de mortalité SMART - Alimbongo, Nord-Kivu",
+                     "Nutrition Cluster", "2026-05-08", _FR_TEXT)
+        out = _collapse_near_duplicates([a, b])
+        assert len(out) == 2
+
+    def test_collapse_noop_on_singleton_and_empty(self):
+        from rag.report_service import _collapse_near_duplicates
+        assert _collapse_near_duplicates([]) == []
+        one = [_src_doc("t", "WFP", "2026-01-01", _EN_TEXT)]
+        assert _collapse_near_duplicates(one) == one
 
 
 # --- analytics distinct countries -------------------------------------------
@@ -333,6 +386,31 @@ class TestReportPdf:
             date_to=None, language="en", title="t", content="c", sources=None, doc_count=1,
         )
         assert _client().get("/reports/rpdf2/pdf").status_code == 404
+
+    def test_long_url_source_renders(self):
+        # A long ReliefWeb slug URL must render — it wraps via the fixed table layout (CJK word-wrap)
+        # instead of overflowing the right margin — without raising.
+        from rag.report_pdf import render_report_pdf
+        long_url = "https://reliefweb.int/report/democratic-republic-congo/" + "x-" * 60 + "end"
+        pdf = render_report_pdf({
+            "country": "DRC", "theme": None, "date_from": None, "date_to": None,
+            "doc_count": 1, "content": "## Executive Summary\nText [1].",
+            "sources": [{"index": 1, "title": "Long URL source", "url": long_url,
+                         "source": "WFP", "date": "2026-05-22"}],
+        })
+        assert pdf[:4] == b"%PDF"
+
+    def test_valid_sources_drives_cover_count(self):
+        # The cover "Source reports" count is len(_valid_sources): entries missing a title/url are
+        # excluded, so the cover number always equals the number of listed references.
+        from rag.report_pdf import _valid_sources
+        sources = [
+            {"index": 1, "title": "A", "url": "u1"},
+            {"index": 2, "title": "B", "url": "u2"},
+            {"index": 3, "title": "no-url"},          # dropped
+            {"index": 4, "url": "no-title"},           # dropped
+        ]
+        assert len(_valid_sources(sources)) == 2
 
 
 class TestCitationNormalization:
