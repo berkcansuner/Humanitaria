@@ -289,12 +289,22 @@ async function generate() {
         } else if (sse.event === 'sources') {
           try { current.value.sources = JSON.parse(sse.data).sources } catch (e) {}
         } else if (sse.event === 'saved') {
+          let rid = null
           try {
             const d = JSON.parse(sse.data)
+            rid = d.report_id
             current.value.id = d.report_id
             current.value.title = d.title
           } catch (e) {}
           await loadList()
+          // Swap the streamed (raw-citation) text for the stored, citation-normalised
+          // version so the on-screen report matches the saved PDF exactly.
+          if (rid) {
+            try {
+              const rep = await getReport(rid)
+              current.value = { id: rep.id, title: rep.title, content: rep.content, sources: rep.sources }
+            } catch (e) {}
+          }
         } else if (sse.event === 'error') {
           try { genError.value = JSON.parse(sse.data).message } catch (e) { genError.value = 'Something went wrong.' }
         }

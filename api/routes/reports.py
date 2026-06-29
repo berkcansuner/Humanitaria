@@ -21,7 +21,8 @@ from config import get_settings
 from ingestion import analytics
 from rag import reports as report_store
 from rag.chain import build_report_chain
-from rag.rag_context import _build_context_and_sources, _filter_cited_sources
+from rag.rag_context import _build_context_and_sources
+from rag.citations import normalize_citations
 from rag.report_pdf import render_report_pdf
 from rag.report_service import (
     build_report_directive, report_title, retrieve_for_report,
@@ -167,7 +168,10 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                         data=json.dumps({"content": chunk}, ensure_ascii=False),
                     )
 
-            sources = _filter_cited_sources(full, source_dicts)
+            # Expand grouped citations, drop uncited/invalid sources, and renumber the
+            # [n] markers + sources to a contiguous 1..N so the stored content, the PDF
+            # and the on-screen Sources list all stay in sync.
+            clean_content, sources = normalize_citations(full, source_dicts)
 
             # Auto-save only after a full stream (an aborted report is never written).
             report_id = str(uuid4())
@@ -176,7 +180,7 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                 lambda: report_store.create_report(
                     report_id, user["id"], country=req.country, theme=req.theme,
                     date_from=req.date_from, date_to=req.date_to, language=req.language,
-                    title=title, content=full, sources=sources, doc_count=len(docs),
+                    title=title, content=clean_content, sources=sources, doc_count=len(docs),
                 )
             )
 

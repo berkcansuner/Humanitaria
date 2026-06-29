@@ -304,3 +304,70 @@ class TestReportPdf:
             date_to=None, language="en", title="t", content="c", sources=None, doc_count=1,
         )
         assert _client().get("/reports/rpdf2/pdf").status_code == 404
+
+
+class TestCitationNormalization:
+    def test_cited_indices_handles_groups(self):
+        from rag.citations import cited_indices
+        assert cited_indices("a [1] b [2, 3] c [5].") == {1, 2, 3, 5}
+
+    def test_grouped_citations_keep_all_sources(self):
+        # The reported bug: grouped [1, 2, 3] dropped most sources from the list.
+        from rag.citations import normalize_citations
+        content = "Conflict and famine worsened [1, 2, 3]. Confirmed [3]."
+        sources = [
+            {"index": 1, "title": "A", "url": "u1"},
+            {"index": 2, "title": "B", "url": "u2"},
+            {"index": 3, "title": "C", "url": "u3"},
+        ]
+        c, s = normalize_citations(content, sources)
+        assert {x["index"] for x in s} == {1, 2, 3}
+        assert "[1][2][3]" in c
+
+    def test_renumbers_by_first_appearance_and_drops_uncited(self):
+        from rag.citations import normalize_citations
+        content = "Eighth [8] then third [3]."
+        sources = [
+            {"index": 3, "title": "C", "url": "u3"},
+            {"index": 8, "title": "H", "url": "u8"},
+            {"index": 5, "title": "uncited", "url": "u5"},
+        ]
+        c, s = normalize_citations(content, sources)
+        assert [x["index"] for x in s] == [1, 2]
+        assert [x["title"] for x in s] == ["H", "C"]
+        assert "[1]" in c and "[2]" in c and "[8]" not in c and "[3]" not in c
+
+    def test_drops_dead_marker(self):
+        from rag.citations import normalize_citations
+        content = "Real [1]. Hallucinated [9]."
+        sources = [{"index": 1, "title": "A", "url": "u1"}]
+        c, s = normalize_citations(content, sources)
+        assert len(s) == 1 and s[0]["index"] == 1
+        assert "[9]" not in c and "Hallucinated." in c
+
+    def test_caps_long_citation_runs(self):
+        import re as _re
+        from rag.citations import normalize_citations
+        content = "Broad claim [1][2][3][4][5][6][7]."
+        sources = [{"index": i, "title": f"S{i}", "url": f"u{i}"} for i in range(1, 8)]
+        c, s = normalize_citations(content, sources)
+        run = _re.findall(r"(?:\[\d+\])+", c)[0]
+        assert run.count("[") == 3   # pile capped to 3
+        assert len(s) == 3           # overflow sources drop out
+
+    def test_stream_stores_normalized_report(self):
+        async def mock_astream(*a, **k):
+            yield "## Summary\nConflict and famine worsened [1, 2, 3]. Confirmed [3]."
+
+        mock_chain = MagicMock()
+        mock_chain.astream = mock_astream
+        with patch("api.routes.reports.retrieve_for_report",
+                   new=AsyncMock(return_value=[_doc(1), _doc(2), _doc(3)])), \
+             patch("api.routes.reports.build_report_chain", return_value=mock_chain):
+            client = _client()
+            resp = client.post("/reports/stream", json={"country": "Sudan", "language": "en"})
+            events = _parse_sse_events(resp.text)
+            rid = next(e for e in events if e["event"] == "saved")["data"]["report_id"]
+            rep = client.get(f"/reports/{rid}").json()
+            assert len(rep["sources"]) == 3            # grouped citation no longer drops sources
+            assert "[1][2][3]" in rep["content"]       # stored content is normalised

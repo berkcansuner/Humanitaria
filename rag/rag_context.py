@@ -7,6 +7,8 @@ report service, so they live in the rag layer (no FastAPI / route dependency).
 """
 import re
 
+from rag.citations import cited_indices
+
 _CITATION_PATTERN = re.compile(r"\[(\d+)\]")
 
 
@@ -63,7 +65,7 @@ def _filter_cited_sources(answer_text: str, sources: list) -> list:
     Falls back to all sources when the model emitted no (or no matching)
     citation markers, so the user never sees an empty source list.
     """
-    cited = {int(n) for n in _CITATION_PATTERN.findall(answer_text)}
+    cited = cited_indices(answer_text)  # handles single [n] and grouped [n, m, ...]
     if not cited:
         return sources
     filtered = [s for s in sources if s.get("index") in cited]
