@@ -495,7 +495,9 @@ class TestReportPdf:
         })
         assert pdf[:4] == b"%PDF"
 
-    def test_render_pdf_with_key_figures(self):
+    def test_render_pdf_ignores_key_figures(self):
+        # key_figures are stored + shown in the web UI but intentionally NOT rendered in the PDF;
+        # a report dict carrying them must still produce a valid PDF.
         from rag.report_pdf import render_report_pdf
         pdf = render_report_pdf({
             "country": "Sudan", "theme": None, "date_from": None, "date_to": None,
@@ -504,13 +506,6 @@ class TestReportPdf:
                             {"label": "Children with SAM", "value": "825k"}],
         })
         assert pdf[:4] == b"%PDF"
-
-    def test_key_figures_band_empty_when_absent_or_invalid(self):
-        from rag.report_pdf import _key_figures_band
-        assert _key_figures_band(None) == ""
-        assert _key_figures_band([]) == ""
-        assert _key_figures_band([{"value": "x"}]) == ""              # missing label → dropped
-        assert "kfig" in _key_figures_band([{"label": "L", "value": "1M"}])
 
     def test_valid_sources_drives_cover_count(self):
         # The cover "Source reports" count is len(_valid_sources): entries missing a title/url are

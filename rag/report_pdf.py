@@ -75,11 +75,6 @@ table.scopebox {{ background-color: {_GREEN_SOFT}; border: 0.5pt solid {_BORDER}
 table.scopebox td {{ padding: 7pt 9pt; font-size: 8.5pt; color: {_INK}; }}
 table.scopebox .lbl {{ color: {_GREEN_DARK}; font-weight: bold; font-size: 7pt; text-transform: uppercase; }}
 
-table.kfig {{ margin-bottom: 14pt; }}
-table.kfig td {{ background-color: {_GREEN_SOFT}; border: 0.5pt solid {_BORDER}; padding: 8pt 5pt; text-align: center; }}
-table.kfig .kval {{ font-size: 13pt; font-weight: bold; color: {_GREEN_DARK}; }}
-table.kfig .klbl {{ font-size: 6.5pt; color: {_MUTED}; text-transform: uppercase; }}
-
 .body h2 {{ font-size: 12.5pt; color: {_GREEN_DARK}; border-bottom: 0.75pt solid {_BORDER}; padding-bottom: 2pt; margin: 14pt 0 6pt 0; }}
 .body h3 {{ font-size: 10.5pt; color: {_GREEN}; margin: 10pt 0 3pt 0; }}
 .body p {{ margin: 0 0 6pt 0; text-align: justify; }}
@@ -97,22 +92,6 @@ table.sources .url {{ color: {_GREEN}; font-size: 7.5pt; -pdf-word-wrap: CJK; }}
 
 #footerContent {{ color: {_MUTED}; font-size: 7.5pt; text-align: center; }}
 """
-
-
-def _key_figures_band(key_figures) -> str:
-    """A horizontal strip of value+label boxes (the at-a-glance panel), or '' when there
-    are none. Background is painted on the <td> (xhtml2pdf ignores it on <div>), and equal
-    column widths keep the strip evenly segmented."""
-    figs = [f for f in (key_figures or []) if f.get("value") and f.get("label")][:6]
-    if not figs:
-        return ""
-    w = max(1, 100 // len(figs))
-    cells = "".join(
-        f'<td width="{w}%"><span class="kval">{html.escape(str(f["value"]))}</span><br/>'
-        f'<span class="klbl">{html.escape(str(f["label"]))}</span></td>'
-        for f in figs
-    )
-    return f'<table class="kfig" width="100%"><tr>{cells}</tr></table>'
 
 
 def _valid_sources(sources) -> list:
@@ -171,8 +150,6 @@ def render_report_pdf(report: dict) -> bytes:
   <td width="20%"><span class="lbl">Source reports</span><br/>{source_count}</td>
   <td width="18%"><span class="lbl">Generated</span><br/>{html.escape(generated)}</td>
 </tr></table>
-
-{_key_figures_band(report.get("key_figures"))}
 
 <div class="body">{_body_html(report.get("content"))}</div>
 
