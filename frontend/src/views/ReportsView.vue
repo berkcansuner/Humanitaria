@@ -99,12 +99,6 @@
             </button>
             <span v-if="pdfError" class="pdf-error">{{ pdfError }}</span>
           </div>
-          <div v-if="current.keyFigures && current.keyFigures.length" class="key-figures">
-            <div v-for="(f, i) in current.keyFigures" :key="i" class="kfig">
-              <span class="kfig-val">{{ f.value }}</span>
-              <span class="kfig-lbl">{{ f.label }}</span>
-            </div>
-          </div>
           <div v-if="!current.content && generating" class="report-loading">
             <span class="skeleton skel-line"></span>
             <span class="skeleton skel-line"></span>
@@ -196,7 +190,7 @@ async function openReport(id) {
   if (generating.value) return
   try {
     const rep = await getReport(id)
-    current.value = { id: rep.id, title: rep.title, content: rep.content, sources: rep.sources, keyFigures: rep.key_figures }
+    current.value = { id: rep.id, title: rep.title, content: rep.content, sources: rep.sources }
     genError.value = ''
     nextTick(() => { if (viewer.value) viewer.value.scrollTop = 0 })
   } catch (e) {
@@ -256,7 +250,7 @@ async function generate() {
   if (!form.value.country || generating.value) return
   generating.value = true
   genError.value = ''
-  current.value = { id: null, title: '', content: '', sources: null, keyFigures: null }
+  current.value = { id: null, title: '', content: '', sources: null }
   controller.value = new AbortController()
   try {
     const res = await fetch('/reports/stream', {
@@ -294,8 +288,6 @@ async function generate() {
           try { current.value.content += JSON.parse(sse.data).content; scrollViewerBottom() } catch (e) {}
         } else if (sse.event === 'sources') {
           try { current.value.sources = JSON.parse(sse.data).sources } catch (e) {}
-        } else if (sse.event === 'key_figures') {
-          try { current.value.keyFigures = JSON.parse(sse.data).figures } catch (e) {}
         } else if (sse.event === 'saved') {
           let rid = null
           try {
@@ -310,7 +302,7 @@ async function generate() {
           if (rid) {
             try {
               const rep = await getReport(rid)
-              current.value = { id: rep.id, title: rep.title, content: rep.content, sources: rep.sources, keyFigures: rep.key_figures }
+              current.value = { id: rep.id, title: rep.title, content: rep.content, sources: rep.sources }
             } catch (e) {}
           }
         } else if (sse.event === 'error') {
@@ -623,37 +615,6 @@ function onCiteClick(e) {
 }
 
 .report-main :deep(.sources) { max-width: 75ch; margin-left: auto; margin-right: auto; }
-
-.key-figures {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  max-width: 75ch;
-  margin: 0 auto var(--space-4);
-}
-.key-figures .kfig {
-  flex: 1 1 120px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: var(--space-3);
-  background: var(--color-accent-container);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  text-align: center;
-}
-.key-figures .kfig-val {
-  font-size: 1.25rem;
-  font-weight: 700;
-  line-height: 1.1;
-  color: var(--color-accent);
-}
-.key-figures .kfig-lbl {
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--color-muted);
-}
 
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

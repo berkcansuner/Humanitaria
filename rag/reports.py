@@ -47,33 +47,26 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
             title       TEXT NOT NULL,
             content     TEXT NOT NULL,
             sources_json TEXT,
-            key_figures_json TEXT,
             doc_count   INTEGER,
             created_at  TEXT NOT NULL
         );
         CREATE INDEX IF NOT EXISTS idx_reports_user ON reports(user_id, created_at);
         """
     )
-    # Migration for DBs created before the key-figures panel (mirrors conversations.py).
-    cols = {r[1] for r in conn.execute("PRAGMA table_info(reports)").fetchall()}
-    if "key_figures_json" not in cols:
-        conn.execute("ALTER TABLE reports ADD COLUMN key_figures_json TEXT")
 
 
 def create_report(report_id: str, user_id: str, *, country: str, theme: str | None,
                   date_from: str | None, date_to: str | None, language: str,
-                  title: str, content: str, sources: list | None, doc_count: int,
-                  key_figures: list | None = None) -> None:
+                  title: str, content: str, sources: list | None, doc_count: int) -> None:
     """Insert a generated report owned by user_id."""
     sources_json = json.dumps(sources, ensure_ascii=False) if sources else None
-    key_figures_json = json.dumps(key_figures, ensure_ascii=False) if key_figures else None
     with _connect() as conn:
         conn.execute(
             "INSERT INTO reports(id, user_id, country, theme, date_from, date_to, language, "
-            "title, content, sources_json, key_figures_json, doc_count, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "title, content, sources_json, doc_count, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (report_id, user_id, country, theme, date_from, date_to, language,
-             title, content, sources_json, key_figures_json, doc_count, _now()),
+             title, content, sources_json, doc_count, _now()),
         )
 
 
@@ -98,7 +91,6 @@ def get_report(report_id: str) -> dict | None:
         return None
     d = dict(row)
     d["sources"] = json.loads(d.pop("sources_json")) if d.get("sources_json") else None
-    d["key_figures"] = json.loads(d.pop("key_figures_json")) if d.get("key_figures_json") else None
     return d
 
 
