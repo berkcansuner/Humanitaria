@@ -121,6 +121,10 @@ def get_or_create_google_user(google_sub: str, email: str, name: str) -> dict:
     """Resolve a Google account to a local user. Matches by google_sub, then by
     email (linking the Google identity to a pre-existing password account), else
     creates a new google-provider user."""
+    # Normalise the email the same way password signup/login does (strip + lower),
+    # so a case difference from Google never splits into a second account or misses
+    # the link to an existing password account.
+    email = email.strip().lower()
     with _connect() as conn:
         row = conn.execute(
             "SELECT * FROM users WHERE google_sub = ?", (google_sub,)

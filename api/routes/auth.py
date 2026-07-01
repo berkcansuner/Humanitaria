@@ -221,6 +221,13 @@ async def _google_userinfo(request: Request) -> dict:
     return dict(await oauth.google.userinfo(token=token))
 
 
+def _email_is_verified(info: dict) -> bool:
+    """True only if Google asserts the email is verified. The OIDC userinfo claim is
+    normally a JSON boolean, but accept the string form defensively."""
+    v = info.get("email_verified")
+    return v is True or str(v).strip().lower() == "true"
+
+
 @router.get("/google/callback")
 async def google_callback(request: Request):
     s = get_settings()
@@ -238,12 +245,24 @@ async def google_callback(request: Request):
     if not sub or not email:
         logger.warning("Google OAuth callback returned no userinfo")
         return RedirectResponse(url=f"{s.FRONTEND_URL}/login?error=google")
-    user = await anyio.to_thread.run_sync(
-        users_store.get_or_create_google_user, sub, email, name
-    )
-    session_token = await anyio.to_thread.run_sync(
-        users_store.create_session, user["id"], s.SESSION_TTL_HOURS
-    )
+    # Require a Google-verified email before creating/linking an account. Otherwise
+    # a Google account with an unverified email could claim (and hijack) an existing
+    # password account that shares that address. Fail closed if the claim is absent.
+    if not _email_is_verified(info):
+        logger.warning("Google OAuth: rejected unverified email for sub=%s", sub)
+        return RedirectResponse(url=f"{s.FRONTEND_URL}/login?error=google_unverified")
+    # Account create/link touches the DB; a concurrent-callback race can raise a
+    # UNIQUE IntegrityError. Fail closed to the login redirect rather than a bare 500.
+    try:
+        user = await anyio.to_thread.run_sync(
+            users_store.get_or_create_google_user, sub, email, name
+        )
+        session_token = await anyio.to_thread.run_sync(
+            users_store.create_session, user["id"], s.SESSION_TTL_HOURS
+        )
+    except Exception as exc:
+        logger.warning("Google OAuth: account create/link failed: %r", exc)
+        return RedirectResponse(url=f"{s.FRONTEND_URL}/login?error=google")
     resp = RedirectResponse(url=f"{s.FRONTEND_URL}/app")
     _set_session_cookie(resp, session_token)
     return resp

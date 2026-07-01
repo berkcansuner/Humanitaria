@@ -109,3 +109,12 @@ def test_google_user_links_to_existing_email(users):
     linked = users.get_or_create_google_user("sub-xyz", "shared@example.com", "Shared")
     assert linked["id"] == uid
     assert linked["google_sub"] == "sub-xyz"
+
+
+def test_google_user_links_case_insensitively(users):
+    """Google may return the email in a different case than the stored (lowercased)
+    password account. Normalising avoids a silent account split / missed link."""
+    uid = users.create_user("shared@example.com", "Shared", password="pw-123456")
+    linked = users.get_or_create_google_user("sub-xyz", "Shared@Example.COM", "Shared")
+    assert linked["id"] == uid
+    assert linked["email"] == "shared@example.com"
