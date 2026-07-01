@@ -78,8 +78,8 @@ class TestChainProvider:
 def test_system_prompt_has_date_awareness_rule():
     from rag.chain import _SYSTEM_PROMPT
     low = _SYSTEM_PROMPT.lower()
-    # Pin rule 9 specifically: "date"/"most recent" alone also occur in earlier
-    # rules, so assert the rule-9 phrasing to guard against its accidental removal.
+    # Pin rule 10 specifically: "date"/"most recent" alone also occur in earlier
+    # rules, so assert the rule-10 phrasing to guard against its accidental removal.
     assert "prioritize the most recent" in low
     assert "(yyyy-mm-dd)" in low
 
@@ -87,6 +87,6 @@ def test_system_prompt_has_date_awareness_rule():
 def test_system_prompt_constrains_citation_numbers_to_context():
     from rag.chain import _SYSTEM_PROMPT
     low = _SYSTEM_PROMPT.lower()
-    # Pin rule 6a's range constraint: citing a number not present in the Context
+    # Pin rule 7's range constraint: citing a number not present in the Context
     # produces a dead [n] marker, so the prompt must forbid out-of-range citations.
     assert "never write a citation number that is not shown in the context" in low
