@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Lint (ruff)
+        run: ruff check api rag ingestion config.py
+
+      - name: Type-check (mypy, advisory)
+        run: mypy
+        continue-on-error: true
+
+      - name: Test (pytest + coverage)
+        # Dummy env so nothing is mistaken for a real, callable backend; the suite
+        # is fully mocked/offline, these just prevent accidental live-call config.
+        env:
+          GEMINI_API_KEY: test
+          PINECONE_API_KEY: test
+          RELIEFWEB_APPNAME: test
+        run: pytest tests/ -q --cov
+
+      - name: Dependency audit (pip-audit, advisory)
+        run: pip-audit
+        continue-on-error: true
