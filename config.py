@@ -79,6 +79,11 @@ class Settings(BaseSettings):
     # fail fast). A secure session cookie (HTTPS) also counts as production.
     ENVIRONMENT: str = "development"
 
+    # Observability
+    LOG_LEVEL: str = "INFO"                 # root log level (DEBUG/INFO/WARNING/...)
+    SENTRY_DSN: str = ""                    # empty = Sentry disabled (opt-in)
+    SENTRY_TRACES_SAMPLE_RATE: float = 0.0  # perf tracing sample rate (0 = errors only)
+
     # API Server
     API_HOST: str = "127.0.0.1"
     API_PORT: int = 8000

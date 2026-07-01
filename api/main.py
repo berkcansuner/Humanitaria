@@ -12,6 +12,7 @@ from slowapi.errors import RateLimitExceeded
 
 from api.routes import chat, health, conversations, auth, admin, reports
 from api.limiter import limiter
+from api.observability import configure_logging, init_sentry
 from config import get_settings, DEFAULT_SESSION_SECRET
 
 logger = logging.getLogger(__name__)
@@ -84,6 +85,11 @@ async def lifespan(app: FastAPI):
 
 
 settings = get_settings()
+# Configure logging first so subsequent startup logs use the app's level/format;
+# then wire optional Sentry error tracking (no-op unless SENTRY_DSN is set).
+configure_logging(settings.LOG_LEVEL)
+init_sentry(settings.SENTRY_DSN, environment=settings.ENVIRONMENT,
+            traces_sample_rate=settings.SENTRY_TRACES_SAMPLE_RATE)
 _verify_production_config(settings)
 
 app = FastAPI(title="ReliefWeb RAG API", lifespan=lifespan, **_docs_kwargs(settings))
