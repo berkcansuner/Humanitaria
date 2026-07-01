@@ -71,7 +71,9 @@ class TestRetriever:
             )
 
     def test_build_retriever_k_override(self):
-        # Caller raises k to fetch a larger candidate pool; fetch_k follows.
+        # Caller raises k to fetch a larger candidate pool; fetch_k must stay
+        # strictly larger so MMR has headroom to diversify (was max(MMR_FETCH_K, k),
+        # which collapsed to k==20 and made the diversity step a no-op).
         with patch("rag.retriever._get_vectorstore") as mock_get_vs:
             mock_vs = MagicMock()
             mock_vs.as_retriever.return_value = MagicMock()
@@ -79,7 +81,23 @@ class TestRetriever:
             build_retriever(k=20)
             call_kwargs = mock_vs.as_retriever.call_args[1]["search_kwargs"]
             assert call_kwargs["k"] == 20
-            assert call_kwargs["fetch_k"] >= 20
+            assert call_kwargs["fetch_k"] >= 20 * 3
+
+    def test_build_retriever_date_filter_widens_pool(self):
+        # A date filter thins the pool in Python afterwards, so fetch even more.
+        with patch("rag.retriever._get_vectorstore") as mock_get_vs:
+            mock_vs = MagicMock()
+            mock_vs.as_retriever.return_value = MagicMock()
+            mock_get_vs.return_value = mock_vs
+            build_retriever(filter={"date": {"from": "2024-01-01"}}, k=20)
+            dated_fetch_k = mock_vs.as_retriever.call_args[1]["search_kwargs"]["fetch_k"]
+        with patch("rag.retriever._get_vectorstore") as mock_get_vs:
+            mock_vs = MagicMock()
+            mock_vs.as_retriever.return_value = MagicMock()
+            mock_get_vs.return_value = mock_vs
+            build_retriever(k=20)
+            plain_fetch_k = mock_vs.as_retriever.call_args[1]["search_kwargs"]["fetch_k"]
+        assert dated_fetch_k > plain_fetch_k
 
     def test_build_retriever_no_filter(self):
         with patch("rag.retriever._get_vectorstore") as mock_get_vs:

@@ -104,15 +104,19 @@ def build_retriever(filter: Optional[Dict[str, Any]] = None, k: Optional[int] = 
     # dedup + reranking; defaults to the final top-k.
     k = k or settings.TOP_K_RETRIEVAL
     store_filter = _build_pinecone_filter(filter)
-    # When a date filter is present, fetch more candidates so post-filtering
-    # in Python has enough docs to work with after the date cut.
+    # MMR only adds value when the candidate pool (fetch_k) is meaningfully larger
+    # than k — otherwise it selects every candidate and the diversity step is a
+    # no-op. The caller often raises k to a rerank pool (TOP_K * multiplier), so
+    # scale fetch_k off k (not just the MMR_FETCH_K floor). Fetch even wider when a
+    # date filter will thin the pool in Python afterwards.
     has_date_filter = isinstance(filter, dict) and "date" in filter
-    fetch_k = settings.MMR_FETCH_K * 4 if has_date_filter else settings.MMR_FETCH_K
+    fetch_multiplier = 12 if has_date_filter else 3
+    fetch_k = max(settings.MMR_FETCH_K, k * fetch_multiplier)
     return vectorstore.as_retriever(
         search_type="mmr",
         search_kwargs={
             "k": k,
-            "fetch_k": max(fetch_k, k),
+            "fetch_k": fetch_k,
             "lambda_mult": settings.MMR_LAMBDA,
             "filter": store_filter,
         },
