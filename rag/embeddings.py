@@ -1,5 +1,6 @@
 import logging
 import time
+from collections import OrderedDict
 from typing import List
 
 from langchain_core.embeddings import Embeddings
@@ -11,6 +12,12 @@ logger = logging.getLogger(__name__)
 
 _RETRY_COUNT = 3
 _RETRY_BACKOFF_S = 1.0
+
+# Bounded LRU cache for query embeddings. The retriever's vectorstore is a process
+# singleton, so the same query text is re-embedded on every repeat search; caching
+# the deterministic query vector avoids a redundant Gemini call + its latency.
+_QUERY_CACHE_MAX = 512
+_query_embed_cache: "OrderedDict[str, List[float]]" = OrderedDict()
 
 
 class GeminiLangChainEmbeddings(Embeddings):
@@ -71,8 +78,16 @@ class GeminiLangChainEmbeddings(Embeddings):
         return all_embeddings
 
     def embed_query(self, text: str) -> List[float]:
+        cached = _query_embed_cache.get(text)
+        if cached is not None:
+            _query_embed_cache.move_to_end(text)  # mark most-recently-used
+            return cached
         vec = self._embed_with_retry([text])[0]
         self._validate_dim(vec)
+        _query_embed_cache[text] = vec
+        _query_embed_cache.move_to_end(text)
+        if len(_query_embed_cache) > _QUERY_CACHE_MAX:
+            _query_embed_cache.popitem(last=False)  # evict least-recently-used
         return vec
 
 

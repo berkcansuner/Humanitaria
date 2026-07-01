@@ -1,5 +1,6 @@
 import logging
 import re
+from collections import OrderedDict
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 
@@ -194,19 +195,20 @@ def _extract_filters_llm(query: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-_llm_cache: Dict[str, Dict[str, Any]] = {}
+_llm_cache: "OrderedDict[str, Dict[str, Any]]" = OrderedDict()
 _MAX_LLM_CACHE = 512
 
 
 def _cached_llm_extract(query_normalized: str) -> Optional[Dict[str, Any]]:
     if query_normalized in _llm_cache:
+        _llm_cache.move_to_end(query_normalized)  # mark most-recently-used
         return _llm_cache[query_normalized]
     result = _extract_filters_llm(query_normalized)
     if result is not None:
-        if len(_llm_cache) >= _MAX_LLM_CACHE:
-            oldest_key = next(iter(_llm_cache))
-            del _llm_cache[oldest_key]
         _llm_cache[query_normalized] = result
+        _llm_cache.move_to_end(query_normalized)
+        if len(_llm_cache) > _MAX_LLM_CACHE:
+            _llm_cache.popitem(last=False)  # evict least-recently-used
     return result
 
 

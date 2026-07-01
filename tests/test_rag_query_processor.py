@@ -13,6 +13,33 @@ def _clear_llm_cache():
     _llm_cache.clear()
 
 
+class TestLlmCacheEviction:
+    def test_cache_is_lru_not_fifo(self):
+        # Accessing an old entry must protect it from eviction (LRU), unlike the
+        # previous FIFO behaviour which always dropped the oldest-inserted key.
+        from rag.query_processor import _cached_llm_extract
+        _clear_llm_cache()
+        with patch("rag.query_processor._MAX_LLM_CACHE", 2), \
+             patch("rag.query_processor._extract_filters_llm", side_effect=lambda q: {"q": q}):
+            _cached_llm_extract("k1")
+            _cached_llm_extract("k2")
+            _cached_llm_extract("k1")   # hit → k1 becomes most-recently-used
+            _cached_llm_extract("k3")   # inserting k3 evicts the LRU entry (k2)
+        assert "k1" in _llm_cache
+        assert "k2" not in _llm_cache
+        assert "k3" in _llm_cache
+        _clear_llm_cache()
+
+    def test_cache_hit_skips_llm_call(self):
+        from rag.query_processor import _cached_llm_extract
+        _clear_llm_cache()
+        with patch("rag.query_processor._extract_filters_llm", side_effect=lambda q: {"q": q}) as ex:
+            _cached_llm_extract("same")
+            _cached_llm_extract("same")
+        assert ex.call_count == 1
+        _clear_llm_cache()
+
+
 class TestQueryProcessor:
     @patch("rag.query_processor._extract_filters_llm", return_value=None)
     def test_extract_country(self, _mock):

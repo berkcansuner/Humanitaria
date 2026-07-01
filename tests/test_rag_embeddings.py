@@ -2,6 +2,16 @@ import pytest
 from unittest.mock import patch, MagicMock
 
 
+@pytest.fixture(autouse=True)
+def _clear_query_embed_cache():
+    """The query-embedding cache is module-global; clear it around each test so
+    cached vectors never leak between tests and skew call-count assertions."""
+    from rag.embeddings import _query_embed_cache
+    _query_embed_cache.clear()
+    yield
+    _query_embed_cache.clear()
+
+
 def _mock_gemini_settings(embed_dim=3072, batch_size=32):
     s = MagicMock()
     s.GEMINI_API_KEY = "test-key"
@@ -80,6 +90,33 @@ class TestGeminiLangChainEmbeddings:
             emb = GeminiLangChainEmbeddings()
             result = emb.embed_query("retry")
             assert len(result) == 3072
+            assert client.embeddings.create.call_count == 2
+
+
+class TestQueryEmbeddingCache:
+    def test_repeated_query_served_from_cache(self):
+        from rag.embeddings import GeminiLangChainEmbeddings
+        with patch("rag.embeddings.get_settings", return_value=_mock_gemini_settings()), \
+             patch("rag.embeddings.OpenAI") as MockOpenAI:
+            client = MagicMock()
+            client.embeddings.create.return_value = _gemini_response(1)
+            MockOpenAI.return_value = client
+            emb = GeminiLangChainEmbeddings()
+            v1 = emb.embed_query("same query")
+            v2 = emb.embed_query("same query")
+            assert v1 == v2
+            assert client.embeddings.create.call_count == 1  # second call cached
+
+    def test_distinct_queries_not_shared(self):
+        from rag.embeddings import GeminiLangChainEmbeddings
+        with patch("rag.embeddings.get_settings", return_value=_mock_gemini_settings()), \
+             patch("rag.embeddings.OpenAI") as MockOpenAI:
+            client = MagicMock()
+            client.embeddings.create.return_value = _gemini_response(1)
+            MockOpenAI.return_value = client
+            emb = GeminiLangChainEmbeddings()
+            emb.embed_query("query a")
+            emb.embed_query("query b")
             assert client.embeddings.create.call_count == 2
 
 
