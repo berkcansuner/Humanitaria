@@ -102,3 +102,14 @@ class TestCollapseNearDuplicates:
         with patch("rag.report_service._detect_lang", return_value="en"):
             out = _collapse_near_duplicates(docs)
         assert len(out) == 2
+
+
+class TestLangDetectedOncePerDoc:
+    def test_language_cached_across_both_filters(self):
+        # _prefer_english then _collapse_near_duplicates must detect each doc's
+        # language ONCE total (cached on metadata), not once per function.
+        docs = [_doc(body=f"d{i}", source="WFP", date=f"2026-05-0{i}", title=f"T{i}") for i in range(1, 4)]
+        with patch("rag.report_service._detect_lang", return_value="en") as detect:
+            kept = _prefer_english(docs)
+            _collapse_near_duplicates(kept)
+        assert detect.call_count == 3  # once per original doc, not 6

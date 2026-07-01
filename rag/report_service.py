@@ -48,6 +48,20 @@ def _detect_lang(text: str) -> str:
         return "unknown"
 
 
+# Metadata key memoising a document's detected language, so the two report filters
+# (_prefer_english + _collapse_near_duplicates) each detect it only once per doc.
+_LANG_META_KEY = "_detected_lang"
+
+
+def _doc_lang(doc: Document) -> str:
+    """Detected language for *doc*, computed once and cached on its metadata."""
+    lang = doc.metadata.get(_LANG_META_KEY)
+    if lang is None:
+        lang = _detect_lang(doc.page_content)
+        doc.metadata[_LANG_META_KEY] = lang
+    return lang
+
+
 def _prefer_english(docs: List[Document]) -> List[Document]:
     """Adaptive source-language filter, decided from the candidate set's own mix.
 
@@ -59,7 +73,7 @@ def _prefer_english(docs: List[Document]) -> List[Document]:
     """
     if not docs:
         return docs
-    english = [d for d in docs if _detect_lang(d.page_content) == "en"]
+    english = [d for d in docs if _doc_lang(d) == "en"]
     if english and len(english) / len(docs) >= _ENGLISH_DOMINANCE:
         return english
     return docs
@@ -100,7 +114,7 @@ def _collapse_near_duplicates(docs: List[Document]) -> List[Document]:
     if n < 2:
         return docs
 
-    langs = [_detect_lang(d.page_content) for d in docs]
+    langs = [_doc_lang(d) for d in docs]
     parent = list(range(n))
 
     def find(x: int) -> int:
