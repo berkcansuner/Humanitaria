@@ -12,9 +12,26 @@ from slowapi.errors import RateLimitExceeded
 
 from api.routes import chat, health, conversations, auth, admin, reports
 from api.limiter import limiter
-from config import get_settings
+from config import get_settings, DEFAULT_SESSION_SECRET
 
 logger = logging.getLogger(__name__)
+
+
+def _docs_kwargs(settings) -> dict:
+    """Hide the interactive API docs (/docs, /redoc, /openapi.json) in production so
+    the internal admin/auth surface is not publicly discoverable."""
+    if settings.is_production:
+        return {"docs_url": None, "redoc_url": None, "openapi_url": None}
+    return {}
+
+
+def _verify_production_config(settings) -> None:
+    """Fail fast at startup if a production deployment runs with insecure defaults."""
+    if settings.is_production and settings.AUTH_SESSION_SECRET == DEFAULT_SESSION_SECRET:
+        raise RuntimeError(
+            "AUTH_SESSION_SECRET is the insecure default in a production environment. "
+            "Set a strong AUTH_SESSION_SECRET (see .env.example)."
+        )
 
 
 @asynccontextmanager
@@ -66,13 +83,15 @@ async def lifespan(app: FastAPI):
         logger.info("Ingestion scheduler stopped")
 
 
-app = FastAPI(title="ReliefWeb RAG API", lifespan=lifespan)
+settings = get_settings()
+_verify_production_config(settings)
+
+app = FastAPI(title="ReliefWeb RAG API", lifespan=lifespan, **_docs_kwargs(settings))
 
 # Rate limiting: register the shared limiter and the 429 handler.
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-settings = get_settings()
 _cors_origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
 # allow_credentials=True so the browser sends/stores the httpOnly session cookie
 # on cross-origin dev calls (frontend :5173 → API :8000). Requires an explicit

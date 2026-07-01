@@ -2,6 +2,10 @@ from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Insecure placeholder used for local dev; production MUST override it (checked at
+# startup by api.main._verify_production_config).
+DEFAULT_SESSION_SECRET = "dev-insecure-change-me"
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -70,6 +74,11 @@ class Settings(BaseSettings):
     # CORS — comma-separated allowed origins
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000,http://localhost:8000"
 
+    # Deployment environment: "development" (default) or "production". Drives
+    # production hardening (interactive /docs are hidden, insecure default secrets
+    # fail fast). A secure session cookie (HTTPS) also counts as production.
+    ENVIRONMENT: str = "development"
+
     # API Server
     API_HOST: str = "127.0.0.1"
     API_PORT: int = 8000
@@ -81,7 +90,7 @@ class Settings(BaseSettings):
     AUTH_SIGNUP_RATE_LIMIT: str = "3/minute"
 
     # Auth (login/signup — httpOnly cookie session + Google OAuth)
-    AUTH_SESSION_SECRET: str = "dev-insecure-change-me"   # signs OAuth state (Starlette SessionMiddleware)
+    AUTH_SESSION_SECRET: str = DEFAULT_SESSION_SECRET     # signs OAuth state (Starlette SessionMiddleware)
     SESSION_COOKIE_NAME: str = "rw_session"               # httpOnly session cookie name
     SESSION_COOKIE_SECURE: bool = False                   # True in production (HTTPS only)
     FRONTEND_URL: str = "http://localhost:5173"           # post-OAuth redirect target
@@ -116,6 +125,12 @@ class Settings(BaseSettings):
     # Shared secret for the automation trigger POST /admin/ingest/cron (empty = endpoint
     # disabled). Set in prod env; the Cloudflare Worker cron sends it as X-Cron-Token.
     INGEST_TRIGGER_TOKEN: str = ""
+
+    @property
+    def is_production(self) -> bool:
+        """True in a production deployment. Explicit ENVIRONMENT=production, or —
+        conservatively — any deployment serving a secure (HTTPS-only) session cookie."""
+        return self.ENVIRONMENT.strip().lower() in {"production", "prod"} or self.SESSION_COOKIE_SECURE
 
 
 @lru_cache

@@ -36,3 +36,23 @@ def test_provider_and_ingest_defaults():
     assert s.RETENTION_DAYS == 0
     assert s.RETENTION_PER_COUNTRY_CAP == 0
     assert s.INGEST_TRIGGER_TOKEN == ""
+
+
+class TestIsProduction:
+    def test_default_is_development(self):
+        from config import Settings
+        assert Settings(_env_file=None).is_production is False
+
+    def test_environment_production_is_prod(self):
+        from config import Settings
+        assert Settings(_env_file=None, ENVIRONMENT="production").is_production is True
+
+    def test_environment_prod_alias(self):
+        from config import Settings
+        assert Settings(_env_file=None, ENVIRONMENT="PROD").is_production is True
+
+    def test_secure_cookie_implies_prod(self):
+        # An HTTPS deployment (secure session cookie) is treated as production even
+        # if ENVIRONMENT is unset — conservative lock-down default.
+        from config import Settings
+        assert Settings(_env_file=None, SESSION_COOKIE_SECURE=True).is_production is True

@@ -11,6 +11,8 @@ services:
     healthCheckPath: /health
     envVars:
       # Production behavior (HTTPS, same-origin SPA, no background ingestion).
+      - key: ENVIRONMENT           # hides /docs, fail-fast on insecure default secret
+        value: production
       - key: SESSION_COOKIE_SECURE
         value: "true"
       - key: INGEST_SCHEDULE_HOURS   # disable scheduler (Pinecone write quota full; not needed)
