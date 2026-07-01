@@ -1,11 +1,16 @@
 import logging
 from collections import OrderedDict
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
 from langchain_core.chat_history import InMemoryChatMessageHistory
 from langchain_core.messages import BaseMessage
 
 from config import get_settings
+
+if TYPE_CHECKING:
+    # Imported lazily at runtime (only when REDIS_URL is set); declared here so the
+    # return-type forward reference resolves for linters/type-checkers.
+    from langchain_community.chat_message_histories import RedisChatMessageHistory
 
 logger = logging.getLogger(__name__)
 

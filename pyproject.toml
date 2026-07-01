@@ -12,3 +12,23 @@ markers = [
 [tool.coverage.run]
 source = ["api", "rag", "ingestion"]
 omit = ["tests/*", "scripts/*"]
+
+[tool.ruff]
+# Lint the application source (tests/scripts are exercised by pytest).
+src = ["api", "rag", "ingestion"]
+target-version = "py312"
+# Long lines are mostly multi-line prompt strings; line-length (E5) is not enforced.
+
+[tool.ruff.lint]
+# Default set: pyflakes (F) + a subset of pycodestyle (E) — catches real bugs
+# (unused imports, undefined names) without imposing a full reformat.
+select = ["E4", "E7", "E9", "F"]
+
+[tool.mypy]
+# Advisory type-checking: the codebase is largely untyped, so mypy runs in CI as
+# a non-blocking signal (continue-on-error). Third-party stubs are not required.
+python_version = "3.12"
+ignore_missing_imports = true
+warn_unused_ignores = false
+warn_redundant_casts = true
+files = ["config.py"]

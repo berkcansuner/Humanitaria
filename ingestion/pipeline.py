@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Tuple, Any
 
 from config import get_settings
-from ingestion.client import ReliefWebClient, ENDPOINT_CONFIG
+from ingestion.client import ReliefWebClient
 from ingestion.parser import parse
 from ingestion.chunker import chunk_document
 from ingestion.store import get_store

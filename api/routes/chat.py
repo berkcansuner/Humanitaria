@@ -25,7 +25,6 @@ from rag import conversations as convo_store
 from rag.rag_context import (
     _build_context_and_sources,
     _filter_cited_sources,
-    _is_displayable_source,
 )
 from api.routes.auth import get_current_user
 from api.limiter import limiter

@@ -6,7 +6,9 @@ from typing import Optional
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from config import get_settings
-from ingestion.pipeline import run_pipeline
+# Re-exported: runner.py calls it as ``sched.run_pipeline`` (single delegation
+# point the tests patch), so it must stay importable from this module.
+from ingestion.pipeline import run_pipeline  # noqa: F401
 
 logger = logging.getLogger(__name__)
 

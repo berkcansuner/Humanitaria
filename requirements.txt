@@ -37,5 +37,9 @@ xhtml2pdf==0.2.17
 markdown==3.10.2
 reportlab==4.5.1
 
-# Testing
+# Testing + dev tooling (also run in CI: pytest+coverage, lint, type-check, audit)
 pytest==8.3.5
+pytest-cov==6.0.0
+ruff==0.9.6
+mypy==1.15.0
+pip-audit==2.9.0
