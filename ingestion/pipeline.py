@@ -104,10 +104,14 @@ def run_pipeline(
             try:
                 texts = [c["content"] for c in all_chunks]
                 all_embeddings = embedder.embed_documents(texts)
-                # Phase 3: delete orphan chunks from previous ingestions, then upsert.
-                for doc, _ in doc_batch:
-                    store.delete_document_chunks(doc["id"])
+                # Phase 3: upsert FIRST (deterministic {doc_id}_{i} ids overwrite the
+                # current chunks in place), THEN prune only surplus/stale chunks from a
+                # previous, longer version of the document. Deleting after the upsert
+                # means a failed write never leaves a document with zero vectors.
                 store.upsert_chunks(all_chunks, all_embeddings)
+                for doc, chunks in doc_batch:
+                    keep_ids = {c["id"] for c in chunks}
+                    store.delete_document_chunks(doc["id"], keep_ids=keep_ids)
                 stats.succeeded += len(doc_batch)
             except Exception as e:
                 stats.failed += len(doc_batch)

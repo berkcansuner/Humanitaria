@@ -76,6 +76,22 @@ class TestPineconeStore:
         mock_index.list.assert_called_once_with(prefix="abc_", namespace=None)
         mock_index.delete.assert_called_once_with(ids=["abc_0", "abc_5"], namespace=None)
 
+    def test_delete_document_chunks_keeps_current_ids(self):
+        # With keep_ids, only surplus/stale chunks are deleted — current chunks stay.
+        mock_index = MagicMock()
+        mock_index.list.return_value = iter([["abc_0", "abc_1", "abc_2", "abc_3"]])
+        store = self._make_store(mock_index)
+        store.delete_document_chunks("abc", keep_ids={"abc_0", "abc_1"})
+        mock_index.delete.assert_called_once_with(ids=["abc_2", "abc_3"], namespace=None)
+
+    def test_delete_document_chunks_keep_ids_noop_when_all_kept(self):
+        # If every listed chunk is a current id, nothing is deleted.
+        mock_index = MagicMock()
+        mock_index.list.return_value = iter([["abc_0", "abc_1"]])
+        store = self._make_store(mock_index)
+        store.delete_document_chunks("abc", keep_ids={"abc_0", "abc_1"})
+        mock_index.delete.assert_not_called()
+
     def test_delete_document_chunks_noop_when_empty(self):
         mock_index = MagicMock()
         mock_index.list.return_value = iter([])

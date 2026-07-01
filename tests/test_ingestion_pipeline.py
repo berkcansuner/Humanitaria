@@ -129,8 +129,8 @@ class TestPipelineErrorIsolation:
             # New batch pipeline: 2 successful docs upserted together in 1 call
             assert mock_store.upsert_chunks.call_count == 1
 
-    def test_orphan_chunks_deleted_before_upsert(self):
-        """delete_document_chunks is called for each document before upserting new chunks."""
+    def test_orphan_chunks_pruned_after_upsert(self):
+        """Surplus orphan cleanup runs once per document, AFTER upserting new chunks."""
         with patch("ingestion.pipeline.ReliefWebClient") as MockClient, \
              patch("ingestion.pipeline.parse") as mock_parse, \
              patch("ingestion.pipeline.chunk_document") as mock_chunk, \
@@ -153,6 +153,86 @@ class TestPipelineErrorIsolation:
             assert mock_store.delete_document_chunks.call_count == 2
             called_ids = {c[0][0] for c in mock_store.delete_document_chunks.call_args_list}
             assert called_ids == {"id1", "id2"}
+
+    def test_upsert_runs_before_orphan_delete(self):
+        """Upsert (overwrite in place) must happen BEFORE surplus-orphan deletion.
+
+        Deterministic {doc_id}_{i} ids let a re-ingest overwrite existing chunks;
+        deleting only afterwards means a failed write never leaves a doc vectorless.
+        """
+        with patch("ingestion.pipeline.ReliefWebClient") as MockClient, \
+             patch("ingestion.pipeline.parse") as mock_parse, \
+             patch("ingestion.pipeline.chunk_document") as mock_chunk, \
+             patch("ingestion.pipeline.get_embeddings") as mock_get_emb, \
+             patch("ingestion.pipeline.get_store") as mock_get_store:
+            mock_client = MagicMock()
+            mock_client.fetch.return_value = [{"id": "1"}]
+            MockClient.return_value = mock_client
+            mock_parse.return_value = {"id": "id1", "url": "u1", "title": "t1", "body": "b1", "date": "", "country": "", "theme": "", "source": "", "format": "", "doctype": "report"}
+            mock_chunk.return_value = [{"id": "id1_0", "content": "b", "metadata": {}}]
+            mock_emb = MagicMock()
+            mock_emb.embed_documents.side_effect = lambda texts: [[0.1] * 4096 for _ in texts]
+            mock_get_emb.return_value = mock_emb
+            calls: list = []
+            mock_store = MagicMock()
+            mock_store.upsert_chunks.side_effect = lambda *a, **k: calls.append("upsert")
+            mock_store.delete_document_chunks.side_effect = lambda *a, **k: calls.append("delete")
+            mock_get_store.return_value = mock_store
+            run_pipeline(limit=1)
+            assert calls == ["upsert", "delete"]
+
+    def test_orphan_delete_preserves_new_chunk_ids(self):
+        """Surplus cleanup passes the new chunk ids as keep_ids so they are never deleted."""
+        with patch("ingestion.pipeline.ReliefWebClient") as MockClient, \
+             patch("ingestion.pipeline.parse") as mock_parse, \
+             patch("ingestion.pipeline.chunk_document") as mock_chunk, \
+             patch("ingestion.pipeline.get_embeddings") as mock_get_emb, \
+             patch("ingestion.pipeline.get_store") as mock_get_store:
+            mock_client = MagicMock()
+            mock_client.fetch.return_value = [{"id": "1"}]
+            MockClient.return_value = mock_client
+            mock_parse.return_value = {"id": "id1", "url": "u1", "title": "t1", "body": "b1", "date": "", "country": "", "theme": "", "source": "", "format": "", "doctype": "report"}
+            mock_chunk.return_value = [
+                {"id": "id1_0", "content": "b", "metadata": {}},
+                {"id": "id1_1", "content": "c", "metadata": {}},
+            ]
+            mock_emb = MagicMock()
+            mock_emb.embed_documents.side_effect = lambda texts: [[0.1] * 4096 for _ in texts]
+            mock_get_emb.return_value = mock_emb
+            mock_store = MagicMock()
+            mock_get_store.return_value = mock_store
+            run_pipeline(limit=1)
+            _, kwargs = mock_store.delete_document_chunks.call_args
+            assert kwargs.get("keep_ids") == {"id1_0", "id1_1"}
+
+    def test_existing_chunks_retained_when_upsert_fails(self):
+        """If upsert throws, orphan delete must NOT run — the doc keeps its old chunks.
+
+        This is the data-loss guard: upsert-before-delete means a transient write
+        failure (e.g. Pinecone 429) leaves existing vectors untouched rather than
+        wiping the document from search.
+        """
+        with patch("ingestion.pipeline.ReliefWebClient") as MockClient, \
+             patch("ingestion.pipeline.parse") as mock_parse, \
+             patch("ingestion.pipeline.chunk_document") as mock_chunk, \
+             patch("ingestion.pipeline.get_embeddings") as mock_get_emb, \
+             patch("ingestion.pipeline.get_store") as mock_get_store:
+            mock_client = MagicMock()
+            mock_client.fetch.return_value = [{"id": "1"}]
+            MockClient.return_value = mock_client
+            mock_parse.return_value = {"id": "id1", "url": "u1", "title": "t1", "body": "b1", "date": "", "country": "", "theme": "", "source": "", "format": "", "doctype": "report"}
+            mock_chunk.return_value = [{"id": "id1_0", "content": "b", "metadata": {}}]
+            mock_emb = MagicMock()
+            mock_emb.embed_documents.side_effect = lambda texts: [[0.1] * 4096 for _ in texts]
+            mock_get_emb.return_value = mock_emb
+            mock_store = MagicMock()
+            mock_store.upsert_chunks.side_effect = RuntimeError("upsert boom")
+            mock_get_store.return_value = mock_store
+            stats = run_pipeline(limit=1)
+            mock_store.upsert_chunks.assert_called_once()
+            mock_store.delete_document_chunks.assert_not_called()
+            assert stats["reports"].failed == 1
+            assert stats["reports"].succeeded == 0
 
     def test_orphan_chunks_retained_when_embed_fails(self):
         """If embedding fails, existing chunks must NOT be deleted (no 0-chunk window).

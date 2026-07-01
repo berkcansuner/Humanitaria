@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional, Set
 
 from pinecone import Pinecone
 
@@ -31,12 +31,19 @@ class PineconeStore:
             # Namespace may not exist yet on first ingest — non-fatal.
             logger.warning("Failed to clear Pinecone namespace %s: %s", self.namespace, e)
 
-    def delete_document_chunks(self, doc_id: str) -> None:
-        """Delete all previously stored chunks for *doc_id* via id-prefix listing."""
+    def delete_document_chunks(self, doc_id: str, keep_ids: Optional[Set[str]] = None) -> None:
+        """Delete previously stored chunks for *doc_id* via id-prefix listing.
+
+        If *keep_ids* is given, chunks whose id is in that set are preserved. This
+        is used to prune only surplus/stale chunks *after* an overwrite-upsert, so a
+        document is never left with zero vectors if a write fails midway.
+        """
         try:
             ids: List[str] = []
             for page in self.index.list(prefix=f"{doc_id}_", namespace=self.namespace):
                 ids.extend(page)
+            if keep_ids is not None:
+                ids = [i for i in ids if i not in keep_ids]
             # Pinecone delete accepts at most 1000 ids per request.
             for i in range(0, len(ids), 1000):
                 self.index.delete(ids=ids[i : i + 1000], namespace=self.namespace)
