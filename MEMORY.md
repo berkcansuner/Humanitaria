@@ -4,7 +4,9 @@
 > Bu bir tarihçe değil — GÜNCEL durumu yansıtır. Eskiyen satırları sil/değiştir.
 > "Nerede kalmıştık?" sorusunun cevabı burasıdır.
 
-**Son güncelleme:** 2026-07-02 (**DERİN DENETİM YAPILDI + TIER 1 sertleştirmeleri UYGULANDI** — 3 paralel Explore ajanı tüm projeyi taradı → önceliklendirilmiş 4-tier öneri listesi → **TIER 1 (7 kritik/hızlı fix) branch `feat/tier1-hardening`'de tamamlandı, 6 commit, 442 backend test yeşil, PASİF (master'a MERGE YOK)**. Detay + TIER 2-4 backlog: plan dosyası `~/.claude/plans/nerede-kalm-t-k-sequential-alpaca.md`. **SIRADAKİ:** kullanıcı onayı → TIER 1'i master'a merge + TIER 2 (CI/CD, ruff/mypy, Sentry, kritik testler) kararı. Hâlâ açık: 1 Temmuz veri aktivasyonu + sızan kimlik rotasyonu.)
+**Son güncelleme:** 2026-07-02 — **SEANS DURAKLATILDI (kullanıcı "sonraki seansta devam" dedi).** Repo `feat/tier3-rag-perf` branch'inde bırakıldı. **SONRAKİ SEANS BURADAN BAŞLAR:** TIER 3 branch test edildi (canlı smoke geçti) → **merge kararı bekliyor**; sonra TIER 4 / ertelenen TIER 3 (3.1/3.2/3.4, eval'li) / 1 Temmuz veri aktivasyonu / kimlik rotasyonu. Git: master = TIER 1+2 (Render canlı, CI success); `feat/tier3-rag-perf` = TIER 3 (3 commit, merge YOK). ⚠️ **NOT: bu seansta branch reorg sırasında `git reset --hard origin/master` çalıştı → seans başındaki commit'lenmemiş (staged) CLAUDE.md düzenlemesi silinmiş olabilir (kullanıcıya bildirildi).**
+
+**(önceki) Son güncelleme:** 2026-07-02 (**DERİN DENETİM YAPILDI + TIER 1 sertleştirmeleri UYGULANDI** — 3 paralel Explore ajanı tüm projeyi taradı → önceliklendirilmiş 4-tier öneri listesi → **TIER 1 (7 kritik/hızlı fix) branch `feat/tier1-hardening`'de tamamlandı, 6 commit, 442 backend test yeşil, PASİF (master'a MERGE YOK)**. Detay + TIER 2-4 backlog: plan dosyası `~/.claude/plans/nerede-kalm-t-k-sequential-alpaca.md`. **SIRADAKİ:** kullanıcı onayı → TIER 1'i master'a merge + TIER 2 (CI/CD, ruff/mypy, Sentry, kritik testler) kararı. Hâlâ açık: 1 Temmuz veri aktivasyonu + sızan kimlik rotasyonu.)
 
 ---
 
