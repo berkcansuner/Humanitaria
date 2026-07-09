@@ -24,9 +24,11 @@
 ## Findings
 
 ### [P18-01] PDF export endpoint is not rate-limited (CPU amplification)
-**Severity:** LOW · `GET /reports/{id}/pdf` runs `render_report_pdf` (xhtml2pdf/reportlab —
-CPU-heavy) with no rate limit. An authenticated user can loop it to burn CPU on the single
-worker. Auth-gated + own-report, so low, but apply the chat limiter (or a lighter one).
+**Severity:** LOW · **Status:** ✅ FIXED (2026-07-09)
+`GET /reports/{id}/pdf` runs `render_report_pdf` (xhtml2pdf/reportlab — CPU-heavy) with no
+rate limit. An authenticated user could loop it to burn CPU on the single worker.
+**Remediated:** applied `@limiter.limit(_rate_limit)` (the chat/report per-IP limiter) to
+the route + regression test `tests/test_reports_pdf_rate_limit.py`.
 
 ## Pass 18 verdict
 Module boundaries have clean, cooperative contracts (notably the citation handshake). The

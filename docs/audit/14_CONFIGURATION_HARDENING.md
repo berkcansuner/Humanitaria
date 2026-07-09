@@ -39,13 +39,14 @@ Uvicorn/Starlette impose no default max body size; oversized POST bodies are buf
 before Pydantic rejects them (the 4000-char `message` cap is post-parse). A large body
 DoS is possible. Remediation: enforce a max content-length (middleware or reverse-proxy).
 
-### [P14-04] No `.dockerignore`
-**Severity:** NIT · **Confidence:** CONFIRMED
+### [P14-04] `.dockerignore` — REJECTED (false positive; audit miss)
+**Severity:** NIT · **Status:** REJECTED (corrected during remediation)
 
-No `.dockerignore` → the build context ships `.env`, `conversations.db`, `venv/`,
-`node_modules/` to the daemon (slower builds; a stray `COPY .` would leak them). The
-current selective `COPY`s don't put them in the image, but add a `.dockerignore` for
-safety + speed.
+The original "no `.dockerignore`" claim was **wrong** — the file exists and was not
+checked during PASS 14. It already excludes the important items (`.env`,
+`conversations.db*`, `.last_ingest.json`, `venv/`, `**/__pycache__/`,
+`frontend/node_modules/`, `frontend/dist/`, `tests/`, `docs/`, `*.md`). Minor follow-up
+applied: added `.reports_cache.json` for parity with `.last_ingest.json`.
 
 ## Pass 14 verdict
 Core deploy config (CORS/cookies/fail-fast/secret handling) is solid. Hardening gaps:
