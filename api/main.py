@@ -1,4 +1,5 @@
 import logging
+import uuid
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -13,7 +14,7 @@ from slowapi.errors import RateLimitExceeded
 
 from api.routes import chat, health, conversations, auth, admin, reports
 from api.limiter import limiter
-from api.observability import configure_logging, init_sentry
+from api.observability import configure_logging, init_sentry, request_id_var
 from config import get_settings, DEFAULT_SESSION_SECRET
 
 logger = logging.getLogger(__name__)
@@ -61,6 +62,37 @@ class SecurityHeadersMiddleware:
             await send(message)
 
         await self.app(scope, receive, send_wrapper)
+
+
+class RequestIDMiddleware:
+    """Assign each request a short correlation id (reuse an inbound X-Request-ID or mint
+    one), expose it via request_id_var so every log line carries it, and echo it back as
+    the X-Request-ID response header (audit P16-01)."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        rid = ""
+        for k, v in scope.get("headers", []):
+            if k == b"x-request-id":
+                rid = v.decode("latin-1")[:64]
+                break
+        rid = rid or uuid.uuid4().hex[:12]
+        token = request_id_var.set(rid)
+
+        async def send_wrapper(message):
+            if message["type"] == "http.response.start":
+                MutableHeaders(scope=message)["X-Request-ID"] = rid
+            await send(message)
+
+        try:
+            await self.app(scope, receive, send_wrapper)
+        finally:
+            request_id_var.reset(token)
 
 
 def _docs_kwargs(settings) -> dict:
@@ -158,6 +190,8 @@ app.add_middleware(
 app.add_middleware(SessionMiddleware, secret_key=settings.AUTH_SESSION_SECRET)
 # Baseline security headers on every response (pure-ASGI → SSE streaming unaffected).
 app.add_middleware(SecurityHeadersMiddleware, csp=_CSP, hsts=settings.is_production)
+# Outermost: assign a correlation id early so it is present for all inner logging.
+app.add_middleware(RequestIDMiddleware)
 
 app.include_router(health.router, tags=["health"])
 app.include_router(auth.router, tags=["auth"])

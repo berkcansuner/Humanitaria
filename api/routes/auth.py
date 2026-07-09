@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from config import get_settings
 from rag import users as users_store
-from api.limiter import limiter
+from api.limiter import limiter, _client_ip
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +130,7 @@ async def get_current_user(request: Request) -> dict:
 async def get_admin_user(user: dict = Depends(get_current_user)) -> dict:
     """FastAPI dependency: require an authenticated user in ADMIN_EMAILS, else 403."""
     if not _is_admin_email(user.get("email", "")):
+        logger.warning("auth: admin access denied (user=%s)", user.get("id"))
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
 
@@ -149,6 +150,7 @@ async def signup(request: Request, body: SignupIn, response: Response):
         users_store.create_session, uid, get_settings().SESSION_TTL_HOURS
     )
     _set_session_cookie(response, token)
+    logger.info("auth: signup (user=%s)", uid)
     return _user_out({"id": uid, "email": body.email, "name": body.name.strip()})
 
 
@@ -161,11 +163,13 @@ async def login(request: Request, body: LoginIn, response: Response):
     stored_hash = user["password_hash"] if (user and user["password_hash"]) else users_store.DUMMY_PASSWORD_HASH
     valid = await anyio.to_thread.run_sync(users_store.verify_password, body.password, stored_hash)
     if not user or not valid:
+        logger.warning("auth: login failed (ip=%s)", _client_ip(request))
         raise HTTPException(status_code=401, detail="Invalid email or password")
     token = await anyio.to_thread.run_sync(
         users_store.create_session, user["id"], get_settings().SESSION_TTL_HOURS
     )
     _set_session_cookie(response, token)
+    logger.info("auth: login success (user=%s)", user["id"])
     return _user_out(user)
 
 

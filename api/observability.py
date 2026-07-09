@@ -4,10 +4,24 @@ Configured once at app startup (api.main). Without this, application log levels
 depend on uvicorn's defaults and WARNING-and-below messages can be lost; Sentry is
 opt-in via SENTRY_DSN so production errors are captured centrally.
 """
+import contextvars
 import logging
 import logging.config
 
 logger = logging.getLogger(__name__)
+
+# Correlation id for the current request (set by RequestIDMiddleware in api.main); "-"
+# outside a request. Injected into every log record so one request can be traced across
+# log lines (audit P16-01).
+request_id_var: contextvars.ContextVar[str] = contextvars.ContextVar("request_id", default="-")
+
+
+class RequestIdLogFilter(logging.Filter):
+    """Attach the current request's correlation id to every log record."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        record.request_id = request_id_var.get()
+        return True
 
 
 def configure_logging(level: str = "INFO") -> None:
@@ -17,12 +31,16 @@ def configure_logging(level: str = "INFO") -> None:
             "version": 1,
             "disable_existing_loggers": False,  # keep uvicorn's own loggers alive
             "formatters": {
-                "default": {"format": "%(asctime)s %(levelname)s %(name)s: %(message)s"},
+                "default": {"format": "%(asctime)s %(levelname)s [%(request_id)s] %(name)s: %(message)s"},
+            },
+            "filters": {
+                "request_id": {"()": "api.observability.RequestIdLogFilter"},
             },
             "handlers": {
                 "console": {
                     "class": "logging.StreamHandler",
                     "formatter": "default",
+                    "filters": ["request_id"],
                     "stream": "ext://sys.stdout",
                 },
             },

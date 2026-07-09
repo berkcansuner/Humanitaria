@@ -73,6 +73,7 @@ async def trigger_ingest(admin: dict = Depends(get_admin_user)):
     """
     if runner.is_running():
         raise HTTPException(status_code=409, detail="An ingest is already running")
+    logger.info("admin: ingest trigger by user=%s", admin.get("id"))
     task = asyncio.create_task(anyio.to_thread.run_sync(runner.run_ingest_once, "manual"))
     _bg_tasks.add(task)
     task.add_done_callback(_bg_tasks.discard)
