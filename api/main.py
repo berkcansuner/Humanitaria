@@ -201,6 +201,21 @@ app.include_router(admin.router, tags=["admin"])
 app.include_router(reports.router, tags=["reports"])
 
 frontend_dir = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+
+
+def _safe_spa_file(full_path: str):
+    """Return the real file to serve for a SPA request path, but ONLY if it is contained
+    within the built dist dir; else None (→ caller falls back to index.html). Blocks path
+    traversal (../ or the encoded ..%2f, which uvicorn decodes) from escaping to arbitrary
+    files — config.py, conversations.db, /proc/self/environ. Audit P1-01."""
+    if not full_path:
+        return None
+    candidate = (frontend_dir / full_path).resolve()
+    if candidate.is_file() and candidate.is_relative_to(frontend_dir.resolve()):
+        return candidate
+    return None
+
+
 if frontend_dir.exists():
     # Vite's hashed assets are served directly. Everything else falls back to
     # index.html so vue-router history-mode client routes (/pricing, /app) work
@@ -210,18 +225,10 @@ if frontend_dir.exists():
     if assets_dir.exists():
         app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
-    # Resolve the SPA dir once so the fallback can prove a requested file is
-    # contained within it — never serve a traversal path (../ or encoded ..%2f)
-    # that escapes to arbitrary files (config.py, conversations.db, /proc/self/environ).
-    _dist_root = frontend_dir.resolve()
-
     @app.get("/{full_path:path}")
     async def spa_fallback(full_path: str):
-        if full_path:
-            candidate = (frontend_dir / full_path).resolve()
-            if candidate.is_file() and candidate.is_relative_to(_dist_root):
-                return FileResponse(candidate)        # favicon, robots.txt, hashed assets
-        return FileResponse(frontend_dir / "index.html")  # client routes → SPA
+        target = _safe_spa_file(full_path)              # None → traversal/miss → SPA shell
+        return FileResponse(target if target is not None else frontend_dir / "index.html")
 
 
 if __name__ == "__main__":
