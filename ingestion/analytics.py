@@ -15,6 +15,7 @@ Concurrency is guarded by a non-blocking ``threading.Lock``, mirroring
 """
 import json
 import logging
+import os
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -115,11 +116,13 @@ def _save_cache() -> None:
     path = _cache_path()
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps({
+        tmp = path.with_name(path.name + ".tmp")
+        tmp.write_text(json.dumps({
             "computed_at": _state.computed_at,
             "namespace": _state.namespace,
             "documents": _state.documents or [],
         }), encoding="utf-8")
+        os.replace(tmp, path)   # atomic write
     except Exception as exc:
         logger.error("Failed to save reports cache: %s", exc)
 
