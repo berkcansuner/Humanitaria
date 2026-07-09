@@ -9,6 +9,7 @@ conversations.db
 conversations.db-wal
 conversations.db-shm
 .last_ingest.json
+.reports_cache.json
 frontend/node_modules/
 frontend/dist/
 tests/

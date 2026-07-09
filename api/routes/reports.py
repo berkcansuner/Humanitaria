@@ -239,7 +239,8 @@ def _pdf_filename(report: dict) -> str:
 
 
 @router.get("/reports/{report_id}/pdf")
-async def report_pdf(report_id: str, user: dict = Depends(get_current_user)):
+@limiter.limit(_rate_limit)
+async def report_pdf(request: Request, report_id: str, user: dict = Depends(get_current_user)):
     if not await anyio.to_thread.run_sync(report_store.is_owner, user["id"], report_id):
         raise HTTPException(status_code=404, detail="Report not found")
     report = await anyio.to_thread.run_sync(report_store.get_report, report_id)
