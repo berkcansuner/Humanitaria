@@ -19,6 +19,8 @@ services:
         value: "0"
       - key: GEMINI_REASONING_EFFORT
         value: low
+      - key: RATE_LIMIT_TRUSTED_HOPS   # Render = single reverse proxy → real client IP = rightmost XFF entry (audit P2-01)
+        value: "1"
       # URLs assume the predicted host below. If Render appends a suffix to the
       # name, update these three + the Google redirect URI (see DEPLOY.md).
       - key: FRONTEND_URL

@@ -141,5 +141,7 @@ Beyond the P0 P1-01 fix, the MEDIUM **P1 batch was also remediated this session*
 `fix/security-audit-p0-p1` (all TDD, suite **494 passed**, ruff clean):
 **P11-01** embedding timeout, **P1-02** xhtml2pdf SSRF (`link_callback`), **P14-02** security
 headers (+ browser-verified CSP), **P14-01** non-root container (awaits a Docker build/deploy
-check). Remaining before merge: confirm/fix **P2-01** (rate-limiter proxy-IP) and rotate the
-**P4-01** operator secrets (user action). LOW/NIT items stay on the P2/P3 backlog.
+check). **P2-01** (rate-limiter proxy-IP) was also fixed — `RATE_LIMIT_TRUSTED_HOPS` reads
+the real client IP from X-Forwarded-For (spoofing-safe), live-verified that distinct clients
+get distinct rate buckets. Remaining before merge: rotate the **P4-01** operator secrets
+(user action). LOW/NIT items stay on the P2/P3 backlog.
