@@ -143,5 +143,12 @@ Beyond the P0 P1-01 fix, the MEDIUM **P1 batch was also remediated this session*
 headers (+ browser-verified CSP), **P14-01** non-root container (awaits a Docker build/deploy
 check). **P2-01** (rate-limiter proxy-IP) was also fixed — `RATE_LIMIT_TRUSTED_HOPS` reads
 the real client IP from X-Forwarded-For (spoofing-safe), live-verified that distinct clients
-get distinct rate buckets. Remaining before merge: rotate the **P4-01** operator secrets
-(user action). LOW/NIT items stay on the P2/P3 backlog.
+get distinct rate buckets.
+
+A batch of quick P2/P3 items followed: **P18-01** (PDF export rate-limit), **P15**
+(`npm audit fix` → dompurify + form-data), **P13-02** (atomic watermark/cache writes),
+**P16-01 + P16-03** (request correlation id + security audit logging). **P14-04** was found
+to be a false positive (a `.dockerignore` exists) and **P17-01** was deferred (it needs a
+coordinated frontend change). Final state: **505 backend + 81 frontend tests green, ruff/mypy
+clean.** Remaining before merge: rotate the **P4-01** operator secrets (user action); the
+nuanced/WONTFIX LOW items (P2-02, P6-01/02, P7-01, P12-01, P16-02) are left by choice.

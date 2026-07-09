@@ -62,8 +62,24 @@ All TDD (red→green). Full suite **494 passed**, ruff clean.
   for Render's single proxy) + 4 unit tests + **live-verified** (distinct XFF → distinct
   rate buckets; forged prefix ignored, real rightmost IP used).
 
-Still open: **P4-01** (user rotates the two leaked operator secrets) + LOW/NIT backlog
-(P0–P3 plan in `FINAL_AUDIT_REPORT.md`).
+### P2/P3 backlog batch (quick + valuable LOW/NIT)
+- **P18-01** PDF export rate-limit — FIXED (per-IP limiter on the pdf route) + test.
+- **P15** dependency CVEs — `npm audit fix` bumped dompurify + form-data (non-breaking);
+  dev-only vite/esbuild chain deferred (breaking major bump).
+- **P13-02** atomic state writes — FIXED (temp + `os.replace` for watermark + reports
+  cache) + tests.
+- **P16-01 / P16-03** observability — FIXED (request correlation id + `X-Request-ID` +
+  security audit logs) + tests.
+- **P14-04** `.dockerignore` — REJECTED (false positive; the file existed) + a minor
+  `.reports_cache.json` addition.
+- **P17-01** unpaginated lists — DEFERRED (needs a coordinated frontend change; a silent
+  server-side cap would drop a heavy user's rows).
+
+Still open: **P4-01** (user rotates the leaked operator secrets) + the nuanced / WONTFIX
+LOW items by choice (P2-02 health-deep throttle, P6-01/02 multi-instance, P7-01 write
+client, P12-01 idempotency key, P16-02 Sentry PII). See `FINAL_AUDIT_REPORT.md`.
+
+Tests after the full remediation: **505 backend + 81 frontend green; ruff/mypy clean.**
 
 ## Pass status
 
