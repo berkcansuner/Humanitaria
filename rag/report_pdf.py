@@ -20,6 +20,24 @@ from xhtml2pdf import pisa
 
 logger = logging.getLogger(__name__)
 
+
+# 1x1 transparent GIF — the inline stand-in for any blocked resource.
+_BLANK_DATA_URI = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+
+
+def _block_external_resources(uri, rel=None):
+    """xhtml2pdf link_callback (see pisaFileObject.__init__: a truthy return REPLACES the
+    original uri, a falsy one keeps it). Replace ANY http/https/file/relative resource URI
+    with an inline 1x1 transparent data: image so LLM-generated report content can never
+    trigger a server-side fetch (SSRF) or a local file read during PDF rendering — this
+    covers both <img src> and CSS url() (both resolve through this callback). `data:` URIs
+    are already inline (no network) and pass through unchanged. Audit P1-02."""
+    if isinstance(uri, str) and uri.strip().lower().startswith("data:"):
+        return uri
+    logger.warning("PDF render replaced external resource with an inline blank: %s", uri)
+    return _BLANK_DATA_URI
+
+
 # Brand green (site --color-accent ≈ oklch(0.46 0.12 152)); print palette = dark ink on white.
 _GREEN = "#2e7d4e"
 _GREEN_DARK = "#21603a"
@@ -161,7 +179,7 @@ def render_report_pdf(report: dict) -> bytes:
 
     _register_fonts()
     buf = io.BytesIO()
-    status = pisa.CreatePDF(doc, dest=buf, encoding="utf-8")
+    status = pisa.CreatePDF(doc, dest=buf, encoding="utf-8", link_callback=_block_external_resources)
     if status.err:
         logger.error("PDF generation reported %d error(s)", status.err)
         raise RuntimeError("PDF generation failed")

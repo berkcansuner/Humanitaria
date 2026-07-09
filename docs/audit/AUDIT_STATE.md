@@ -42,6 +42,25 @@
 - `vite build` → ok
 - `pip-audit` / `npm audit` → DEFERRED to PASS 15 (NEEDS-CONTEXT: live advisory data)
 
+## Remediation applied (2026-07-09, branch `fix/security-audit-p0-p1`)
+
+All TDD (red→green). Full suite **494 passed**, ruff clean.
+- **P1-01** CRIT path traversal — FIXED (resolve + `is_relative_to` containment) + 3 tests
+  + live re-verify. [d466f02]
+- **P11-01** MED embedding timeout — FIXED (`EMBED_TIMEOUT=20` passed to the embedding
+  `OpenAI(...)` client) + `tests/test_embeddings.py`.
+- **P1-02** MED xhtml2pdf SSRF — FIXED (`link_callback` replaces any remote/file URI with an
+  inline blank `data:` image) + `tests/test_report_pdf_security.py` (socket probe → 0 fetch).
+- **P14-02** MED security headers — FIXED (pure-ASGI middleware: CSP/X-Frame-Options/nosniff/
+  Referrer-Policy/HSTS-in-prod) + `tests/test_security_headers.py` + **browser CSP smoke**
+  (landing + /login render fully, no CSP violations).
+- **P14-01** MED container root — FIXED (`adduser` + `chown` + `USER app`); **needs a
+  Docker build/deploy check** (not built locally).
+
+Still open: **P2-01** (rate-limiter proxy-IP — needs prod confirmation), **P4-01** (user
+rotates the two leaked operator secrets), + LOW/NIT backlog (P0–P3 plan in
+`FINAL_AUDIT_REPORT.md`).
+
 ## Pass status
 
 | Pass | Status | Confirmed | Unverified | Notes |

@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.datastructures import MutableHeaders
 from pathlib import Path
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -16,6 +17,50 @@ from api.observability import configure_logging, init_sentry
 from config import get_settings, DEFAULT_SESSION_SECRET
 
 logger = logging.getLogger(__name__)
+
+# Content-Security-Policy tuned for the built Vite SPA: the only script is the external
+# hashed module bundle under /assets ('self'); Vue runtime :style bindings need inline
+# styles; the API + SSE are same-origin ('self'); nothing may frame the app.
+_CSP = (
+    "default-src 'self'; "
+    "script-src 'self'; "
+    "style-src 'self' 'unsafe-inline'; "
+    "img-src 'self' data:; "
+    "font-src 'self' data:; "
+    "connect-src 'self'; "
+    "frame-ancestors 'none'; "
+    "base-uri 'self'; "
+    "object-src 'none'; "
+    "form-action 'self'"
+)
+
+
+class SecurityHeadersMiddleware:
+    """Pure-ASGI middleware that stamps baseline security headers on every HTTP response
+    without buffering the body — BaseHTTPMiddleware would break SSE streaming. Audit P14-02."""
+
+    def __init__(self, app, *, csp: str, hsts: bool):
+        self.app = app
+        self.csp = csp
+        self.hsts = hsts
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_wrapper(message):
+            if message["type"] == "http.response.start":
+                headers = MutableHeaders(scope=message)
+                headers["X-Content-Type-Options"] = "nosniff"
+                headers["X-Frame-Options"] = "DENY"
+                headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+                headers["Content-Security-Policy"] = self.csp
+                if self.hsts:
+                    headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+            await send(message)
+
+        await self.app(scope, receive, send_wrapper)
 
 
 def _docs_kwargs(settings) -> dict:
@@ -111,6 +156,8 @@ app.add_middleware(
 )
 # Signed cookie used by Authlib to hold the Google OAuth state/nonce mid-flow.
 app.add_middleware(SessionMiddleware, secret_key=settings.AUTH_SESSION_SECRET)
+# Baseline security headers on every response (pure-ASGI → SSE streaming unaffected).
+app.add_middleware(SecurityHeadersMiddleware, csp=_CSP, hsts=settings.is_production)
 
 app.include_router(health.router, tags=["health"])
 app.include_router(auth.router, tags=["auth"])
