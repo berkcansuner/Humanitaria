@@ -36,6 +36,10 @@ class Settings(BaseSettings):
 
     EMBED_DIM: int = 3072          # Gemini gemini-embedding-001 → 3072
     EMBED_BATCH_SIZE: int = 32
+    # Explicit timeout (s) for the embedding client. Without it the OpenAI SDK default
+    # (~600s) can hang query vectorization — which runs before the LLM in every
+    # retrieval — and exhaust the single worker (audit P11-01).
+    EMBED_TIMEOUT: int = 20
 
     # Gemini embedding (OpenAI-uyumlu endpoint; GEMINI_API_KEY/GEMINI_BASE_URL yeniden kullanılır)
     GEMINI_EMBED_MODEL: str = "gemini-embedding-001"

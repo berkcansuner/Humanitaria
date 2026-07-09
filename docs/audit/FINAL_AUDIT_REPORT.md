@@ -134,3 +134,12 @@ MEDIUMs are meaningful hardening (timeouts, security headers, SSRF, non-root) bu
 an unauthenticated critical-takeover path. The codebase shows consistently strong security
 fundamentals — the authorization model and secret hygiene in particular are exemplary for a
 project of this size. Recommend completing P0/P1 before broadening the user base.
+
+## Remediation status update (2026-07-09)
+
+Beyond the P0 P1-01 fix, the MEDIUM **P1 batch was also remediated this session** on branch
+`fix/security-audit-p0-p1` (all TDD, suite **494 passed**, ruff clean):
+**P11-01** embedding timeout, **P1-02** xhtml2pdf SSRF (`link_callback`), **P14-02** security
+headers (+ browser-verified CSP), **P14-01** non-root container (awaits a Docker build/deploy
+check). Remaining before merge: confirm/fix **P2-01** (rate-limiter proxy-IP) and rotate the
+**P4-01** operator secrets (user action). LOW/NIT items stay on the P2/P3 backlog.

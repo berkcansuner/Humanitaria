@@ -31,6 +31,7 @@ class GeminiLangChainEmbeddings(Embeddings):
         self.client = OpenAI(
             api_key=self.settings.GEMINI_API_KEY,
             base_url=self.settings.GEMINI_BASE_URL,
+            timeout=self.settings.EMBED_TIMEOUT,
         )
         self.model = self.settings.GEMINI_EMBED_MODEL
         self.batch_size = self.settings.EMBED_BATCH_SIZE
