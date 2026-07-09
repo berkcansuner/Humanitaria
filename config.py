@@ -94,6 +94,10 @@ class Settings(BaseSettings):
     API_RELOAD: bool = False
     # Rate limiting (slowapi) — applied per client IP to the chat endpoints.
     RATE_LIMIT: str = "20/minute"
+    # Trusted reverse-proxy hops in front of the app. >0 makes the limiter read the real
+    # client IP from X-Forwarded-For (the entry the trusted proxy appended) instead of the
+    # shared proxy IP. 0 = trust nothing (audit P2-01). Render = 1 proxy → set 1 in prod.
+    RATE_LIMIT_TRUSTED_HOPS: int = 0
     # Per-IP limits on the auth endpoints (brute-force / signup-spam guard).
     AUTH_LOGIN_RATE_LIMIT: str = "5/minute"
     AUTH_SIGNUP_RATE_LIMIT: str = "3/minute"

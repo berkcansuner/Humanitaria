@@ -57,9 +57,13 @@ All TDD (red→green). Full suite **494 passed**, ruff clean.
 - **P14-01** MED container root — FIXED (`adduser` + `chown` + `USER app`); **needs a
   Docker build/deploy check** (not built locally).
 
-Still open: **P2-01** (rate-limiter proxy-IP — needs prod confirmation), **P4-01** (user
-rotates the two leaked operator secrets), + LOW/NIT backlog (P0–P3 plan in
-`FINAL_AUDIT_REPORT.md`).
+- **P2-01** MED rate-limiter proxy-IP — FIXED (`RATE_LIMIT_TRUSTED_HOPS`: read the real
+  client IP as the Nth-from-right `X-Forwarded-For` entry, spoofing-safe; `render.yaml=1`
+  for Render's single proxy) + 4 unit tests + **live-verified** (distinct XFF → distinct
+  rate buckets; forged prefix ignored, real rightmost IP used).
+
+Still open: **P4-01** (user rotates the two leaked operator secrets) + LOW/NIT backlog
+(P0–P3 plan in `FINAL_AUDIT_REPORT.md`).
 
 ## Pass status
 
