@@ -129,11 +129,17 @@ if frontend_dir.exists():
     if assets_dir.exists():
         app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
+    # Resolve the SPA dir once so the fallback can prove a requested file is
+    # contained within it — never serve a traversal path (../ or encoded ..%2f)
+    # that escapes to arbitrary files (config.py, conversations.db, /proc/self/environ).
+    _dist_root = frontend_dir.resolve()
+
     @app.get("/{full_path:path}")
     async def spa_fallback(full_path: str):
-        candidate = frontend_dir / full_path
-        if full_path and candidate.is_file():
-            return FileResponse(candidate)        # favicon, robots.txt, etc.
+        if full_path:
+            candidate = (frontend_dir / full_path).resolve()
+            if candidate.is_file() and candidate.is_relative_to(_dist_root):
+                return FileResponse(candidate)        # favicon, robots.txt, hashed assets
         return FileResponse(frontend_dir / "index.html")  # client routes → SPA
 
 
