@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -34,7 +35,9 @@ def _save_watermark(timestamp: str) -> None:
     path = _watermark_path()
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps({"last_ingest": timestamp}), encoding="utf-8")
+        tmp = path.with_name(path.name + ".tmp")
+        tmp.write_text(json.dumps({"last_ingest": timestamp}), encoding="utf-8")
+        os.replace(tmp, path)   # atomic: a crash never leaves a half-written watermark
     except Exception as e:
         logger.error("Failed to save ingest watermark: %s", e)
 
