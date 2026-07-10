@@ -1,7 +1,19 @@
 <template>
-  <span class="mark" :class="{ solid }" :style="{ width: size + 'px', height: size + 'px', borderRadius: radius + 'px' }">
-    <svg :width="icon" :height="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-         :stroke-width="stroke" stroke-linecap="round" stroke-linejoin="round">
+  <span
+    class="mark"
+    :class="{ solid }"
+    :style="{ width: size + 'px', height: size + 'px', borderRadius: radius + 'px' }"
+  >
+    <svg
+      :width="icon"
+      :height="icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      :stroke-width="stroke"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
       <path v-for="(d, i) in paths" :key="i" :d="d" />
     </svg>
   </span>

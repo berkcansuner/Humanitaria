@@ -3,11 +3,13 @@
     <div class="wrap">
       <div class="foot-grid">
         <div class="foot-brand">
-          <router-link class="brand" to="/" style="margin-bottom:0;">
+          <router-link class="brand" to="/" style="margin-bottom: 0">
             <HandMark :size="30" :radius="9" />
             <span class="name">Humanitaria</span>
           </router-link>
-          <p>Answers from the humanitarian record — clear, current, and grounded in real reporting.</p>
+          <p>
+            Answers from the humanitarian record — clear, current, and grounded in real reporting.
+          </p>
         </div>
         <div class="foot-col">
           <h5>Product</h5>

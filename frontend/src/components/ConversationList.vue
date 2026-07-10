@@ -24,14 +24,29 @@
             />
           </template>
           <template v-else>
-            <button type="button" class="conv-select" :title="c.title" @click="$emit('select', c.id)">
+            <button
+              type="button"
+              class="conv-select"
+              :title="c.title"
+              @click="$emit('select', c.id)"
+            >
               {{ c.title }}
             </button>
             <div class="conv-actions">
-              <button type="button" class="conv-action" aria-label="Rename" @click.stop="startRename(c)">
+              <button
+                type="button"
+                class="conv-action"
+                aria-label="Rename"
+                @click.stop="startRename(c)"
+              >
                 <Pencil :size="13" />
               </button>
-              <button type="button" class="conv-action" aria-label="Delete" @click.stop="$emit('delete', c.id)">
+              <button
+                type="button"
+                class="conv-action"
+                aria-label="Delete"
+                @click.stop="$emit('delete', c.id)"
+              >
                 <Trash2 :size="13" />
               </button>
             </div>
@@ -119,9 +134,15 @@ function cancelRename() {
 }
 
 /* Slight width variation reads as a natural list rather than a uniform grid. */
-.conv-skeleton-item:nth-child(3n) .conv-skeleton-bar { width: 64%; }
-.conv-skeleton-item:nth-child(3n + 1) .conv-skeleton-bar { width: 86%; }
-.conv-skeleton-item:nth-child(3n + 2) .conv-skeleton-bar { width: 72%; }
+.conv-skeleton-item:nth-child(3n) .conv-skeleton-bar {
+  width: 64%;
+}
+.conv-skeleton-item:nth-child(3n + 1) .conv-skeleton-bar {
+  width: 86%;
+}
+.conv-skeleton-item:nth-child(3n + 2) .conv-skeleton-bar {
+  width: 72%;
+}
 
 .conv-item {
   display: flex;

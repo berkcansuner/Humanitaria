@@ -36,7 +36,7 @@ describe('renumberCitations', () => {
     ]
     const result = renumberCitations(content, sources)
     expect(result.content).toBe('Bir [1]. İki [1]. Üç [2].')
-    expect(result.sources.map(s => s.index)).toEqual([1, 2])
+    expect(result.sources.map((s) => s.index)).toEqual([1, 2])
   })
 
   it('leaves already-contiguous citations unchanged', () => {
@@ -47,7 +47,7 @@ describe('renumberCitations', () => {
     ]
     const result = renumberCitations(content, sources)
     expect(result.content).toBe('A [1]. B [2].')
-    expect(result.sources.map(s => s.index)).toEqual([1, 2])
+    expect(result.sources.map((s) => s.index)).toEqual([1, 2])
   })
 
   it('renumbers sources sequentially when the answer has no citation markers (fallback)', () => {
@@ -58,7 +58,7 @@ describe('renumberCitations', () => {
     ]
     const result = renumberCitations(content, sources)
     expect(result.content).toBe('Genel bir özet, atıf yok.')
-    expect(result.sources.map(s => s.index)).toEqual([1, 2])
+    expect(result.sources.map((s) => s.index)).toEqual([1, 2])
   })
 
   it('strips a dangling marker that has no matching source', () => {
@@ -67,7 +67,7 @@ describe('renumberCitations', () => {
     const sources = [{ index: 3, title: 'C', url: 'https://x/3' }]
     const result = renumberCitations(content, sources)
     expect(result.content).toBe('Var olan [1]. Eksik.')
-    expect(result.sources.map(s => s.index)).toEqual([1])
+    expect(result.sources.map((s) => s.index)).toEqual([1])
   })
 
   it('strips multiple dangling markers, keeping the one valid source', () => {
@@ -76,7 +76,7 @@ describe('renumberCitations', () => {
     const sources = [{ index: 1, title: 'A', url: 'https://x/1' }]
     const result = renumberCitations(content, sources)
     expect(result.content).toBe('Durum kötü [1] ve ayrıca.')
-    expect(result.sources.map(s => s.index)).toEqual([1])
+    expect(result.sources.map((s) => s.index)).toEqual([1])
   })
 
   it('returns input unchanged for empty sources', () => {
@@ -96,6 +96,6 @@ describe('renumberCitations', () => {
     ]
     const result = renumberCitations(content, sources)
     expect(result.content).toBe('Both sources [1][2] agree.')
-    expect(result.sources.map(s => s.index)).toEqual([1, 2])
+    expect(result.sources.map((s) => s.index)).toEqual([1, 2])
   })
 })

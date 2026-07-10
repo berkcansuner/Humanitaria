@@ -26,7 +26,7 @@ function render() {
       clarification: props.clarification,
       onApply: (values) => emit('apply', values),
       onDismiss: () => emit('dismiss'),
-    })
+    }),
   )
 }
 

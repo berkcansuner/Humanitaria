@@ -45,7 +45,13 @@
         >
           <Shield :size="16" />
         </router-link>
-        <button type="button" class="logout-btn" title="Log out" aria-label="Log out" @click="logout">
+        <button
+          type="button"
+          class="logout-btn"
+          title="Log out"
+          aria-label="Log out"
+          @click="logout"
+        >
           <LogOut :size="16" />
         </button>
       </div>
@@ -73,7 +79,7 @@ defineEmits(['select', 'new-chat', 'rename', 'delete'])
 const query = ref('')
 const hasQuery = computed(() => query.value.trim().length > 0)
 const groups = computed(() =>
-  groupConversationsByDate(filterConversations(props.conversations, query.value))
+  groupConversationsByDate(filterConversations(props.conversations, query.value)),
 )
 
 // Footer reflects the signed-in user (from the auth store).
@@ -150,7 +156,10 @@ async function logout() {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   text-decoration: none;
-  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+  transition:
+    background-color 0.15s,
+    color 0.15s,
+    border-color 0.15s;
 }
 
 .reports-nav-link:hover {
@@ -253,7 +262,9 @@ async function logout() {
   color: var(--color-text-secondary);
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background-color 0.2s, color 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
 }
 
 .logout-btn:hover {
@@ -270,7 +281,9 @@ async function logout() {
   color: var(--color-text-secondary);
   border-radius: var(--radius-md);
   text-decoration: none;
-  transition: background-color 0.2s, color 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
 }
 
 .admin-link:hover {

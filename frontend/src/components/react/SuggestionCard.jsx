@@ -5,9 +5,27 @@ import './SuggestionCard.css'
 // Each missing query dimension becomes one step (only those with suggestions).
 // `chips: false` -> free-text only (with autocomplete); `true` -> chips + text.
 const STEP_DEFS = [
-  { key: 'country', src: 'countries', chips: false, title: 'Which country would you like information about?', placeholder: 'Enter a country…' },
-  { key: 'date', src: 'time_periods', chips: false, title: 'Which time period?', placeholder: 'Enter a time period…' },
-  { key: 'theme', src: 'themes', chips: true, title: 'Which topic?', placeholder: 'or enter a topic…' },
+  {
+    key: 'country',
+    src: 'countries',
+    chips: false,
+    title: 'Which country would you like information about?',
+    placeholder: 'Enter a country…',
+  },
+  {
+    key: 'date',
+    src: 'time_periods',
+    chips: false,
+    title: 'Which time period?',
+    placeholder: 'Enter a time period…',
+  },
+  {
+    key: 'theme',
+    src: 'themes',
+    chips: true,
+    title: 'Which topic?',
+    placeholder: 'or enter a topic…',
+  },
 ]
 
 /**
@@ -20,9 +38,13 @@ const STEP_DEFS = [
 export default function SuggestionCard({ clarification, onApply, onDismiss }) {
   const steps = useMemo(() => {
     const s = clarification?.suggestions || {}
-    return STEP_DEFS
-      .filter((d) => Array.isArray(s[d.src]) && s[d.src].length)
-      .map((d) => ({ key: d.key, title: d.title, placeholder: d.placeholder, chips: d.chips, options: s[d.src] }))
+    return STEP_DEFS.filter((d) => Array.isArray(s[d.src]) && s[d.src].length).map((d) => ({
+      key: d.key,
+      title: d.title,
+      placeholder: d.placeholder,
+      chips: d.chips,
+      options: s[d.src],
+    }))
   }, [clarification])
 
   const [current, setCurrent] = useState(0)
@@ -56,9 +78,9 @@ export default function SuggestionCard({ clarification, onApply, onDismiss }) {
   const q = custom.trim().toLowerCase()
   const matches = q
     ? step.options.filter((o) => {
-      const lo = o.toLowerCase()
-      return lo.startsWith(q) || lo.split(/\s+/).some((w) => w.startsWith(q))
-    })
+        const lo = o.toLowerCase()
+        return lo.startsWith(q) || lo.split(/\s+/).some((w) => w.startsWith(q))
+      })
     : []
 
   function finalize(next) {
@@ -78,24 +100,37 @@ export default function SuggestionCard({ clarification, onApply, onDismiss }) {
     return next
   }
   function prefersReduced() {
-    return typeof window !== 'undefined' && window.matchMedia
-      && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    return (
+      typeof window !== 'undefined' &&
+      window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    )
   }
   // Chip click: briefly flash the "selected" state, then advance.
   function selectChip(opt) {
     const next = applyValue(opt)
     if (!next) return
-    if (prefersReduced()) { advance(next); return }
+    if (prefersReduced()) {
+      advance(next)
+      return
+    }
     setSelecting((opt || '').trim())
-    timer.current = setTimeout(() => { setSelecting(null); advance(next) }, 240)
+    timer.current = setTimeout(() => {
+      setSelecting(null)
+      advance(next)
+    }, 240)
   }
   // Autocomplete match or typed value: advance immediately.
   function selectValue(v) {
     const next = applyValue(v)
     if (next) advance(next)
   }
-  function skip() { advance(selections) }
-  function prev() { if (current > 0) setCurrent((c) => c - 1) }
+  function skip() {
+    advance(selections)
+  }
+  function prev() {
+    if (current > 0) setCurrent((c) => c - 1)
+  }
 
   function submitCustom(e) {
     e.preventDefault()
@@ -113,28 +148,52 @@ export default function SuggestionCard({ clarification, onApply, onDismiss }) {
       if (activeMatch >= 0 && matches[activeMatch]) selectValue(matches[activeMatch])
       else selectValue(custom)
     } else if (e.key === 'Escape') {
-      if (custom) { e.stopPropagation(); setCustom(''); setActiveMatch(-1) }
+      if (custom) {
+        e.stopPropagation()
+        setCustom('')
+        setActiveMatch(-1)
+      }
       // else: let it bubble to the card and dismiss
     }
   }
   function onCardKey(e) {
-    if (e.key === 'Escape') { e.preventDefault(); onDismiss() }
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      onDismiss()
+    }
   }
 
   const chosen = steps.map((s) => selections[s.key]).filter(Boolean)
 
   return (
-    <div className="sc-card" role="group" aria-label="Refine your query suggestions" onKeyDown={onCardKey}>
+    <div
+      className="sc-card"
+      role="group"
+      aria-label="Refine your query suggestions"
+      onKeyDown={onCardKey}
+    >
       <div className="sc-header">
-        <span className="sc-title" aria-live="polite">{step.title}</span>
+        <span className="sc-title" aria-live="polite">
+          {step.title}
+        </span>
         <div className="sc-nav">
           <span className="sc-dots" aria-hidden="true">
             {steps.map((_, i) => (
-              <span key={i} className={'sc-dot' + (i === current ? ' active' : i < current ? ' done' : '')} />
+              <span
+                key={i}
+                className={'sc-dot' + (i === current ? ' active' : i < current ? ' done' : '')}
+              />
             ))}
           </span>
-          <span className="sc-hint">{current + 1} / {steps.length}</span>
-          <button className="sc-iconbtn" onClick={prev} disabled={current === 0} aria-label="Previous step">
+          <span className="sc-hint">
+            {current + 1} / {steps.length}
+          </span>
+          <button
+            className="sc-iconbtn"
+            onClick={prev}
+            disabled={current === 0}
+            aria-label="Previous step"
+          >
             <ChevronLeft size={16} />
           </button>
           <button className="sc-iconbtn" onClick={skip} aria-label="Next step">
@@ -149,7 +208,10 @@ export default function SuggestionCard({ clarification, onApply, onDismiss }) {
       {chosen.length > 0 && (
         <div className="sc-chips">
           {chosen.map((v) => (
-            <span className="sc-chip" key={v}><Check size={12} />{v}</span>
+            <span className="sc-chip" key={v}>
+              <Check size={12} />
+              {v}
+            </span>
           ))}
         </div>
       )}
@@ -180,7 +242,10 @@ export default function SuggestionCard({ clarification, onApply, onDismiss }) {
             className="sc-input"
             type="text"
             value={custom}
-            onChange={(e) => { setCustom(e.target.value); setActiveMatch(-1) }}
+            onChange={(e) => {
+              setCustom(e.target.value)
+              setActiveMatch(-1)
+            }}
             onKeyDown={onInputKey}
             placeholder={step.placeholder}
             aria-label={step.placeholder}
@@ -189,7 +254,12 @@ export default function SuggestionCard({ clarification, onApply, onDismiss }) {
             aria-expanded={matches.length > 0}
             aria-controls="sc-ac-list"
           />
-          <button className="sc-input-go" type="submit" disabled={!custom.trim()} aria-label="Use your input">
+          <button
+            className="sc-input-go"
+            type="submit"
+            disabled={!custom.trim()}
+            aria-label="Use your input"
+          >
             <ArrowRight size={16} />
           </button>
         </form>
@@ -201,7 +271,10 @@ export default function SuggestionCard({ clarification, onApply, onDismiss }) {
                 role="option"
                 aria-selected={i === activeMatch}
                 className={'sc-ac-item' + (i === activeMatch ? ' active' : '')}
-                onMouseDown={(e) => { e.preventDefault(); selectValue(m) }}
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  selectValue(m)
+                }}
                 onMouseEnter={() => setActiveMatch(i)}
               >
                 {m}
@@ -212,7 +285,9 @@ export default function SuggestionCard({ clarification, onApply, onDismiss }) {
       </div>
 
       <div className="sc-footer">
-        <button className="sc-skip" onClick={skip}>{isLast ? 'Finish' : 'Skip'}</button>
+        <button className="sc-skip" onClick={skip}>
+          {isLast ? 'Finish' : 'Skip'}
+        </button>
       </div>
     </div>
   )

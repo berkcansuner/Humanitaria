@@ -40,7 +40,10 @@ describe('truncateAt', () => {
   })
 
   it('returns a new array (does not mutate the input)', () => {
-    const messages = [{ role: 'user', content: 'a' }, { role: 'assistant', content: 'b' }]
+    const messages = [
+      { role: 'user', content: 'a' },
+      { role: 'assistant', content: 'b' },
+    ]
     const result = truncateAt(messages, 0)
     expect(result).toEqual([{ role: 'user', content: 'a' }])
     expect(messages).toHaveLength(2)
@@ -65,9 +68,9 @@ describe('lastServerIdBefore', () => {
     const messages = [
       { role: 'user', content: 'q1', serverId: 1 },
       { role: 'assistant', content: 'a1', serverId: 2 },
-      { role: 'user', content: 'merhaba' },        // greeting, not persisted
-      { role: 'assistant', content: 'selam' },      // greeting reply, not persisted
-      { role: 'user', content: 'q2' },              // the message being edited
+      { role: 'user', content: 'merhaba' }, // greeting, not persisted
+      { role: 'assistant', content: 'selam' }, // greeting reply, not persisted
+      { role: 'user', content: 'q2' }, // the message being edited
     ]
     expect(lastServerIdBefore(messages, 4)).toBe(2)
   })
@@ -93,7 +96,7 @@ describe('planResend', () => {
   it('on truncate success: truncates locally and signals resend', () => {
     const r = planResend(msgs, 2, true, 'ERR')
     expect(r.resend).toBe(true)
-    expect(r.messages.map(m => m.content)).toEqual(['q1', 'a1'])
+    expect(r.messages.map((m) => m.content)).toEqual(['q1', 'a1'])
   })
 
   it('on truncate failure: does NOT resend and marks only the target with an error', () => {
@@ -101,7 +104,7 @@ describe('planResend', () => {
     // Must not diverge from the server: keep every message, do not re-send.
     expect(r.resend).toBe(false)
     expect(r.messages).toHaveLength(4)
-    expect(r.messages.map(m => m.content)).toEqual(['q1', 'a1', 'q2', 'a2'])
+    expect(r.messages.map((m) => m.content)).toEqual(['q1', 'a1', 'q2', 'a2'])
     expect(r.messages[2].error).toBe('ERR')
     expect(r.messages[0].error).toBeUndefined()
   })
@@ -125,7 +128,7 @@ describe('filterConversations', () => {
   })
 
   it('filters by title case-insensitively', () => {
-    expect(filterConversations(convs, 'sudan').map(c => c.id)).toEqual(['1', '3'])
+    expect(filterConversations(convs, 'sudan').map((c) => c.id)).toEqual(['1', '3'])
   })
 
   it('returns empty when nothing matches', () => {
@@ -134,7 +137,7 @@ describe('filterConversations', () => {
 
   it('folds diacritics so an ASCII query matches accented titles', () => {
     // "güvenliği" (ü, ğ) should be found by the plain query "guvenligi".
-    expect(filterConversations(convs, 'guvenligi').map(c => c.id)).toEqual(['2'])
+    expect(filterConversations(convs, 'guvenligi').map((c) => c.id)).toEqual(['2'])
   })
 })
 
@@ -148,11 +151,11 @@ describe('groupConversationsByDate', () => {
 
   it('groups by updated_at into Bugün / Bu hafta / Daha eski in order', () => {
     const groups = groupConversationsByDate(convs, now)
-    expect(groups.map(g => g.key)).toEqual(['today', 'week', 'older'])
-    expect(groups.map(g => g.label)).toEqual(['Today', 'This week', 'Older'])
-    expect(groups[0].items.map(c => c.id)).toEqual(['t'])
-    expect(groups[1].items.map(c => c.id)).toEqual(['w'])
-    expect(groups[2].items.map(c => c.id)).toEqual(['o'])
+    expect(groups.map((g) => g.key)).toEqual(['today', 'week', 'older'])
+    expect(groups.map((g) => g.label)).toEqual(['Today', 'This week', 'Older'])
+    expect(groups[0].items.map((c) => c.id)).toEqual(['t'])
+    expect(groups[1].items.map((c) => c.id)).toEqual(['w'])
+    expect(groups[2].items.map((c) => c.id)).toEqual(['o'])
   })
 
   it('omits empty groups', () => {

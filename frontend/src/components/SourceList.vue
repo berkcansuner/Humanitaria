@@ -1,12 +1,12 @@
 <template>
-  <div class="sources" v-if="validSources.length">
+  <div v-if="validSources.length" class="sources">
     <div class="sources-header">SOURCES ({{ validSources.length }})</div>
     <ul class="source-list">
       <li
         v-for="(src, idx) in validSources"
+        :id="src.index != null ? 'src-' + src.index : null"
         :key="idx"
         class="source-item"
-        :id="src.index != null ? 'src-' + src.index : null"
         :data-srcid="src.index != null ? src.index : null"
       >
         <span v-if="src.index != null" class="source-index">[{{ src.index }}]</span>
@@ -32,8 +32,8 @@ import { isValidSource } from '../utils/sources.js'
 const props = defineProps({
   sources: {
     type: Array,
-    default: () => []
-  }
+    default: () => [],
+  },
 })
 
 function formatDate(iso) {
@@ -84,7 +84,9 @@ const validSources = computed(() => (props.sources || []).filter(isValidSource))
   padding-left: var(--space-2);
   border-left: 2px solid transparent;
   border-radius: var(--radius-md);
-  transition: background-color 0.3s, border-color 0.2s;
+  transition:
+    background-color 0.3s,
+    border-color 0.2s;
 }
 
 /* Briefly pulse a source's background when its [n] citation chip is activated. */

@@ -7,7 +7,7 @@ import { reactive } from 'vue'
 import { me, login, signup, logout } from './authApi.js'
 
 export const auth = reactive({
-  user: null,   // { id, email, name, is_admin } when signed in, else null
+  user: null, // { id, email, name, is_admin } when signed in, else null
   ready: false, // true once the initial /auth/me probe has resolved
 })
 

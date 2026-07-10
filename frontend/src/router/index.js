@@ -5,15 +5,40 @@ import { auth, refresh, isAuthenticated, isAdmin } from '../utils/authStore.js'
 
 const routes = [
   { path: '/', name: 'home', component: LandingView },
-  { path: '/login', name: 'login', component: () => import('../views/AuthView.vue'), props: { mode: 'login' } },
-  { path: '/signup', name: 'signup', component: () => import('../views/AuthView.vue'), props: { mode: 'signup' } },
+  {
+    path: '/login',
+    name: 'login',
+    component: () => import('../views/AuthView.vue'),
+    props: { mode: 'login' },
+  },
+  {
+    path: '/signup',
+    name: 'signup',
+    component: () => import('../views/AuthView.vue'),
+    props: { mode: 'signup' },
+  },
   // The chat app is the heaviest chunk and most visitors land on the marketing
   // page first, so it is lazy-loaded. It requires an authenticated session.
-  { path: '/app', name: 'app', component: () => import('../views/ChatView.vue'), meta: { requiresAuth: true } },
+  {
+    path: '/app',
+    name: 'app',
+    component: () => import('../views/ChatView.vue'),
+    meta: { requiresAuth: true },
+  },
   // M&E situation-report generator (form → streamed brief → saved reports).
-  { path: '/reports', name: 'reports', component: () => import('../views/ReportsView.vue'), meta: { requiresAuth: true } },
+  {
+    path: '/reports',
+    name: 'reports',
+    component: () => import('../views/ReportsView.vue'),
+    meta: { requiresAuth: true },
+  },
   // Admin-only ingestion status & management panel.
-  { path: '/admin/ingestion', name: 'admin-ingestion', component: () => import('../views/AdminIngestionView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
+  {
+    path: '/admin/ingestion',
+    name: 'admin-ingestion',
+    component: () => import('../views/AdminIngestionView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
   // Unknown paths fall back to the landing page.
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ]

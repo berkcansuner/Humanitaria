@@ -72,7 +72,10 @@ const prompts = [
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: background-color 0.2s, border-color 0.2s, transform 0.15s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    transform 0.15s;
 }
 
 .prompt-card:hover {

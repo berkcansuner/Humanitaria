@@ -1,6 +1,11 @@
 <template>
   <div class="message-actions">
-    <button type="button" class="action-btn" :aria-label="copied ? 'Copied' : 'Copy message'" @click="onCopy">
+    <button
+      type="button"
+      class="action-btn"
+      :aria-label="copied ? 'Copied' : 'Copy message'"
+      @click="onCopy"
+    >
       <Check v-if="copied" :size="15" />
       <Copy v-else :size="15" />
     </button>
@@ -44,7 +49,9 @@ function onCopy() {
   navigator.clipboard?.writeText(props.content)
   emit('copy')
   copied.value = true
-  setTimeout(() => { copied.value = false }, 1500)
+  setTimeout(() => {
+    copied.value = false
+  }, 1500)
 }
 </script>
 
@@ -73,7 +80,9 @@ function onCopy() {
   background: transparent;
   color: var(--color-muted);
   cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
 }
 
 .action-btn:hover {

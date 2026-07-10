@@ -8,7 +8,7 @@ describe('isValidSource', () => {
 
   it('rejects a country-metadata source whose title equals the country', () => {
     expect(
-      isValidSource({ url: 'https://x', doctype: 'country', title: 'Sudan', country: 'Sudan' })
+      isValidSource({ url: 'https://x', doctype: 'country', title: 'Sudan', country: 'Sudan' }),
     ).toBe(false)
   })
 

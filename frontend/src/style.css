@@ -9,9 +9,9 @@
   --color-text: #1a1c1a;
   --color-text-secondary: #5f5e5e;
   --color-text-variant: #5a403c;
-  --color-accent: oklch(0.46 0.12 152);            /* başlık · bağlantı · atıf · odak */
-  --color-accent-container: oklch(0.52 0.11 152);  /* birincil butonlar (gönder, yeni sohbet) */
-  --color-accent-soft: oklch(0.93 0.03 152);       /* atıf rozetleri · flash zemini */
+  --color-accent: oklch(0.46 0.12 152); /* başlık · bağlantı · atıf · odak */
+  --color-accent-container: oklch(0.52 0.11 152); /* birincil butonlar (gönder, yeni sohbet) */
+  --color-accent-soft: oklch(0.93 0.03 152); /* atıf rozetleri · flash zemini */
   --color-on-accent: #ffffff;
   --color-muted: #8e706b;
   --color-border: #e3e2e0;
@@ -46,9 +46,9 @@
   --radius-full: 9999px;
 
   /* Shadows — low opacity, wide blur (Stitch elevation spec) */
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.04);
-  --shadow-lg: 0 8px 24px rgba(0,0,0,0.06);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.06);
 
   /* Typography */
   --font-display: 'DM Sans Variable', system-ui, -apple-system, sans-serif;
@@ -72,32 +72,32 @@
 
 /* Dark theme — overrides color tokens only; spacing/radii/typography unchanged.
    Activated by setTheme() setting data-theme="dark" on <html>. */
-:root[data-theme="dark"] {
-  --color-bg: oklch(0.185 0.010 165);
+:root[data-theme='dark'] {
+  --color-bg: oklch(0.185 0.01 165);
   --color-surface: oklch(0.228 0.012 167);
-  --color-surface-container: oklch(0.250 0.013 167);
+  --color-surface-container: oklch(0.25 0.013 167);
   --color-surface-container-low: oklch(0.207 0.011 167);
   --color-surface-container-high: oklch(0.278 0.014 168);
-  --color-surface-variant: oklch(0.300 0.014 167);
-  --color-text: oklch(0.940 0.008 165);
+  --color-surface-variant: oklch(0.3 0.014 167);
+  --color-text: oklch(0.94 0.008 165);
   --color-text-secondary: oklch(0.755 0.012 165);
-  --color-text-variant: oklch(0.800 0.040 156);
-  --color-accent: oklch(0.80 0.13 158);            /* aydınlık yeşil — metin/bağlantı/atıf */
-  --color-accent-container: oklch(0.73 0.15 154);  /* canlı yeşil — butonlar */
-  --color-accent-soft: oklch(0.30 0.05 152);
-  --color-on-accent: oklch(0.220 0.040 156);       /* aksan üstündeki koyu metin */
-  --color-muted: oklch(0.630 0.013 165);
-  --color-border: oklch(0.300 0.013 167);
-  --color-border-subtle: oklch(0.270 0.012 167);
-  --color-outline: oklch(0.500 0.014 165);
-  --color-tertiary: oklch(0.865 0.010 165);        /* kullanıcı balonu zemini */
+  --color-text-variant: oklch(0.8 0.04 156);
+  --color-accent: oklch(0.8 0.13 158); /* aydınlık yeşil — metin/bağlantı/atıf */
+  --color-accent-container: oklch(0.73 0.15 154); /* canlı yeşil — butonlar */
+  --color-accent-soft: oklch(0.3 0.05 152);
+  --color-on-accent: oklch(0.22 0.04 156); /* aksan üstündeki koyu metin */
+  --color-muted: oklch(0.63 0.013 165);
+  --color-border: oklch(0.3 0.013 167);
+  --color-border-subtle: oklch(0.27 0.012 167);
+  --color-outline: oklch(0.5 0.014 165);
+  --color-tertiary: oklch(0.865 0.01 165); /* kullanıcı balonu zemini */
   --color-on-tertiary: oklch(0.205 0.012 165);
   --color-error: #ffb4ab;
   --color-error-bg: #5c1310;
   --color-error-accent: #ffb4ab;
   --color-success: #81c784;
   --color-code-bg: oklch(0.228 0.012 167);
-  --color-primary-fixed: oklch(0.30 0.05 152);
+  --color-primary-fixed: oklch(0.3 0.05 152);
 }
 
 * {
@@ -137,7 +137,7 @@ body {
    box-shadow. Components may override with a more specific :focus-visible rule. */
 button:focus-visible,
 a:focus-visible,
-[role="button"]:focus-visible,
+[role='button']:focus-visible,
 [tabindex]:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
@@ -210,8 +210,12 @@ select:focus-visible {
 }
 
 @keyframes skeleton-shimmer {
-  from { background-position: 200% 0; }
-  to { background-position: -200% 0; }
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
 }
 
 /* Copy button injected into rendered code blocks (decorateCodeBlocks).
@@ -234,7 +238,9 @@ select:focus-visible {
   border-radius: var(--radius-sm);
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.15s, color 0.15s;
+  transition:
+    opacity 0.15s,
+    color 0.15s;
 }
 
 .message-content pre:hover .copy-code,
@@ -266,7 +272,9 @@ select:focus-visible {
   text-decoration: none;
   vertical-align: text-top;
   cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
 }
 
 .cite:hover {

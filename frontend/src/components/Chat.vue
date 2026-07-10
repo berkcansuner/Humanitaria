@@ -1,6 +1,13 @@
 <template>
   <div class="chat">
-    <div class="messages" ref="messagesContainer" role="log" aria-live="polite" @click="onCiteClick" @keydown="onCiteKeydown">
+    <div
+      ref="messagesContainer"
+      class="messages"
+      role="log"
+      aria-live="polite"
+      @click="onCiteClick"
+      @keydown="onCiteKeydown"
+    >
       <template v-if="isLoadingMessages">
         <div
           v-for="n in 3"
@@ -26,7 +33,9 @@
       >
         <div class="message-row">
           <div class="message-bubble">
-            <template v-if="msg.role === 'assistant' && !msg.content && !msg.error && !msg.clarification">
+            <template
+              v-if="msg.role === 'assistant' && !msg.content && !msg.error && !msg.clarification"
+            >
               <div class="typing-indicator" role="status">
                 <span></span>
                 <span></span>
@@ -51,7 +60,10 @@
                 </div>
               </div>
               <template v-else>
-                <div class="message-content" v-html="renderMarkdown(msg.content, msg.sources)"></div>
+                <div
+                  class="message-content"
+                  v-html="renderMarkdown(msg.content, msg.sources)"
+                ></div>
                 <div v-if="msg.error" class="error-banner">
                   <AlertCircle :size="16" class="error-icon" />
                   {{ msg.error }}
@@ -93,12 +105,18 @@
         v-if="loading"
         type="button"
         class="send-btn stop-btn"
-        @click="stopGenerating"
         aria-label="Stop generating"
+        @click="stopGenerating"
       >
         <Square :size="18" />
       </button>
-      <button v-else type="submit" class="send-btn" :disabled="!input.trim()" aria-label="Send message">
+      <button
+        v-else
+        type="submit"
+        class="send-btn"
+        :disabled="!input.trim()"
+        aria-label="Send message"
+      >
         <Send :size="20" />
       </button>
     </form>
@@ -108,7 +126,7 @@
 
 <script setup>
 import { ref, watch, nextTick, defineAsyncComponent } from 'vue'
-import { Send, Loader2, AlertCircle, Square } from 'lucide-vue-next'
+import { Send, AlertCircle, Square } from 'lucide-vue-next'
 import SourceList from './SourceList.vue'
 import EmptyState from './EmptyState.vue'
 import MessageActions from './MessageActions.vue'
@@ -140,7 +158,7 @@ const emit = defineEmits(['session'])
 
 const messages = ref([])
 const input = ref('')
-const loading = ref(false)            // a response is streaming
+const loading = ref(false) // a response is streaming
 const isLoadingMessages = ref(false) // past conversation's history is being fetched
 const sessionId = ref(null)
 const messagesContainer = ref(null)
@@ -149,8 +167,6 @@ const controller = ref(null)
 const editingIndex = ref(null)
 const editText = ref('')
 const editTextarea = ref(null)
-
-
 
 async function sendMessage(opts = {}) {
   // opts.text  -> send this query instead of the composer's value
@@ -168,7 +184,14 @@ async function sendMessage(opts = {}) {
   }
   loading.value = true
 
-  const assistantMsg = { role: 'assistant', content: '', sources: null, error: null, clarification: null, serverId: null }
+  const assistantMsg = {
+    role: 'assistant',
+    content: '',
+    sources: null,
+    error: null,
+    clarification: null,
+    serverId: null,
+  }
   messages.value.push(assistantMsg)
   const msgIndex = messages.value.length - 1
   scrollToBottom()
@@ -181,7 +204,7 @@ async function sendMessage(opts = {}) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         message: text,
-        history: messages.value.slice(0, -1).map(m => ({ role: m.role, content: m.content })),
+        history: messages.value.slice(0, -1).map((m) => ({ role: m.role, content: m.content })),
         session_id: sessionId.value,
       }),
       signal: controller.value.signal,
@@ -432,7 +455,7 @@ function autoGrow() {
 function onSuggestionApply(msg, values) {
   msg.clarification.resolved = true
   messages.value[messages.value.indexOf(msg)] = { ...msg }
-  const lastUserMsg = [...messages.value].reverse().find(m => m.role === 'user')
+  const lastUserMsg = [...messages.value].reverse().find((m) => m.role === 'user')
   const originalQuery = lastUserMsg ? lastUserMsg.content : ''
   const enriched = (originalQuery + ' ' + values.join(' ')).trim()
   // Refine the search silently — no second user bubble with the raw query.
@@ -448,37 +471,40 @@ function onSuggestionDismiss(msg) {
 // React to conversation switches driven by the sidebar (via the conversationId
 // prop). A null id means "new chat"; an id we already show is a no-op (this is
 // also what keeps the freshly-created-conversation echo from reloading).
-watch(() => props.conversationId, async (newId) => {
-  if (newId === sessionId.value) return
-  if (loading.value) controller.value?.abort()
-  if (!newId) {
-    messages.value = []
-    sessionId.value = null
-    return
-  }
-  try {
-    isLoadingMessages.value = true
-    messages.value = []  // drop stale history so only the skeleton shows while fetching
-    const rows = await getMessages(newId)
-    messages.value = rows.map(m => {
-      let content = m.content
-      let sources = m.sources || null
-      // Persisted answers keep the backend's original [n] numbering; renumber to
-      // a contiguous 1..M (and drop dead markers) just like the live stream so a
-      // reloaded conversation reads identically.
-      if (m.role === 'assistant' && sources && sources.length) {
-        ;({ content, sources } = renumberCitations(content, sources))
-      }
-      return { role: m.role, content, sources, error: null, clarification: null, serverId: m.id }
-    })
-    sessionId.value = newId
-    nextTick(() => decorateCodeBlocks(messagesContainer.value))
-  } catch (e) {
-    console.error('Failed to load conversation:', e)
-  } finally {
-    isLoadingMessages.value = false
-  }
-})
+watch(
+  () => props.conversationId,
+  async (newId) => {
+    if (newId === sessionId.value) return
+    if (loading.value) controller.value?.abort()
+    if (!newId) {
+      messages.value = []
+      sessionId.value = null
+      return
+    }
+    try {
+      isLoadingMessages.value = true
+      messages.value = [] // drop stale history so only the skeleton shows while fetching
+      const rows = await getMessages(newId)
+      messages.value = rows.map((m) => {
+        let content = m.content
+        let sources = m.sources || null
+        // Persisted answers keep the backend's original [n] numbering; renumber to
+        // a contiguous 1..M (and drop dead markers) just like the live stream so a
+        // reloaded conversation reads identically.
+        if (m.role === 'assistant' && sources && sources.length) {
+          ;({ content, sources } = renumberCitations(content, sources))
+        }
+        return { role: m.role, content, sources, error: null, clarification: null, serverId: m.id }
+      })
+      sessionId.value = newId
+      nextTick(() => decorateCodeBlocks(messagesContainer.value))
+    } catch (e) {
+      console.error('Failed to load conversation:', e)
+    } finally {
+      isLoadingMessages.value = false
+    }
+  },
+)
 </script>
 
 <style scoped>
@@ -756,12 +782,24 @@ watch(() => props.conversationId, async (newId) => {
   animation: bounce 1.4s infinite ease-in-out both;
 }
 
-.typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
-.typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+.typing-indicator span:nth-child(1) {
+  animation-delay: -0.32s;
+}
+.typing-indicator span:nth-child(2) {
+  animation-delay: -0.16s;
+}
 
 @keyframes bounce {
-  0%, 80%, 100% { transform: scale(0.6); opacity: 0.3; }
-  40% { transform: scale(1); opacity: 1; }
+  0%,
+  80%,
+  100% {
+    transform: scale(0.6);
+    opacity: 0.3;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .input-area {
@@ -772,7 +810,9 @@ watch(() => props.conversationId, async (newId) => {
   border: 1px solid var(--color-outline);
   border-radius: 16px;
   background-color: var(--color-surface);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 .input-area:focus-within {
@@ -823,7 +863,9 @@ watch(() => props.conversationId, async (newId) => {
   border: none;
   border-radius: 10px;
   cursor: pointer;
-  transition: background-color 0.2s, transform 0.15s;
+  transition:
+    background-color 0.2s,
+    transform 0.15s;
 }
 
 .send-btn:hover:not(:disabled) {
@@ -855,8 +897,11 @@ watch(() => props.conversationId, async (newId) => {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
-
 </style>

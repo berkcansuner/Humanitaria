@@ -48,10 +48,14 @@
             <div>
               <dt>Vectors (active namespace)</dt>
               <dd>
-                <span v-if="status?.vector_count_error" title="Pinecone unavailable">unavailable</span>
+                <span v-if="status?.vector_count_error" title="Pinecone unavailable"
+                  >unavailable</span
+                >
                 <template v-else>
                   {{ formatNumber(status?.namespace_vectors) }}
-                  <span class="dd-note">{{ namespaceLabel }} · {{ formatNumber(status?.total_vectors) }} in index</span>
+                  <span class="dd-note"
+                    >{{ namespaceLabel }} · {{ formatNumber(status?.total_vectors) }} in index</span
+                  >
                 </template>
               </dd>
             </div>
@@ -61,8 +65,8 @@
         <section class="card">
           <div class="card-head"><h2>Run ingest</h2></div>
           <p class="muted">
-            Fetches new ReliefWeb documents since the last run (incremental) and upserts
-            them into Pinecone. A scheduled run uses the same path, so only one runs at a time.
+            Fetches new ReliefWeb documents since the last run (incremental) and upserts them into
+            Pinecone. A scheduled run uses the same path, so only one runs at a time.
           </p>
           <button class="primary-btn" :disabled="running || triggering" @click="onTrigger">
             <RefreshCw :size="16" :class="{ spin: running }" />
@@ -77,11 +81,19 @@
             <h3>Last run</h3>
             <p class="muted run-meta">
               {{ run.source }} · started {{ formatDateTime(run.started_at) }}
-              <template v-if="run.finished_at"> · finished {{ formatDateTime(run.finished_at) }}</template>
+              <template v-if="run.finished_at">
+                · finished {{ formatDateTime(run.finished_at) }}</template
+              >
             </p>
             <table>
               <thead>
-                <tr><th>Endpoint</th><th>Total</th><th>OK</th><th>Failed</th><th>Skipped</th></tr>
+                <tr>
+                  <th>Endpoint</th>
+                  <th>Total</th>
+                  <th>OK</th>
+                  <th>Failed</th>
+                  <th>Skipped</th>
+                </tr>
               </thead>
               <tbody>
                 <tr v-for="row in lastStatsRows" :key="row.endpoint">
@@ -104,8 +116,8 @@
             </span>
           </div>
           <p class="muted">
-            Indexed reports in the active namespace, newest first. The list builds
-            automatically and refreshes after each ingest.
+            Indexed reports in the active namespace, newest first. The list builds automatically and
+            refreshes after each ingest.
           </p>
 
           <div class="bd-actions">
@@ -122,9 +134,7 @@
             </span>
           </div>
 
-          <div v-if="docError" class="error-box" role="alert">
-            Last scan failed: {{ docError }}
-          </div>
+          <div v-if="docError" class="error-box" role="alert">Last scan failed: {{ docError }}</div>
 
           <p v-if="docComputing && !docItems.length" class="muted bd-empty">
             Building the report list… this can take up to a minute.
@@ -137,13 +147,20 @@
           <template v-if="docItems.length">
             <table class="doc-table">
               <thead>
-                <tr><th>Date</th><th>Title</th><th>Source</th><th>Country</th></tr>
+                <tr>
+                  <th>Date</th>
+                  <th>Title</th>
+                  <th>Source</th>
+                  <th>Country</th>
+                </tr>
               </thead>
               <tbody>
                 <tr v-for="row in docItems" :key="row.doc_id">
                   <td class="doc-date">{{ formatDate(row.date) }}</td>
                   <td class="doc-title">
-                    <a v-if="row.url" :href="row.url" target="_blank" rel="noopener">{{ row.title || '(untitled)' }}</a>
+                    <a v-if="row.url" :href="row.url" target="_blank" rel="noopener">{{
+                      row.title || '(untitled)'
+                    }}</a>
                     <span v-else>{{ row.title || '(untitled)' }}</span>
                   </td>
                   <td>{{ row.source || '—' }}</td>
@@ -155,7 +172,9 @@
             <div class="doc-pager">
               <button class="pager-btn" :disabled="docOffset === 0" @click="prevPage">Prev</button>
               <span class="pager-info">Page {{ docPage }} of {{ docPageCount }}</span>
-              <button class="pager-btn" :disabled="docPage >= docPageCount" @click="nextPage">Next</button>
+              <button class="pager-btn" :disabled="docPage >= docPageCount" @click="nextPage">
+                Next
+              </button>
             </div>
           </template>
         </section>
@@ -181,7 +200,7 @@ let pollTimer = null
 const run = computed(() => status.value?.run || {})
 const running = computed(() => run.value.running === true)
 const lastStatsRows = computed(() =>
-  Object.entries(run.value.last_stats || {}).map(([endpoint, s]) => ({ endpoint, ...s }))
+  Object.entries(run.value.last_stats || {}).map(([endpoint, s]) => ({ endpoint, ...s })),
 )
 const namespaceLabel = computed(() => {
   const ns = status.value?.namespace
@@ -189,7 +208,7 @@ const namespaceLabel = computed(() => {
 })
 
 // --- reports list (indexed documents, newest-first) ---
-const docState = ref(null)        // last /admin/ingest/documents response
+const docState = ref(null) // last /admin/ingest/documents response
 const docOffset = ref(0)
 const docLimit = ref(50)
 const docQuery = ref('')
@@ -211,7 +230,9 @@ function formatNumber(n) {
 function formatDateTime(iso) {
   if (!iso) return '—'
   const d = new Date(iso)
-  return isNaN(d.getTime()) ? '—' : d.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })
+  return isNaN(d.getTime())
+    ? '—'
+    : d.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })
 }
 
 function formatDate(iso) {
@@ -224,13 +245,15 @@ async function fetchStatus() {
   try {
     status.value = await getIngestStatus()
     forbidden.value = false
-    actionError.value = null   // a recovered poll clears any earlier transient error
+    actionError.value = null // a recovered poll clears any earlier transient error
     // Poll only while a run is active; stop once it goes idle.
     if (running.value) startPolling()
     else stopPolling()
   } catch (e) {
-    if (e.status === 403) { forbidden.value = true; stopPolling() }
-    else actionError.value = 'Could not load ingestion status.'
+    if (e.status === 403) {
+      forbidden.value = true
+      stopPolling()
+    } else actionError.value = 'Could not load ingestion status.'
   } finally {
     loading.value = false
   }
@@ -245,8 +268,10 @@ async function onTrigger() {
     startPolling()
   } catch (e) {
     if (e.status === 409) actionError.value = 'An ingest is already running.'
-    else if (e.status === 403) { forbidden.value = true; stopPolling() }
-    else actionError.value = 'Could not start the ingest.'
+    else if (e.status === 403) {
+      forbidden.value = true
+      stopPolling()
+    } else actionError.value = 'Could not start the ingest.'
   } finally {
     triggering.value = false
   }
@@ -257,28 +282,35 @@ function startPolling() {
 }
 
 function stopPolling() {
-  if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
 }
 
 async function fetchDocuments() {
   try {
     docState.value = await getIngestDocuments({
-      q: docQuery.value, offset: docOffset.value, limit: docLimit.value,
+      q: docQuery.value,
+      offset: docOffset.value,
+      limit: docLimit.value,
     })
     forbidden.value = false
     // Poll only while a scan is rebuilding the list; stop once it settles.
     if (docComputing.value) startDocPolling()
     else stopDocPolling()
   } catch (e) {
-    if (e.status === 403) { forbidden.value = true; stopDocPolling() }
-    else actionError.value = 'Could not load the reports list.'
+    if (e.status === 403) {
+      forbidden.value = true
+      stopDocPolling()
+    } else actionError.value = 'Could not load the reports list.'
   }
 }
 
 function onSearchInput() {
   if (searchTimer) clearTimeout(searchTimer)
   searchTimer = setTimeout(() => {
-    docOffset.value = 0          // a new query starts from the first page
+    docOffset.value = 0 // a new query starts from the first page
     fetchDocuments()
   }, 300)
 }
@@ -300,11 +332,21 @@ function startDocPolling() {
 }
 
 function stopDocPolling() {
-  if (docPollTimer) { clearInterval(docPollTimer); docPollTimer = null }
+  if (docPollTimer) {
+    clearInterval(docPollTimer)
+    docPollTimer = null
+  }
 }
 
-onMounted(() => { fetchStatus(); fetchDocuments() })
-onUnmounted(() => { stopPolling(); stopDocPolling(); if (searchTimer) clearTimeout(searchTimer) })
+onMounted(() => {
+  fetchStatus()
+  fetchDocuments()
+})
+onUnmounted(() => {
+  stopPolling()
+  stopDocPolling()
+  if (searchTimer) clearTimeout(searchTimer)
+})
 </script>
 
 <style scoped>
@@ -468,8 +510,13 @@ onUnmounted(() => { stopPolling(); stopDocPolling(); if (searchTimer) clearTimeo
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
 }
 
 .muted {
@@ -513,7 +560,9 @@ onUnmounted(() => { stopPolling(); stopDocPolling(); if (searchTimer) clearTimeo
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .error-box,

@@ -29,7 +29,9 @@
       </header>
       <div v-if="actionError" class="action-error" role="alert">
         <span>{{ actionError }}</span>
-        <button class="action-error-dismiss" aria-label="Dismiss" @click="actionError = null">×</button>
+        <button class="action-error-dismiss" aria-label="Dismiss" @click="actionError = null">
+          ×
+        </button>
       </div>
       <main class="content">
         <Chat :conversation-id="activeId" @session="onSession" />
@@ -45,11 +47,7 @@ import Chat from '../components/Chat.vue'
 import Sidebar from '../components/Sidebar.vue'
 import HelpingHandLogo from '../components/HelpingHandLogo.vue'
 import ThemeToggle from '../components/ThemeToggle.vue'
-import {
-  listConversations,
-  renameConversation,
-  deleteConversation,
-} from '../utils/api.js'
+import { listConversations, renameConversation, deleteConversation } from '../utils/api.js'
 
 const conversations = ref([])
 const activeId = ref(null)
@@ -63,7 +61,9 @@ let errorTimer = null
 function showActionError(message) {
   actionError.value = message
   if (errorTimer) clearTimeout(errorTimer)
-  errorTimer = setTimeout(() => { actionError.value = null }, 5000)
+  errorTimer = setTimeout(() => {
+    actionError.value = null
+  }, 5000)
 }
 
 async function loadConversations() {

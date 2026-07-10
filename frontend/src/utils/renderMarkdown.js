@@ -14,7 +14,7 @@ export function expandCitationGroups(text) {
     group
       .split(',')
       .map((n) => `[${n.trim()}]`)
-      .join('')
+      .join(''),
   )
 }
 
@@ -37,9 +37,7 @@ export function renderMarkdown(text, sources = null) {
   // click handler in Chat.vue scrolls to the matching source within the message.
   const expanded = expandCitationGroups(clean)
   const validIndexes =
-    sources && sources.length
-      ? new Set(sources.filter(isValidSource).map((s) => s.index))
-      : null
+    sources && sources.length ? new Set(sources.filter(isValidSource).map((s) => s.index)) : null
   return expanded.replace(/( ?)\[(\d+)\]/g, (_full, space, n) => {
     // A citation with no displayed source is dropped (with a leading space) rather
     // than left as a dead [n] the reader can't click. During streaming (no sources

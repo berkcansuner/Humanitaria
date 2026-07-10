@@ -33,7 +33,7 @@ export function useReveal(rootRef) {
           }
         })
       },
-      { threshold: 0.12, rootMargin: '0px 0px -6% 0px' }
+      { threshold: 0.12, rootMargin: '0px 0px -6% 0px' },
     )
 
     const vh = window.innerHeight || 800

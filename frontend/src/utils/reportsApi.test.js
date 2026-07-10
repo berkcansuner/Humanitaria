@@ -10,26 +10,41 @@ describe('reports api client', () => {
 
   it('getReportOptions GETs /reports/options', async () => {
     const data = { countries: ['Sudan'], themes: ['Health'] }
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(data) }))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(data) }),
+    )
     const result = await getReportOptions()
-    expect(fetch).toHaveBeenCalledWith('/reports/options', expect.objectContaining({ method: 'GET' }))
+    expect(fetch).toHaveBeenCalledWith(
+      '/reports/options',
+      expect.objectContaining({ method: 'GET' }),
+    )
     expect(result).toEqual(data)
   })
 
   it('listReports GETs /reports', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ reports: [] }) }))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ reports: [] }) }),
+    )
     await listReports()
     expect(fetch).toHaveBeenCalledWith('/reports/list', expect.objectContaining({ method: 'GET' }))
   })
 
   it('getReport GETs the report path', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ id: 'r1' }) }))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ id: 'r1' }) }),
+    )
     await getReport('r1')
     expect(fetch).toHaveBeenCalledWith('/reports/r1', expect.objectContaining({ method: 'GET' }))
   })
 
   it('deleteReport DELETEs the report path', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ ok: true }) }))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ ok: true }) }),
+    )
     await deleteReport('r1')
     expect(fetch).toHaveBeenCalledWith('/reports/r1', expect.objectContaining({ method: 'DELETE' }))
   })

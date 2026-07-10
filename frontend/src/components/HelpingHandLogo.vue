@@ -1,7 +1,18 @@
 <template>
-  <span class="hh-mark" :style="{ width: size + 'px', height: size + 'px', borderRadius: radius + 'px' }">
-    <svg :width="icon" :height="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-         :stroke-width="stroke" stroke-linecap="round" stroke-linejoin="round">
+  <span
+    class="hh-mark"
+    :style="{ width: size + 'px', height: size + 'px', borderRadius: radius + 'px' }"
+  >
+    <svg
+      :width="icon"
+      :height="icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      :stroke-width="stroke"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
       <path v-for="(d, i) in paths" :key="i" :d="d" />
     </svg>
   </span>
@@ -10,7 +21,7 @@
 <script setup>
 import { computed } from 'vue'
 const props = defineProps({
-  size:   { type: Number, default: 40 },
+  size: { type: Number, default: 40 },
   radius: { type: Number, default: 13 },
   stroke: { type: Number, default: 1.6 },
 })
@@ -25,7 +36,9 @@ const paths = [
 
 <style scoped>
 .hh-mark {
-  display: inline-grid; place-items: center; flex-shrink: 0;
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
   color: var(--color-accent);
   background: color-mix(in oklch, var(--color-accent) 16%, transparent);
 }

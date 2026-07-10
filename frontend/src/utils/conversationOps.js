@@ -56,7 +56,10 @@ export function planResend(messages, targetIndex, truncateOk, errorMessage) {
 
 /** Lower-case and strip diacritics so "guvenligi" matches "güvenliği". */
 function _fold(s) {
-  return (s || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
+  return (s || '')
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
 }
 
 /**
@@ -93,9 +96,11 @@ const _DATE_GROUPS = [
  * is injected for testability (defaults to the current time).
  */
 export function groupConversationsByDate(conversations, now = new Date()) {
-  return _DATE_GROUPS.map(([key, label]) => ({
-    key,
-    label,
-    items: conversations.filter((c) => _dateGroupKey(c.updated_at, now) === key),
-  })).filter((g) => g.items.length)
+  return _DATE_GROUPS
+    .map(([key, label]) => ({
+      key,
+      label,
+      items: conversations.filter((c) => _dateGroupKey(c.updated_at, now) === key),
+    }))
+    .filter((g) => g.items.length)
 }

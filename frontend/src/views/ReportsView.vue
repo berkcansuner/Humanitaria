@@ -39,11 +39,11 @@
           <div class="field-row">
             <label class="field">
               <span>From</span>
-              <input type="date" v-model="form.date_from" :disabled="generating" />
+              <input v-model="form.date_from" type="date" :disabled="generating" />
             </label>
             <label class="field">
               <span>To</span>
-              <input type="date" v-model="form.date_to" :disabled="generating" />
+              <input v-model="form.date_to" type="date" :disabled="generating" />
             </label>
           </div>
 
@@ -78,9 +78,16 @@
             >
               <button type="button" class="saved-open" @click="openReport(r.id)">
                 <span class="saved-name">{{ r.title }}</span>
-                <span class="saved-meta">{{ fmtDate(r.created_at) }} · {{ r.doc_count }} reports</span>
+                <span class="saved-meta"
+                  >{{ fmtDate(r.created_at) }} · {{ r.doc_count }} reports</span
+                >
               </button>
-              <button type="button" class="saved-del" aria-label="Delete report" @click.stop="onDelete(r.id)">
+              <button
+                type="button"
+                class="saved-del"
+                aria-label="Delete report"
+                @click.stop="onDelete(r.id)"
+              >
                 <Trash2 :size="13" />
               </button>
             </li>
@@ -89,7 +96,7 @@
         </div>
       </aside>
 
-      <main class="report-main" ref="viewer" @click="onCiteClick">
+      <main ref="viewer" class="report-main" @click="onCiteClick">
         <template v-if="current">
           <div v-if="current.id" class="report-toolbar">
             <button type="button" class="pdf-btn" :disabled="pdfLoading" @click="downloadPdf">
@@ -104,10 +111,12 @@
             <span class="skeleton skel-line"></span>
             <span class="skeleton skel-line short"></span>
           </div>
-          <article v-else class="report-content" v-html="renderMarkdown(current.content, current.sources)"></article>
-          <div v-if="genError" class="error-banner">
-            <AlertCircle :size="16" /> {{ genError }}
-          </div>
+          <article
+            v-else
+            class="report-content"
+            v-html="renderMarkdown(current.content, current.sources)"
+          ></article>
+          <div v-if="genError" class="error-banner"><AlertCircle :size="16" /> {{ genError }}</div>
           <SourceList v-if="current.sources" :sources="current.sources" />
         </template>
         <div v-else class="report-empty">
@@ -139,7 +148,7 @@ const loadingList = ref(false)
 
 const form = ref({ country: '', theme: '', date_from: '', date_to: '', language: 'en' })
 
-const current = ref(null)        // { id, title, content, sources }
+const current = ref(null) // { id, title, content, sources }
 const generating = ref(false)
 const genError = ref('')
 const viewer = ref(null)
@@ -192,7 +201,9 @@ async function openReport(id) {
     const rep = await getReport(id)
     current.value = { id: rep.id, title: rep.title, content: rep.content, sources: rep.sources }
     genError.value = ''
-    nextTick(() => { if (viewer.value) viewer.value.scrollTop = 0 })
+    nextTick(() => {
+      if (viewer.value) viewer.value.scrollTop = 0
+    })
   } catch (e) {
     console.error('Failed to open report:', e)
   }
@@ -218,7 +229,10 @@ async function downloadPdf() {
   try {
     const res = await fetch(`/reports/${current.value.id}/pdf`, { credentials: 'include' })
     if (!res.ok) {
-      if (res.status === 401) { handleSessionExpired(); return }
+      if (res.status === 401) {
+        handleSessionExpired()
+        return
+      }
       throw new Error(`HTTP ${res.status}`)
     }
     const blob = await res.blob()
@@ -227,7 +241,9 @@ async function downloadPdf() {
     a.href = url
     a.download =
       ('Humanitaria_' + (current.value.title || 'report'))
-        .replace(/[^\w.-]+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '') + '.pdf'
+        .replace(/[^\w.-]+/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '') + '.pdf'
     document.body.appendChild(a)
     a.click()
     a.remove()
@@ -267,7 +283,10 @@ async function generate() {
       signal: controller.value.signal,
     })
     if (!res.ok) {
-      if (res.status === 401) { handleSessionExpired(); return }
+      if (res.status === 401) {
+        handleSessionExpired()
+        return
+      }
       genError.value = 'Could not generate the report. Please try again.'
       return
     }
@@ -285,9 +304,14 @@ async function generate() {
         const sse = parseSSE(part)
         if (!sse) continue
         if (sse.event === 'token') {
-          try { current.value.content += JSON.parse(sse.data).content; scrollViewerBottom() } catch (e) {}
+          try {
+            current.value.content += JSON.parse(sse.data).content
+            scrollViewerBottom()
+          } catch (e) {}
         } else if (sse.event === 'sources') {
-          try { current.value.sources = JSON.parse(sse.data).sources } catch (e) {}
+          try {
+            current.value.sources = JSON.parse(sse.data).sources
+          } catch (e) {}
         } else if (sse.event === 'saved') {
           let rid = null
           try {
@@ -302,11 +326,20 @@ async function generate() {
           if (rid) {
             try {
               const rep = await getReport(rid)
-              current.value = { id: rep.id, title: rep.title, content: rep.content, sources: rep.sources }
+              current.value = {
+                id: rep.id,
+                title: rep.title,
+                content: rep.content,
+                sources: rep.sources,
+              }
             } catch (e) {}
           }
         } else if (sse.event === 'error') {
-          try { genError.value = JSON.parse(sse.data).message } catch (e) { genError.value = 'Something went wrong.' }
+          try {
+            genError.value = JSON.parse(sse.data).message
+          } catch (e) {
+            genError.value = 'Something went wrong.'
+          }
         }
       }
     }
@@ -329,7 +362,9 @@ function onCiteClick(e) {
   const id = cite.getAttribute('data-cite')
   const item = viewer.value && viewer.value.querySelector(`.source-item[data-srcid="${id}"]`)
   if (!item) return
-  viewer.value.querySelectorAll('.source-item.active').forEach((el) => el.classList.remove('active'))
+  viewer.value
+    .querySelectorAll('.source-item.active')
+    .forEach((el) => el.classList.remove('active'))
   item.classList.add('active')
   item.scrollIntoView({ behavior: 'smooth', block: 'center' })
   item.classList.add('flash')
@@ -362,7 +397,12 @@ function onCiteClick(e) {
   text-decoration: none;
 }
 
-.brand-text { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  min-width: 0;
+}
 .brand-title {
   font-family: var(--font-display);
   font-size: var(--text-lg);
@@ -379,7 +419,9 @@ function onCiteClick(e) {
   color: var(--color-muted);
   white-space: nowrap;
 }
-.topbar-spacer { flex: 1; }
+.topbar-spacer {
+  flex: 1;
+}
 
 .ghost-link {
   display: inline-flex;
@@ -391,9 +433,14 @@ function onCiteClick(e) {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   text-decoration: none;
-  transition: background-color 0.15s, color 0.15s;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
 }
-.ghost-link:hover { background-color: var(--color-surface-container); color: var(--color-text); }
+.ghost-link:hover {
+  background-color: var(--color-surface-container);
+  color: var(--color-text);
+}
 
 .reports-body {
   flex: 1;
@@ -413,10 +460,22 @@ function onCiteClick(e) {
   gap: var(--space-5);
 }
 
-.report-form { display: flex; flex-direction: column; gap: var(--space-3); }
-.form-title { font-family: var(--font-display); font-size: var(--text-base); font-weight: 700; }
+.report-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.form-title {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: 700;
+}
 
-.field { display: flex; flex-direction: column; gap: 4px; }
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
 .field > span {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -424,8 +483,13 @@ function onCiteClick(e) {
   text-transform: uppercase;
   color: var(--color-muted);
 }
-.field-row { display: flex; gap: var(--space-2); }
-.field-row .field { flex: 1; }
+.field-row {
+  display: flex;
+  gap: var(--space-2);
+}
+.field-row .field {
+  flex: 1;
+}
 
 .field select,
 .field input {
@@ -460,15 +524,31 @@ function onCiteClick(e) {
   border: none;
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: background-color 0.2s, transform 0.15s;
+  transition:
+    background-color 0.2s,
+    transform 0.15s;
 }
-.generate-btn:hover:not(:disabled) { background-color: var(--color-accent); }
-.generate-btn:active:not(:disabled) { transform: scale(0.98); }
-.generate-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.generate-btn:hover:not(:disabled) {
+  background-color: var(--color-accent);
+}
+.generate-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.generate-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
 
-.form-hint { font-size: var(--text-xs); color: var(--color-muted); }
+.form-hint {
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+}
 
-.saved { display: flex; flex-direction: column; gap: var(--space-2); }
+.saved {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
 .saved-title-h {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -476,15 +556,26 @@ function onCiteClick(e) {
   text-transform: uppercase;
   color: var(--color-muted);
 }
-.saved-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.saved-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
 .saved-item {
   display: flex;
   align-items: center;
   border-radius: var(--radius-md);
   transition: background-color 0.15s;
 }
-.saved-item:hover { background-color: var(--color-surface-container); }
-.saved-item.active { background-color: var(--color-surface-container-high); }
+.saved-item:hover {
+  background-color: var(--color-surface-container);
+}
+.saved-item.active {
+  background-color: var(--color-surface-container-high);
+}
 .saved-open {
   flex: 1;
   min-width: 0;
@@ -504,8 +595,14 @@ function onCiteClick(e) {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.saved-item.active .saved-name { color: var(--color-accent); font-weight: 600; }
-.saved-meta { font-size: 11px; color: var(--color-muted); }
+.saved-item.active .saved-name {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+.saved-meta {
+  font-size: 11px;
+  color: var(--color-muted);
+}
 .saved-del {
   flex-shrink: 0;
   display: grid;
@@ -519,11 +616,21 @@ function onCiteClick(e) {
   border-radius: var(--radius-sm);
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.15s, color 0.15s;
+  transition:
+    opacity 0.15s,
+    color 0.15s;
 }
-.saved-item:hover .saved-del { opacity: 1; }
-.saved-del:hover { color: var(--color-error); }
-.saved-skel { display: block; height: 32px; border-radius: var(--radius-md); }
+.saved-item:hover .saved-del {
+  opacity: 1;
+}
+.saved-del:hover {
+  color: var(--color-error);
+}
+.saved-skel {
+  display: block;
+  height: 32px;
+  border-radius: var(--radius-md);
+}
 
 .report-main {
   flex: 1;
@@ -555,7 +662,10 @@ function onCiteClick(e) {
   border-radius: var(--radius-md);
   cursor: pointer;
   text-decoration: none;
-  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+  transition:
+    background-color 0.15s,
+    color 0.15s,
+    border-color 0.15s;
 }
 .pdf-btn:hover:not(:disabled) {
   background-color: var(--color-surface-container);
@@ -579,16 +689,48 @@ function onCiteClick(e) {
   line-height: 1.65;
   color: var(--color-text);
 }
-.report-content :deep(h1) { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0 0 0.5em; }
-.report-content :deep(h2) { font-family: var(--font-display); font-size: var(--text-xl); margin: 1.1em 0 0.4em; }
-.report-content :deep(h3) { font-size: var(--text-lg); font-weight: 700; margin: 0.9em 0 0.3em; }
-.report-content :deep(p) { margin: 0 0 0.7em; }
-.report-content :deep(ul), .report-content :deep(ol) { margin: 0.4em 0 0.8em; padding-left: 1.4em; }
-.report-content :deep(li) { margin-bottom: 0.35em; }
+.report-content :deep(h1) {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  margin: 0 0 0.5em;
+}
+.report-content :deep(h2) {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  margin: 1.1em 0 0.4em;
+}
+.report-content :deep(h3) {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  margin: 0.9em 0 0.3em;
+}
+.report-content :deep(p) {
+  margin: 0 0 0.7em;
+}
+.report-content :deep(ul),
+.report-content :deep(ol) {
+  margin: 0.4em 0 0.8em;
+  padding-left: 1.4em;
+}
+.report-content :deep(li) {
+  margin-bottom: 0.35em;
+}
 
-.report-loading { max-width: 75ch; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-3); }
-.skel-line { display: block; height: 14px; border-radius: var(--radius-sm); }
-.skel-line.short { width: 55%; }
+.report-loading {
+  max-width: 75ch;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.skel-line {
+  display: block;
+  height: 14px;
+  border-radius: var(--radius-sm);
+}
+.skel-line.short {
+  width: 55%;
+}
 
 .report-empty {
   height: 100%;
@@ -614,14 +756,36 @@ function onCiteClick(e) {
   gap: var(--space-2);
 }
 
-.report-main :deep(.sources) { max-width: 75ch; margin-left: auto; margin-right: auto; }
+.report-main :deep(.sources) {
+  max-width: 75ch;
+  margin-left: auto;
+  margin-right: auto;
+}
 
-.spin { animation: spin 1s linear infinite; }
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 @media (max-width: 760px) {
-  .reports-body { flex-direction: column; }
-  .reports-aside { width: 100%; border-right: none; border-bottom: 1px solid var(--color-border); max-height: 45%; }
-  .report-main { padding: var(--space-4); }
+  .reports-body {
+    flex-direction: column;
+  }
+  .reports-aside {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    max-height: 45%;
+  }
+  .report-main {
+    padding: var(--space-4);
+  }
 }
 </style>

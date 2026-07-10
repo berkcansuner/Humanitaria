@@ -28,7 +28,9 @@ export function decorateCodeBlocks(root) {
       navigator.clipboard?.writeText(text)
       const prev = btn.textContent
       btn.textContent = 'Copied'
-      setTimeout(() => { btn.textContent = prev }, 1500)
+      setTimeout(() => {
+        btn.textContent = prev
+      }, 1500)
     })
 
     pre.appendChild(btn)
