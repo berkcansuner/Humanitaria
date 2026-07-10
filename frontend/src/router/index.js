@@ -32,6 +32,13 @@ const routes = [
     component: () => import('../views/ReportsView.vue'),
     meta: { requiresAuth: true },
   },
+  // Account settings: profile, appearance, password, account deletion.
+  {
+    path: '/settings',
+    name: 'settings',
+    component: () => import('../views/SettingsView.vue'),
+    meta: { requiresAuth: true },
+  },
   // Admin-only ingestion status & management panel.
   {
     path: '/admin/ingestion',
