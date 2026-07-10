@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { signup, login, logout, me, updateProfile, changePassword, deleteAccount } from './authApi.js'
+import {
+  signup,
+  login,
+  logout,
+  me,
+  updateProfile,
+  changePassword,
+  deleteAccount,
+} from './authApi.js'
 
 describe('auth api client', () => {
   beforeEach(() => {

@@ -41,161 +41,166 @@
         </nav>
 
         <template v-if="tab === 'ingestion'">
-        <section class="card">
-          <div class="card-head">
-            <h2>Ingestion status</h2>
-            <span :class="['pill', running ? 'pill-run' : 'pill-idle']">
-              <span class="dot"></span>{{ running ? 'Running' : 'Idle' }}
-            </span>
-          </div>
+          <section class="card">
+            <div class="card-head">
+              <h2>Ingestion status</h2>
+              <span :class="['pill', running ? 'pill-run' : 'pill-idle']">
+                <span class="dot"></span>{{ running ? 'Running' : 'Idle' }}
+              </span>
+            </div>
 
-          <p v-if="loading && !status" class="muted">Loading…</p>
-          <dl v-else class="grid">
-            <div>
-              <dt>Last ingest</dt>
-              <dd>{{ status?.last_ingest || '—' }}</dd>
-            </div>
-            <div>
-              <dt>Next scheduled run</dt>
-              <dd>{{ formatDateTime(status?.next_scheduled_run) }}</dd>
-            </div>
-            <div>
-              <dt>Scheduler</dt>
-              <dd>{{ status?.scheduler_active ? 'Active' : 'Inactive' }}</dd>
-            </div>
-            <div>
-              <dt>Vectors (active namespace)</dt>
-              <dd>
-                <span v-if="status?.vector_count_error" title="Pinecone unavailable"
-                  >unavailable</span
-                >
-                <template v-else>
-                  {{ formatNumber(status?.namespace_vectors) }}
-                  <span class="dd-note"
-                    >{{ namespaceLabel }} · {{ formatNumber(status?.total_vectors) }} in index</span
+            <p v-if="loading && !status" class="muted">Loading…</p>
+            <dl v-else class="grid">
+              <div>
+                <dt>Last ingest</dt>
+                <dd>{{ status?.last_ingest || '—' }}</dd>
+              </div>
+              <div>
+                <dt>Next scheduled run</dt>
+                <dd>{{ formatDateTime(status?.next_scheduled_run) }}</dd>
+              </div>
+              <div>
+                <dt>Scheduler</dt>
+                <dd>{{ status?.scheduler_active ? 'Active' : 'Inactive' }}</dd>
+              </div>
+              <div>
+                <dt>Vectors (active namespace)</dt>
+                <dd>
+                  <span v-if="status?.vector_count_error" title="Pinecone unavailable"
+                    >unavailable</span
                   >
-                </template>
-              </dd>
-            </div>
-          </dl>
-        </section>
+                  <template v-else>
+                    {{ formatNumber(status?.namespace_vectors) }}
+                    <span class="dd-note"
+                      >{{ namespaceLabel }} · {{ formatNumber(status?.total_vectors) }} in
+                      index</span
+                    >
+                  </template>
+                </dd>
+              </div>
+            </dl>
+          </section>
 
-        <section class="card">
-          <div class="card-head"><h2>Run ingest</h2></div>
-          <p class="muted">
-            Fetches new ReliefWeb documents since the last run (incremental) and upserts them into
-            Pinecone. A scheduled run uses the same path, so only one runs at a time.
-          </p>
-          <button class="primary-btn" :disabled="running || triggering" @click="onTrigger">
-            <RefreshCw :size="16" :class="{ spin: running }" />
-            {{ running ? 'Ingest in progress…' : 'Run ingest now' }}
-          </button>
-
-          <div v-if="run.last_error" class="error-box" role="alert">
-            Last run failed: {{ run.last_error }}
-          </div>
-
-          <div v-if="lastStatsRows.length" class="run-summary">
-            <h3>Last run</h3>
-            <p class="muted run-meta">
-              {{ run.source }} · started {{ formatDateTime(run.started_at) }}
-              <template v-if="run.finished_at">
-                · finished {{ formatDateTime(run.finished_at) }}</template
-              >
+          <section class="card">
+            <div class="card-head"><h2>Run ingest</h2></div>
+            <p class="muted">
+              Fetches new ReliefWeb documents since the last run (incremental) and upserts them into
+              Pinecone. A scheduled run uses the same path, so only one runs at a time.
             </p>
-            <table>
-              <thead>
-                <tr>
-                  <th>Endpoint</th>
-                  <th>Total</th>
-                  <th>OK</th>
-                  <th>Failed</th>
-                  <th>Skipped</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="row in lastStatsRows" :key="row.endpoint">
-                  <td>{{ row.endpoint }}</td>
-                  <td>{{ row.total }}</td>
-                  <td>{{ row.succeeded }}</td>
-                  <td>{{ row.failed }}</td>
-                  <td>{{ row.skipped }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
+            <button class="primary-btn" :disabled="running || triggering" @click="onTrigger">
+              <RefreshCw :size="16" :class="{ spin: running }" />
+              {{ running ? 'Ingest in progress…' : 'Run ingest now' }}
+            </button>
 
-        <section class="card">
-          <div class="card-head">
-            <h2>Reports</h2>
-            <span :class="['pill', docComputing ? 'pill-run' : 'pill-idle']">
-              <span class="dot"></span>{{ docComputing ? 'Building' : 'Idle' }}
-            </span>
-          </div>
-          <p class="muted">
-            Indexed reports in the active namespace, newest first. The list builds automatically and
-            refreshes after each ingest.
-          </p>
-
-          <div class="bd-actions">
-            <input
-              v-model="docQuery"
-              class="doc-search"
-              type="search"
-              placeholder="Search title, source, country…"
-              aria-label="Search reports"
-              @input="onSearchInput"
-            />
-            <span v-if="docComputedAt" class="bd-meta">
-              {{ formatNumber(docTotal) }} reports · updated {{ formatDateTime(docComputedAt) }}
-            </span>
-          </div>
-
-          <div v-if="docError" class="error-box" role="alert">Last scan failed: {{ docError }}</div>
-
-          <p v-if="docComputing && !docItems.length" class="muted bd-empty">
-            Building the report list… this can take up to a minute.
-          </p>
-          <p v-else-if="!docItems.length" class="muted bd-empty">
-            <template v-if="docQuery.trim()">No reports match “{{ docQuery }}”.</template>
-            <template v-else>No reports found.</template>
-          </p>
-
-          <template v-if="docItems.length">
-            <table class="doc-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Title</th>
-                  <th>Source</th>
-                  <th>Country</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="row in docItems" :key="row.doc_id">
-                  <td class="doc-date">{{ formatDate(row.date) }}</td>
-                  <td class="doc-title">
-                    <a v-if="row.url" :href="row.url" target="_blank" rel="noopener">{{
-                      row.title || '(untitled)'
-                    }}</a>
-                    <span v-else>{{ row.title || '(untitled)' }}</span>
-                  </td>
-                  <td>{{ row.source || '—' }}</td>
-                  <td>{{ row.country || '—' }}</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <div class="doc-pager">
-              <button class="pager-btn" :disabled="docOffset === 0" @click="prevPage">Prev</button>
-              <span class="pager-info">Page {{ docPage }} of {{ docPageCount }}</span>
-              <button class="pager-btn" :disabled="docPage >= docPageCount" @click="nextPage">
-                Next
-              </button>
+            <div v-if="run.last_error" class="error-box" role="alert">
+              Last run failed: {{ run.last_error }}
             </div>
-          </template>
-        </section>
+
+            <div v-if="lastStatsRows.length" class="run-summary">
+              <h3>Last run</h3>
+              <p class="muted run-meta">
+                {{ run.source }} · started {{ formatDateTime(run.started_at) }}
+                <template v-if="run.finished_at">
+                  · finished {{ formatDateTime(run.finished_at) }}</template
+                >
+              </p>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Endpoint</th>
+                    <th>Total</th>
+                    <th>OK</th>
+                    <th>Failed</th>
+                    <th>Skipped</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="row in lastStatsRows" :key="row.endpoint">
+                    <td>{{ row.endpoint }}</td>
+                    <td>{{ row.total }}</td>
+                    <td>{{ row.succeeded }}</td>
+                    <td>{{ row.failed }}</td>
+                    <td>{{ row.skipped }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <h2>Reports</h2>
+              <span :class="['pill', docComputing ? 'pill-run' : 'pill-idle']">
+                <span class="dot"></span>{{ docComputing ? 'Building' : 'Idle' }}
+              </span>
+            </div>
+            <p class="muted">
+              Indexed reports in the active namespace, newest first. The list builds automatically
+              and refreshes after each ingest.
+            </p>
+
+            <div class="bd-actions">
+              <input
+                v-model="docQuery"
+                class="doc-search"
+                type="search"
+                placeholder="Search title, source, country…"
+                aria-label="Search reports"
+                @input="onSearchInput"
+              />
+              <span v-if="docComputedAt" class="bd-meta">
+                {{ formatNumber(docTotal) }} reports · updated {{ formatDateTime(docComputedAt) }}
+              </span>
+            </div>
+
+            <div v-if="docError" class="error-box" role="alert">
+              Last scan failed: {{ docError }}
+            </div>
+
+            <p v-if="docComputing && !docItems.length" class="muted bd-empty">
+              Building the report list… this can take up to a minute.
+            </p>
+            <p v-else-if="!docItems.length" class="muted bd-empty">
+              <template v-if="docQuery.trim()">No reports match “{{ docQuery }}”.</template>
+              <template v-else>No reports found.</template>
+            </p>
+
+            <template v-if="docItems.length">
+              <table class="doc-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Title</th>
+                    <th>Source</th>
+                    <th>Country</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="row in docItems" :key="row.doc_id">
+                    <td class="doc-date">{{ formatDate(row.date) }}</td>
+                    <td class="doc-title">
+                      <a v-if="row.url" :href="row.url" target="_blank" rel="noopener">{{
+                        row.title || '(untitled)'
+                      }}</a>
+                      <span v-else>{{ row.title || '(untitled)' }}</span>
+                    </td>
+                    <td>{{ row.source || '—' }}</td>
+                    <td>{{ row.country || '—' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div class="doc-pager">
+                <button class="pager-btn" :disabled="docOffset === 0" @click="prevPage">
+                  Prev
+                </button>
+                <span class="pager-info">Page {{ docPage }} of {{ docPageCount }}</span>
+                <button class="pager-btn" :disabled="docPage >= docPageCount" @click="nextPage">
+                  Next
+                </button>
+              </div>
+            </template>
+          </section>
         </template>
 
         <AdminUsersPanel v-if="tab === 'users'" />
