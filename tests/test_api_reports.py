@@ -239,6 +239,76 @@ class TestReportService:
         one = [_src_doc("t", "WFP", "2026-01-01", _EN_TEXT)]
         assert _collapse_near_duplicates(one) == one
 
+    def _report_settings(self, report_top_k=12, candidate_multiplier=4):
+        s = MagicMock()
+        s.REPORT_TOP_K = report_top_k
+        s.RERANK_CANDIDATE_MULTIPLIER = candidate_multiplier
+        return s
+
+    def test_retrieve_widens_top_k_for_indicator_monitoring(self):
+        from rag import report_service
+        captured = {}
+
+        def fake_build_retriever(filter=None, k=None):
+            captured["k"] = k
+            r = MagicMock()
+            r.ainvoke = AsyncMock(return_value=[])
+            return r
+
+        with patch("rag.report_service.get_settings", return_value=self._report_settings()), \
+             patch("rag.report_service.build_retriever", side_effect=fake_build_retriever), \
+             patch("rag.report_service.rerank_by_relevance", side_effect=lambda q, d, n: d[:n]), \
+             patch("rag.report_service.rerank_by_recency", side_effect=lambda d: d):
+            anyio.run(
+                report_service.retrieve_for_report, "Mali", None, None, None, None,
+                "indicator_monitoring",
+            )
+        assert captured["k"] == 16 * 4  # top_k widened to 16 (> REPORT_TOP_K=12) for indicator_monitoring
+
+    def test_retrieve_situation_keeps_configured_top_k(self):
+        from rag import report_service
+        captured = {}
+
+        def fake_build_retriever(filter=None, k=None):
+            captured["k"] = k
+            r = MagicMock()
+            r.ainvoke = AsyncMock(return_value=[])
+            return r
+
+        with patch("rag.report_service.get_settings", return_value=self._report_settings()), \
+             patch("rag.report_service.build_retriever", side_effect=fake_build_retriever), \
+             patch("rag.report_service.rerank_by_relevance", side_effect=lambda q, d, n: d[:n]), \
+             patch("rag.report_service.rerank_by_recency", side_effect=lambda d: d):
+            anyio.run(report_service.retrieve_for_report, "Sudan", None, None, None)
+        assert captured["k"] == 12 * 4  # unchanged for the default (situation) type
+
+    def test_report_title_type_prefix(self):
+        from rag.report_service import report_title
+        assert report_title("Mali", "Food and Nutrition", "2026-04-01", "2026-07-01",
+                            report_type="indicator_monitoring") == \
+            "Indicator Monitoring Report — Mali · Food and Nutrition · 2026-04-01 – 2026-07-01"
+        assert report_title("Mali", None, "2026-04-01", "2026-07-01",
+                            report_type="needs_assessment") == \
+            "Needs Assessment Brief — Mali · All sectors · 2026-04-01 – 2026-07-01"
+        # default (situation) unchanged
+        assert report_title("Sudan", None, "2026-01-01", "2026-06-30") == \
+            "Sudan · All sectors · 2026-01-01 – 2026-06-30"
+
+    def test_build_directive_type_verb(self):
+        from rag.report_service import build_report_directive
+        situation = build_report_directive("Sudan", None, "2026-01-01", "2026-06-30", 5, "en")
+        indicator = build_report_directive("Mali", None, "2026-01-01", "2026-06-30", 5, "en",
+                                           report_type="indicator_monitoring")
+        needs = build_report_directive("Mali", None, "2026-01-01", "2026-06-30", 5, "en",
+                                       report_type="needs_assessment")
+        assert situation.startswith("Generate the situation report.")
+        assert indicator.startswith("Generate the indicator monitoring report.")
+        assert needs.startswith("Generate the needs assessment brief.")
+
+    def test_report_types_constant(self):
+        from rag.report_service import REPORT_TYPES
+        assert REPORT_TYPES == ("situation", "indicator_monitoring", "needs_assessment")
+
 
 # --- analytics distinct countries -------------------------------------------
 

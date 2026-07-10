@@ -156,6 +156,20 @@ def _collapse_near_duplicates(docs: List[Document]) -> List[Document]:
     return [d for i, d in enumerate(docs) if i in keep]
 
 
+REPORT_TYPES = ("situation", "indicator_monitoring", "needs_assessment")
+
+_REPORT_TYPE_TITLE_PREFIX = {
+    "indicator_monitoring": "Indicator Monitoring Report — ",
+    "needs_assessment": "Needs Assessment Brief — ",
+}
+
+_REPORT_TYPE_DIRECTIVE_VERB = {
+    "situation": "Generate the situation report.",
+    "indicator_monitoring": "Generate the indicator monitoring report.",
+    "needs_assessment": "Generate the needs assessment brief.",
+}
+
+
 def _retrieval_query(country: str, theme: Optional[str]) -> str:
     """Embedding/rerank query synthesized from the form (no natural-language query)."""
     if theme:
@@ -190,15 +204,21 @@ def _build_filters(country: str, theme: Optional[str],
 
 async def retrieve_for_report(country: str, theme: Optional[str],
                               date_from: Optional[str], date_to: Optional[str],
-                              top_k: Optional[int] = None) -> List[Document]:
-    """Fetch the document set to synthesize into one situation report.
+                              top_k: Optional[int] = None,
+                              report_type: str = "situation") -> List[Document]:
+    """Fetch the document set to synthesize into one M&E report.
 
     Wider than chat retrieval (REPORT_TOP_K): candidates → date filter → dedupe by
     document → relevance rerank → mild recency blend → top-k. Filtered by
-    country (+ optional theme) and the from–to date window.
+    country (+ optional theme) and the from–to date window. indicator_monitoring
+    reports draw from a wider pool (a table of indicators needs broader source
+    coverage than a narrative summary) unless the caller pins an explicit top_k.
     """
     settings = get_settings()
-    top_k = top_k or settings.REPORT_TOP_K
+    if top_k is None:
+        top_k = settings.REPORT_TOP_K
+        if report_type == "indicator_monitoring":
+            top_k = max(top_k, 16)
     query = _retrieval_query(country, theme)
     filters = _build_filters(country, theme, date_from, date_to)
 
@@ -214,21 +234,26 @@ async def retrieve_for_report(country: str, theme: Optional[str],
     return docs[:top_k]
 
 
-def report_title(country: str, theme: Optional[str],
-                 date_from: Optional[str], date_to: Optional[str]) -> str:
-    """Human-readable saved-report title: 'Country · Sector · from–to'."""
+def report_title(country: str, theme: Optional[str], date_from: Optional[str],
+                 date_to: Optional[str], report_type: str = "situation") -> str:
+    """Human-readable saved-report title: 'Country · Sector · from–to', prefixed
+    with the type label for non-situation reports (situation stays unprefixed,
+    unchanged from the original single-type format)."""
     sector = theme or "All sectors"
     period = f"{date_from or '…'} – {date_to or '…'}"
-    return f"{country} · {sector} · {period}"
+    prefix = _REPORT_TYPE_TITLE_PREFIX.get(report_type, "")
+    return f"{prefix}{country} · {sector} · {period}"
 
 
 def build_report_directive(country: str, theme: Optional[str], date_from: Optional[str],
-                           date_to: Optional[str], doc_count: int, language: str) -> str:
+                           date_to: Optional[str], doc_count: int, language: str,
+                           report_type: str = "situation") -> str:
     """The 'human' directive passed to the report chain alongside the context."""
     lang_name = _LANG_NAMES.get((language or "en").lower(), "English")
     sector = theme or "all sectors"
+    verb = _REPORT_TYPE_DIRECTIVE_VERB.get(report_type, _REPORT_TYPE_DIRECTIVE_VERB["situation"])
     return (
-        "Generate the situation report. "
+        f"{verb} "
         f"Country: {country}. Sector(s): {sector}. "
         f"Period: {date_from or 'unspecified'} to {date_to or 'unspecified'}. "
         f"Source documents available: {doc_count}. "
