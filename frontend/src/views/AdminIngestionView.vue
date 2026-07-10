@@ -23,6 +23,24 @@
       <template v-else>
         <div v-if="actionError" class="action-error" role="alert">{{ actionError }}</div>
 
+        <nav class="tabs" aria-label="Admin sections">
+          <button
+            type="button"
+            :class="['tab-btn', { active: tab === 'ingestion' }]"
+            @click="tab = 'ingestion'"
+          >
+            Ingestion
+          </button>
+          <button
+            type="button"
+            :class="['tab-btn', { active: tab === 'users' }]"
+            @click="tab = 'users'"
+          >
+            Users
+          </button>
+        </nav>
+
+        <template v-if="tab === 'ingestion'">
         <section class="card">
           <div class="card-head">
             <h2>Ingestion status</h2>
@@ -178,6 +196,9 @@
             </div>
           </template>
         </section>
+        </template>
+
+        <AdminUsersPanel v-if="tab === 'users'" />
       </template>
     </main>
   </div>
@@ -188,8 +209,10 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ArrowLeft, RefreshCw } from 'lucide-vue-next'
 import HelpingHandLogo from '../components/HelpingHandLogo.vue'
 import UserMenu from '../components/UserMenu.vue'
+import AdminUsersPanel from '../components/AdminUsersPanel.vue'
 import { getIngestStatus, triggerIngest, getIngestDocuments } from '../utils/adminApi.js'
 
+const tab = ref('ingestion')
 const status = ref(null)
 const loading = ref(true)
 const triggering = ref(false)
@@ -425,6 +448,30 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
+}
+
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tab-btn {
+  padding: var(--space-2) var(--space-4);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+
+.tab-btn.active {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
 }
 
 .card {
