@@ -66,6 +66,7 @@ import { Plus, Search, LogOut, Shield, FileText } from 'lucide-vue-next'
 import ConversationList from './ConversationList.vue'
 import { filterConversations, groupConversationsByDate } from '../utils/conversationOps.js'
 import { auth, doLogout } from '../utils/authStore.js'
+import { userInitials } from '../utils/userDisplay.js'
 
 const props = defineProps({
   conversations: { type: Array, default: () => [] },
@@ -85,15 +86,7 @@ const groups = computed(() =>
 // Footer reflects the signed-in user (from the auth store).
 const displayName = computed(() => auth.user?.name || auth.user?.email || 'Account')
 const secondary = computed(() => (auth.user?.name ? auth.user?.email : '') || '')
-const initials = computed(() => {
-  const n = auth.user?.name?.trim()
-  if (n) {
-    const p = n.split(/\s+/)
-    return ((p[0]?.[0] || '') + (p[1]?.[0] || '')).toUpperCase() || n[0].toUpperCase()
-  }
-  const e = auth.user?.email
-  return e ? e[0].toUpperCase() : '?'
-})
+const initials = computed(() => userInitials(auth.user))
 
 const router = useRouter()
 async function logout() {
