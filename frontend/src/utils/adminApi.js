@@ -17,3 +17,8 @@ export function getIngestDocuments({ q = '', offset = 0, limit = 50 } = {}) {
   const params = new URLSearchParams({ q, offset, limit })
   return request(`/admin/ingest/documents?${params}`, { method: 'GET' })
 }
+
+export function listUsers({ q = '', offset = 0, limit = 50 } = {}) {
+  const params = new URLSearchParams({ q, offset, limit })
+  return request(`/admin/users?${params}`, { method: 'GET' })
+}

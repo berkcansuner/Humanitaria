@@ -39,3 +39,19 @@ export function logout() {
 export function me() {
   return request('/auth/me', { method: 'GET' })
 }
+
+export function updateProfile(name) {
+  return request('/auth/me', { method: 'PATCH', body: JSON.stringify({ name }) })
+}
+
+export function changePassword(currentPassword, newPassword) {
+  return request('/auth/me/password', {
+    method: 'POST',
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+  })
+}
+
+// body: { password } for password accounts, { confirm_email } for Google-only.
+export function deleteAccount(body) {
+  return request('/auth/me', { method: 'DELETE', body: JSON.stringify(body) })
+}
