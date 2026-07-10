@@ -94,13 +94,20 @@
           Deleting your account permanently removes your conversations, reports and profile. This
           cannot be undone.
         </p>
-        <button class="danger-btn" type="button" @click="showDelete = true">
+        <button ref="deleteTriggerBtn" class="danger-btn" type="button" @click="openDeleteModal">
           Delete my account
         </button>
       </section>
 
-      <div v-if="showDelete" class="modal-backdrop" @click.self="showDelete = false">
-        <div class="modal" role="dialog" aria-modal="true" aria-label="Confirm account deletion">
+      <div v-if="showDelete" class="modal-backdrop" @click.self="closeDeleteModal">
+        <div
+          ref="deleteModalEl"
+          class="modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Confirm account deletion"
+          @keydown="onModalKeydown"
+        >
           <h3>Delete account?</h3>
           <p class="muted">
             This permanently deletes your account and all data.
@@ -111,6 +118,7 @@
             <label v-if="auth.user?.has_password" class="field">
               <span>Password</span>
               <input
+                ref="deleteInputEl"
                 v-model="deleteConfirm"
                 type="password"
                 autocomplete="current-password"
@@ -119,12 +127,20 @@
             </label>
             <label v-else class="field">
               <span>Email</span>
-              <input v-model="deleteConfirm" type="email" required />
+              <input ref="deleteInputEl" v-model="deleteConfirm" type="email" required />
             </label>
             <p v-if="deleteError" class="error-box" role="alert">{{ deleteError }}</p>
             <div class="modal-actions">
-              <button class="ghost-btn" type="button" @click="showDelete = false">Cancel</button>
-              <button class="danger-btn" type="submit" :disabled="deleting">
+              <button
+                ref="cancelBtnEl"
+                class="ghost-btn"
+                type="button"
+                :disabled="deleting"
+                @click="closeDeleteModal"
+              >
+                Cancel
+              </button>
+              <button ref="confirmBtnEl" class="danger-btn" type="submit" :disabled="deleting">
                 {{ deleting ? 'Deleting…' : 'Delete forever' }}
               </button>
             </div>
@@ -136,7 +152,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowLeft, Sun, Moon } from 'lucide-vue-next'
 import HelpingHandLogo from '../components/HelpingHandLogo.vue'
@@ -212,6 +228,46 @@ const showDelete = ref(false)
 const deleteConfirm = ref('')
 const deleting = ref(false)
 const deleteError = ref('')
+const deleteTriggerBtn = ref(null)
+const deleteModalEl = ref(null)
+const deleteInputEl = ref(null)
+const cancelBtnEl = ref(null)
+const confirmBtnEl = ref(null)
+
+function openDeleteModal() {
+  deleteConfirm.value = ''
+  deleteError.value = ''
+  showDelete.value = true
+  nextTick(() => deleteInputEl.value?.focus())
+}
+
+function closeDeleteModal() {
+  if (deleting.value) return
+  showDelete.value = false
+  deleteConfirm.value = ''
+  deleteError.value = ''
+  nextTick(() => deleteTriggerBtn.value?.focus())
+}
+
+function onModalKeydown(e) {
+  if (e.key === 'Escape') {
+    if (deleting.value) return
+    closeDeleteModal()
+    return
+  }
+  if (e.key !== 'Tab') return
+  const focusable = [deleteInputEl.value, cancelBtnEl.value, confirmBtnEl.value].filter(Boolean)
+  if (!focusable.length) return
+  const first = focusable[0]
+  const last = focusable[focusable.length - 1]
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault()
+    last.focus()
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault()
+    first.focus()
+  }
+}
 
 async function confirmDelete() {
   deleting.value = true
