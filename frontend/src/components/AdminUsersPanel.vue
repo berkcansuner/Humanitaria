@@ -12,7 +12,7 @@
         aria-label="Search users"
         @input="onSearchInput"
       />
-      <span v-if="!loading" class="users-meta">{{ total }} users</span>
+      <span v-if="!loading" class="users-meta">{{ formatNumber(total) }} users</span>
     </div>
 
     <div v-if="error" class="error-box" role="alert">
@@ -63,7 +63,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { listUsers } from '../utils/adminApi.js'
 
 const PAGE_SIZE = 50
@@ -78,6 +78,10 @@ let searchTimer = null
 
 const page = computed(() => Math.floor(offset.value / PAGE_SIZE) + 1)
 const pageCount = computed(() => Math.max(1, Math.ceil(total.value / PAGE_SIZE)))
+
+function formatNumber(n) {
+  return typeof n === 'number' ? n.toLocaleString('en-US') : '—'
+}
 
 async function load() {
   loading.value = true
@@ -114,10 +118,11 @@ function nextPage() {
 function formatDate(iso) {
   if (!iso) return '—'
   const d = new Date(iso)
-  return isNaN(d) ? iso : d.toLocaleDateString()
+  return isNaN(d.getTime()) ? iso : d.toLocaleDateString('en-GB', { dateStyle: 'medium' })
 }
 
 onMounted(load)
+onUnmounted(() => clearTimeout(searchTimer))
 </script>
 
 <style scoped>
