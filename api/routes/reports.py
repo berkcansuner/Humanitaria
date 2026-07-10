@@ -235,6 +235,8 @@ async def get_report(report_id: str, user: dict = Depends(get_current_user)):
     if not await anyio.to_thread.run_sync(report_store.is_owner, user["id"], report_id):
         raise HTTPException(status_code=404, detail="Report not found")
     row = await anyio.to_thread.run_sync(report_store.get_report, report_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Report not found")
     return _normalize_report_type(row)
 
 
