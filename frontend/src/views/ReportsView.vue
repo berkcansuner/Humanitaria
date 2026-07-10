@@ -21,6 +21,15 @@
           <h2 class="form-title">New report</h2>
 
           <label class="field">
+            <span>Report type</span>
+            <select v-model="form.report_type" :disabled="generating">
+              <option v-for="t in REPORT_TYPES" :key="t.value" :value="t.value">
+                {{ t.label }}
+              </option>
+            </select>
+          </label>
+
+          <label class="field">
             <span>Country</span>
             <select v-model="form.country" required :disabled="generating">
               <option value="" disabled>Select a country…</option>
@@ -78,9 +87,12 @@
             >
               <button type="button" class="saved-open" @click="openReport(r.id)">
                 <span class="saved-name">{{ r.title }}</span>
-                <span class="saved-meta"
-                  >{{ fmtDate(r.created_at) }} · {{ r.doc_count }} reports</span
-                >
+                <span class="saved-meta">
+                  {{ fmtDate(r.created_at) }} · {{ r.doc_count }} reports
+                  <span v-if="reportTypeBadge(r.report_type)" class="type-badge saved-type-badge">{{
+                    reportTypeBadge(r.report_type)
+                  }}</span>
+                </span>
               </button>
               <button
                 type="button"
@@ -98,6 +110,12 @@
 
       <main ref="viewer" class="report-main" @click="onCiteClick">
         <template v-if="current">
+          <div class="report-header">
+            <h2 v-if="current.title" class="report-title-h">{{ current.title }}</h2>
+            <span v-if="reportTypeBadge(current.report_type)" class="type-badge">{{
+              reportTypeBadge(current.report_type)
+            }}</span>
+          </div>
           <div v-if="current.id" class="report-toolbar">
             <button type="button" class="pdf-btn" :disabled="pdfLoading" @click="downloadPdf">
               <Loader2 v-if="pdfLoading" :size="15" class="spin" />
@@ -137,6 +155,7 @@ import SourceList from '../components/SourceList.vue'
 import { renderMarkdown } from '../utils/renderMarkdown.js'
 import { parseSSE } from '../utils/parseSSE.js'
 import { getReportOptions, listReports, getReport, deleteReport } from '../utils/reportsApi.js'
+import { REPORT_TYPES, reportTypeBadge } from '../utils/reportTypes.js'
 import { handleSessionExpired } from '../utils/authStore.js'
 
 const countries = ref([])
@@ -146,7 +165,14 @@ const optionsError = ref(false)
 const reports = ref([])
 const loadingList = ref(false)
 
-const form = ref({ country: '', theme: '', date_from: '', date_to: '', language: 'en' })
+const form = ref({
+  report_type: 'situation',
+  country: '',
+  theme: '',
+  date_from: '',
+  date_to: '',
+  language: 'en',
+})
 
 const current = ref(null) // { id, title, content, sources }
 const generating = ref(false)
@@ -199,7 +225,13 @@ async function openReport(id) {
   if (generating.value) return
   try {
     const rep = await getReport(id)
-    current.value = { id: rep.id, title: rep.title, content: rep.content, sources: rep.sources }
+    current.value = {
+      id: rep.id,
+      title: rep.title,
+      content: rep.content,
+      sources: rep.sources,
+      report_type: rep.report_type,
+    }
     genError.value = ''
     nextTick(() => {
       if (viewer.value) viewer.value.scrollTop = 0
@@ -266,7 +298,13 @@ async function generate() {
   if (!form.value.country || generating.value) return
   generating.value = true
   genError.value = ''
-  current.value = { id: null, title: '', content: '', sources: null }
+  current.value = {
+    id: null,
+    title: '',
+    content: '',
+    sources: null,
+    report_type: form.value.report_type,
+  }
   controller.value = new AbortController()
   try {
     const res = await fetch('/reports/stream', {
@@ -274,6 +312,7 @@ async function generate() {
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        report_type: form.value.report_type,
         country: form.value.country,
         theme: form.value.theme || null,
         date_from: form.value.date_from || null,
@@ -331,6 +370,7 @@ async function generate() {
                 title: rep.title,
                 content: rep.content,
                 sources: rep.sources,
+                report_type: rep.report_type,
               }
             } catch (e) {}
           }
@@ -640,6 +680,36 @@ function onCiteClick(e) {
   scroll-behavior: smooth;
 }
 
+.report-header {
+  max-width: 75ch;
+  margin: 0 auto var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.report-title-h {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  color: var(--color-text);
+  margin: 0;
+}
+.type-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-accent);
+  background-color: var(--color-surface-container);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+.saved-type-badge {
+  margin-left: 6px;
+}
+
 .report-toolbar {
   max-width: 75ch;
   margin: 0 auto var(--space-3);
@@ -714,6 +784,22 @@ function onCiteClick(e) {
 }
 .report-content :deep(li) {
   margin-bottom: 0.35em;
+}
+.report-content :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.6em 0 1em;
+  font-size: var(--text-sm);
+}
+.report-content :deep(th),
+.report-content :deep(td) {
+  border: 1px solid var(--color-border);
+  padding: 6px 10px;
+  text-align: left;
+}
+.report-content :deep(th) {
+  background-color: var(--color-surface-container);
+  font-weight: 600;
 }
 
 .report-loading {
