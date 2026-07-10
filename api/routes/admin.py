@@ -12,12 +12,13 @@ import anyio
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 
-from api.routes.auth import get_admin_user
+from api.routes.auth import get_admin_user, _is_admin_email
 from config import get_settings
 from ingestion import analytics
 from ingestion import runner
 from ingestion import scheduler as sched
 from ingestion.store import get_store
+from rag import users as users_store
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +102,22 @@ async def ingest_documents(
         page["computing"] = True   # the scan was just scheduled; tell the UI to poll
         return page
     return analytics.get_documents(q=q, offset=offset, limit=limit)
+
+
+@router.get("/users")
+async def list_users(
+    admin: dict = Depends(get_admin_user),
+    q: str = Query("", max_length=200),
+    offset: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+):
+    """Paginated, searchable read-only user list (admin-only). is_admin is
+    computed server-side from the ADMIN_EMAILS allowlist for the badge."""
+    rows, total = await anyio.to_thread.run_sync(users_store.list_users, q, offset, limit)
+    return {
+        "users": [{**r, "is_admin": _is_admin_email(r["email"])} for r in rows],
+        "total": total,
+    }
 
 
 @router.post("/ingest/cron", status_code=202)

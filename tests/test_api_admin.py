@@ -302,3 +302,41 @@ def test_rebuild_documents_applies_retention(tmp_path):
     # 'old' (2020) is past the 1-year window → its chunks deleted, cache keeps only 'new'.
     mock_store.delete_document_chunks.assert_any_call("old")
     assert [d["doc_id"] for d in analytics._state.documents] == ["new"]
+
+
+# --- /admin/users ----------------------------------------------------------------
+
+def test_admin_users_forbidden_for_non_admin(client):
+    with patch("api.routes.auth.get_settings", return_value=_admin_settings("")):
+        assert client.get("/admin/users").status_code == 403
+
+
+@pytest.mark.real_auth
+def test_admin_users_unauthenticated(client):
+    assert client.get("/admin/users").status_code == 401
+
+
+def test_admin_users_lists_with_admin_badge_and_search(client):
+    from rag import users as users_store
+
+    users_store.create_user("boss@example.com", "Boss", password="pw-123456")
+    users_store.create_user("member@example.com", "Member", password="pw-123456")
+    with patch("api.routes.auth.get_settings",
+               return_value=_admin_settings("test@example.com, boss@example.com")):
+        r = client.get("/admin/users")
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["total"] == 2
+        by_email = {u["email"]: u for u in body["users"]}
+        assert by_email["boss@example.com"]["is_admin"] is True
+        assert by_email["member@example.com"]["is_admin"] is False
+        assert "password_hash" not in by_email["boss@example.com"]
+
+        r = client.get("/admin/users", params={"q": "member"})
+        assert r.json()["total"] == 1
+
+
+def test_admin_users_pagination_params_validated(client):
+    with patch("api.routes.auth.get_settings", return_value=_admin_settings("test@example.com")):
+        assert client.get("/admin/users", params={"limit": 500}).status_code == 422
+        assert client.get("/admin/users", params={"offset": -1}).status_code == 422
