@@ -28,44 +28,23 @@
     />
 
     <div class="sidebar-foot">
-      <div class="who">
+      <router-link to="/settings" class="who" title="Settings">
         <div class="avatar">{{ initials }}</div>
         <div class="who-text">
           <div class="who-name">{{ displayName }}</div>
           <div v-if="secondary" class="who-org">{{ secondary }}</div>
         </div>
-      </div>
-      <div class="foot-actions">
-        <router-link
-          v-if="auth.user?.is_admin"
-          to="/admin/ingestion"
-          class="admin-link"
-          title="Ingestion admin"
-          aria-label="Ingestion admin"
-        >
-          <Shield :size="16" />
-        </router-link>
-        <button
-          type="button"
-          class="logout-btn"
-          title="Log out"
-          aria-label="Log out"
-          @click="logout"
-        >
-          <LogOut :size="16" />
-        </button>
-      </div>
+      </router-link>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { Plus, Search, LogOut, Shield, FileText } from 'lucide-vue-next'
+import { Plus, Search, FileText } from 'lucide-vue-next'
 import ConversationList from './ConversationList.vue'
 import { filterConversations, groupConversationsByDate } from '../utils/conversationOps.js'
-import { auth, doLogout } from '../utils/authStore.js'
+import { auth } from '../utils/authStore.js'
 import { userInitials } from '../utils/userDisplay.js'
 
 const props = defineProps({
@@ -87,12 +66,6 @@ const groups = computed(() =>
 const displayName = computed(() => auth.user?.name || auth.user?.email || 'Account')
 const secondary = computed(() => (auth.user?.name ? auth.user?.email : '') || '')
 const initials = computed(() => userInitials(auth.user))
-
-const router = useRouter()
-async function logout() {
-  await doLogout()
-  router.push('/')
-}
 </script>
 
 <style scoped>
@@ -205,6 +178,7 @@ async function logout() {
   align-items: center;
   gap: 9px;
   min-width: 0;
+  text-decoration: none;
 }
 
 .avatar {
@@ -242,54 +216,6 @@ async function logout() {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.logout-btn {
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border: none;
-  background: transparent;
-  color: var(--color-text-secondary);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition:
-    background-color 0.2s,
-    color 0.2s;
-}
-
-.logout-btn:hover {
-  background-color: var(--color-surface-container-high);
-  color: var(--color-text);
-}
-
-.admin-link {
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  color: var(--color-text-secondary);
-  border-radius: var(--radius-md);
-  text-decoration: none;
-  transition:
-    background-color 0.2s,
-    color 0.2s;
-}
-
-.admin-link:hover {
-  background-color: var(--color-surface-container-high);
-  color: var(--color-text);
-}
-
-/* Footer action icons (reports, admin, logout) right-align as one group. */
-.foot-actions {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
 }
 
 /* ConversationList grows to fill the middle; the list itself scrolls. */

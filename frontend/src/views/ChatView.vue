@@ -25,7 +25,7 @@
           </div>
         </router-link>
         <div class="topbar-spacer"></div>
-        <ThemeToggle />
+        <UserMenu />
       </header>
       <div v-if="actionError" class="action-error" role="alert">
         <span>{{ actionError }}</span>
@@ -46,7 +46,7 @@ import { Menu } from 'lucide-vue-next'
 import Chat from '../components/Chat.vue'
 import Sidebar from '../components/Sidebar.vue'
 import HelpingHandLogo from '../components/HelpingHandLogo.vue'
-import ThemeToggle from '../components/ThemeToggle.vue'
+import UserMenu from '../components/UserMenu.vue'
 import { listConversations, renameConversation, deleteConversation } from '../utils/api.js'
 
 const conversations = ref([])

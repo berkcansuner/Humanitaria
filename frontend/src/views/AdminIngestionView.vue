@@ -10,7 +10,7 @@
       </router-link>
       <div class="topbar-spacer"></div>
       <router-link class="back-link" to="/app"><ArrowLeft :size="16" /> Back to chat</router-link>
-      <ThemeToggle />
+      <UserMenu />
     </header>
 
     <main class="content">
@@ -187,7 +187,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ArrowLeft, RefreshCw } from 'lucide-vue-next'
 import HelpingHandLogo from '../components/HelpingHandLogo.vue'
-import ThemeToggle from '../components/ThemeToggle.vue'
+import UserMenu from '../components/UserMenu.vue'
 import { getIngestStatus, triggerIngest, getIngestDocuments } from '../utils/adminApi.js'
 
 const status = ref(null)

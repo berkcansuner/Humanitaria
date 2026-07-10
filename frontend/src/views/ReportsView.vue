@@ -12,7 +12,7 @@
       <router-link to="/app" class="ghost-link" title="Back to chat">
         <MessageSquare :size="16" /> Chat
       </router-link>
-      <ThemeToggle />
+      <UserMenu />
     </header>
 
     <div class="reports-body">
@@ -131,7 +131,7 @@
 <script setup>
 import { ref, onMounted, nextTick } from 'vue'
 import { MessageSquare, FileText, Trash2, Loader2, AlertCircle, FileDown } from 'lucide-vue-next'
-import ThemeToggle from '../components/ThemeToggle.vue'
+import UserMenu from '../components/UserMenu.vue'
 import HelpingHandLogo from '../components/HelpingHandLogo.vue'
 import SourceList from '../components/SourceList.vue'
 import { renderMarkdown } from '../utils/renderMarkdown.js'
