@@ -97,6 +97,19 @@ def test_logout_invalidates_session(client):
     assert after.json() is None
 
 
+def test_me_includes_auth_provider_and_has_password(client):
+    client.post("/auth/signup", json=SIGNUP)
+    body = client.get("/auth/me").json()
+    assert body["auth_provider"] == "password"
+    assert body["has_password"] is True
+
+
+def test_signup_response_includes_new_fields(client):
+    body = client.post("/auth/signup", json=SIGNUP).json()
+    assert body["auth_provider"] == "password"
+    assert body["has_password"] is True
+
+
 class TestAuthRateLimit:
     """İK2-2a: signup/login are rate-limited per client IP to blunt brute-force
     and signup spam. Uses the shared limiter (api.limiter), enabled only for this

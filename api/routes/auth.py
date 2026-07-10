@@ -76,6 +76,8 @@ class UserOut(BaseModel):
     email: str
     name: str
     is_admin: bool = False
+    auth_provider: str = "password"
+    has_password: bool = False
 
 
 def _is_admin_email(email: str) -> bool:
@@ -85,10 +87,14 @@ def _is_admin_email(email: str) -> bool:
 
 
 def _user_out(user: dict) -> UserOut:
-    """Public user payload; computes is_admin from the ADMIN_EMAILS allowlist."""
+    """Public user payload; computes is_admin from the ADMIN_EMAILS allowlist.
+    has_password drives the settings page (password section hidden for
+    Google-only accounts)."""
     return UserOut(
         id=user["id"], email=user["email"], name=user["name"],
         is_admin=_is_admin_email(user["email"]),
+        auth_provider=user.get("auth_provider", "password"),
+        has_password=bool(user.get("password_hash")),
     )
 
 
@@ -151,7 +157,8 @@ async def signup(request: Request, body: SignupIn, response: Response):
     )
     _set_session_cookie(response, token)
     logger.info("auth: signup (user=%s)", uid)
-    return _user_out({"id": uid, "email": body.email, "name": body.name.strip()})
+    user = await anyio.to_thread.run_sync(users_store.get_user_by_id, uid)
+    return _user_out(user)
 
 
 @router.post("/login", response_model=UserOut)
