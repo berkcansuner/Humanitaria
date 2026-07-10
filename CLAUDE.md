@@ -139,9 +139,11 @@ History route'da `get_session_history` ile alınır,
 
 **Metadata şeması (her chunk, Pinecone):**
 ```python
-{"doc_id", "url", "title", "country", "theme", "date" (YYYY-MM-DD),
- "date_ts" (sayısal YYYYMMDD, Pinecone $gte için), "source", "format",
- "doctype"}  # doc_id orphan cleanup için kullanılır
+{"doc_id", "url", "title", "country", "iso3", "theme", "themes" (varsa; tüm sektör
+ temaları), "language", "glide" (bağlı/ilgili afetin GLIDE kodu), "disaster_type"
+ (yalnız doctype=disaster; primary_type.name → yoksa type[0].name fallback),
+ "date" (YYYY-MM-DD), "date_ts" (sayısal YYYYMMDD, Pinecone $gte için), "source",
+ "format", "doctype"}  # doc_id orphan cleanup için kullanılır
 ```
 
 **Endpoint'ler** (`api/routes/chat.py`): `POST /chat/stream` (SSE, token-by-token) +

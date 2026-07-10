@@ -165,8 +165,17 @@ def _retrieval_query(country: str, theme: Optional[str]) -> str:
 
 def _build_filters(country: str, theme: Optional[str],
                    date_from: Optional[str], date_to: Optional[str]) -> dict:
-    """Filter dict in the shape rag.retriever expects (country / theme / date range)."""
-    filters: dict = {"country": country}
+    """Filter dict in the shape rag.retriever expects (country / theme / date range).
+
+    Always scoped to doctype="report": a disaster or country-index record has no
+    source organisation (parse_disaster/parse_country both set source=""), and
+    the report system prompt's citation rule (rag/chain.py _REPORT_SYSTEM_PROMPT,
+    rule 7) attributes each cited fact to its source organisation — letting a
+    non-report record slip into a situation report would produce a citation with
+    a blank/garbled attribution. Chat retrieval is unaffected: a user can still
+    ask about disasters there via the query processor's doctype filter.
+    """
+    filters: dict = {"country": country, "doctype": "report"}
     if theme:
         filters["theme"] = theme
     date: dict = {}

@@ -127,6 +127,13 @@ class Settings(BaseSettings):
     DATABASE_URL: str = ""
 
     # Ingestion
+    # Endpoints ingested by every automatic/admin-triggered run (comma-separated;
+    # see ingestion.client.ENDPOINT_CONFIG for the full endpoint list). This is the
+    # single switch for the scheduled job, the admin "run now" trigger, and the
+    # daily cron — all three call ingestion.runner.run_ingest_once, which resolves
+    # this setting. Manual `python scripts/ingest.py --endpoints ...` is unaffected
+    # (its own --endpoints flag/default).
+    INGEST_ENDPOINTS: str = "reports,disasters"
     FETCH_PDF_CONTENT: bool = False   # download and index PDF attachments (slow, opt-in)
     INGEST_WATERMARK_PATH: str = "./.last_ingest.json"   # incremental ingest watermark
     REPORTS_CACHE_PATH: str = "./.reports_cache.json"    # admin reports list (persisted scan)

@@ -34,6 +34,7 @@ def chunk_document(doc: Dict[str, Any], chunk_size: int = None, chunk_overlap: i
             "theme": doc.get("theme", ""),
             "language": doc.get("language", ""),
             "glide": doc.get("glide", ""),
+            "disaster_type": doc.get("disaster_type", ""),
             "date": doc.get("date", ""),
             "date_ts": date_ts,
             "source": doc.get("source", ""),

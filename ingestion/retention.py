@@ -39,13 +39,16 @@ def cutoff_ts_for(retention_days: int, now=None) -> int:
 def select_expired(docs: Iterable[dict], cutoff_ts: int = 0, per_country_cap: int = 0) -> Set[str]:
     """Return the set of ``doc_id``s to delete under the rolling-window policy. PURE.
 
-    Each input is one document's metadata (``doc_id``, ``date``, ``country``). A doc is
-    expired if EITHER:
+    Each input is one document's metadata (``doc_id``, ``date``, ``country``, ``doctype``).
+    A doc is expired if EITHER:
       - date rule: ``0 < date_ts < cutoff_ts`` (older than the window; a missing/0 date
         is never expired by this rule), OR
-      - cap rule: within its country it is not among the newest ``per_country_cap``
-        non-date-expired docs (sorted date desc, doc_id asc for ties; a missing date
-        sorts oldest, so it is dropped first when the country is over the cap).
+      - cap rule: within its (``country``, ``doctype``) group it is not among the newest
+        ``per_country_cap`` non-date-expired docs (sorted date desc, doc_id asc for ties;
+        a missing date sorts oldest, so it is dropped first when the group is over the
+        cap). Grouping by doctype too keeps a country's reports and its disasters on
+        separate counters, so ingesting one doctype can never silently evict the other
+        out of a shared cap.
 
     ``cutoff_ts<=0`` disables the date rule; ``per_country_cap<=0`` disables the cap rule.
     """
@@ -61,10 +64,11 @@ def select_expired(docs: Iterable[dict], cutoff_ts: int = 0, per_country_cap: in
             survivors.append((d, ts))
 
     if per_country_cap and per_country_cap > 0:
-        by_country = defaultdict(list)
+        by_group = defaultdict(list)
         for d, ts in survivors:
-            by_country[d.get("country") or UNKNOWN_COUNTRY].append((d, ts))
-        for rows in by_country.values():
+            group_key = (d.get("country") or UNKNOWN_COUNTRY, d.get("doctype") or "")
+            by_group[group_key].append((d, ts))
+        for rows in by_group.values():
             rows.sort(key=lambda dt: (-dt[1], dt[0].get("doc_id") or ""))  # newest first
             for d, _ in rows[per_country_cap:]:
                 expired.add(d.get("doc_id"))

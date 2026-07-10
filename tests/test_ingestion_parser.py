@@ -140,6 +140,9 @@ class TestParseDisaster:
         assert doc["format"] == "past"
         assert doc["doctype"] == "disaster"
         assert "50910" in doc["url"]
+        # Enrichment fields (metadata-only — see chunker.py / CLAUDE.md).
+        assert doc["disaster_type"] == "Flood"
+        assert doc["glide"] == "FL-2021-000145-BEN"
 
     def test_parse_disaster_fallback_type(self):
         raw = {
@@ -155,8 +158,12 @@ class TestParseDisaster:
         # Disaster type is not a sector theme — see test_parse_full_disaster.
         assert doc["theme"] == ""
         assert doc["doctype"] == "disaster"
+        # No primary_type in this fixture → falls back to type[0].name.
+        assert doc["disaster_type"] == "Earthquake"
 
     def test_parse_disaster_no_body(self):
+        """No `description` → body falls back to the title (never blank), so
+        chunk_document()'s empty-body guard no longer silently drops the record."""
         raw = {
             "id": "100",
             "fields": {
@@ -165,8 +172,21 @@ class TestParseDisaster:
             }
         }
         doc = parse_disaster(raw)
-        assert doc["body"] == ""
+        assert doc["body"] == "No Description"
         assert doc["doctype"] == "disaster"
+
+    def test_parse_disaster_enrichment_defaults_when_missing(self):
+        raw = {
+            "id": "101",
+            "fields": {
+                "name": "No Type Info",
+                "description": "Some description.",
+                "date": {"created": "2026-01-01"},
+            }
+        }
+        doc = parse_disaster(raw)
+        assert doc["disaster_type"] == ""
+        assert doc["glide"] == ""
 
 
 class TestParseCountry:

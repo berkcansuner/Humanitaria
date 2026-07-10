@@ -14,6 +14,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from typing import Optional
 
+from config import get_settings
 from ingestion import scheduler as sched
 
 logger = logging.getLogger(__name__)
@@ -73,10 +74,16 @@ def run_ingest_once(source: str) -> bool:
         _state.last_error = None
         run_start = datetime.now().strftime("%Y-%m-%d")
         date_from = sched._load_watermark()
-        logger.info("Ingest starting (source=%s, date_from=%s)", source, date_from or "full")
+        # Endpoints ingested by every automatic/admin-triggered run (scheduled job,
+        # admin "run now", daily cron) — configurable via INGEST_ENDPOINTS so
+        # disasters (or a future endpoint) can be added/removed without a code
+        # change. This is the ONE place all three trigger paths converge.
+        endpoints = [e.strip() for e in get_settings().INGEST_ENDPOINTS.split(",") if e.strip()]
+        logger.info("Ingest starting (source=%s, date_from=%s, endpoints=%s)",
+                    source, date_from or "full", endpoints)
         _ping_database()
         try:
-            stats = sched.run_pipeline(date_from=date_from)
+            stats = sched.run_pipeline(date_from=date_from, endpoints=endpoints)
             sched._save_watermark(run_start)
             _state.last_stats = {
                 ep: {"total": s.total, "succeeded": s.succeeded,

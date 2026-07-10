@@ -1,5 +1,5 @@
 """Tests for the shared ingest runner (ingestion/runner.py)."""
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from ingestion import runner
 from ingestion.pipeline import IngestionStats
@@ -58,3 +58,23 @@ def test_run_ingest_once_records_error_and_skips_watermark(tmp_path):
     state = runner.get_state()
     assert state["running"] is False
     assert "boom" in state["last_error"]
+
+
+def test_run_ingest_once_passes_endpoints_from_settings(tmp_path):
+    """INGEST_ENDPOINTS (comma-separated) is the single connection point for all
+    three automatic/admin trigger paths (scheduled job, admin trigger, cron) —
+    they all call run_ingest_once, which resolves endpoints from settings."""
+    wm = tmp_path / ".last_ingest.json"
+    stats = {
+        "reports": IngestionStats(endpoint="reports"),
+        "disasters": IngestionStats(endpoint="disasters"),
+    }
+    settings = MagicMock()
+    settings.INGEST_ENDPOINTS = "reports, disasters"   # tolerate whitespace
+    with patch("ingestion.scheduler._watermark_path", return_value=wm), \
+         patch("ingestion.scheduler.run_pipeline", return_value=stats) as mock_pipeline, \
+         patch("ingestion.analytics.rebuild_documents"), \
+         patch("ingestion.runner.get_settings", return_value=settings):
+        assert runner.run_ingest_once("manual") is True
+        _, kwargs = mock_pipeline.call_args
+        assert kwargs.get("endpoints") == ["reports", "disasters"]

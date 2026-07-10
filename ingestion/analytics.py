@@ -29,7 +29,7 @@ from ingestion.store import get_store
 logger = logging.getLogger(__name__)
 
 # Reports list (admin panel): lean per-document row, sorted newest-first.
-DOC_FIELDS = ("date", "title", "url", "source", "country", "doc_id")
+DOC_FIELDS = ("date", "title", "url", "source", "country", "doc_id", "doctype")
 DEFAULT_PAGE = 50
 MAX_PAGE = 200
 # fetch() puts ids in the request URI; ~1000 ids → HTTP 414 (backfill_source_urls.py:40).

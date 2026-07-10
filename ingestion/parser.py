@@ -141,18 +141,38 @@ def parse_disaster(raw: Dict[str, Any]) -> Dict[str, Any]:
     # Disaster TYPE (e.g. "Flood", "Earthquake") is NOT a humanitarian sector theme.
     # Keep it out of `theme` so the sector-theme filter ($eq on report themes like
     # "Health"/"Protection and Human Rights") is not polluted if the disasters
-    # endpoint is ingested alongside reports.
+    # endpoint is ingested alongside reports. It IS useful, so it is captured
+    # separately below as `disaster_type` — metadata-only for now (see chunker.py
+    # and CLAUDE.md's metadata schema), not yet a query-filter dimension.
     theme = ""
+    # primary_type is ReliefWeb's single "main" type (a dict); type is the full
+    # list-of-dict (a disaster can carry more than one type, e.g. Flood + Flash
+    # Flood). Prefer primary_type; fall back to the first `type` entry when
+    # ReliefWeb omits primary_type (observed on some disaster records).
+    disaster_type = (
+        _safe_get(fields.get("primary_type"), "name")
+        or _safe_list_get(fields.get("type"), 0, "name")
+    )
+    title = _sanitize(fields.get("name", ""))
+    status = _sanitize(fields.get("status", ""))
+    # Some disaster records carry no free-text description at all. Without a
+    # fallback, chunk_document()'s empty-body guard (and run_pipeline's matching
+    # `if not doc.get("body")` check) silently drops the record — it is fetched
+    # and parsed, then discarded before ever reaching the index. Falling back to
+    # the title keeps the record searchable without inventing any new fact.
+    body = _sanitize(fields.get("description", "")) or title
     return {
         "id": doc_id,
         "url": url,
-        "title": _sanitize(fields.get("name", "")),
-        "body": _sanitize(fields.get("description", "")),
+        "title": title,
+        "body": body,
         "date": date,
         "country": country,
         "theme": theme,
+        "disaster_type": disaster_type,
+        "glide": _safe_get(fields, "glide"),
         "source": "",
-        "format": _sanitize(fields.get("status", "")),
+        "format": status,
         "doctype": "disaster",
     }
 

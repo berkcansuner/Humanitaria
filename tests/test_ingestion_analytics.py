@@ -54,6 +54,11 @@ def test_build_documents_keeps_only_doc_fields_and_coerces_none():
     assert row["country"] == ""                 # None → ""
 
 
+def test_build_documents_includes_doctype():
+    [row] = build_documents([{"date": "2024-01-01", "title": "T", "doc_id": "d1", "doctype": "disaster"}])
+    assert row["doctype"] == "disaster"
+
+
 # --- slice_documents (filter + paginate) ------------------------------------
 
 def _rows(n):

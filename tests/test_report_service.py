@@ -8,6 +8,7 @@ from rag.report_service import (
     _is_prefix_title_dup,
     _prefer_english,
     _collapse_near_duplicates,
+    _build_filters,
 )
 
 
@@ -113,3 +114,18 @@ class TestLangDetectedOncePerDoc:
             kept = _prefer_english(docs)
             _collapse_near_duplicates(kept)
         assert detect.call_count == 3  # once per original doc, not 6
+
+
+class TestBuildFilters:
+    def test_scopes_to_report_doctype(self):
+        filters = _build_filters("Sudan", None, None, None)
+        assert filters == {"country": "Sudan", "doctype": "report"}
+
+    def test_theme_and_date_still_included(self):
+        filters = _build_filters("Sudan", "Health", "2026-01-01", "2026-06-30")
+        assert filters == {
+            "country": "Sudan",
+            "doctype": "report",
+            "theme": "Health",
+            "date": {"$gte": "2026-01-01", "$lte": "2026-06-30"},
+        }

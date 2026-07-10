@@ -167,6 +167,7 @@ class TestReportService:
         assert captured["filter"]["country"] == "Sudan"
         assert captured["filter"]["theme"] == "Health"
         assert captured["filter"]["date"] == {"$gte": "2026-01-01", "$lte": "2026-06-30"}
+        assert captured["filter"]["doctype"] == "report"
         assert captured["k"] == 12 * 4  # top_k * RERANK_CANDIDATE_MULTIPLIER
         assert len(docs) == 1
 

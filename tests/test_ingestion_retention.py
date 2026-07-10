@@ -5,8 +5,8 @@ from ingestion import retention
 from ingestion.retention import select_expired, cutoff_ts_for
 
 
-def _doc(doc_id, date="", country="X"):
-    return {"doc_id": doc_id, "date": date, "country": country}
+def _doc(doc_id, date="", country="X", doctype=""):
+    return {"doc_id": doc_id, "date": date, "country": country, "doctype": doctype}
 
 
 # --- select_expired (pure) --------------------------------------------------
@@ -48,6 +48,22 @@ def test_both_rules_combined():
 def test_disabled_when_both_off():
     docs = [_doc("a", "2000-01-01"), _doc("b", "")]
     assert select_expired(docs, cutoff_ts=0, per_country_cap=0) == set()
+
+
+def test_cap_rule_groups_by_country_and_doctype_separately():
+    """A country's reports and disasters must not share one cap counter — each
+    doctype gets its own newest-N slots within the country (regression guard for
+    the disasters-ingestion rollout, where RETENTION_PER_COUNTRY_CAP is already
+    live in production)."""
+    docs = [
+        _doc("r1", "2026-06-03", "Sudan", doctype="report"),
+        _doc("r2", "2026-06-02", "Sudan", doctype="report"),
+        _doc("r3", "2026-06-01", "Sudan", doctype="report"),    # report overflow (cap=2)
+        _doc("d1", "2026-06-03", "Sudan", doctype="disaster"),
+        _doc("d2", "2026-06-02", "Sudan", doctype="disaster"),
+        _doc("d3", "2026-06-01", "Sudan", doctype="disaster"),  # disaster overflow (cap=2)
+    ]
+    assert select_expired(docs, cutoff_ts=0, per_country_cap=2) == {"r3", "d3"}
 
 
 # --- cutoff_ts_for ----------------------------------------------------------

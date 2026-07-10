@@ -55,6 +55,17 @@ def test_chunk_metadata_includes_enrichment_fields():
     assert md["glide"] == "EQ-2023-000015-SYR"
 
 
+def test_chunk_metadata_includes_disaster_type():
+    doc = _doc("Bir cümle. " * 400, disaster_type="Flood")
+    md = chunk_document(doc, chunk_size=1500, chunk_overlap=200)[0]["metadata"]
+    assert md["disaster_type"] == "Flood"
+
+
+def test_chunk_metadata_disaster_type_defaults_empty_when_absent():
+    md = chunk_document(_doc("Bir cümle. " * 400), chunk_size=1500, chunk_overlap=200)[0]["metadata"]
+    assert md["disaster_type"] == ""
+
+
 def test_chunk_omits_empty_themes_list():
     # No themes → the list key is omitted (Pinecone metadata dislikes empty lists).
     md = chunk_document(_doc("Bir cümle. " * 400), chunk_size=1500, chunk_overlap=200)[0]["metadata"]
