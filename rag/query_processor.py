@@ -29,6 +29,14 @@ class QueryFilters(BaseModel):
         return v
 
 
+class QueryPlan(QueryFilters):
+    """Combined follow-up plan: the standalone retrieval query plus the filters
+    extracted from it (one LLM call instead of rewrite + extract)."""
+    standalone_query: Optional[str] = Field(
+        default=None, description="The follow-up rewritten as a standalone search query"
+    )
+
+
 _COUNTRY_MAP = {
     "iran": "Iran", "ırak": "Iraq", "irak": "Iraq", "suriye": "Syria", "turkey": "Turkey",
     "türkiye": "Turkey", "yemen": "Yemen", "afganistan": "Afghanistan",
@@ -74,11 +82,7 @@ def _as_known_country(value: str) -> Optional[str]:
             return canon
     return None
 
-_FILTER_EXTRACTION_PROMPT = """You are a filter extraction system for a ReliefWeb humanitarian documents database.
-
-Given a user query in Turkish or English, extract structured search filters.
-
-Rules:
+_FILTER_RULES = """Rules:
 - Map country mentions to canonical ReliefWeb names. Turkish agglutinative suffixes may be attached
   directly (e.g. "Iranda"/"İran'da" = Iran, "Suriyede" = Syria, "Afganistanda" = Afghanistan).
   Mappings: gazze/Gaza/Gazze -> State of Palestine, suriye/Syria/Suriye/Suriyede -> Syria,
@@ -108,9 +112,34 @@ Rules:
 - Only set date_from when the query contains explicit patterns like "son X gun/hafta/ay/yil"
   or "last X days/weeks/months/years" or "since DATE" (number + unit required).
 - Only set a field if explicitly mentioned in the query. If unclear, set to null.
-- Respond ONLY with valid JSON matching the schema.
+- Respond ONLY with valid JSON matching the schema."""
 
-Query: {query}"""
+
+_FILTER_EXTRACTION_PROMPT = (
+    "You are a filter extraction system for a ReliefWeb humanitarian documents database.\n\n"
+    "Given a user query in Turkish or English, extract structured search filters.\n\n"
+    + _FILTER_RULES
+    + "\n\nQuery: {query}"
+)
+
+# Combined follow-up planning: ONE json_mode call both resolves the follow-up
+# into a standalone retrieval query and extracts filters from it — replacing the
+# previous sequential rewrite-then-extract pair (two LLM round-trips before
+# retrieval). Extraction still reads the REWRITTEN query, which is what makes
+# "ya kuzeyde?" inherit the conversation's country.
+_QUERY_PLAN_PROMPT = (
+    "You are the retrieval planner for a ReliefWeb humanitarian documents database. "
+    "Given the conversation so far and a follow-up message, do BOTH steps in one answer:\n\n"
+    "1. Rewrite the follow-up as a standalone search query that makes sense without the "
+    "conversation. Keep the user's language. Preserve country, topic and timeframe from the "
+    "conversation. If the message is already standalone, use it unchanged. Put it in the "
+    "standalone_query field.\n"
+    "2. Extract structured search filters FROM THAT STANDALONE QUERY.\n\n"
+    + _FILTER_RULES
+    + "\n- The JSON object has the fields: standalone_query, country, theme, doctype, "
+    "date_from, source, format (null for anything not set)."
+    "\n\nConversation:\n{history}\n\nFollow-up: {question}"
+)
 
 
 _llm_extractor = None
@@ -342,6 +371,56 @@ def extract_filters(query: str) -> Dict[str, Any]:
     merged = dict(rule_filters)
     merged.update(llm_filters)
     return merged
+
+
+_llm_planner = None
+
+
+def _get_llm_planner():
+    global _llm_planner
+    if _llm_planner is None:
+        from langchain_openai import ChatOpenAI
+        from config import get_settings
+        settings = get_settings()
+        llm = ChatOpenAI(
+            model=settings.GEMINI_QUERY_MODEL,
+            base_url=settings.GEMINI_BASE_URL,
+            api_key=settings.GEMINI_API_KEY,
+            temperature=0.0,
+            timeout=10,
+        )
+        _llm_planner = llm.with_structured_output(QueryPlan, method="json_mode")
+    return _llm_planner
+
+
+def plan_retrieval(message: str, chat_history: list, planner=None) -> tuple[str, Dict[str, Any]]:
+    """Resolve a follow-up into (standalone retrieval query, filters) with ONE
+    LLM call. Follow-up turns previously paid two sequential round-trips
+    (rewrite, then extract on the rewrite's output); this does both together —
+    extraction still reads the rewritten query. No history → the message is
+    already standalone, so only the (cached) filter extraction runs. On any
+    failure, falls back to filters on the original message rather than adding
+    more LLM calls to an already-struggling endpoint."""
+    if not chat_history:
+        return message, extract_filters(message)
+    from rag.query_rewriter import _format_history
+    try:
+        planner = planner or _get_llm_planner()
+        prompt = _QUERY_PLAN_PROMPT.format(
+            today=datetime.now().strftime("%Y-%m-%d"),
+            history=_format_history(chat_history),
+            question=message,
+        )
+        result: QueryPlan = planner.invoke(prompt)
+        query = (result.standalone_query or "").strip() or message
+        # Same merge semantics as extract_filters: rule-based backstop fills what
+        # the LLM left empty; the LLM wins on any field it set.
+        merged = dict(_extract_filters_rule_based(query))
+        merged.update(_normalize_llm_filters(result))
+        return query, merged
+    except Exception as e:
+        logger.warning("Combined query planning failed, falling back to filters-only: %s", e)
+        return message, extract_filters(message)
 
 
 # Geçmiş/trend görünümü isteyen ifadeler. Biri varsa recency boost KAPATILIR

@@ -88,3 +88,4 @@ def _reset():
     _chain_mod._chain = None
     _chain_mod._report_chain = None
     _qp._llm_extractor = None
+    _qp._llm_planner = None

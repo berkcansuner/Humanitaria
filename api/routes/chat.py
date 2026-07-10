@@ -13,14 +13,13 @@ from langchain_core.messages import HumanMessage, AIMessage
 from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 
 from config import get_settings
-from rag.query_processor import extract_filters, analyze_query, should_boost_recency
+from rag.query_processor import extract_filters, analyze_query, plan_retrieval, should_boost_recency
 from rag.retriever import (
     build_retriever, rerank_by_recency, apply_date_filter,
     dedupe_by_document, rerank_by_relevance,
 )
 from rag.chain import build_chain
 from rag.history import get_session_history, has_session, populate_history_from_messages
-from rag.query_rewriter import rewrite_query
 from rag import conversations as convo_store
 from rag.rag_context import (
     _build_context_and_sources,
@@ -96,14 +95,18 @@ def _verify_session_owner(user_id: str, session_id: str) -> bool:
     return convo_store.is_owner(user_id, session_id)
 
 
-def _resolve_retrieval_query(session_id: str, message: str) -> str:
-    """Rewrite a follow-up into a standalone retrieval query using in-memory chat
-    history. Returns the original message for first turns or when disabled; the
-    answer is always generated from the original message."""
+def _plan_retrieval(session_id: str, message: str) -> tuple:
+    """Resolve the retrieval query + filters. First turns (or rewrite disabled):
+    the message is already standalone → filters only. Follow-ups: ONE combined
+    LLM call rewrites the follow-up and extracts filters together (one
+    round-trip instead of two before retrieval). The answer is always generated
+    from the original message."""
     if not get_settings().QUERY_REWRITE_ENABLED or not has_session(session_id):
-        return message
+        return message, extract_filters(message)
     prior = list(get_session_history(session_id).messages)
-    return rewrite_query(message, prior) if prior else message
+    if not prior:
+        return message, extract_filters(message)
+    return plan_retrieval(message, prior)
 
 
 _BUSY_MESSAGE = "The model is busy right now (high demand). Please try again in a moment."
@@ -245,8 +248,7 @@ async def chat(request: Request, req: ChatRequest, user: dict = Depends(get_curr
         return ChatResponse(answer=_GREETING_REPLY, sources=[], session_id=session_id)
 
     try:
-        retrieval_query = _resolve_retrieval_query(session_id, req.message)
-        filters = extract_filters(retrieval_query)
+        retrieval_query, filters = _plan_retrieval(session_id, req.message)
         docs = await _retrieve_docs(retrieval_query, filters)
 
         if not docs:
@@ -312,8 +314,7 @@ async def chat_stream(request: Request, req: ChatRequest, user: dict = Depends(g
         _filter_ms = _retrieval_ms = 0.0
         _ttft_ms = None
         try:
-            retrieval_query = _resolve_retrieval_query(session_id, req.message)
-            filters = extract_filters(retrieval_query)
+            retrieval_query, filters = _plan_retrieval(session_id, req.message)
             _filter_ms = (time.perf_counter() - _t0) * 1000
             docs = await _retrieve_docs(retrieval_query, filters)
             _retrieval_ms = (time.perf_counter() - _t0) * 1000 - _filter_ms
