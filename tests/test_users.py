@@ -192,3 +192,35 @@ def test_delete_user_sessions_all(users):
     t1 = users.create_session(uid)
     users.delete_user_sessions(uid)
     assert users.get_user_by_session(t1) is None
+
+
+# --- account deletion ----------------------------------------------------------
+
+def test_delete_user_account_removes_everything(users, tmp_path):
+    """users + sessions (CASCADE) + conversations + messages (CASCADE) + reports
+    must all go in one transaction; other users' data is untouched."""
+    from rag import conversations as convs
+    from rag import reports as reports_store
+
+    uid = users.create_user("kate@example.com", "Kate", password="pw-123456")
+    other = users.create_user("safe@example.com", "Safe", password="pw-123456")
+    token = users.create_session(uid)
+    convs.create_conversation(uid, "conv-kate", "Kate chat")
+    convs.append_message("conv-kate", "user", "hello")
+    convs.create_conversation(other, "conv-safe", "Safe chat")
+    reports_store.create_report(
+        "report-kate", uid, country="Mali", theme=None, date_from=None, date_to=None,
+        language="en", title="Kate report", content="body", sources=[], doc_count=0,
+    )
+
+    deleted_convs = users.delete_user_account(uid)
+
+    assert deleted_convs == ["conv-kate"]
+    assert users.get_user_by_id(uid) is None
+    assert users.get_user_by_session(token) is None
+    assert convs.list_conversations(uid) == []
+    assert convs.get_messages("conv-kate") == []
+    assert reports_store.list_reports(uid) == []
+    # other user untouched
+    assert users.get_user_by_id(other) is not None
+    assert [c["id"] for c in convs.list_conversations(other)] == ["conv-safe"]

@@ -240,3 +240,27 @@ def delete_user_sessions(user_id: str, keep_token: str | None = None) -> None:
         params["keep"] = _hash_token(keep_token)
     with _connect() as conn:
         conn.execute(text(sql), params)
+
+
+# --- account deletion --------------------------------------------------------
+
+def delete_user_account(user_id: str) -> list[str]:
+    """Delete the user and ALL owned data in one transaction: conversations
+    (messages via FK CASCADE), reports, then the user row (sessions via FK
+    CASCADE). conversations/reports carry no FK to users, so they are deleted
+    explicitly. Returns the deleted conversation ids so the caller can clear
+    their in-memory history windows."""
+    with _connect() as conn:
+        conv_ids = [
+            r[0] for r in conn.execute(
+                text("SELECT id FROM conversations WHERE user_id = :uid"),
+                {"uid": user_id},
+            ).fetchall()
+        ]
+        conn.execute(
+            text("DELETE FROM conversations WHERE user_id = :uid"), {"uid": user_id}
+        )
+        conn.execute(text("DELETE FROM reports WHERE user_id = :uid"), {"uid": user_id})
+        conn.execute(text("DELETE FROM users WHERE id = :id"), {"id": user_id})
+    logger.info("users: account deleted (user=%s, conversations=%d)", user_id, len(conv_ids))
+    return conv_ids
