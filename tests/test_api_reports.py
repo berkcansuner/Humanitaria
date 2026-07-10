@@ -430,6 +430,62 @@ class TestReportEndpoints:
         assert client.delete("/reports/rD").status_code == 200
         assert client.get("/reports/rD").status_code == 404
 
+    def test_stream_invalid_report_type_rejected(self):
+        r = _client().post("/reports/stream", json={"country": "Sudan", "report_type": "bogus_type"})
+        assert r.status_code == 422
+
+    def test_stream_indicator_monitoring_persists_type(self):
+        async def mock_astream(*args, **kwargs):
+            yield "## Overview\n"
+            yield "Situation dire [1]."
+
+        mock_chain = MagicMock()
+        mock_chain.astream = mock_astream
+
+        with patch("api.routes.reports.retrieve_for_report", new=AsyncMock(return_value=[_doc(1)])), \
+             patch("api.routes.reports.build_report_chain", return_value=mock_chain) as mock_build_chain:
+            client = _client()
+            resp = client.post("/reports/stream", json={
+                "country": "Mali", "report_type": "indicator_monitoring", "language": "en",
+            })
+            assert resp.status_code == 200
+            events = _parse_sse_events(resp.text)
+            rid = next(e for e in events if e["event"] == "saved")["data"]["report_id"]
+            mock_build_chain.assert_called_once_with("indicator_monitoring")
+
+            full = client.get(f"/reports/{rid}").json()
+            assert full["report_type"] == "indicator_monitoring"
+            lst = client.get("/reports/list").json()["reports"]
+            assert next(r for r in lst if r["id"] == rid)["report_type"] == "indicator_monitoring"
+
+    def test_legacy_null_report_type_normalizes_to_situation(self):
+        """A report row inserted before the report_type column existed (NULL) reads
+        back as 'situation' through the API, never a bare null."""
+        from rag.db import get_engine
+        from sqlalchemy import text as sqltext
+        from rag import reports as store
+
+        store.create_report(
+            "r-legacy", "test-user", country="Sudan", theme=None, date_from=None, date_to=None,
+            language="en", title="t", content="c", sources=None, doc_count=1,
+        )
+        with get_engine().begin() as conn:
+            conn.execute(sqltext("UPDATE reports SET report_type = NULL WHERE id = :id"),
+                        {"id": "r-legacy"})
+
+        client = _client()
+        lst = client.get("/reports/list").json()["reports"]
+        row = next(r for r in lst if r["id"] == "r-legacy")
+        assert row["report_type"] == "situation"
+        full = client.get("/reports/r-legacy").json()
+        assert full["report_type"] == "situation"
+
+    def test_report_types_constant_matches_api_literal(self):
+        from rag.report_service import REPORT_TYPES
+        from api.routes.reports import ReportRequest
+        literal_values = ReportRequest.model_fields["report_type"].annotation.__args__
+        assert set(REPORT_TYPES) == set(literal_values)
+
 
 class TestReportPdf:
     _CONTENT = ("## Executive Summary\nConflict worsened [1].\n\n"

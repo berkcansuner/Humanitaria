@@ -106,6 +106,7 @@ class ReportRequest(BaseModel):
     date_from: Optional[str] = None
     date_to: Optional[str] = None
     language: Literal["tr", "en"] = "en"
+    report_type: Literal["situation", "indicator_monitoring", "needs_assessment"] = "situation"
 
 
 def _no_docs_message(req: ReportRequest) -> str:
@@ -141,7 +142,9 @@ async def report_options(user: dict = Depends(get_current_user)):
 async def report_stream(request: Request, req: ReportRequest, user: dict = Depends(get_current_user)):
     async def event_generator():
         try:
-            docs = await retrieve_for_report(req.country, req.theme, req.date_from, req.date_to)
+            docs = await retrieve_for_report(
+                req.country, req.theme, req.date_from, req.date_to, report_type=req.report_type
+            )
             if not docs:
                 yield ServerSentEvent(
                     event="token",
@@ -152,9 +155,10 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
 
             context, source_dicts = _build_context_and_sources(docs)
             directive = build_report_directive(
-                req.country, req.theme, req.date_from, req.date_to, len(docs), req.language
+                req.country, req.theme, req.date_from, req.date_to, len(docs), req.language,
+                report_type=req.report_type,
             )
-            chain = build_report_chain()
+            chain = build_report_chain(req.report_type)
 
             full = ""
             async for chunk in _astream_with_retry(
@@ -175,12 +179,14 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
 
             # Auto-save only after a full stream (an aborted report is never written).
             report_id = str(uuid4())
-            title = report_title(req.country, req.theme, req.date_from, req.date_to)
+            title = report_title(req.country, req.theme, req.date_from, req.date_to,
+                                 report_type=req.report_type)
             await anyio.to_thread.run_sync(
                 lambda: report_store.create_report(
                     report_id, user["id"], country=req.country, theme=req.theme,
                     date_from=req.date_from, date_to=req.date_to, language=req.language,
                     title=title, content=clean_content, sources=sources, doc_count=len(docs),
+                    report_type=req.report_type,
                 )
             )
 
@@ -207,20 +213,29 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
     return EventSourceResponse(event_generator())
 
 
+def _normalize_report_type(row: dict) -> dict:
+    """Pre-migration rows carry NULL report_type in the DB; the API always
+    returns a concrete type so the frontend never has to special-case null."""
+    row = dict(row)
+    row["report_type"] = row.get("report_type") or "situation"
+    return row
+
+
 # NB: the bare "/reports" path is the SPA client route (served by the catch-all in
 # api/main.py). Keeping the list under "/reports/list" avoids the API shadowing the
 # page — mirrors the admin split (client "/admin/ingestion" vs API "/admin/ingest/*").
 @router.get("/reports/list")
 async def list_reports(user: dict = Depends(get_current_user)):
     rows = await anyio.to_thread.run_sync(report_store.list_reports, user["id"])
-    return {"reports": rows}
+    return {"reports": [_normalize_report_type(r) for r in rows]}
 
 
 @router.get("/reports/{report_id}")
 async def get_report(report_id: str, user: dict = Depends(get_current_user)):
     if not await anyio.to_thread.run_sync(report_store.is_owner, user["id"], report_id):
         raise HTTPException(status_code=404, detail="Report not found")
-    return await anyio.to_thread.run_sync(report_store.get_report, report_id)
+    row = await anyio.to_thread.run_sync(report_store.get_report, report_id)
+    return _normalize_report_type(row)
 
 
 @router.delete("/reports/{report_id}")
