@@ -71,6 +71,18 @@ class LoginIn(BaseModel):
         return v.strip().lower()
 
 
+class UpdateProfileIn(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+
+    @field_validator("name")
+    @classmethod
+    def _non_blank(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("name must not be blank")
+        return v
+
+
 class UserOut(BaseModel):
     id: str
     email: str
@@ -193,6 +205,13 @@ async def me(user: Optional[dict] = Depends(get_optional_user)):
     if user is None:
         return None
     return _user_out(user)
+
+
+@router.patch("/me", response_model=UserOut)
+async def update_me(body: UpdateProfileIn, user: dict = Depends(get_current_user)):
+    await anyio.to_thread.run_sync(users_store.update_user_name, user["id"], body.name)
+    logger.info("auth: name updated (user=%s)", user["id"])
+    return _user_out({**user, "name": body.name})
 
 
 # --- Google OAuth -----------------------------------------------------------
