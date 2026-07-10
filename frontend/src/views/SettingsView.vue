@@ -101,7 +101,6 @@
 
       <div v-if="showDelete" class="modal-backdrop" @click.self="closeDeleteModal">
         <div
-          ref="deleteModalEl"
           class="modal"
           role="dialog"
           aria-modal="true"
@@ -229,7 +228,6 @@ const deleteConfirm = ref('')
 const deleting = ref(false)
 const deleteError = ref('')
 const deleteTriggerBtn = ref(null)
-const deleteModalEl = ref(null)
 const deleteInputEl = ref(null)
 const cancelBtnEl = ref(null)
 const confirmBtnEl = ref(null)

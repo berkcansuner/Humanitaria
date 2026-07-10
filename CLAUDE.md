@@ -180,3 +180,4 @@ Selamlaşma → retrieval atlanır. Mesaj doğrulama: boş/4000+ karakter redded
 - PDF içerik ingestion opsiyonel (`FETCH_PDF_CONTENT=False`); varsayılan sadece HTML `body`.
 - Pinecone serverless metadata-filtreli silme desteklemez; orphan temizliği chunk-id prefix (`{doc_id}_`) list+delete ile yapılır.
 - Gemini embedding OpenAI-uyumlu endpoint üzerinden çalışır; `task_type` (`RETRIEVAL_DOCUMENT`/`QUERY`) ayrımı yok (küçük kalite ödünü).
+- Hesap silme (DELETE /auth/me) in-memory chat history pencerelerini temizler; REDIS_URL ile kalıcı history kullanılıyorsa Redis'teki pencereler TTL dolana dek kalır (bugünkü deploy in-memory).

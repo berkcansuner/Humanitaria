@@ -157,7 +157,6 @@ select:focus-visible {
 .action-btn:active,
 .conv-action:active,
 .new-chat-btn:active,
-.logout-btn:active,
 .hamburger:active {
   transform: scale(0.94);
 }
