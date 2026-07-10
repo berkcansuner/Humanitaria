@@ -83,6 +83,11 @@ class UpdateProfileIn(BaseModel):
         return v
 
 
+class ChangePasswordIn(BaseModel):
+    current_password: str = Field(..., min_length=1, max_length=72)
+    new_password: str = Field(..., min_length=8, max_length=72)  # bcrypt 72-byte cap
+
+
 class UserOut(BaseModel):
     id: str
     email: str
@@ -212,6 +217,28 @@ async def update_me(body: UpdateProfileIn, user: dict = Depends(get_current_user
     await anyio.to_thread.run_sync(users_store.update_user_name, user["id"], body.name)
     logger.info("auth: name updated (user=%s)", user["id"])
     return _user_out({**user, "name": body.name})
+
+
+@router.post("/me/password", status_code=204)
+@limiter.limit(_login_rate_limit)
+async def change_password(request: Request, body: ChangePasswordIn,
+                          user: dict = Depends(get_current_user)):
+    # Re-read the row: the conftest auth override (and any stale dict) may lack
+    # password_hash, and verification must run against the current hash.
+    full = await anyio.to_thread.run_sync(users_store.get_user_by_id, user["id"])
+    if not full or not full["password_hash"]:
+        raise HTTPException(status_code=400, detail="Password login is not enabled for this account")
+    valid = await anyio.to_thread.run_sync(
+        users_store.verify_password, body.current_password, full["password_hash"]
+    )
+    if not valid:
+        logger.warning("auth: password change rejected, wrong current password (user=%s)", user["id"])
+        raise HTTPException(status_code=403, detail="Current password is incorrect")
+    await anyio.to_thread.run_sync(users_store.change_password, user["id"], body.new_password)
+    # Log out every other session; the one making this request stays valid.
+    current_token = request.cookies.get(get_settings().SESSION_COOKIE_NAME)
+    await anyio.to_thread.run_sync(users_store.delete_user_sessions, user["id"], current_token)
+    logger.info("auth: password changed (user=%s)", user["id"])
 
 
 # --- Google OAuth -----------------------------------------------------------
