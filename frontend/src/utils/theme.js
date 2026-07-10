@@ -8,15 +8,15 @@ const STORAGE_KEY = 'theme'
 const VALID = ['light', 'dark']
 
 /**
- * Resolve the initial theme: a valid stored choice wins, otherwise fall back
- * to the OS `prefers-color-scheme`.
+ * Resolve the initial theme: a valid stored choice wins, otherwise light.
+ * (The OS prefers-color-scheme fallback was removed on purpose — the product
+ * default is light; users opt into dark from the settings page.)
  * @returns {'light'|'dark'}
  */
 export function getInitialTheme() {
   const stored = localStorage.getItem(STORAGE_KEY)
   if (VALID.includes(stored)) return stored
-  const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches
-  return prefersDark ? 'dark' : 'light'
+  return 'light'
 }
 
 /** Reflect the theme on <html> so the CSS variable overrides take effect. */

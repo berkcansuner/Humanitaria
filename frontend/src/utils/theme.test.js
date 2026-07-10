@@ -10,26 +10,20 @@ describe('theme', () => {
   })
 
   describe('getInitialTheme', () => {
-    it('prefers a stored theme over the system preference', () => {
+    it('prefers a stored theme', () => {
       localStorage.setItem('theme', 'dark')
-      vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: false }))
       expect(getInitialTheme()).toBe('dark')
     })
 
-    it('falls back to dark when the system prefers dark and nothing is stored', () => {
+    it('defaults to light when nothing is stored (ignores OS preference)', () => {
       vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true }))
-      expect(getInitialTheme()).toBe('dark')
-    })
-
-    it('falls back to light when the system prefers light and nothing is stored', () => {
-      vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: false }))
       expect(getInitialTheme()).toBe('light')
     })
 
-    it('ignores an invalid stored value and uses the system preference', () => {
+    it('ignores an invalid stored value and defaults to light', () => {
       localStorage.setItem('theme', 'banana')
       vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true }))
-      expect(getInitialTheme()).toBe('dark')
+      expect(getInitialTheme()).toBe('light')
     })
   })
 
