@@ -1,6 +1,8 @@
 name = "humanitaria-daily-cron"
 main = "worker.js"
 compatibility_date = "2026-01-01"
+# Cron-only Worker — no HTTP route needed, so skip the workers.dev subdomain.
+workers_dev = false
 
 # Daily at 03:00 UTC — trigger the app's ingest + rolling-retention pass.
 [triggers]
