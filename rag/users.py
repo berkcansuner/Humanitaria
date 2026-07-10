@@ -208,3 +208,35 @@ def list_users(q: str = "", offset: int = 0, limit: int = 50) -> tuple[list[dict
             params,
         ).mappings().all()
     return [dict(r) for r in rows], int(total)
+
+
+# --- profile updates ----------------------------------------------------------
+
+def update_user_name(user_id: str, name: str) -> None:
+    with _connect() as conn:
+        conn.execute(
+            text("UPDATE users SET name = :name WHERE id = :id"),
+            {"name": name, "id": user_id},
+        )
+
+
+def change_password(user_id: str, new_password: str) -> None:
+    """Set a new bcrypt hash. Current-password verification is the route's job."""
+    with _connect() as conn:
+        conn.execute(
+            text("UPDATE users SET password_hash = :pw WHERE id = :id"),
+            {"pw": hash_password(new_password), "id": user_id},
+        )
+
+
+def delete_user_sessions(user_id: str, keep_token: str | None = None) -> None:
+    """Drop the user's sessions; when ``keep_token`` (the raw cookie value) is
+    given, that session survives — used by password change to keep the active
+    session while logging out everywhere else."""
+    params: dict = {"uid": user_id}
+    sql = "DELETE FROM sessions WHERE user_id = :uid"
+    if keep_token:
+        sql += " AND token_hash != :keep"
+        params["keep"] = _hash_token(keep_token)
+    with _connect() as conn:
+        conn.execute(text(sql), params)

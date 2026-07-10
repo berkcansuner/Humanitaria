@@ -160,3 +160,35 @@ def test_list_users_last_login_from_sessions(users):
     by_email = {r["email"]: r for r in rows}
     assert by_email["erin@example.com"]["last_login"] is not None
     assert by_email["nologin@example.com"]["last_login"] is None
+
+
+# --- profile updates ----------------------------------------------------------
+
+def test_update_user_name(users):
+    uid = users.create_user("gina@example.com", "Gina", password="pw-123456")
+    users.update_user_name(uid, "Gina Renamed")
+    assert users.get_user_by_id(uid)["name"] == "Gina Renamed"
+
+
+def test_change_password_rehashes(users):
+    uid = users.create_user("hank@example.com", "Hank", password="old-pw-123")
+    users.change_password(uid, "new-pw-456")
+    row = users.get_user_by_id(uid)
+    assert users.verify_password("new-pw-456", row["password_hash"]) is True
+    assert users.verify_password("old-pw-123", row["password_hash"]) is False
+
+
+def test_delete_user_sessions_keeps_the_given_token(users):
+    uid = users.create_user("ivy@example.com", "Ivy", password="pw-123456")
+    keep = users.create_session(uid)
+    other = users.create_session(uid)
+    users.delete_user_sessions(uid, keep_token=keep)
+    assert users.get_user_by_session(keep) is not None
+    assert users.get_user_by_session(other) is None
+
+
+def test_delete_user_sessions_all(users):
+    uid = users.create_user("jack@example.com", "Jack", password="pw-123456")
+    t1 = users.create_session(uid)
+    users.delete_user_sessions(uid)
+    assert users.get_user_by_session(t1) is None
