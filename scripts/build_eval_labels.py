@@ -36,7 +36,8 @@ from pinecone import Pinecone
 from config import get_settings
 from rag.embeddings import get_embeddings
 
-# Queries within v2's 8-country coverage (IRN/IRQ/SYR/TUR/YEM/AFG/SOM/SDN), TR+EN.
+# Legacy queries (the original 8-country coverage) + all-country coverage queries
+# added after the v3 cutover (249 countries x last-1-year corpus), TR+EN.
 QUERIES = [
     "Sudan'daki güncel insani durum",
     "food security in Yemen",
@@ -53,6 +54,17 @@ QUERIES = [
     "Sudan'da gıda güvenliği",
     "water and sanitation in Yemen",
     "humanitarian access in Syria",
+    # v3 all-country coverage
+    "humanitarian situation in Haiti",
+    "Kongo Demokratik Cumhuriyeti'nde kolera salgını",
+    "Ethiopia drought and food insecurity",
+    "Ukrayna'da sivillerin korunması",
+    "displacement in Myanmar",
+    "Venezuelan migrants and refugees",
+    "flooding response in Pakistan",
+    "Bangladeş'te Rohingya mültecilerinin durumu",
+    "cholera outbreak in South Sudan",
+    "Mali'de insani erişim",
 ]
 
 OUTPUT = Path(__file__).resolve().parent / "eval_data" / "labeled_queries.json"
@@ -130,8 +142,9 @@ def _pool_candidates(query: str, stores, pool_k: int) -> list[dict]:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--namespaces", nargs="+", default=["", "v2"],
-                    help="Namespaces to pool candidates from (default: '' and v2)")
+    ap.add_argument("--namespaces", nargs="+",
+                    default=[get_settings().PINECONE_NAMESPACE],
+                    help="Namespaces to pool candidates from (default: the active namespace)")
     ap.add_argument("--pool-k", type=int, default=8, help="Candidates per namespace per query")
     args = ap.parse_args()
 
