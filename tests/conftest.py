@@ -86,6 +86,6 @@ def _reset():
     _session_histories.clear()
     _llm_cache.clear()
     _chain_mod._chain = None
-    _chain_mod._report_chain = None
+    _chain_mod._report_chains = {}
     _qp._llm_extractor = None
     _qp._llm_planner = None
