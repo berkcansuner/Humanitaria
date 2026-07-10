@@ -81,6 +81,7 @@ reports_table = Table(
     "reports", metadata,
     Column("id", Text, primary_key=True),
     Column("user_id", Text),
+    Column("report_type", Text),
     Column("country", Text),
     Column("theme", Text),
     Column("date_from", Text),
@@ -148,6 +149,22 @@ def _ensure_schema(engine: Engine) -> None:
             cols = {r[1] for r in conn.exec_driver_sql("PRAGMA table_info(conversations)")}
             if cols and "user_id" not in cols:
                 conn.exec_driver_sql("ALTER TABLE conversations ADD COLUMN user_id TEXT")
+            # Migrate pre-report-types SQLite files that lack reports.report_type.
+            # (Legacy rows keep report_type NULL → normalized to "situation" on read.)
+            cols = {r[1] for r in conn.exec_driver_sql("PRAGMA table_info(reports)")}
+            if cols and "report_type" not in cols:
+                conn.exec_driver_sql("ALTER TABLE reports ADD COLUMN report_type TEXT")
+    else:
+        # Postgres: same self-healing migration for an already-deployed reports
+        # table (guard the ALTER on the table existing, since a brand-new
+        # database has no reports table yet — create_all() below creates it
+        # fresh, already including report_type).
+        with engine.begin() as conn:
+            exists = conn.exec_driver_sql(
+                "SELECT 1 FROM information_schema.tables WHERE table_name = 'reports'"
+            ).fetchone()
+            if exists:
+                conn.exec_driver_sql("ALTER TABLE reports ADD COLUMN IF NOT EXISTS report_type TEXT")
     metadata.create_all(engine)
 
 

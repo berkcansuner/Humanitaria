@@ -106,6 +106,26 @@ class TestReportStore:
         from rag import reports as store
         assert store.get_report("nope") is None
 
+    def test_create_report_stores_report_type(self):
+        from rag import reports as store
+        store.create_report(
+            "r-type", "test-user", country="Mali", theme=None, date_from=None, date_to=None,
+            language="en", title="t", content="c", sources=None, doc_count=1,
+            report_type="indicator_monitoring",
+        )
+        rep = store.get_report("r-type")
+        assert rep["report_type"] == "indicator_monitoring"
+        rows = store.list_reports("test-user")
+        assert next(r for r in rows if r["id"] == "r-type")["report_type"] == "indicator_monitoring"
+
+    def test_create_report_defaults_report_type_to_situation(self):
+        from rag import reports as store
+        store.create_report(
+            "r-default", "test-user", country="Mali", theme=None, date_from=None, date_to=None,
+            language="en", title="t", content="c", sources=None, doc_count=1,
+        )
+        assert store.get_report("r-default")["report_type"] == "situation"
+
 
 # --- retriever date range ($lte) --------------------------------------------
 

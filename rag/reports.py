@@ -22,19 +22,20 @@ def _now() -> str:
 
 def create_report(report_id: str, user_id: str, *, country: str, theme: str | None,
                   date_from: str | None, date_to: str | None, language: str,
-                  title: str, content: str, sources: list | None, doc_count: int) -> None:
+                  title: str, content: str, sources: list | None, doc_count: int,
+                  report_type: str = "situation") -> None:
     """Insert a generated report owned by user_id."""
     sources_json = json.dumps(sources, ensure_ascii=False) if sources else None
     with _connect() as conn:
         conn.execute(
             text(
-                "INSERT INTO reports(id, user_id, country, theme, date_from, date_to, language, "
-                "title, content, sources_json, doc_count, created_at) "
-                "VALUES (:id, :uid, :country, :theme, :date_from, :date_to, :language, "
+                "INSERT INTO reports(id, user_id, report_type, country, theme, date_from, date_to, "
+                "language, title, content, sources_json, doc_count, created_at) "
+                "VALUES (:id, :uid, :report_type, :country, :theme, :date_from, :date_to, :language, "
                 ":title, :content, :sources, :doc_count, :now)"
             ),
-            {"id": report_id, "uid": user_id, "country": country, "theme": theme,
-             "date_from": date_from, "date_to": date_to, "language": language,
+            {"id": report_id, "uid": user_id, "report_type": report_type, "country": country,
+             "theme": theme, "date_from": date_from, "date_to": date_to, "language": language,
              "title": title, "content": content, "sources": sources_json,
              "doc_count": doc_count, "now": _now()},
         )
@@ -45,8 +46,8 @@ def list_reports(user_id: str) -> list[dict]:
     with _connect() as conn:
         rows = conn.execute(
             text(
-                "SELECT id, country, theme, date_from, date_to, language, title, doc_count, created_at "
-                "FROM reports WHERE user_id = :uid ORDER BY created_at DESC"
+                "SELECT id, report_type, country, theme, date_from, date_to, language, title, "
+                "doc_count, created_at FROM reports WHERE user_id = :uid ORDER BY created_at DESC"
             ),
             {"uid": user_id},
         ).mappings().fetchall()
