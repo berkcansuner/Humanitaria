@@ -179,3 +179,32 @@ def delete_session(token: str) -> None:
             text("DELETE FROM sessions WHERE token_hash = :th"),
             {"th": _hash_token(token)},
         )
+
+
+# --- admin user list ----------------------------------------------------------
+
+def list_users(q: str = "", offset: int = 0, limit: int = 50) -> tuple[list[dict], int]:
+    """Public user rows (no password_hash/google_sub), newest first, with the
+    last session-creation time as ``last_login``. Returns (rows, total). Works
+    on both dialects: correlated subquery instead of GROUP BY, LOWER+LIKE for
+    case-insensitive search."""
+    where = ""
+    params: dict = {"limit": limit, "offset": offset}
+    q = (q or "").strip().lower()
+    if q:
+        where = "WHERE LOWER(u.email) LIKE :pat OR LOWER(u.name) LIKE :pat"
+        params["pat"] = f"%{q}%"
+    with _connect() as conn:
+        total = conn.execute(
+            text(f"SELECT COUNT(*) FROM users u {where}"), params
+        ).scalar_one()
+        rows = conn.execute(
+            text(
+                "SELECT u.id, u.email, u.name, u.auth_provider, u.created_at, "
+                "(SELECT MAX(s.created_at) FROM sessions s WHERE s.user_id = u.id) AS last_login "
+                f"FROM users u {where} "
+                "ORDER BY u.created_at DESC, u.id LIMIT :limit OFFSET :offset"
+            ),
+            params,
+        ).mappings().all()
+    return [dict(r) for r in rows], int(total)

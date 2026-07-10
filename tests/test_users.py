@@ -119,3 +119,44 @@ def test_google_user_links_case_insensitively(users):
     linked = users.get_or_create_google_user("sub-xyz", "Shared@Example.COM", "Shared")
     assert linked["id"] == uid
     assert linked["email"] == "shared@example.com"
+
+
+# --- list_users (admin user list) ----------------------------------------
+
+def test_list_users_returns_public_fields_newest_first(users):
+    u1 = users.create_user("old@example.com", "Old", password="pw-123456")
+    u2 = users.create_user("new@example.com", "New", password="pw-123456")
+    rows, total = users.list_users()
+    assert total == 2
+    assert [r["id"] for r in rows] == [u2, u1] or rows[0]["created_at"] >= rows[1]["created_at"]
+    for r in rows:
+        assert set(r) == {"id", "email", "name", "auth_provider", "created_at", "last_login"}
+        assert "password_hash" not in r and "google_sub" not in r
+
+
+def test_list_users_search_matches_email_and_name_case_insensitive(users):
+    users.create_user("alice@example.com", "Alice", password="pw-123456")
+    users.create_user("bob@example.com", "Bob", password="pw-123456")
+    rows, total = users.list_users(q="ALICE")
+    assert total == 1 and rows[0]["email"] == "alice@example.com"
+    rows, total = users.list_users(q="bo")   # name substring
+    assert total == 1 and rows[0]["name"] == "Bob"
+
+
+def test_list_users_pagination(users):
+    for i in range(5):
+        users.create_user(f"u{i}@example.com", f"User{i}", password="pw-123456")
+    rows, total = users.list_users(offset=0, limit=2)
+    assert total == 5 and len(rows) == 2
+    rows2, _ = users.list_users(offset=4, limit=2)
+    assert len(rows2) == 1
+
+
+def test_list_users_last_login_from_sessions(users):
+    uid = users.create_user("erin@example.com", "Erin", password="pw-123456")
+    users.create_user("nologin@example.com", "NoLogin", password="pw-123456")
+    users.create_session(uid)
+    rows, _ = users.list_users()
+    by_email = {r["email"]: r for r in rows}
+    assert by_email["erin@example.com"]["last_login"] is not None
+    assert by_email["nologin@example.com"]["last_login"] is None
