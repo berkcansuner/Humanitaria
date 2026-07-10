@@ -46,6 +46,17 @@ _INK = "#1a1c1a"
 _MUTED = "#5f5e5e"
 _BORDER = "#d6e2da"
 
+_REPORT_TYPE_LABELS = {
+    "situation": "M&E Situation Report",
+    "indicator_monitoring": "M&E Indicator Monitoring Report",
+    "needs_assessment": "M&E Needs Assessment Brief",
+}
+
+
+def _type_label(report_type: str | None) -> str:
+    return _REPORT_TYPE_LABELS.get(report_type or "situation", _REPORT_TYPE_LABELS["situation"])
+
+
 _FONT_DIR = os.path.join(os.path.dirname(reportlab.__file__), "fonts")
 _fonts_ready = False
 
@@ -98,6 +109,9 @@ table.scopebox .lbl {{ color: {_GREEN_DARK}; font-weight: bold; font-size: 7pt; 
 .body p {{ margin: 0 0 6pt 0; text-align: justify; }}
 .body ul {{ margin: 2pt 0 8pt 0; }}
 .body li {{ margin-bottom: 3pt; }}
+.body table {{ width: 100%; border-collapse: collapse; margin: 4pt 0 10pt 0; }}
+.body table th, .body table td {{ border: 0.5pt solid {_BORDER}; padding: 4pt 6pt; font-size: 8.5pt; text-align: left; }}
+.body table th {{ background-color: {_GREEN_SOFT}; color: {_GREEN_DARK}; font-weight: bold; }}
 .cite {{ color: {_GREEN}; font-weight: bold; }}
 
 h2.sources-h {{ font-size: 11pt; color: {_GREEN_DARK}; border-bottom: 0.75pt solid {_BORDER}; padding-bottom: 2pt; margin: 16pt 0 6pt 0; }}
@@ -152,11 +166,12 @@ def render_report_pdf(report: dict) -> bytes:
     # reports than the reader can see (doc_count is the retrieved set; not all of it gets cited).
     source_count = len(_valid_sources(report.get("sources")))
     generated = datetime.now(timezone.utc).strftime("%d %b %Y")
+    type_label = _type_label(report.get("report_type"))
 
     doc = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>{_CSS}</style></head><body>
 <table class="brandbar" width="100%"><tr>
   <td class="brand">Humanitaria</td>
-  <td class="brandsub" align="right" valign="middle">M&amp;E Situation Report</td>
+  <td class="brandsub" align="right" valign="middle">{html.escape(type_label)}</td>
 </tr></table>
 
 <h1 class="reporttitle">{country} &middot; {sector}</h1>

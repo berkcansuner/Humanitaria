@@ -503,6 +503,35 @@ class TestReportPdf:
         ]
         assert len(_valid_sources(sources)) == 2
 
+    def test_type_label_defaults_and_maps(self):
+        from rag.report_pdf import _type_label
+        assert _type_label(None) == "M&E Situation Report"
+        assert _type_label("situation") == "M&E Situation Report"
+        assert _type_label("indicator_monitoring") == "M&E Indicator Monitoring Report"
+        assert _type_label("needs_assessment") == "M&E Needs Assessment Brief"
+        assert _type_label("unknown_type") == "M&E Situation Report"
+
+    def test_render_pdf_with_indicator_table(self):
+        from rag.report_pdf import render_report_pdf
+        content = (
+            "## Overview\nSituation remains dire [1].\n\n"
+            "## Indicator Table\n"
+            "| Indicator | Latest value | As of | Source |\n"
+            "|---|---|---|---|\n"
+            "| IPC Phase | Phase 4 | 2026-05-01 | [1] |\n\n"
+            "## Data Gaps\nNo WASH data available.\n\n"
+            "## Recent Developments\nAccess improved slightly [1]."
+        )
+        pdf = render_report_pdf({
+            "country": "Mali", "theme": "Food and Nutrition", "date_from": None, "date_to": None,
+            "doc_count": 1, "content": content,
+            "sources": [{"index": 1, "title": "WFP Report", "url": "https://reliefweb.int/r/1",
+                         "source": "WFP", "date": "2026-05-01"}],
+            "report_type": "indicator_monitoring",
+        })
+        assert pdf[:4] == b"%PDF"
+        assert len(pdf) > 1000
+
 
 class TestCitationNormalization:
     def test_cited_indices_handles_groups(self):
