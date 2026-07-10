@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     PINECONE_INDEX: str = "reliefweb-docs"
     PINECONE_CLOUD: str = "aws"
     PINECONE_REGION: str = "us-east-1"
-    PINECONE_NAMESPACE: str = ""
+    PINECONE_NAMESPACE: str = "v3"
 
     # RAG
     CHUNK_SIZE: int = 1500        # characters per chunk (recursive splitter)

@@ -19,6 +19,14 @@ services:
         value: "0"
       - key: GEMINI_REASONING_EFFORT
         value: low
+      # v3 cutover: all-country × last-1-year corpus + daily rolling-window retention
+      # (ingest via Cloudflare Worker cron → POST /admin/ingest/cron).
+      - key: PINECONE_NAMESPACE
+        value: v3
+      - key: RETENTION_DAYS
+        value: "365"
+      - key: RETENTION_PER_COUNTRY_CAP
+        value: "200"
       - key: RATE_LIMIT_TRUSTED_HOPS   # Render = single reverse proxy → real client IP = rightmost XFF entry (audit P2-01)
         value: "1"
       # URLs assume the predicted host below. If Render appends a suffix to the
@@ -33,6 +41,8 @@ services:
       - key: AUTH_SESSION_SECRET
         generateValue: true
       # Secrets — set these in the Render dashboard (never committed).
+      - key: INGEST_TRIGGER_TOKEN   # shared secret for POST /admin/ingest/cron (Cloudflare Worker)
+        sync: false
       - key: GEMINI_API_KEY
         sync: false
       - key: PINECONE_API_KEY
