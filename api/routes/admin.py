@@ -10,6 +10,7 @@ import secrets
 
 import anyio
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
 
 from api.routes.auth import get_admin_user
 from config import get_settings
@@ -102,19 +103,27 @@ async def ingest_documents(
     return analytics.get_documents(q=q, offset=offset, limit=limit)
 
 
-@router.post("/ingest/cron")
+@router.post("/ingest/cron", status_code=202)
 async def cron_ingest(x_cron_token: str = Header(default="", alias="X-Cron-Token")):
     """Token-gated automation trigger (called daily by the Cloudflare Worker cron).
 
-    Runs ONE ingest + rolling-retention pass SYNCHRONOUSLY so the caller stays
-    connected until it finishes — that keeps a sleeping free-tier instance awake for
-    the whole (small) daily job. Gated by ``INGEST_TRIGGER_TOKEN`` (constant-time
-    compare); 403 if the token is unset or mismatched. Not session-gated — automation
-    has no cookie. The session-cookie UI trigger (/ingest/trigger) is unaffected."""
+    Responds 202 immediately and runs ONE ingest + rolling-retention pass in the
+    background (same pattern as /ingest/trigger): Render's proxy times out long
+    requests with a 502, so a synchronous response cannot survive the first run
+    after a cold start. The job itself (~5-10 min) finishes well inside the
+    free-tier 15-min idle window, and its outcome lands in the admin status panel.
+    Gated by ``INGEST_TRIGGER_TOKEN`` (constant-time compare); 403 if the token is
+    unset or mismatched. Not session-gated — automation has no cookie. The
+    session-cookie UI trigger (/ingest/trigger) is unaffected."""
     token = get_settings().INGEST_TRIGGER_TOKEN
     if not token or not secrets.compare_digest(x_cron_token or "", token):
         raise HTTPException(status_code=403, detail="Invalid or missing cron token")
     if runner.is_running():
-        return {"status": "already-running", "run": runner.get_state()}
-    ran = await anyio.to_thread.run_sync(runner.run_ingest_once, "cron")
-    return {"status": "ok" if ran else "skipped", "run": runner.get_state()}
+        return JSONResponse(
+            status_code=409,
+            content={"status": "already-running", "run": runner.get_state()},
+        )
+    task = asyncio.create_task(anyio.to_thread.run_sync(runner.run_ingest_once, "cron"))
+    _bg_tasks.add(task)
+    task.add_done_callback(_bg_tasks.discard)
+    return {"status": "started"}

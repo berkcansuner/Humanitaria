@@ -258,10 +258,21 @@ def test_cron_runs_with_valid_token(client):
         runner._state.running = False
         with patch("api.routes.admin.get_settings", return_value=_cron_settings("secret")):
             r = client.post("/admin/ingest/cron", headers={"X-Cron-Token": "secret"})
-        assert r.status_code == 200
-        assert r.json()["status"] in ("ok", "skipped")
+        assert r.status_code == 202
+        assert r.json()["status"] == "started"
     finally:
         runner._lock.release()
+
+
+def test_cron_already_running_returns_409(client):
+    runner._state.running = True
+    try:
+        with patch("api.routes.admin.get_settings", return_value=_cron_settings("secret")):
+            r = client.post("/admin/ingest/cron", headers={"X-Cron-Token": "secret"})
+        assert r.status_code == 409
+        assert r.json()["status"] == "already-running"
+    finally:
+        runner._state.running = False
 
 
 # --- rebuild_documents + retention integration ------------------------------
