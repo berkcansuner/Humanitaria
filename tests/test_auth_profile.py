@@ -87,3 +87,49 @@ def test_change_password_short_new_rejected(client):
     r = client.post("/auth/me/password",
                     json={"current_password": "password123", "new_password": "short"})
     assert r.status_code == 422
+
+
+# --- DELETE /auth/me ------------------------------------------------------------
+
+def test_delete_account_with_password(client):
+    from rag import users as users_store
+
+    client.post("/auth/signup", json=SIGNUP)
+    uid = client.get("/auth/me").json()["id"]
+    r = client.request("DELETE", "/auth/me", json={"password": "password123"})
+    assert r.status_code == 204, r.text
+    assert users_store.get_user_by_id(uid) is None
+    assert client.get("/auth/me").json() is None   # session gone
+    assert client.post("/auth/login",
+                       json={"email": SIGNUP["email"], "password": "password123"}).status_code == 401
+
+
+def test_delete_account_wrong_password_403(client):
+    client.post("/auth/signup", json=SIGNUP)
+    r = client.request("DELETE", "/auth/me", json={"password": "WRONG-pw-123"})
+    assert r.status_code == 403
+    assert client.get("/auth/me").json() is not None   # still alive
+
+
+def test_delete_google_account_with_confirm_email(client):
+    from config import get_settings
+    from rag import users as users_store
+
+    user = users_store.get_or_create_google_user("g-sub-2", "goog2@example.com", "Goog2")
+    token = users_store.create_session(user["id"])
+    client.cookies.set(get_settings().SESSION_COOKIE_NAME, token)
+    r = client.request("DELETE", "/auth/me", json={"confirm_email": "GOOG2@example.com "})
+    assert r.status_code == 204, r.text
+    assert users_store.get_user_by_id(user["id"]) is None
+
+
+def test_delete_google_account_wrong_confirm_400(client):
+    from config import get_settings
+    from rag import users as users_store
+
+    user = users_store.get_or_create_google_user("g-sub-3", "goog3@example.com", "Goog3")
+    token = users_store.create_session(user["id"])
+    client.cookies.set(get_settings().SESSION_COOKIE_NAME, token)
+    r = client.request("DELETE", "/auth/me", json={"confirm_email": "typo@example.com"})
+    assert r.status_code == 400
+    assert users_store.get_user_by_id(user["id"]) is not None

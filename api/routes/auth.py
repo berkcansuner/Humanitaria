@@ -19,6 +19,7 @@ from sqlalchemy.exc import IntegrityError
 
 from config import get_settings
 from rag import users as users_store
+from rag.history import clear_session
 from api.limiter import limiter, _client_ip
 
 logger = logging.getLogger(__name__)
@@ -86,6 +87,13 @@ class UpdateProfileIn(BaseModel):
 class ChangePasswordIn(BaseModel):
     current_password: str = Field(..., min_length=1, max_length=72)
     new_password: str = Field(..., min_length=8, max_length=72)  # bcrypt 72-byte cap
+
+
+class DeleteAccountIn(BaseModel):
+    # Password accounts confirm with their password; Google-only accounts type
+    # their email address instead (they have no password to give).
+    password: Optional[str] = Field(default=None, max_length=72)
+    confirm_email: Optional[str] = Field(default=None, max_length=254)
 
 
 class UserOut(BaseModel):
@@ -239,6 +247,31 @@ async def change_password(request: Request, body: ChangePasswordIn,
     current_token = request.cookies.get(get_settings().SESSION_COOKIE_NAME)
     await anyio.to_thread.run_sync(users_store.delete_user_sessions, user["id"], current_token)
     logger.info("auth: password changed (user=%s)", user["id"])
+
+
+@router.delete("/me", status_code=204)
+@limiter.limit(_login_rate_limit)
+async def delete_me(request: Request, body: DeleteAccountIn, response: Response,
+                    user: dict = Depends(get_current_user)):
+    full = await anyio.to_thread.run_sync(users_store.get_user_by_id, user["id"])
+    if not full:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    if full["password_hash"]:
+        valid = body.password and await anyio.to_thread.run_sync(
+            users_store.verify_password, body.password, full["password_hash"]
+        )
+        if not valid:
+            logger.warning("auth: account deletion rejected, wrong password (user=%s)", user["id"])
+            raise HTTPException(status_code=403, detail="Password is incorrect")
+    else:
+        confirmed = (body.confirm_email or "").strip().lower() == full["email"]
+        if not confirmed:
+            raise HTTPException(status_code=400, detail="Email confirmation does not match")
+    conv_ids = await anyio.to_thread.run_sync(users_store.delete_user_account, user["id"])
+    for cid in conv_ids:   # best-effort in-memory history cleanup
+        clear_session(cid)
+    response.delete_cookie(get_settings().SESSION_COOKIE_NAME, path="/")
+    logger.info("auth: account deleted (user=%s)", user["id"])
 
 
 # --- Google OAuth -----------------------------------------------------------
