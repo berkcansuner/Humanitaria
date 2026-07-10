@@ -1,8 +1,9 @@
-"""User accounts + login sessions (SQLite).
+"""User accounts + login sessions.
 
-Backs the login/signup auth system. Mirrors ``rag/conversations.py``: plain
-stdlib ``sqlite3``, same DB file (``CONVERSATION_DB_PATH``), one fresh
-connection per call (WAL mode), all functions synchronous.
+Backs the login/signup auth system. Mirrors ``rag/conversations.py``: plain SQL
+through the shared engine in ``rag/db.py`` (SQLite file by default, Postgres
+when ``DATABASE_URL`` is set), all functions synchronous — FastAPI routes
+offload them with ``anyio.to_thread.run_sync``.
 
 Passwords are hashed with bcrypt. Session cookies hold a high-entropy random
 token; the DB stores only its SHA-256 hash, so a DB leak does not expose live
@@ -11,57 +12,19 @@ session cookies.
 import hashlib
 import logging
 import secrets
-import sqlite3
 import uuid
-from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
+from sqlalchemy import text
 
-from config import get_settings
+from rag.db import connect as _connect
 
 logger = logging.getLogger(__name__)
 
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
-
-
-@contextmanager
-def _connect():
-    conn = sqlite3.connect(get_settings().CONVERSATION_DB_PATH, check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys=ON")
-    conn.execute("PRAGMA journal_mode=WAL")
-    _ensure_schema(conn)
-    try:
-        yield conn
-        conn.commit()
-    finally:
-        conn.close()
-
-
-def _ensure_schema(conn: sqlite3.Connection) -> None:
-    conn.executescript(
-        """
-        CREATE TABLE IF NOT EXISTS users (
-            id            TEXT PRIMARY KEY,
-            email         TEXT NOT NULL UNIQUE,
-            name          TEXT NOT NULL,
-            password_hash TEXT,
-            auth_provider TEXT NOT NULL DEFAULT 'password',
-            google_sub    TEXT UNIQUE,
-            created_at    TEXT NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS sessions (
-            token_hash TEXT PRIMARY KEY,
-            user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            expires_at TEXT NOT NULL,
-            created_at TEXT NOT NULL
-        );
-        CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
-        """
-    )
 
 
 # --- password hashing -------------------------------------------------------
@@ -92,28 +55,35 @@ def create_user(
     auth_provider: str = "password",
     google_sub: str | None = None,
 ) -> str:
-    """Create a user and return its id. Raises sqlite3.IntegrityError on a
-    duplicate email or google_sub."""
+    """Create a user and return its id. Raises sqlalchemy.exc.IntegrityError on
+    a duplicate email or google_sub."""
     uid = uuid.uuid4().hex
     pw_hash = hash_password(password) if password else None
     with _connect() as conn:
         conn.execute(
-            "INSERT INTO users(id, email, name, password_hash, auth_provider, google_sub, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (uid, email, name, pw_hash, auth_provider, google_sub, _now().isoformat()),
+            text(
+                "INSERT INTO users(id, email, name, password_hash, auth_provider, google_sub, created_at) "
+                "VALUES (:id, :email, :name, :pw, :provider, :sub, :now)"
+            ),
+            {"id": uid, "email": email, "name": name, "pw": pw_hash,
+             "provider": auth_provider, "sub": google_sub, "now": _now().isoformat()},
         )
     return uid
 
 
 def get_user_by_email(email: str) -> dict | None:
     with _connect() as conn:
-        row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+        row = conn.execute(
+            text("SELECT * FROM users WHERE email = :email"), {"email": email}
+        ).mappings().fetchone()
     return dict(row) if row else None
 
 
 def get_user_by_id(user_id: str) -> dict | None:
     with _connect() as conn:
-        row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        row = conn.execute(
+            text("SELECT * FROM users WHERE id = :id"), {"id": user_id}
+        ).mappings().fetchone()
     return dict(row) if row else None
 
 
@@ -127,26 +97,34 @@ def get_or_create_google_user(google_sub: str, email: str, name: str) -> dict:
     email = email.strip().lower()
     with _connect() as conn:
         row = conn.execute(
-            "SELECT * FROM users WHERE google_sub = ?", (google_sub,)
-        ).fetchone()
+            text("SELECT * FROM users WHERE google_sub = :sub"), {"sub": google_sub}
+        ).mappings().fetchone()
         if row:
             return dict(row)
-        row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+        row = conn.execute(
+            text("SELECT * FROM users WHERE email = :email"), {"email": email}
+        ).mappings().fetchone()
         if row:
             conn.execute(
-                "UPDATE users SET google_sub = ? WHERE id = ?", (google_sub, row["id"])
+                text("UPDATE users SET google_sub = :sub WHERE id = :id"),
+                {"sub": google_sub, "id": row["id"]},
             )
             updated = conn.execute(
-                "SELECT * FROM users WHERE id = ?", (row["id"],)
-            ).fetchone()
+                text("SELECT * FROM users WHERE id = :id"), {"id": row["id"]}
+            ).mappings().fetchone()
             return dict(updated)
         uid = uuid.uuid4().hex
         conn.execute(
-            "INSERT INTO users(id, email, name, password_hash, auth_provider, google_sub, created_at) "
-            "VALUES (?, ?, ?, NULL, 'google', ?, ?)",
-            (uid, email, name, google_sub, _now().isoformat()),
+            text(
+                "INSERT INTO users(id, email, name, password_hash, auth_provider, google_sub, created_at) "
+                "VALUES (:id, :email, :name, NULL, 'google', :sub, :now)"
+            ),
+            {"id": uid, "email": email, "name": name, "sub": google_sub,
+             "now": _now().isoformat()},
         )
-        created = conn.execute("SELECT * FROM users WHERE id = ?", (uid,)).fetchone()
+        created = conn.execute(
+            text("SELECT * FROM users WHERE id = :id"), {"id": uid}
+        ).mappings().fetchone()
     return dict(created)
 
 
@@ -163,9 +141,12 @@ def create_session(user_id: str, ttl_hours: int = 24) -> str:
     expires_at = _now() + timedelta(hours=ttl_hours)
     with _connect() as conn:
         conn.execute(
-            "INSERT INTO sessions(token_hash, user_id, expires_at, created_at) "
-            "VALUES (?, ?, ?, ?)",
-            (_hash_token(token), user_id, expires_at.isoformat(), _now().isoformat()),
+            text(
+                "INSERT INTO sessions(token_hash, user_id, expires_at, created_at) "
+                "VALUES (:th, :uid, :exp, :now)"
+            ),
+            {"th": _hash_token(token), "uid": user_id,
+             "exp": expires_at.isoformat(), "now": _now().isoformat()},
         )
     return token
 
@@ -176,10 +157,12 @@ def get_user_by_session(token: str) -> dict | None:
         return None
     with _connect() as conn:
         row = conn.execute(
-            "SELECT u.* , s.expires_at FROM sessions s "
-            "JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?",
-            (_hash_token(token),),
-        ).fetchone()
+            text(
+                "SELECT u.*, s.expires_at FROM sessions s "
+                "JOIN users u ON u.id = s.user_id WHERE s.token_hash = :th"
+            ),
+            {"th": _hash_token(token)},
+        ).mappings().fetchone()
     if not row:
         return None
     expires_at = datetime.fromisoformat(row["expires_at"])
@@ -192,4 +175,7 @@ def get_user_by_session(token: str) -> dict | None:
 
 def delete_session(token: str) -> None:
     with _connect() as conn:
-        conn.execute("DELETE FROM sessions WHERE token_hash = ?", (_hash_token(token),))
+        conn.execute(
+            text("DELETE FROM sessions WHERE token_hash = :th"),
+            {"th": _hash_token(token)},
+        )

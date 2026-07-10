@@ -16,6 +16,11 @@ uvicorn[standard]==0.46.0
 sse-starlette==3.0.3
 slowapi==0.1.9
 
+# Database (users/sessions/conversations/reports — SQLite by default,
+# Supabase Postgres via DATABASE_URL)
+sqlalchemy==2.0.51
+psycopg[binary]==3.3.4
+
 # Auth (login/signup — httpOnly cookie session + Google OAuth)
 bcrypt==5.0.0
 authlib==1.7.2

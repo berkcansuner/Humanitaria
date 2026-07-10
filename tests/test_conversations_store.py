@@ -11,8 +11,9 @@ U = "user-1"  # owning user for single-user fixtures
 def db(tmp_path):
     """Point the store at a throwaway SQLite file for the duration of a test."""
     settings = MagicMock()
+    settings.DATABASE_URL = ""
     settings.CONVERSATION_DB_PATH = str(tmp_path / "conversations.db")
-    with patch("rag.conversations.get_settings", return_value=settings):
+    with patch("rag.db.get_settings", return_value=settings):
         yield
 
 

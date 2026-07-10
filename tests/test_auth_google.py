@@ -78,14 +78,14 @@ def test_google_callback_db_error_redirects_not_500(client):
     """A DB race on account create/link (concurrent callbacks → IntegrityError) must
     degrade to the login redirect, honouring the callback's 'never 500' contract."""
     import contextlib
-    import sqlite3
+    from sqlalchemy.exc import IntegrityError
     fake = {"sub": "g-race", "email": "race@example.com", "name": "R", "email_verified": True}
     with contextlib.ExitStack() as stack:
         for p in _patch_userinfo(fake):
             stack.enter_context(p)
         stack.enter_context(patch(
             "api.routes.auth.users_store.get_or_create_google_user",
-            side_effect=sqlite3.IntegrityError("UNIQUE constraint failed"),
+            side_effect=IntegrityError("UNIQUE constraint failed", None, Exception()),
         ))
         r = client.get("/auth/google/callback?code=abc&state=xyz", follow_redirects=False)
     assert r.status_code in (302, 307)

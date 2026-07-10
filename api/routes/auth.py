@@ -8,7 +8,6 @@ Google OAuth routes (``/auth/google/login`` + ``/auth/google/callback``) are
 defined below in this module.
 """
 import logging
-import sqlite3
 from typing import Optional
 
 import anyio
@@ -16,6 +15,7 @@ from authlib.integrations.starlette_client import OAuth, OAuthError
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field, field_validator
+from sqlalchemy.exc import IntegrityError
 
 from config import get_settings
 from rag import users as users_store
@@ -144,7 +144,7 @@ async def signup(request: Request, body: SignupIn, response: Response):
         uid = await anyio.to_thread.run_sync(
             users_store.create_user, body.email, body.name.strip(), body.password
         )
-    except sqlite3.IntegrityError:
+    except IntegrityError:
         raise HTTPException(status_code=409, detail="Email already registered")
     token = await anyio.to_thread.run_sync(
         users_store.create_session, uid, get_settings().SESSION_TTL_HOURS

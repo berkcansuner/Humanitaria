@@ -6,10 +6,11 @@ import pytest
 
 @pytest.fixture
 def users(tmp_path):
-    """rag.users with its SQLite store pointed at a throwaway DB."""
+    """rag.users with the shared DB engine pointed at a throwaway SQLite DB."""
     settings = MagicMock()
+    settings.DATABASE_URL = ""
     settings.CONVERSATION_DB_PATH = str(tmp_path / "auth.db")
-    with patch("rag.users.get_settings", return_value=settings):
+    with patch("rag.db.get_settings", return_value=settings):
         from rag import users as users_mod
         yield users_mod
 
@@ -34,10 +35,10 @@ def test_unknown_email_returns_none(users):
 
 
 def test_duplicate_email_raises(users):
-    import sqlite3
+    from sqlalchemy.exc import IntegrityError
 
     users.create_user("dup@example.com", "First", password="pw-123456")
-    with pytest.raises(sqlite3.IntegrityError):
+    with pytest.raises(IntegrityError):
         users.create_user("dup@example.com", "Second", password="pw-abcdef")
 
 
@@ -64,13 +65,13 @@ def test_session_roundtrip_returns_user(users):
     assert user["id"] == uid
 
 
-def test_session_token_not_stored_in_plaintext(users):
+def test_session_token_not_stored_in_plaintext(users, tmp_path):
     """The raw cookie token must not be recoverable from the DB (stored hashed)."""
     import sqlite3
 
     uid = users.create_user("frank@example.com", "Frank", password="pw-123456")
     token = users.create_session(uid)
-    conn = sqlite3.connect(users.get_settings().CONVERSATION_DB_PATH)
+    conn = sqlite3.connect(str(tmp_path / "auth.db"))
     rows = conn.execute("SELECT * FROM sessions").fetchall()
     conn.close()
     flat = " ".join(str(c) for r in rows for c in r)

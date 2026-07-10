@@ -15,16 +15,16 @@ def test_user_id():
 
 @pytest.fixture(autouse=True)
 def _isolate_conversation_db(tmp_path):
-    """Point the SQLite stores (conversations + users/sessions, same DB file) at a
-    throwaway DB for every test so the chat flow (which now persists exchanges)
-    and the auth store never write to the real ./conversations.db. Tests that need
-    their own DB still patch get_settings explicitly; that inner patch
-    transparently overrides this one."""
+    """Point the shared DB engine (conversations + users/sessions + reports, one
+    DB) at a throwaway SQLite file for every test so the chat flow (which
+    persists exchanges) and the auth store never write to the real
+    ./conversations.db. Tests that need their own DB still patch
+    rag.db.get_settings explicitly; that inner patch transparently overrides
+    this one."""
     settings = MagicMock()
+    settings.DATABASE_URL = ""
     settings.CONVERSATION_DB_PATH = str(tmp_path / "conversations.db")
-    with patch("rag.conversations.get_settings", return_value=settings), \
-         patch("rag.users.get_settings", return_value=settings), \
-         patch("rag.reports.get_settings", return_value=settings):
+    with patch("rag.db.get_settings", return_value=settings):
         yield
 
 

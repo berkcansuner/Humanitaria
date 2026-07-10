@@ -121,6 +121,10 @@ class Settings(BaseSettings):
     # Persistent conversation store (SQLite, file-based).
     # Holds the named conversations + messages shown in the sidebar.
     CONVERSATION_DB_PATH: str = "./conversations.db"
+    # Postgres (e.g. Supabase) connection URL for users/sessions/conversations/
+    # reports. Empty = file-based SQLite at CONVERSATION_DB_PATH (dev/tests).
+    # Form: postgresql+psycopg://user:pass@host:5432/postgres
+    DATABASE_URL: str = ""
 
     # Ingestion
     FETCH_PDF_CONTENT: bool = False   # download and index PDF attachments (slow, opt-in)

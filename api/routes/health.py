@@ -1,10 +1,8 @@
 import logging
-import sqlite3
 
 import anyio
 from fastapi import APIRouter, HTTPException
-
-from config import get_settings
+from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
@@ -19,12 +17,10 @@ def _check_pinecone() -> bool:
 
 
 def _check_database() -> bool:
-    """Probe the SQLite users/conversations DB (raises if it cannot be opened)."""
-    con = sqlite3.connect(get_settings().CONVERSATION_DB_PATH)
-    try:
-        con.execute("SELECT 1")
-    finally:
-        con.close()
+    """Probe the users/conversations DB (raises if it cannot be reached)."""
+    from rag.db import get_engine
+    with get_engine().connect() as conn:
+        conn.execute(text("SELECT 1"))
     return True
 
 

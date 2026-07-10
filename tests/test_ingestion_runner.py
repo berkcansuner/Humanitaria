@@ -33,6 +33,20 @@ def test_run_ingest_once_runs_and_writes_watermark(tmp_path):
     assert state["last_stats"]["reports"]["succeeded"] == 4
 
 
+def test_run_ingest_once_pings_database(tmp_path):
+    """Each run touches the app DB once (keep-alive for free-tier Postgres);
+    a ping failure must not fail the ingest."""
+    wm = tmp_path / ".last_ingest.json"
+    stats = {"reports": IngestionStats(endpoint="reports", total=1, succeeded=1, failed=0, skipped=0)}
+    with patch("ingestion.scheduler._watermark_path", return_value=wm), \
+         patch("ingestion.scheduler.run_pipeline", return_value=stats), \
+         patch("ingestion.analytics.rebuild_documents"), \
+         patch("rag.db.get_engine", side_effect=RuntimeError("db down")) as mock_engine:
+        assert runner.run_ingest_once("cron") is True
+        mock_engine.assert_called_once()
+    assert runner.get_state()["last_error"] is None   # ping failure ≠ ingest failure
+
+
 def test_run_ingest_once_records_error_and_skips_watermark(tmp_path):
     wm = tmp_path / ".last_ingest.json"
     with patch("ingestion.scheduler._watermark_path", return_value=wm), \

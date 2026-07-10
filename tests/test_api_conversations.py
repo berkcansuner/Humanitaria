@@ -9,8 +9,9 @@ from fastapi.testclient import TestClient
 def client(tmp_path):
     """A TestClient with the conversation store pointed at a throwaway DB."""
     settings = MagicMock()
+    settings.DATABASE_URL = ""
     settings.CONVERSATION_DB_PATH = str(tmp_path / "conversations.db")
-    with patch("rag.conversations.get_settings", return_value=settings):
+    with patch("rag.db.get_settings", return_value=settings):
         from api.main import app
         yield TestClient(app)
 

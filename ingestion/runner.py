@@ -42,6 +42,21 @@ def get_state() -> dict:
     return asdict(_state)
 
 
+def _ping_database() -> None:
+    """Touch the app DB once per ingest run. The nightly cron then produces
+    daily database activity, which keeps a free-tier Supabase project from
+    being paused for inactivity. Never blocks the ingest itself."""
+    try:
+        from sqlalchemy import text
+
+        from rag.db import get_engine
+
+        with get_engine().connect() as conn:
+            conn.execute(text("SELECT 1"))
+    except Exception as exc:
+        logger.warning("DB keep-alive ping failed: %s", exc)
+
+
 def run_ingest_once(source: str) -> bool:
     """Run one incremental ingest. Returns False immediately if a run is already
     in progress (no overlap); True once this call has run (success or handled
@@ -59,6 +74,7 @@ def run_ingest_once(source: str) -> bool:
         run_start = datetime.now().strftime("%Y-%m-%d")
         date_from = sched._load_watermark()
         logger.info("Ingest starting (source=%s, date_from=%s)", source, date_from or "full")
+        _ping_database()
         try:
             stats = sched.run_pipeline(date_from=date_from)
             sched._save_watermark(run_start)

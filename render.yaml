@@ -41,6 +41,8 @@ services:
       - key: AUTH_SESSION_SECRET
         generateValue: true
       # Secrets — set these in the Render dashboard (never committed).
+      - key: DATABASE_URL           # Supabase Postgres (session pooler URI); empty = ephemeral SQLite
+        sync: false
       - key: INGEST_TRIGGER_TOKEN   # shared secret for POST /admin/ingest/cron (Cloudflare Worker)
         sync: false
       - key: GEMINI_API_KEY
