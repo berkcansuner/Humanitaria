@@ -28,13 +28,7 @@
     />
 
     <div class="sidebar-foot">
-      <router-link to="/settings" class="who" title="Settings">
-        <div class="avatar">{{ initials }}</div>
-        <div class="who-text">
-          <div class="who-name">{{ displayName }}</div>
-          <div v-if="secondary" class="who-org">{{ secondary }}</div>
-        </div>
-      </router-link>
+      <UserMenu variant="sidebar" />
     </div>
   </div>
 </template>
@@ -43,9 +37,8 @@
 import { ref, computed } from 'vue'
 import { Plus, Search, FileText } from 'lucide-vue-next'
 import ConversationList from './ConversationList.vue'
+import UserMenu from './UserMenu.vue'
 import { filterConversations, groupConversationsByDate } from '../utils/conversationOps.js'
-import { auth } from '../utils/authStore.js'
-import { userInitials } from '../utils/userDisplay.js'
 
 const props = defineProps({
   conversations: { type: Array, default: () => [] },
@@ -61,11 +54,6 @@ const hasQuery = computed(() => query.value.trim().length > 0)
 const groups = computed(() =>
   groupConversationsByDate(filterConversations(props.conversations, query.value)),
 )
-
-// Footer reflects the signed-in user (from the auth store).
-const displayName = computed(() => auth.user?.name || auth.user?.email || 'Account')
-const secondary = computed(() => (auth.user?.name ? auth.user?.email : '') || '')
-const initials = computed(() => userInitials(auth.user))
 </script>
 
 <style scoped>
@@ -171,51 +159,6 @@ const initials = computed(() => userInitials(auth.user))
   align-items: center;
   padding-top: var(--space-2);
   border-top: 1px solid var(--color-border);
-}
-
-.who {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  min-width: 0;
-  text-decoration: none;
-}
-
-.avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: var(--radius-full);
-  flex-shrink: 0;
-  background-color: var(--color-surface-container-high);
-  color: var(--color-text-secondary);
-  display: grid;
-  place-items: center;
-  font-family: var(--font-display);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.who-text {
-  min-width: 0;
-}
-
-.who-name {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--color-text);
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.who-org {
-  font-size: 11px;
-  color: var(--color-muted);
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* ConversationList grows to fill the middle; the list itself scrolls. */
