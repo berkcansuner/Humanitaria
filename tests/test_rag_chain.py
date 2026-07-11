@@ -164,6 +164,19 @@ def test_needs_assessment_prompt_requires_sections():
     assert "recommendations" in low
 
 
+def test_all_report_prompts_scope_to_report_country():
+    # Country-scoping guard: figures measuring another country's own internal
+    # situation (e.g. an Iran report picking up Afghanistan's country-wide caseload
+    # mentioned as background) must be excluded, while refugees the country hosts stay.
+    from rag.chain import _REPORT_PROMPTS
+    for report_type, prompt in _REPORT_PROMPTS.items():
+        low = prompt.lower()
+        assert "scoped to the country named in" in low, report_type
+        assert "the refugees it hosts" in low, report_type
+        # the restriction is on FIGURES only; qualitative causal context stays allowed
+        assert "qualitative causal context" in low, report_type
+
+
 def test_situation_prompt_unchanged():
     """Regression guard: the existing situation-report prompt text must not
     change when new report-type prompts are added alongside it."""
