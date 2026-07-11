@@ -48,11 +48,23 @@
           <div class="field-row">
             <label class="field">
               <span>From</span>
-              <input v-model="form.date_from" type="date" :disabled="generating" />
+              <input
+                v-model="form.date_from"
+                type="date"
+                :min="minDate"
+                :max="form.date_to || maxDate"
+                :disabled="generating"
+              />
             </label>
             <label class="field">
               <span>To</span>
-              <input v-model="form.date_to" type="date" :disabled="generating" />
+              <input
+                v-model="form.date_to"
+                type="date"
+                :min="form.date_from || minDate"
+                :max="maxDate"
+                :disabled="generating"
+              />
             </label>
           </div>
 
@@ -154,7 +166,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { MessageSquare, FileText, Trash2, Loader2, AlertCircle, FileDown } from 'lucide-vue-next'
 import UserMenu from '../components/UserMenu.vue'
 import HelpingHandLogo from '../components/HelpingHandLogo.vue'
@@ -164,7 +176,13 @@ import { injectSectionImages } from '../utils/reportImages.js'
 import { parseSSE } from '../utils/parseSSE.js'
 import { getReportOptions, listReports, getReport, deleteReport } from '../utils/reportsApi.js'
 import { REPORT_TYPES, reportTypeBadge } from '../utils/reportTypes.js'
+import { minReportDate, maxReportDate } from '../utils/reportDateBounds.js'
 import { handleSessionExpired } from '../utils/authStore.js'
+
+// Prod retains ~1 year of data; clamp the date pickers to [one year ago, today]
+// so a user can't pick a window with no indexed reports (or a future date).
+const minDate = computed(() => minReportDate())
+const maxDate = computed(() => maxReportDate())
 
 const countries = ref([])
 const themes = ref([])
