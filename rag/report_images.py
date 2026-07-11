@@ -41,7 +41,12 @@ def _call_image_api(prompt: str) -> str:
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {"responseModalities": ["IMAGE"]},
     }
-    r = httpx.post(url, params={"key": s.GEMINI_API_KEY}, json=body, timeout=s.GEMINI_IMAGE_TIMEOUT)
+    r = httpx.post(
+        url,
+        headers={"x-goog-api-key": s.GEMINI_API_KEY},
+        json=body,
+        timeout=s.GEMINI_IMAGE_TIMEOUT,
+    )
     r.raise_for_status()
     for part in r.json()["candidates"][0]["content"]["parts"]:
         if "inlineData" in part:

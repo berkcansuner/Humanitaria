@@ -722,6 +722,28 @@ class TestReportPdf:
                    "sources": sources})
         assert len(pdf) > len(bare) + 100
 
+    def test_render_pdf_section_image_matches_apostrophe_heading(self):
+        # Regression: Python-Markdown does not escape ' or " in heading text (only
+        # & < >), so the section-image matcher must use the same quote=False escaping
+        # or headings like "Women's Health" never match and silently drop their image.
+        from rag.report_pdf import render_report_pdf
+        sources = [{"index": 1, "title": "WFP", "url": "https://reliefweb.int/r/1",
+                    "source": "WFP", "date": "2026-05-01"}]
+        content = "## Women's Health\nText [1].\n\n## Outlook\nMore [1]."
+        pdf = render_report_pdf({
+            "country": "Sudan", "theme": None, "date_from": None, "date_to": None,
+            "doc_count": 1, "report_type": "situation",
+            "content": content, "sources": sources,
+            "section_images": [{"heading": "Women's Health", "image": self._PNG}],
+        })
+        assert pdf[:4] == b"%PDF"
+        bare = render_report_pdf({
+            "country": "Sudan", "theme": None, "date_from": None, "date_to": None,
+            "doc_count": 1, "report_type": "situation",
+            "content": content, "sources": sources,
+        })
+        assert len(pdf) > len(bare) + 100
+
     def test_render_pdf_without_images_unchanged(self):
         # A report dict lacking image keys must still render (regression).
         from rag.report_pdf import render_report_pdf

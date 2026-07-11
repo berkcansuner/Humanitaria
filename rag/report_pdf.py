@@ -159,7 +159,10 @@ def _body_html(markdown_text: str, section_images=None) -> str:
     html_body = _markdown.markdown(markdown_text or "", extensions=["extra", "sane_lists"])
     html_body = re.sub(r"\[(\d+)\]", r'<span class="cite">[\1]</span>', html_body)
     for item in (section_images or []):
-        heading = html.escape(str(item.get("heading", "")))
+        # quote=False: Python-Markdown's renderer only escapes & < > in heading text
+        # (not ' or "), so the matcher must mirror that exactly or apostrophe/quote
+        # headings (e.g. "Women's Health") never match and silently drop their image.
+        heading = html.escape(str(item.get("heading", "")), quote=False)
         img = item.get("image") or ""
         if not heading or not img:
             continue

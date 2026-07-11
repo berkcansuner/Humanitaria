@@ -54,6 +54,27 @@ class TestExtractSectionHeadings:
             assert len(extract_section_headings(md)) == 3
 
 
+class TestCallImageApiAuth:
+    def test_key_sent_via_header_not_query_param(self):
+        # Regression: the API key must never appear in the request URL/params, since
+        # httpx.HTTPStatusError's message embeds the full URL and that message gets
+        # logged verbatim on failure (log-leak of the same key used for chat+embeddings).
+        from rag import report_images
+
+        fake_response = MagicMock()
+        fake_response.raise_for_status.return_value = None
+        fake_response.json.return_value = {
+            "candidates": [{"content": {"parts": [{"inlineData": {"data": "AAA"}}]}}]
+        }
+        with patch("rag.report_images.get_settings", return_value=_settings()), \
+             patch("httpx.post", return_value=fake_response) as mock_post:
+            out = report_images._call_image_api("p")
+        assert out == "AAA"
+        _, kwargs = mock_post.call_args
+        assert "key" not in kwargs.get("params", {})
+        assert kwargs["headers"]["x-goog-api-key"] == "test-key"
+
+
 class TestGenerateImage:
     def test_returns_none_when_disabled(self):
         from rag.report_images import generate_image

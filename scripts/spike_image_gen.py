@@ -31,7 +31,7 @@ def _try_native_rest(base_url: str, api_key: str) -> str:
         "contents": [{"parts": [{"text": PROMPT}]}],
         "generationConfig": {"responseModalities": ["IMAGE"]},
     }
-    r = httpx.post(url, params={"key": api_key}, json=body, timeout=60)
+    r = httpx.post(url, headers={"x-goog-api-key": api_key}, json=body, timeout=60)
     r.raise_for_status()
     parts = r.json()["candidates"][0]["content"]["parts"]
     for p in parts:
