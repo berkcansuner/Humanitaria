@@ -264,6 +264,8 @@ async def report_pdf(request: Request, report_id: str, user: dict = Depends(get_
     if not await anyio.to_thread.run_sync(report_store.is_owner, user["id"], report_id):
         raise HTTPException(status_code=404, detail="Report not found")
     report = await anyio.to_thread.run_sync(report_store.get_report, report_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="Report not found")
     pdf = await anyio.to_thread.run_sync(render_report_pdf, report)
     return Response(
         content=pdf,

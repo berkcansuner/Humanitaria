@@ -542,6 +542,15 @@ class TestReportPdf:
         )
         assert _client().get("/reports/rpdf2/pdf").status_code == 404
 
+    def test_pdf_deleted_between_owner_check_and_fetch_404(self):
+        # TOCTOU: is_owner passes, then the row is deleted before get_report fetches
+        # it (returns None). Must be a graceful 404, never a 500 from render_report_pdf(None).
+        from unittest.mock import patch
+        with patch("api.routes.reports.report_store.is_owner", return_value=True), \
+             patch("api.routes.reports.report_store.get_report", return_value=None):
+            r = _client().get("/reports/whatever/pdf")
+        assert r.status_code == 404
+
     def test_long_url_source_renders(self):
         # A long ReliefWeb slug URL must render — it wraps via the fixed table layout (CJK word-wrap)
         # instead of overflowing the right margin — without raising.
