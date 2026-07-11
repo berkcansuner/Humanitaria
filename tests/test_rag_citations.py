@@ -5,6 +5,7 @@ from rag.citations import (
     _is_valid_source,
     _cap_citation_runs,
     normalize_citations,
+    normalize_table_delimiters,
 )
 
 
@@ -82,3 +83,40 @@ class TestNormalizeCitations:
     def test_empty_content_or_sources_is_safe(self):
         assert normalize_citations("", self._sources()) == ("", self._sources())
         assert normalize_citations("text [1]", []) == ("text [1]", [])
+
+
+class TestNormalizeTableDelimiters:
+    def test_repairs_collapsed_overpadded_delimiter(self):
+        # An LLM padded the separator into one giant cell (interior pipes lost) → the
+        # column count no longer matches the 4-column header, so marked would reject it.
+        content = (
+            "## Indicator Table\n\n"
+            "| Indicator | Latest value | As of | Source |\n"
+            "| :" + "-" * 5000 + " |\n"
+            "| IPC Phase | Phase 4 | 2026-05 | [1] |\n"
+        )
+        out = normalize_table_delimiters(content)
+        assert "| --- | --- | --- | --- |" in out
+        assert "-" * 5000 not in out  # bloat trimmed
+
+    def test_wellformed_delimiter_collapsed_but_alignment_kept(self):
+        content = (
+            "| A | B |\n"
+            "| :------------ | ------------: |\n"
+            "| 1 | 2 |\n"
+        )
+        out = normalize_table_delimiters(content)
+        assert "| :--- | ---: |" in out
+
+    def test_leaves_thematic_break_untouched(self):
+        # A bare '---' with no table header above it is a horizontal rule, not a delimiter.
+        content = "Some prose paragraph.\n\n---\n\nMore prose."
+        assert normalize_table_delimiters(content) == content
+
+    def test_noop_without_pipes_or_empty(self):
+        assert normalize_table_delimiters("") == ""
+        assert normalize_table_delimiters("no tables here") == "no tables here"
+
+    def test_wellformed_plain_delimiter_unchanged(self):
+        content = "| A | B |\n| --- | --- |\n| 1 | 2 |"
+        assert normalize_table_delimiters(content) == content

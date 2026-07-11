@@ -67,6 +67,52 @@ def _cap_citation_runs(text: str) -> str:
     return _RUN_RE.sub(_trim, text)
 
 
+def _looks_like_delimiter(line: str) -> bool:
+    """True if *line* is a GFM table delimiter row: only pipes, dashes, colons and
+    whitespace, with at least one dash. A bare '---' thematic break also matches, but
+    the caller only rewrites it when the previous line is a table header (has a pipe)."""
+    s = line.strip()
+    if "-" not in s:
+        return False
+    return bool(re.fullmatch(r"[\s:|-]+", s))
+
+
+def normalize_table_delimiters(text: str) -> str:
+    """Repair GFM table delimiter rows so the frontend Markdown renderer (marked) parses
+    the table. Report LLMs sometimes 'align' a table by padding the separator row with
+    tens of thousands of dashes, which also drops the interior pipes — the row collapses
+    to one giant cell whose column count no longer matches the header, and marked then
+    renders the whole table as a <br>-joined paragraph (the Python PDF renderer is more
+    tolerant, so only the web view breaks). This also trims the multi-KB bloat that such
+    a row adds to the stored content.
+
+    For each detected delimiter row whose preceding line is a table header: if the cell
+    count already matches the header, collapse each cell to a compact '---' (preserving
+    ':' alignment); otherwise rebuild the row as '| --- | ... |' with the header's column
+    count. Non-table dashes (a '---' with no header above) are left untouched.
+    """
+    if not text or "|" not in text:
+        return text
+    lines = text.split("\n")
+    for i in range(1, len(lines)):
+        if not _looks_like_delimiter(lines[i]):
+            continue
+        header = lines[i - 1]
+        if not header.strip() or "|" not in header:
+            continue
+        hcols = len(header.strip().strip("|").split("|"))
+        cells = [c.strip() for c in lines[i].strip().strip("|").split("|")]
+        if len(cells) == hcols:
+            fixed = [
+                (":" if c.startswith(":") else "") + "---" + (":" if c.endswith(":") else "")
+                for c in cells
+            ]
+            lines[i] = "| " + " | ".join(fixed) + " |"
+        else:
+            lines[i] = "| " + " | ".join(["---"] * hcols) + " |"
+    return "\n".join(lines)
+
+
 def normalize_citations(content: str, sources):
     """Expand grouped citations, keep only cited + valid sources, and renumber the [n]
     markers and the source list to a contiguous 1..N by first appearance.
