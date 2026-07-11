@@ -91,6 +91,8 @@ reports_table = Table(
     Column("content", Text, nullable=False),
     Column("sources_json", Text),
     Column("doc_count", Integer),
+    Column("cover_image", Text),
+    Column("section_images", Text),
     Column("created_at", Text, nullable=False),
 )
 Index("idx_reports_user", reports_table.c.user_id, reports_table.c.created_at)
@@ -154,6 +156,10 @@ def _ensure_schema(engine: Engine) -> None:
             cols = {r[1] for r in conn.exec_driver_sql("PRAGMA table_info(reports)")}
             if cols and "report_type" not in cols:
                 conn.exec_driver_sql("ALTER TABLE reports ADD COLUMN report_type TEXT")
+            if cols and "cover_image" not in cols:
+                conn.exec_driver_sql("ALTER TABLE reports ADD COLUMN cover_image TEXT")
+            if cols and "section_images" not in cols:
+                conn.exec_driver_sql("ALTER TABLE reports ADD COLUMN section_images TEXT")
     else:
         # Postgres: same self-healing migration for an already-deployed reports
         # table (guard the ALTER on the table existing, since a brand-new
@@ -165,6 +171,8 @@ def _ensure_schema(engine: Engine) -> None:
             ).fetchone()
             if exists:
                 conn.exec_driver_sql("ALTER TABLE reports ADD COLUMN IF NOT EXISTS report_type TEXT")
+                conn.exec_driver_sql("ALTER TABLE reports ADD COLUMN IF NOT EXISTS cover_image TEXT")
+                conn.exec_driver_sql("ALTER TABLE reports ADD COLUMN IF NOT EXISTS section_images TEXT")
     metadata.create_all(engine)
 
 

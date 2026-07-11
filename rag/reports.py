@@ -23,21 +23,26 @@ def _now() -> str:
 def create_report(report_id: str, user_id: str, *, country: str, theme: str | None,
                   date_from: str | None, date_to: str | None, language: str,
                   title: str, content: str, sources: list | None, doc_count: int,
-                  report_type: str = "situation") -> None:
+                  report_type: str = "situation",
+                  cover_image: str | None = None,
+                  section_images: list | None = None) -> None:
     """Insert a generated report owned by user_id."""
     sources_json = json.dumps(sources, ensure_ascii=False) if sources else None
+    section_images_json = json.dumps(section_images, ensure_ascii=False) if section_images else None
     with _connect() as conn:
         conn.execute(
             text(
                 "INSERT INTO reports(id, user_id, report_type, country, theme, date_from, date_to, "
-                "language, title, content, sources_json, doc_count, created_at) "
+                "language, title, content, sources_json, doc_count, cover_image, section_images, "
+                "created_at) "
                 "VALUES (:id, :uid, :report_type, :country, :theme, :date_from, :date_to, :language, "
-                ":title, :content, :sources, :doc_count, :now)"
+                ":title, :content, :sources, :doc_count, :cover_image, :section_images, :now)"
             ),
             {"id": report_id, "uid": user_id, "report_type": report_type, "country": country,
              "theme": theme, "date_from": date_from, "date_to": date_to, "language": language,
              "title": title, "content": content, "sources": sources_json,
-             "doc_count": doc_count, "now": _now()},
+             "doc_count": doc_count, "cover_image": cover_image,
+             "section_images": section_images_json, "now": _now()},
         )
 
 
@@ -55,7 +60,7 @@ def list_reports(user_id: str) -> list[dict]:
 
 
 def get_report(report_id: str) -> dict | None:
-    """Full report incl. body + parsed sources, or None if it doesn't exist."""
+    """Full report incl. body + parsed sources + images, or None if it doesn't exist."""
     with _connect() as conn:
         row = conn.execute(
             text("SELECT * FROM reports WHERE id = :id"), {"id": report_id}
@@ -64,6 +69,7 @@ def get_report(report_id: str) -> dict | None:
         return None
     d = dict(row)
     d["sources"] = json.loads(d.pop("sources_json")) if d.get("sources_json") else None
+    d["section_images"] = json.loads(d["section_images"]) if d.get("section_images") else None
     return d
 
 

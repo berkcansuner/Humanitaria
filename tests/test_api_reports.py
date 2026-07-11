@@ -126,6 +126,32 @@ class TestReportStore:
         )
         assert store.get_report("r-default")["report_type"] == "situation"
 
+    def test_create_report_stores_images(self):
+        from rag import reports as store
+        store.create_report(
+            "r-img", "test-user", country="Mali", theme=None, date_from=None, date_to=None,
+            language="en", title="t", content="c", sources=None, doc_count=1,
+            cover_image="data:image/png;base64,AAAA",
+            section_images=[{"heading": "Overview", "image": "data:image/png;base64,BBBB"}],
+        )
+        rep = store.get_report("r-img")
+        assert rep["cover_image"] == "data:image/png;base64,AAAA"
+        assert rep["section_images"] == [{"heading": "Overview", "image": "data:image/png;base64,BBBB"}]
+        # lean list must NOT carry the heavy image columns
+        rows = store.list_reports("test-user")
+        row = next(r for r in rows if r["id"] == "r-img")
+        assert "cover_image" not in row and "section_images" not in row
+
+    def test_create_report_images_default_none(self):
+        from rag import reports as store
+        store.create_report(
+            "r-noimg", "test-user", country="Mali", theme=None, date_from=None, date_to=None,
+            language="en", title="t", content="c", sources=None, doc_count=1,
+        )
+        rep = store.get_report("r-noimg")
+        assert rep["cover_image"] is None
+        assert rep["section_images"] is None
+
 
 # --- retriever date range ($lte) --------------------------------------------
 
