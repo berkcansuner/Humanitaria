@@ -7,11 +7,11 @@ from unittest.mock import MagicMock, patch
 
 def _settings(enabled=True, max_sections=6):
     s = MagicMock()
-    s.GEMINI_IMAGE_MODEL = "gemini-3.1-flash-image"
+    s.GEMINI_IMAGE_MODEL = "gemini-3-pro-image"
     s.GEMINI_IMAGE_BASE_URL = ""
     s.GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
     s.GEMINI_API_KEY = "test-key"
-    s.GEMINI_IMAGE_TIMEOUT = 30
+    s.GEMINI_IMAGE_TIMEOUT = 60
     s.REPORT_IMAGES_ENABLED = enabled
     s.REPORT_IMAGE_MAX_SECTIONS = max_sections
     return s
