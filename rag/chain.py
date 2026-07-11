@@ -132,7 +132,16 @@ _REPORT_SYSTEM_PROMPT = (
     "single fact from more than one source. Cite ONLY numbers that appear as [n] in the Context; never invent one.\n"
     "8. Do NOT add a 'Sources' section — sources are listed separately in the interface.\n"
     "9. Be factual and neutral; prefer concrete figures, dates, and locations, and avoid speculative wording "
-    "('may', 'could') in favour of what the documents state. If the documents conflict or coverage is thin, say so."
+    "('may', 'could') in favour of what the documents state. PRECISION: for any figure you report, give it "
+    "exactly as the source states it, with its unit and any qualifier (e.g. '2,362 killed', '21.9 million "
+    "(45% of the population)', '4.4 million (registered and unregistered)') — do NOT round, approximate, or "
+    "use a vague quantifier ('millions', 'many'), and keep a source's range or 'at least' form. Report every "
+    "date at the precision the source gives — an exact day ('7 April 2026') when stated, otherwise the month "
+    "or year — never rounding a specific date down to just its year, and never moving a date onto a different "
+    "figure. Each individual figure and its date must be drawn from a single Context document (never stitched "
+    "together from several): never combine numbers from different "
+    "documents into a new total, carry a figure to a different date, or estimate — if a value or its date is "
+    "unclear or absent, omit it rather than guessing. If the documents conflict or coverage is thin, say so."
 )
 
 _INDICATOR_SYSTEM_PROMPT = (
@@ -187,8 +196,17 @@ _INDICATOR_SYSTEM_PROMPT = (
     "numbers that appear as [n] in the Context; never invent one.\n"
     "7. Do NOT add a 'Sources' section — sources are listed separately in the interface.\n"
     "8. Be factual and neutral; every value in the Indicator Table must be traceable to a Context "
-    "document. If the documents conflict or coverage is thin, say so in Data Gaps rather than picking "
-    "one silently."
+    "document. PRECISION: for any figure you report, give it exactly as the source states it, with its unit "
+    "and any qualifier (e.g. '2,362 killed', '21.9 million (45% of the population)', '4.4 million (registered "
+    "and unregistered)') — do NOT round, approximate, or use a vague quantifier ('millions', 'many'), and "
+    "keep a source's range or 'at least' form. The 'As of' column and any date in prose must be at the "
+    "precision the source gives — an exact day ('7 April 2026') when stated, otherwise the month or year — "
+    "never rounded down to just a year, and never moved onto a different figure. Each individual figure and "
+    "its date must come from a single Context document (never stitched together from several): never combine "
+    "numbers from different documents into a new total, "
+    "carry a figure to a different date, or estimate — if a value or its date is unclear or absent, omit "
+    "that indicator rather than guessing. If the documents conflict or coverage is thin, say so in Data "
+    "Gaps rather than picking one silently."
 )
 
 _NEEDS_ASSESSMENT_SYSTEM_PROMPT = (
@@ -235,8 +253,17 @@ _NEEDS_ASSESSMENT_SYSTEM_PROMPT = (
     "as [n] in the Context; never invent one.\n"
     "7. Do NOT add a 'Sources' section — sources are listed separately in the interface.\n"
     "8. Be factual and neutral; prefer concrete figures, dates, and locations, and avoid speculative "
-    "wording ('may', 'could') in favour of what the documents state. If the documents conflict or "
-    "coverage is thin, say so."
+    "wording ('may', 'could') in favour of what the documents state. PRECISION: for any figure you report, "
+    "give it exactly as the source states it, with its unit and any qualifier (e.g. '2,362 killed', '21.9 "
+    "million (45% of the population)', '4.4 million (registered and unregistered)') — do NOT round, "
+    "approximate, or use a vague quantifier ('millions', 'many'), and keep a source's range or 'at least' "
+    "form. Report every date at the precision the source gives — an exact day ('7 April 2026') when stated, "
+    "otherwise the month or year — never rounding a specific date down to just its year, and never moving a "
+    "date onto a different figure. Each individual figure and its date must be drawn from a single Context "
+    "document (never stitched together from several): never combine "
+    "numbers from different documents into a new total, carry a figure to a different date, or estimate — "
+    "if a value or its date is unclear or absent, omit it rather than guessing. If the documents conflict "
+    "or coverage is thin, say so."
 )
 
 _REPORT_PROMPTS = {

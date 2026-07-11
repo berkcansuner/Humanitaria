@@ -164,6 +164,19 @@ def test_needs_assessment_prompt_requires_sections():
     assert "recommendations" in low
 
 
+def test_all_report_prompts_require_precision():
+    # Figures verbatim (unit + qualifier, no rounding/vague quantifiers), dates at the
+    # source's precision (day when given, never rounded to a bare year), and every value
+    # traceable to a single Context document (no cross-document combining/estimating).
+    from rag.chain import _REPORT_PROMPTS
+    for report_type, prompt in _REPORT_PROMPTS.items():
+        low = prompt.lower()
+        assert "precision:" in low, report_type
+        assert "exactly as the source states it" in low, report_type
+        assert "precision the source gives" in low, report_type
+        assert "single context document" in low, report_type
+
+
 def test_all_report_prompts_scope_to_report_country():
     # Country-scoping guard: figures measuring another country's own internal
     # situation (e.g. an Iran report picking up Afghanistan's country-wide caseload
