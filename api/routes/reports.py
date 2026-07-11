@@ -19,6 +19,7 @@ from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 
 from config import get_settings
 from ingestion import analytics
+from rag import report_images
 from rag import reports as report_store
 from rag.chain import build_report_chain
 from rag.rag_context import _build_context_and_sources
@@ -40,6 +41,10 @@ router = APIRouter()
 
 def _rate_limit() -> str:
     return get_settings().RATE_LIMIT
+
+
+def settings_images_enabled() -> bool:
+    return get_settings().REPORT_IMAGES_ENABLED
 
 
 # ReliefWeb 'theme' facet (canonical theme.name strings — must match the indexed
@@ -180,6 +185,39 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
             # web renderer parses the table instead of showing a <br>-joined paragraph.
             clean_content = normalize_table_delimiters(clean_content)
 
+            cover_image = None
+            section_images = []
+            if settings_images_enabled():
+                try:
+                    yield ServerSentEvent(
+                        event="images_status",
+                        data=json.dumps({"stage": "cover"}, ensure_ascii=False),
+                    )
+                    cover_image = await anyio.to_thread.run_sync(
+                        report_images.generate_image,
+                        report_images.build_cover_prompt(req.country, req.theme, req.report_type),
+                    )
+                    headings = report_images.extract_section_headings(clean_content)
+                    for h in headings:
+                        yield ServerSentEvent(
+                            event="images_status",
+                            data=json.dumps({"stage": "section", "heading": h}, ensure_ascii=False),
+                        )
+                        img = await anyio.to_thread.run_sync(
+                            report_images.generate_image,
+                            report_images.build_section_prompt(req.country, req.theme, h),
+                        )
+                        if img:
+                            section_images.append({"heading": h, "image": img})
+                    yield ServerSentEvent(
+                        event="images",
+                        data=json.dumps({"cover": cover_image, "sections": section_images},
+                                        ensure_ascii=False),
+                    )
+                except Exception as exc:  # image generation must never block the report
+                    logger.warning("Report image block failed, saving text-only: %s", exc)
+                    cover_image, section_images = None, []
+
             # Auto-save only after a full stream (an aborted report is never written).
             report_id = str(uuid4())
             title = report_title(req.country, req.theme, req.date_from, req.date_to,
@@ -190,6 +228,8 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                     date_from=req.date_from, date_to=req.date_to, language=req.language,
                     title=title, content=clean_content, sources=sources, doc_count=len(docs),
                     report_type=req.report_type,
+                    cover_image=cover_image,
+                    section_images=section_images or None,
                 )
             )
 

@@ -436,6 +436,68 @@ class TestReportEndpoints:
             assert "bulunamadı" in events[0]["data"]["content"] or "No matching" in events[0]["data"]["content"]
             assert events[-1]["event"] == "done"
 
+    def test_stream_emits_images_and_persists(self):
+        async def mock_astream(*a, **k):
+            yield "## Overview\n"
+            yield "Situation [1]."
+
+        mock_chain = MagicMock()
+        mock_chain.astream = mock_astream
+
+        with patch("api.routes.reports.retrieve_for_report", new=AsyncMock(return_value=[_doc(1)])), \
+             patch("api.routes.reports.build_report_chain", return_value=mock_chain), \
+             patch("api.routes.reports.report_images.generate_image",
+                   return_value="data:image/png;base64,ZZZ"), \
+             patch("api.routes.reports.report_images.extract_section_headings",
+                   return_value=["Overview"]), \
+             patch("api.routes.reports.settings_images_enabled", return_value=True):
+            client = _client()
+            resp = client.post("/reports/stream", json={"country": "Sudan", "language": "en"})
+            events = _parse_sse_events(resp.text)
+            kinds = [e["event"] for e in events]
+            assert "images" in kinds
+            img_ev = next(e for e in events if e["event"] == "images")
+            assert img_ev["data"]["cover"] == "data:image/png;base64,ZZZ"
+            assert img_ev["data"]["sections"] == [{"heading": "Overview", "image": "data:image/png;base64,ZZZ"}]
+            rid = next(e for e in events if e["event"] == "saved")["data"]["report_id"]
+            rep = client.get(f"/reports/{rid}").json()
+            assert rep["cover_image"] == "data:image/png;base64,ZZZ"
+            assert rep["section_images"] == [{"heading": "Overview", "image": "data:image/png;base64,ZZZ"}]
+
+    def test_stream_image_failure_saves_text_only(self):
+        async def mock_astream(*a, **k):
+            yield "## Overview\nText [1]."
+
+        mock_chain = MagicMock()
+        mock_chain.astream = mock_astream
+
+        with patch("api.routes.reports.retrieve_for_report", new=AsyncMock(return_value=[_doc(1)])), \
+             patch("api.routes.reports.build_report_chain", return_value=mock_chain), \
+             patch("api.routes.reports.report_images.generate_image", return_value=None), \
+             patch("api.routes.reports.settings_images_enabled", return_value=True):
+            client = _client()
+            resp = client.post("/reports/stream", json={"country": "Sudan", "language": "en"})
+            events = _parse_sse_events(resp.text)
+            rid = next(e for e in events if e["event"] == "saved")["data"]["report_id"]
+            rep = client.get(f"/reports/{rid}").json()
+            assert rep["cover_image"] is None
+            assert rep["section_images"] is None   # no images, but the report saved fine
+
+    def test_stream_images_disabled_no_image_event(self):
+        async def mock_astream(*a, **k):
+            yield "## Overview\nText [1]."
+
+        mock_chain = MagicMock()
+        mock_chain.astream = mock_astream
+
+        with patch("api.routes.reports.retrieve_for_report", new=AsyncMock(return_value=[_doc(1)])), \
+             patch("api.routes.reports.build_report_chain", return_value=mock_chain), \
+             patch("api.routes.reports.settings_images_enabled", return_value=False):
+            client = _client()
+            resp = client.post("/reports/stream", json={"country": "Sudan", "language": "en"})
+            events = _parse_sse_events(resp.text)
+            assert "images" not in [e["event"] for e in events]
+
     def test_get_report_not_owner_404(self):
         from rag import reports as store
         store.create_report(
