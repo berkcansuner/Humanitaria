@@ -110,6 +110,8 @@
 
       <main ref="viewer" class="report-main" @click="onCiteClick">
         <template v-if="current">
+          <img v-if="current.cover_image" class="cover-img" :src="current.cover_image" alt="" />
+          <p v-if="current.imagesStatus" class="images-status">{{ current.imagesStatus }}</p>
           <div class="report-header">
             <h2 v-if="current.title" class="report-title-h">{{ current.title }}</h2>
             <span v-if="reportTypeBadge(current.report_type)" class="type-badge">{{
@@ -132,7 +134,12 @@
           <article
             v-else
             class="report-content"
-            v-html="renderMarkdown(current.content, current.sources)"
+            v-html="
+              injectSectionImages(
+                renderMarkdown(current.content, current.sources),
+                current.section_images,
+              )
+            "
           ></article>
           <div v-if="genError" class="error-banner"><AlertCircle :size="16" /> {{ genError }}</div>
           <SourceList v-if="current.sources" :sources="current.sources" />
@@ -153,6 +160,7 @@ import UserMenu from '../components/UserMenu.vue'
 import HelpingHandLogo from '../components/HelpingHandLogo.vue'
 import SourceList from '../components/SourceList.vue'
 import { renderMarkdown } from '../utils/renderMarkdown.js'
+import { injectSectionImages } from '../utils/reportImages.js'
 import { parseSSE } from '../utils/parseSSE.js'
 import { getReportOptions, listReports, getReport, deleteReport } from '../utils/reportsApi.js'
 import { REPORT_TYPES, reportTypeBadge } from '../utils/reportTypes.js'
@@ -231,6 +239,8 @@ async function openReport(id) {
       content: rep.content,
       sources: rep.sources,
       report_type: rep.report_type,
+      cover_image: rep.cover_image,
+      section_images: rep.section_images,
     }
     genError.value = ''
     nextTick(() => {
@@ -304,6 +314,9 @@ async function generate() {
     content: '',
     sources: null,
     report_type: form.value.report_type,
+    cover_image: null,
+    section_images: null,
+    imagesStatus: null,
   }
   controller.value = new AbortController()
   try {
@@ -351,6 +364,21 @@ async function generate() {
           try {
             current.value.sources = JSON.parse(sse.data).sources
           } catch (e) {}
+        } else if (sse.event === 'images_status') {
+          try {
+            const d = JSON.parse(sse.data)
+            current.value.imagesStatus =
+              d.stage === 'cover'
+                ? 'Generating cover illustration…'
+                : `Illustrating “${d.heading}”…`
+          } catch (e) {}
+        } else if (sse.event === 'images') {
+          try {
+            const d = JSON.parse(sse.data)
+            current.value.cover_image = d.cover
+            current.value.section_images = d.sections
+            current.value.imagesStatus = null
+          } catch (e) {}
         } else if (sse.event === 'saved') {
           let rid = null
           try {
@@ -371,6 +399,8 @@ async function generate() {
                 content: rep.content,
                 sources: rep.sources,
                 report_type: rep.report_type,
+                cover_image: rep.cover_image,
+                section_images: rep.section_images,
               }
             } catch (e) {}
           }
@@ -708,6 +738,26 @@ function onCiteClick(e) {
 }
 .saved-type-badge {
   margin-left: 6px;
+}
+.cover-img {
+  display: block;
+  max-width: 75ch;
+  width: 100%;
+  margin: 0 auto var(--space-4);
+  border-radius: var(--radius-lg);
+}
+.images-status {
+  max-width: 75ch;
+  margin: 0 auto var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+  font-style: italic;
+}
+.report-content :deep(.section-img) {
+  display: block;
+  width: 100%;
+  margin: 0.4em 0 1em;
+  border-radius: var(--radius-md);
 }
 
 .report-toolbar {
