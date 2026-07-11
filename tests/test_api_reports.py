@@ -693,6 +693,44 @@ class TestReportPdf:
         assert pdf[:4] == b"%PDF"
         assert len(pdf) > 1000
 
+    # A 1x1 transparent PNG data URI (valid, tiny) for embedding tests.
+    _PNG = ("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4"
+            "2mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=")
+
+    def test_render_pdf_with_cover_and_section_images(self):
+        from rag.report_pdf import render_report_pdf
+        sources = [{"index": 1, "title": "WFP", "url": "https://reliefweb.int/r/1",
+                    "source": "WFP", "date": "2026-05-01"}]
+        pdf = render_report_pdf({
+            "country": "Sudan", "theme": None, "date_from": None, "date_to": None,
+            "doc_count": 1, "report_type": "situation",
+            "content": "## Executive Summary\nText [1].\n\n## Outlook\nMore [1].",
+            "sources": sources,
+            "cover_image": self._PNG,
+            "section_images": [{"heading": "Executive Summary", "image": self._PNG}],
+        })
+        assert pdf[:4] == b"%PDF"
+        assert len(pdf) > 1000
+        # the embedded PNG must materially grow the PDF vs the same report without images.
+        # `sources` is kept identical to `pdf`'s so the delta isolates the image contribution
+        # (a mismatched `sources` list alone shifts PDF size by 100+ bytes, which would make
+        # this assert pass trivially even with no image embedded).
+        from rag.report_pdf import render_report_pdf as _r
+        bare = _r({"country": "Sudan", "theme": None, "date_from": None, "date_to": None,
+                   "doc_count": 1, "report_type": "situation",
+                   "content": "## Executive Summary\nText [1].\n\n## Outlook\nMore [1].",
+                   "sources": sources})
+        assert len(pdf) > len(bare) + 100
+
+    def test_render_pdf_without_images_unchanged(self):
+        # A report dict lacking image keys must still render (regression).
+        from rag.report_pdf import render_report_pdf
+        pdf = render_report_pdf({
+            "country": "Sudan", "theme": None, "date_from": "2026-01-01", "date_to": "2026-06-30",
+            "doc_count": 1, "content": "## Executive Summary\nText [1].", "sources": None,
+        })
+        assert pdf[:4] == b"%PDF"
+
 
 class TestCitationNormalization:
     def test_cited_indices_handles_groups(self):

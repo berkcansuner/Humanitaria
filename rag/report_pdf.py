@@ -112,6 +112,10 @@ table.scopebox .lbl {{ color: {_GREEN_DARK}; font-weight: bold; font-size: 7pt; 
 .body table {{ width: 100%; border-collapse: collapse; margin: 4pt 0 10pt 0; }}
 .body table th, .body table td {{ border: 0.5pt solid {_BORDER}; padding: 4pt 6pt; font-size: 8.5pt; text-align: left; }}
 .body table th {{ background-color: {_GREEN_SOFT}; color: {_GREEN_DARK}; font-weight: bold; }}
+.cover-img {{ margin: 10pt 0 6pt 0; }}
+.cover-img img {{ width: 100%; }}
+.section-img {{ margin: 4pt 0 8pt 0; }}
+.section-img img {{ width: 100%; }}
 .cite {{ color: {_GREEN}; font-weight: bold; }}
 
 h2.sources-h {{ font-size: 11pt; color: {_GREEN_DARK}; border-bottom: 0.75pt solid {_BORDER}; padding-bottom: 2pt; margin: 16pt 0 6pt 0; }}
@@ -149,10 +153,21 @@ def _sources_rows(sources) -> str:
     return "".join(rows)
 
 
-def _body_html(markdown_text: str) -> str:
-    """Markdown → HTML, then tint citation markers [n] green."""
+def _body_html(markdown_text: str, section_images=None) -> str:
+    """Markdown → HTML, tint citation markers, and inject each section image right
+    after its matching <h2> heading."""
     html_body = _markdown.markdown(markdown_text or "", extensions=["extra", "sane_lists"])
-    return re.sub(r"\[(\d+)\]", r'<span class="cite">[\1]</span>', html_body)
+    html_body = re.sub(r"\[(\d+)\]", r'<span class="cite">[\1]</span>', html_body)
+    for item in (section_images or []):
+        heading = html.escape(str(item.get("heading", "")))
+        img = item.get("image") or ""
+        if not heading or not img:
+            continue
+        # markdown renders '## Heading' as '<h2>Heading</h2>'; insert the image after it.
+        pattern = re.compile(r"(<h2>" + re.escape(heading) + r"</h2>)")
+        replacement = r"\1" + f'<div class="section-img"><img src="{html.escape(img)}" /></div>'
+        html_body = pattern.sub(replacement, html_body, count=1)
+    return html_body
 
 
 def render_report_pdf(report: dict) -> bytes:
@@ -167,13 +182,19 @@ def render_report_pdf(report: dict) -> bytes:
     source_count = len(_valid_sources(report.get("sources")))
     generated = datetime.now(timezone.utc).strftime("%d %b %Y")
     type_label = _type_label(report.get("report_type"))
+    cover_image = report.get("cover_image")
+    section_images = report.get("section_images")
+    cover_html = (
+        f'<div class="cover-img"><img src="{html.escape(str(cover_image))}" /></div>'
+        if cover_image else ""
+    )
 
     doc = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>{_CSS}</style></head><body>
 <table class="brandbar" width="100%"><tr>
   <td class="brand">Humanitaria</td>
   <td class="brandsub" align="right" valign="middle">{html.escape(type_label)}</td>
 </tr></table>
-
+{cover_html}
 <h1 class="reporttitle">{country} &middot; {sector}</h1>
 <div class="titlerule"></div>
 
@@ -184,7 +205,7 @@ def render_report_pdf(report: dict) -> bytes:
   <td width="18%"><span class="lbl">Generated</span><br/>{html.escape(generated)}</td>
 </tr></table>
 
-<div class="body">{_body_html(report.get("content"))}</div>
+<div class="body">{_body_html(report.get("content"), section_images)}</div>
 
 <h2 class="sources-h">Sources</h2>
 <table class="sources" width="100%">{_sources_rows(report.get("sources"))}</table>
