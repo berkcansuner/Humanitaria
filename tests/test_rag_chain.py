@@ -143,6 +143,18 @@ def test_indicator_prompt_requires_indicator_table_section():
     assert "never invent" in low
 
 
+def test_indicator_table_has_no_source_column():
+    # The indicator table is citation-free: no 'Source' column, a 3-column separator,
+    # and an explicit instruction not to put [n] markers in table cells. Sources are
+    # listed once at the bottom of the report (the prose sections still carry [n]).
+    from rag.chain import _INDICATOR_SYSTEM_PROMPT
+    p = _INDICATOR_SYSTEM_PROMPT
+    assert "'Indicator', 'Latest value', 'As of'" in p
+    assert "| --- | --- | --- |" in p
+    assert "| --- | --- | --- | --- |" not in p          # no 4-column separator
+    assert "do not add a 'source' column" in p.lower()
+
+
 def test_needs_assessment_prompt_requires_sections():
     from rag.chain import _NEEDS_ASSESSMENT_SYSTEM_PROMPT
     low = _NEEDS_ASSESSMENT_SYSTEM_PROMPT.lower()
