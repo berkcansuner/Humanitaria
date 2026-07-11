@@ -44,6 +44,13 @@ class Settings(BaseSettings):
     # Gemini embedding (OpenAI-uyumlu endpoint; GEMINI_API_KEY/GEMINI_BASE_URL yeniden kullanılır)
     GEMINI_EMBED_MODEL: str = "gemini-embedding-001"
 
+    # Gemini image generation (M&E report visuals, Phase B)
+    GEMINI_IMAGE_MODEL: str = "gemini-3.1-flash-image"   # 2.5-flash-image sunsets Oct 2026
+    GEMINI_IMAGE_BASE_URL: str = ""                       # empty → derive from GEMINI_BASE_URL (spike may override)
+    GEMINI_IMAGE_TIMEOUT: int = 30                        # seconds per image call
+    REPORT_IMAGES_ENABLED: bool = False                  # kill-switch; prod flips to True after verification
+    REPORT_IMAGE_MAX_SECTIONS: int = 6                   # cap on non-cover section images (cost ceiling)
+
     # Pinecone (serverless)
     PINECONE_API_KEY: str = ""
     PINECONE_INDEX: str = "reliefweb-docs"
