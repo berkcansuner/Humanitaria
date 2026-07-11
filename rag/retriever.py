@@ -111,7 +111,12 @@ def build_retriever(filter: Optional[Dict[str, Any]] = None, k: Optional[int] = 
     # date filter will thin the pool in Python afterwards.
     has_date_filter = isinstance(filter, dict) and "date" in filter
     fetch_multiplier = 12 if has_date_filter else 3
-    fetch_k = max(settings.MMR_FETCH_K, k * fetch_multiplier)
+    # Cap the candidate pool: a report's wide k (indicator top_k 16 → candidate_k 64)
+    # combined with the date over-fetch reaches k*12 = 768, and MMR over that many
+    # 3072-dim vectors is slow enough on constrained CPU to blow the request timeout
+    # (the indicator-report 502). The date filter is already applied server-side by
+    # Pinecone (date_ts $gte/$lte), so a smaller pool loses little recall.
+    fetch_k = min(max(settings.MMR_FETCH_K, k * fetch_multiplier), settings.MMR_FETCH_K_CAP)
     return vectorstore.as_retriever(
         search_type="mmr",
         search_kwargs={

@@ -99,6 +99,21 @@ class TestRetriever:
             plain_fetch_k = mock_vs.as_retriever.call_args[1]["search_kwargs"]["fetch_k"]
         assert dated_fetch_k > plain_fetch_k
 
+    def test_build_retriever_fetch_k_capped_for_wide_k(self):
+        # An indicator report's wide candidate pool (top_k 16 → candidate_k 64) with a
+        # date filter would compute fetch_k = 64*12 = 768; MMR over that many 3072-dim
+        # vectors is slow enough on constrained CPU to blow the request timeout (the
+        # indicator-report 502 bug). fetch_k must be capped at MMR_FETCH_K_CAP.
+        with patch("rag.retriever._get_vectorstore") as mock_get_vs:
+            settings = get_settings()
+            mock_vs = MagicMock()
+            mock_vs.as_retriever.return_value = MagicMock()
+            mock_get_vs.return_value = mock_vs
+            build_retriever(filter={"date": {"from": "2024-01-01"}}, k=64)
+            fetch_k = mock_vs.as_retriever.call_args[1]["search_kwargs"]["fetch_k"]
+        assert fetch_k == settings.MMR_FETCH_K_CAP
+        assert fetch_k < 64 * 12  # not the uncapped 768
+
     def test_build_retriever_no_filter(self):
         with patch("rag.retriever._get_vectorstore") as mock_get_vs:
             settings = get_settings()

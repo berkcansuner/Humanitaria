@@ -66,6 +66,7 @@ class Settings(BaseSettings):
     # history (resolves anaphora like "what about the north?"). Kill-switch.
     QUERY_REWRITE_ENABLED: bool = True
     MMR_FETCH_K: int = 20          # candidate pool for MMR diversity
+    MMR_FETCH_K_CAP: int = 256     # upper bound on the MMR candidate pool — keeps MMR over 3072-dim vectors tractable on constrained CPU (a wide report top_k × the date over-fetch could otherwise reach ~768 and blow the request timeout)
     MMR_LAMBDA: float = 0.5        # 0=max diversity, 1=max relevance
     # Two-stage retrieval: Pinecone hosted reranker over a larger candidate pool.
     RERANK_ENABLED: bool = True
