@@ -24,4 +24,14 @@ describe('injectSectionImages', () => {
     const out = injectSectionImages(html, [{ heading: 'Missing', image: 'data:...' }])
     expect(out).toBe(html)
   })
+
+  it('matches a heading with special chars against marked-escaped HTML', () => {
+    // marked escapes '&' to '&amp;' in the rendered <h2>, so the matcher must too.
+    const html = '<h2>Food Security &amp; Livelihoods</h2><p>x</p>'
+    const out = injectSectionImages(html, [
+      { heading: 'Food Security & Livelihoods', image: 'data:image/png;base64,AAA' },
+    ])
+    expect(out).toContain('</h2><img')
+    expect(out).toContain('src="data:image/png;base64,AAA"')
+  })
 })

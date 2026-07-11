@@ -380,6 +380,7 @@ async function generate() {
             current.value.imagesStatus = null
           } catch (e) {}
         } else if (sse.event === 'saved') {
+          current.value.imagesStatus = null
           let rid = null
           try {
             const d = JSON.parse(sse.data)
