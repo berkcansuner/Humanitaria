@@ -109,6 +109,9 @@ class TestTechnicalMonitoringRoute:
             assert "saved" not in [e["event"] for e in events]
 
     def test_technical_empty_findings_message(self):
+        # FIX #7: boş-bulgu mesajı belge-retrieval yolunun _no_docs_message'ını (yanlış
+        # şekilde "belge bulunamadı" diyen) DEĞİL, HDX HAPI istatistik pipeline'ına özgü
+        # bir mesajı kullanmalı.
         from analytics.technical_report import Findings
         empty = Findings(sections=[], gaps=["İnsani ihtiyaç: veri çekilemedi"], indicators_covered=[])
         with patch("api.routes.reports.technical_report.compute_findings", return_value=empty), \
@@ -119,5 +122,24 @@ class TestTechnicalMonitoringRoute:
             })
             events = _parse_sse_events(resp.text)
             assert events[0]["event"] == "token"
+            content = events[0]["data"]["content"]
+            assert "HDX HAPI" in content
+            assert "document" not in content.lower()
+            assert "Sudan" in content
             assert "saved" not in [e["event"] for e in events]
             assert events[-1]["event"] == "done"
+
+    def test_technical_empty_findings_message_turkish(self):
+        from analytics.technical_report import Findings
+        empty = Findings(sections=[], gaps=["İnsani ihtiyaç: veri çekilemedi"], indicators_covered=[])
+        with patch("api.routes.reports.technical_report.compute_findings", return_value=empty), \
+             patch("api.routes.reports.retrieve_for_report",
+                   new=AsyncMock(side_effect=AssertionError("must not fall through"))):
+            resp = _client().post("/reports/stream", json={
+                "country": "Sudan", "report_type": "technical_monitoring", "language": "tr",
+            })
+            events = _parse_sse_events(resp.text)
+            content = events[0]["data"]["content"]
+            assert "HDX HAPI" in content
+            assert "belge bulunamadı" not in content
+            assert "Sudan" in content

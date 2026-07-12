@@ -132,6 +132,22 @@ def _no_docs_message(req: ReportRequest) -> str:
     )
 
 
+def _no_findings_message(req: ReportRequest) -> str:
+    """technical_monitoring için boş-bulgu mesajı — _no_docs_message'ın "belge bulunamadı"
+    ifadesi yanlış olur, çünkü bu rapor tipi belge-retrieval değil HDX HAPI istatistik
+    pipeline'ı kullanır."""
+    window = f"{req.date_from or '…'}–{req.date_to or '…'}"
+    if req.language == "tr":
+        return (
+            f"**{req.country}** için seçilen dönemde ({window}) HDX HAPI'den istatistiksel "
+            "analiz yapmaya yetecek indikatör verisi bulunamadı."
+        )
+    return (
+        f"No HDX HAPI indicator data sufficient for statistical analysis was found for "
+        f"**{req.country}** in the selected period ({window})."
+    )
+
+
 def _countries() -> list[str]:
     """Country options for the form. Prefer the indexed-derived list when the scan
     cache is warm (precise, data-backed); fall back to the static COUNTRIES snapshot
@@ -173,7 +189,7 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                 if not findings.sections:
                     yield ServerSentEvent(
                         event="token",
-                        data=json.dumps({"content": _no_docs_message(req)}, ensure_ascii=False),
+                        data=json.dumps({"content": _no_findings_message(req)}, ensure_ascii=False),
                     )
                     yield ServerSentEvent(event="done", data="{}")
                     return

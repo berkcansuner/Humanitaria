@@ -1,4 +1,4 @@
-from analytics.datasets import national_series, regional_series
+from analytics.datasets import national_series, regional_series, has_required_filter_columns
 from analytics.indicators import by_key
 
 
@@ -49,3 +49,27 @@ def test_empty_rows_yield_empty():
     idps = by_key("idps")
     assert national_series([], idps) == ([], [])
     assert regional_series([], idps) == {}
+
+
+def test_has_required_filter_columns_true_when_indicator_has_no_filters():
+    idps = by_key("idps")
+    assert has_required_filter_columns([_row(100, "2025-01-01")], idps) is True
+
+
+def test_has_required_filter_columns_true_when_column_present():
+    hn = by_key("humanitarian_needs")
+    rows = [_row(300, "2025-01-01", status="INN")]
+    assert has_required_filter_columns(rows, hn) is True
+
+
+def test_has_required_filter_columns_false_when_column_missing():
+    # population_status alanı hiç gelmemiş → filtre sessizce no-op olup tüm
+    # sektörleri toplamamalı; çağıran bunu gap'e düşürmeli.
+    hn = by_key("humanitarian_needs")
+    rows = [_row(300, "2025-01-01")]   # status=None → population_status alanı yok
+    assert has_required_filter_columns(rows, hn) is False
+
+
+def test_has_required_filter_columns_true_when_rows_empty():
+    hn = by_key("humanitarian_needs")
+    assert has_required_filter_columns([], hn) is True

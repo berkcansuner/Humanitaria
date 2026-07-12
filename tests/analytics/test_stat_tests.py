@@ -14,6 +14,7 @@ def test_trend_detects_clear_increase():
     assert r.p_value is not None and r.p_value < ALPHA
     assert r.pct_change == pytest.approx(400.0)
     assert r.ci_low is not None and r.ci_high is not None
+    assert r.intercept == pytest.approx(10.0)
 
 
 def test_trend_flat_series_no_trend():
@@ -27,12 +28,14 @@ def test_trend_insufficient_points():
     assert r.direction == "insufficient_data"
     assert r.slope is None and r.p_value is None
     assert r.n_points == 2
+    assert r.intercept is None
 
 
 def test_trend_zero_variance():
     r = trend([5, 5, 5, 5, 5], indicator="IDPs")
     assert r.direction == "insufficient_data"
     assert r.p_value is None
+    assert r.intercept is None
 
 
 def test_trend_ignores_nan():

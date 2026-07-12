@@ -29,6 +29,19 @@ def _frame(rows: list[dict], indicator: Indicator) -> pd.DataFrame:
     return df
 
 
+def has_required_filter_columns(rows: list[dict], indicator: Indicator) -> bool:
+    """indicator.filters uygulanabilir mi? Filtre yoksa her zaman True. Satırlar
+    boşsa karar national_series'in kendi 'veri yok' dalına bırakılır (True).
+    Filtre alanı satırlarda hiç yoksa False — çağıran, double-counting riskine
+    karşı bu indikatörü unfiltered toplamak yerine gap'e düşürmeli."""
+    if not indicator.filters or not rows:
+        return True
+    columns: set[str] = set()
+    for r in rows:
+        columns.update(r.keys())
+    return all(key in columns for key in indicator.filters)
+
+
 def _agg(series: pd.Series, how: str) -> float:
     if how == "mean":
         return float(series.mean())

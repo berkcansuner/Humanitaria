@@ -27,6 +27,7 @@ class TrendResult:
     pct_change: float | None
     ci_low: float | None
     ci_high: float | None
+    intercept: float | None   # OLS intercept (linregress) — grafikte trend çizgisinin başlangıcı
 
 
 @dataclass(frozen=True)
@@ -83,7 +84,7 @@ def trend(values, indicator: str, min_points: int = 4) -> TrendResult:
     n = len(v)
     # Yetersiz veri / sıfır varyans → test yok.
     if n < min_points or len(set(v)) < 2:
-        return TrendResult(indicator, n, None, None, "insufficient_data", None, None, None)
+        return TrendResult(indicator, n, None, None, "insufficient_data", None, None, None, None)
     x = list(range(n))
     lr = stats.linregress(x, v)
     tcrit = stats.t.ppf(0.975, n - 2)
@@ -103,6 +104,7 @@ def trend(values, indicator: str, min_points: int = 4) -> TrendResult:
         indicator=indicator, n_points=n, slope=float(lr.slope),
         p_value=float(mk_res.p), direction=direction, pct_change=pct,
         ci_low=float(lr.slope - half), ci_high=float(lr.slope + half),
+        intercept=float(lr.intercept),
     )
 
 

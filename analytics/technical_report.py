@@ -11,7 +11,7 @@ from dataclasses import dataclass
 import requests
 
 from analytics.charts import comparison_chart, correlation_chart, trend_chart
-from analytics.datasets import national_series, regional_series
+from analytics.datasets import has_required_filter_columns, national_series, regional_series
 from analytics.hapi_client import HapiError, fetch_rows
 from analytics.indicators import INDICATORS
 from analytics.stat_tests import by_region, compare, correlate, trend
@@ -57,69 +57,84 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None) -> F
             gaps.append(f"{ind.label}: veri çekilemedi")
             continue
 
-        rows = _filter_period(rows, date_from, date_to)
-        periods, values = national_series(rows, ind)
-        if not values:
-            gaps.append(f"{ind.label}: dönem içinde veri yok")
-            continue
-        covered.append(ind.key)
-        national_by_label[ind.label] = (periods, values)
+        # Fetch başarılıysa: seri kurma + tüm istatistik testleri + grafikler bu
+        # try/except altında. Herhangi biri (örn. stats.kruskal'ın sabit-değerli
+        # bölgelerde fırlattığı ValueError) patlarsa tüm rapor değil, yalnızca bu
+        # indikatör gap'e düşer — diğer indikatörler işlenmeye devam eder.
+        try:
+            rows = _filter_period(rows, date_from, date_to)
+            if not has_required_filter_columns(rows, ind):
+                # Filtre alanı (örn. population_status) veride yoksa filtre
+                # sessizce no-op olur ve tüm sektörler toplanır → şişirilmiş,
+                # yanlış "otoriter" toplam. Unfiltered toplamak yerine atla.
+                missing = ", ".join(ind.filters.keys())
+                gaps.append(f"{ind.label}: beklenen filtre alanı ({missing}) veride yok, atlandı")
+                continue
+            periods, values = national_series(rows, ind)
+            if not values:
+                gaps.append(f"{ind.label}: dönem içinde veri yok")
+                continue
+            covered.append(ind.key)
+            national_by_label[ind.label] = (periods, values)
 
-        # Trend
-        tr = trend(values, indicator=ind.label, min_points=min_pts)
-        if tr.direction == "insufficient_data":
-            gaps.append(f"{ind.label}: trend için yetersiz veri (n={tr.n_points})")
-        else:
-            intercept = values[0]
-            chart = trend_chart(periods, values, tr.slope, intercept,
-                                title=f"{ind.label} — Trend", ylabel=ind.label)
-            sections.append(ReportSection(
-                heading=f"{ind.label} — Trend Analizi",
-                stat_result={"kind": "trend", "indicator": ind.label,
-                             "direction": tr.direction, "slope": tr.slope,
-                             "p_value": tr.p_value, "pct_change": tr.pct_change,
-                             "n_points": tr.n_points, "ci_low": tr.ci_low,
-                             "ci_high": tr.ci_high},
-                chart=chart,
-                findings_text=_trend_text(tr),
-            ))
-
-        # Dönem karşılaştırması (ilk yarı vs ikinci yarı)
-        # min_pts trend adımıyla tutarlı; min_pts >= 4 KALMALI, çünkü yarı-bölme
-        # her iki gruba >= 2 nokta garantisi verir (t-testinin grup-başı >= 2 tabanı).
-        if len(values) >= min_pts:
-            mid = len(values) // 2
-            cmp = compare(values[:mid], values[mid:], indicator=ind.label,
-                          period_a=f"{periods[0]}–{periods[mid-1]}",
-                          period_b=f"{periods[mid]}–{periods[-1]}")
-            if cmp.note != "insufficient_data":
+            # Trend
+            tr = trend(values, indicator=ind.label, min_points=min_pts)
+            if tr.direction == "insufficient_data":
+                gaps.append(f"{ind.label}: trend için yetersiz veri (n={tr.n_points})")
+            else:
+                chart = trend_chart(periods, values, tr.slope, tr.intercept,
+                                    title=f"{ind.label} — Trend", ylabel=ind.label)
                 sections.append(ReportSection(
-                    heading=f"{ind.label} — Dönem Karşılaştırması",
-                    stat_result={"kind": "compare", "indicator": ind.label,
-                                 "pct_change": cmp.pct_change, "p_value": cmp.p_value,
-                                 "significant": cmp.significant,
-                                 "period_a": cmp.period_a, "period_b": cmp.period_b},
-                    chart=None,
-                    findings_text=_compare_text(cmp),
+                    heading=f"{ind.label} — Trend Analizi",
+                    stat_result={"kind": "trend", "indicator": ind.label,
+                                 "direction": tr.direction, "slope": tr.slope,
+                                 "p_value": tr.p_value, "pct_change": tr.pct_change,
+                                 "n_points": tr.n_points, "ci_low": tr.ci_low,
+                                 "ci_high": tr.ci_high},
+                    chart=chart,
+                    findings_text=_trend_text(tr),
                 ))
 
-        # Bölgeler-arası (admin-1)
-        reg = regional_series(rows, ind)
-        if len(reg) >= 2:
-            rr = by_region(reg, indicator=ind.label, period=f"{periods[0]}–{periods[-1]}")
-            labels = [r for r, _ in rr.ranking]
-            vals = [v for _, v in rr.ranking]
-            chart = comparison_chart(labels, vals,
-                                     title=f"{ind.label} — Bölge Karşılaştırması",
-                                     ylabel=ind.label)
-            sections.append(ReportSection(
-                heading=f"{ind.label} — Bölgesel Analiz",
-                stat_result={"kind": "region", "indicator": ind.label,
-                             "ranking": rr.ranking, "p_value": rr.p_value,
-                             "significant": rr.significant},
-                chart=chart,
-                findings_text=_region_text(rr),
-            ))
+            # Dönem karşılaştırması (ilk yarı vs ikinci yarı)
+            # min_pts trend adımıyla tutarlı; min_pts >= 4 KALMALI, çünkü yarı-bölme
+            # her iki gruba >= 2 nokta garantisi verir (t-testinin grup-başı >= 2 tabanı).
+            if len(values) >= min_pts:
+                mid = len(values) // 2
+                cmp = compare(values[:mid], values[mid:], indicator=ind.label,
+                              period_a=f"{periods[0]}–{periods[mid-1]}",
+                              period_b=f"{periods[mid]}–{periods[-1]}")
+                if cmp.note != "insufficient_data":
+                    sections.append(ReportSection(
+                        heading=f"{ind.label} — Dönem Karşılaştırması",
+                        stat_result={"kind": "compare", "indicator": ind.label,
+                                     "pct_change": cmp.pct_change, "p_value": cmp.p_value,
+                                     "significant": cmp.significant,
+                                     "period_a": cmp.period_a, "period_b": cmp.period_b},
+                        chart=None,
+                        findings_text=_compare_text(cmp),
+                    ))
+
+            # Bölgeler-arası (admin-1)
+            reg = regional_series(rows, ind)
+            if len(reg) >= 2:
+                rr = by_region(reg, indicator=ind.label, period=f"{periods[0]}–{periods[-1]}")
+                labels = [r for r, _ in rr.ranking]
+                vals = [v for _, v in rr.ranking]
+                chart = comparison_chart(labels, vals,
+                                         title=f"{ind.label} — Bölge Karşılaştırması",
+                                         ylabel=ind.label)
+                sections.append(ReportSection(
+                    heading=f"{ind.label} — Bölgesel Analiz",
+                    stat_result={"kind": "region", "indicator": ind.label,
+                                 "ranking": rr.ranking, "p_value": rr.p_value,
+                                 "significant": rr.significant},
+                    chart=chart,
+                    findings_text=_region_text(rr),
+                ))
+        except Exception as exc:
+            logger.warning("%s indikatörü analiz hatası (%s): %s", ind.key, iso3, exc)
+            gaps.append(f"{ind.label}: analiz hatası")
+            continue
 
     # İndikatörler-arası korelasyon: ortak dönemi olan indikatör çiftleri.
     labels = list(national_by_label.keys())
@@ -206,11 +221,17 @@ def _correlation_text(cor) -> str:
 
 
 def findings_to_context(findings: Findings) -> str:
+    # Her bölümün başlığı '## ' satırı olarak VERBATIM (kod-üretimli, s.heading) taşınır.
+    # Render tarafı (report_pdf.py / reportImages.js) grafiği bu başlığa göre LLM çıktısındaki
+    # '## ' başlığıyla eşleştirir — LLM başlığı burada göremezse kendi başlığını uydurur ve
+    # grafik hiçbir zaman eşleşmez (bkz. FIX I1). Bu yüzden başlık LLM'e aynen verilir; prompt
+    # bunu değiştirmeden kopyalamasını zorunlu kılar.
     lines = ["COMPUTED STATISTICAL FINDINGS (do not recompute — narrate only):", ""]
     for s in findings.sections:
-        lines.append(f"- {s.findings_text}")
-    if findings.gaps:
+        lines.append(f"## {s.heading}")
+        lines.append(s.findings_text)
         lines.append("")
+    if findings.gaps:
         lines.append("DATA GAPS:")
         for g in findings.gaps:
             lines.append(f"- {g}")
