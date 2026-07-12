@@ -225,6 +225,11 @@ def test_technical_prompt_registered_and_narrate_only():
     assert "α" in p or "alpha" in low or "0.05" in p
     # Yetersiz veriyi anlamlıymış gibi sunma.
     assert "insufficient" in low
+    # Bölüm başlıkları İngilizce (rule 2 dile çevirir); Türkçe sabit başlık kalmamalı.
+    assert "Data Coverage & Limitations" in p and "Methods" in p
+    assert "Veri Kapsamı" not in p and "Yöntem" not in p
+    # Başlıklar level-2 ('## ') olmalı — görsel/PDF pipeline yalnızca '## ' tanır.
+    assert "## " in p
 
 
 def test_technical_report_type_wired_in_service():
