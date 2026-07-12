@@ -60,6 +60,29 @@ def test_assemble_section_images_shape(_mock):
     assert all(d["image"].startswith("data:image/png;base64,") for d in imgs)
 
 
+def _multi_region_rows(key):
+    # idps için ≥4 dönem × 2 ayrı admin1 bölgesi → regional_series ≥2 bölge döndürür,
+    # by_region analiz yolu (len(reg) >= 2) tetiklenir.
+    if key == "idps":
+        rows = []
+        for region, code, base in [("North", "AF01", 100), ("South", "AF02", 50)]:
+            for i, p in enumerate(["2025-01-01", "2025-04-01", "2025-07-01", "2025-10-01"]):
+                rows.append({"population": base + i * 40, "reference_period_start": p,
+                             "admin1_name": region, "admin1_code": code})
+        return rows
+    return []
+
+
+@patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _multi_region_rows(
+    "idps" if ep.endswith("idps") else "other"))
+def test_by_region_section_for_multi_region_indicator(_mock):
+    f = compute_findings("AFG", "2025-01-01", "2025-12-31")
+    region_sections = [s for s in f.sections if s.stat_result.get("kind") == "region"]
+    assert region_sections, "≥2 bölgeli indikatör bölgesel analiz bölümü üretmeli"
+    assert region_sections[0].chart is not None
+    assert region_sections[0].stat_result["ranking"], "ranking dolu olmalı"
+
+
 def _two_indicator_rows(ep):
     # idps ve food_security için ortak dönemli, ilişkili iki seri → korelasyon.
     base = {

@@ -35,10 +35,6 @@ class Findings:
     indicators_covered: list
 
 
-def _period_label(periods: list[str]) -> tuple[str, str]:
-    return (periods[0], periods[-1]) if periods else ("?", "?")
-
-
 def compute_findings(iso3: str, date_from: str | None, date_to: str | None) -> Findings:
     settings = get_settings()
     min_pts = settings.TECHNICAL_REPORT_MIN_POINTS
@@ -89,7 +85,9 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None) -> F
             ))
 
         # Dönem karşılaştırması (ilk yarı vs ikinci yarı)
-        if len(values) >= 4:
+        # min_pts trend adımıyla tutarlı; min_pts >= 4 KALMALI, çünkü yarı-bölme
+        # her iki gruba >= 2 nokta garantisi verir (t-testinin grup-başı >= 2 tabanı).
+        if len(values) >= min_pts:
             mid = len(values) // 2
             cmp = compare(values[:mid], values[mid:], indicator=ind.label,
                           period_a=f"{periods[0]}–{periods[mid-1]}",
