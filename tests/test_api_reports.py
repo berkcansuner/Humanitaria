@@ -584,10 +584,9 @@ class TestReportEndpoints:
         from rag.report_service import REPORT_TYPES
         from api.routes.reports import ReportRequest
         literal_values = ReportRequest.model_fields["report_type"].annotation.__args__
-        # The route exposes every registered type EXCEPT technical_monitoring, whose selectable
-        # route branch (HAPI pipeline) arrives in Task 9. Until then it is registered in the rag
-        # layer but not user-facing — the only permitted registry/route drift.
-        assert set(literal_values) == set(REPORT_TYPES) - {"technical_monitoring"}
+        # Every registered report type is now user-facing (technical_monitoring's route
+        # branch landed in Task 9), so the registry and the route Literal must match exactly.
+        assert set(literal_values) == set(REPORT_TYPES)
 
 
 class TestReportPdf:
@@ -677,6 +676,7 @@ class TestReportPdf:
         assert _type_label("situation") == "M&E Situation Report"
         assert _type_label("indicator_monitoring") == "M&E Indicator Monitoring Report"
         assert _type_label("needs_assessment") == "M&E Needs Assessment Brief"
+        assert _type_label("technical_monitoring") == "Technical Monitoring Report"
         assert _type_label("unknown_type") == "M&E Situation Report"
 
     def test_render_pdf_with_indicator_table(self):

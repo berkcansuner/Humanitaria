@@ -17,6 +17,8 @@ from pydantic import BaseModel, Field
 from typing import Literal, Optional
 from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 
+from analytics import technical_report
+from analytics.countries import iso3_for
 from config import get_settings
 from ingestion import analytics
 from rag import report_images
@@ -111,7 +113,9 @@ class ReportRequest(BaseModel):
     date_from: Optional[str] = None
     date_to: Optional[str] = None
     language: Literal["tr", "en"] = "en"
-    report_type: Literal["situation", "indicator_monitoring", "needs_assessment"] = "situation"
+    report_type: Literal[
+        "situation", "indicator_monitoring", "needs_assessment", "technical_monitoring"
+    ] = "situation"
 
 
 def _no_docs_message(req: ReportRequest) -> str:
@@ -147,6 +151,75 @@ async def report_options(user: dict = Depends(get_current_user)):
 async def report_stream(request: Request, req: ReportRequest, user: dict = Depends(get_current_user)):
     async def event_generator():
         try:
+            # technical_monitoring: HAPI+istatistik pipeline'ı — belge-retrieval yoluna
+            # ASLA düşmemeli (narrate-only prompt sözleşmesi). Bu yüzden erken return.
+            if req.report_type == "technical_monitoring":
+                iso3 = iso3_for(req.country)
+                if iso3 is None:
+                    yield ServerSentEvent(
+                        event="token",
+                        data=json.dumps(
+                            {"content": (
+                                f"**{req.country}** için HDX HAPI ülke kodu (ISO3) "
+                                "bulunamadı; teknik rapor bu ülke için oluşturulamıyor."
+                            )}, ensure_ascii=False),
+                    )
+                    yield ServerSentEvent(event="done", data="{}")
+                    return
+
+                findings = await anyio.to_thread.run_sync(
+                    technical_report.compute_findings, iso3, req.date_from, req.date_to
+                )
+                if not findings.sections:
+                    yield ServerSentEvent(
+                        event="token",
+                        data=json.dumps({"content": _no_docs_message(req)}, ensure_ascii=False),
+                    )
+                    yield ServerSentEvent(event="done", data="{}")
+                    return
+
+                context = technical_report.findings_to_context(findings)
+                directive = build_report_directive(
+                    req.country, req.theme, req.date_from, req.date_to,
+                    len(findings.indicators_covered), req.language,
+                    report_type=req.report_type,
+                )
+                chain = build_report_chain(req.report_type)
+
+                full = ""
+                async for chunk in _astream_with_retry(
+                    chain, {"question": directive, "context": context},
+                    get_settings().CHAT_LLM_MAX_RETRIES,
+                ):
+                    if chunk:
+                        full += chunk
+                        yield ServerSentEvent(
+                            event="token",
+                            data=json.dumps({"content": chunk}, ensure_ascii=False),
+                        )
+
+                section_images = technical_report.assemble_section_images(findings)
+                report_id = str(uuid4())
+                title = report_title(req.country, req.theme, req.date_from, req.date_to,
+                                     report_type=req.report_type)
+                await anyio.to_thread.run_sync(
+                    lambda: report_store.create_report(
+                        report_id, user["id"], country=req.country, theme=req.theme,
+                        date_from=req.date_from, date_to=req.date_to, language=req.language,
+                        title=title, content=full, sources=None,
+                        doc_count=len(findings.indicators_covered),
+                        report_type=req.report_type,
+                        cover_image=None,
+                        section_images=section_images or None,
+                    )
+                )
+                yield ServerSentEvent(
+                    event="saved",
+                    data=json.dumps({"report_id": report_id, "title": title}, ensure_ascii=False),
+                )
+                yield ServerSentEvent(event="done", data="{}")
+                return
+
             docs = await retrieve_for_report(
                 req.country, req.theme, req.date_from, req.date_to, report_type=req.report_type
             )
