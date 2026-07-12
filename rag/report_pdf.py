@@ -50,6 +50,7 @@ _REPORT_TYPE_LABELS = {
     "situation": "M&E Situation Report",
     "indicator_monitoring": "M&E Indicator Monitoring Report",
     "needs_assessment": "M&E Needs Assessment Brief",
+    "technical_monitoring": "Technical Monitoring Report",
 }
 
 

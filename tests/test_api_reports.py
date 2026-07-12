@@ -353,7 +353,11 @@ class TestReportService:
 
     def test_report_types_constant(self):
         from rag.report_service import REPORT_TYPES
-        assert REPORT_TYPES == ("situation", "indicator_monitoring", "needs_assessment")
+        # technical_monitoring is registered in the rag layer in Task 8 (chain + service);
+        # its selectable route branch (HAPI pipeline) lands in Task 9.
+        assert REPORT_TYPES == (
+            "situation", "indicator_monitoring", "needs_assessment", "technical_monitoring",
+        )
 
 
 # --- analytics distinct countries -------------------------------------------
@@ -580,7 +584,9 @@ class TestReportEndpoints:
         from rag.report_service import REPORT_TYPES
         from api.routes.reports import ReportRequest
         literal_values = ReportRequest.model_fields["report_type"].annotation.__args__
-        assert set(REPORT_TYPES) == set(literal_values)
+        # Every registered report type is now user-facing (technical_monitoring's route
+        # branch landed in Task 9), so the registry and the route Literal must match exactly.
+        assert set(literal_values) == set(REPORT_TYPES)
 
 
 class TestReportPdf:
@@ -670,6 +676,7 @@ class TestReportPdf:
         assert _type_label("situation") == "M&E Situation Report"
         assert _type_label("indicator_monitoring") == "M&E Indicator Monitoring Report"
         assert _type_label("needs_assessment") == "M&E Needs Assessment Brief"
+        assert _type_label("technical_monitoring") == "Technical Monitoring Report"
         assert _type_label("unknown_type") == "M&E Situation Report"
 
     def test_render_pdf_with_indicator_table(self):

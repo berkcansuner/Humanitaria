@@ -2,11 +2,12 @@ import { describe, it, expect } from 'vitest'
 import { REPORT_TYPES, reportTypeBadge } from './reportTypes.js'
 
 describe('reportTypes', () => {
-  it('lists exactly the three backend report types', () => {
+  it('lists exactly the four backend report types', () => {
     expect(REPORT_TYPES.map((t) => t.value)).toEqual([
       'situation',
       'indicator_monitoring',
       'needs_assessment',
+      'technical_monitoring',
     ])
   })
 
@@ -19,5 +20,14 @@ describe('reportTypes', () => {
     expect(reportTypeBadge('situation')).toBeNull()
     expect(reportTypeBadge(undefined)).toBeNull()
     expect(reportTypeBadge('')).toBeNull()
+  })
+
+  it('includes the technical_monitoring type', () => {
+    const values = REPORT_TYPES.map((t) => t.value)
+    expect(values).toContain('technical_monitoring')
+  })
+
+  it('has a badge for technical_monitoring', () => {
+    expect(reportTypeBadge('technical_monitoring')).toBe('Technical Monitoring')
   })
 })

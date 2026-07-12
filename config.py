@@ -51,6 +51,17 @@ class Settings(BaseSettings):
     REPORT_IMAGES_ENABLED: bool = False                  # kill-switch; prod flips to True after verification
     REPORT_IMAGE_MAX_SECTIONS: int = 6                   # cap on non-cover section images (cost ceiling)
 
+    # HDX HAPI (Humanitarian API — yapılandırılmış sayısal indikatör verisi;
+    # teknik izleme raporunun veri kaynağı). app_identifier hesap gerektirmez,
+    # encode_app_identifier ile üretilir; boşsa daha düşük rate limit ile çalışır.
+    HDX_HAPI_BASE_URL: str = "https://hapi.humdata.org/api/v1"
+    HDX_APP_IDENTIFIER: str = ""          # base64(appname:email)
+    HDX_HAPI_TIMEOUT: int = 30            # saniye / istek
+    HDX_HAPI_ADMIN_LEVEL: int = 1         # bölgesel analiz için admin-1
+    # Teknik izleme raporu: trend testi için asgari dönem (gözlem) sayısı.
+    # Altındaki serilerde inferential test çalıştırılmaz ("insufficient_data").
+    TECHNICAL_REPORT_MIN_POINTS: int = 4
+
     # Pinecone (serverless)
     PINECONE_API_KEY: str = ""
     PINECONE_INDEX: str = "reliefweb-docs"

@@ -8,10 +8,12 @@ function _isoDay(d) {
   return d.toISOString().slice(0, 10)
 }
 
-/** Earliest selectable report date: one year before `today` (ISO YYYY-MM-DD). */
-export function minReportDate(today = new Date()) {
+/** Earliest selectable report date. Standart raporlar 1 yıl geriye; teknik izleme
+ * raporu trend için daha uzun geçmiş ister (5 yıl). */
+export function minReportDate(today = new Date(), reportType = 'situation') {
   const d = new Date(today.getTime())
-  d.setUTCFullYear(d.getUTCFullYear() - 1)
+  const years = reportType === 'technical_monitoring' ? 5 : 1
+  d.setUTCFullYear(d.getUTCFullYear() - years)
   return _isoDay(d)
 }
 

@@ -14,4 +14,11 @@ describe('reportDateBounds', () => {
     // 2028-02-29 minus one year → 2027-03-01 (JS Date normalises the missing Feb 29).
     expect(minReportDate(new Date('2028-02-29T12:00:00Z'))).toBe('2027-03-01')
   })
+
+  it('technical_monitoring reaches further back than one year', () => {
+    const std = minReportDate(new Date('2026-07-12T00:00:00Z'))
+    const tech = minReportDate(new Date('2026-07-12T00:00:00Z'), 'technical_monitoring')
+    expect(tech < std).toBe(true)
+    expect(tech).toBe('2021-07-12') // 5 yıl geçmiş
+  })
 })
