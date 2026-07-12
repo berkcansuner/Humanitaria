@@ -111,7 +111,7 @@ class ReportRequest(BaseModel):
     date_from: Optional[str] = None
     date_to: Optional[str] = None
     language: Literal["tr", "en"] = "en"
-    report_type: Literal["situation", "indicator_monitoring", "needs_assessment"] = "situation"
+    report_type: Literal["situation", "indicator_monitoring", "needs_assessment", "technical_monitoring"] = "situation"
 
 
 def _no_docs_message(req: ReportRequest) -> str:

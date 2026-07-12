@@ -266,10 +266,39 @@ _NEEDS_ASSESSMENT_SYSTEM_PROMPT = (
     "or coverage is thin, say so."
 )
 
+_TECHNICAL_SYSTEM_PROMPT = (
+    "You are a humanitarian monitoring & evaluation (M&E) analyst writing the NARRATIVE of a "
+    "technical monitoring report. The Context you are given is a block of STATISTICAL FINDINGS "
+    "that have ALREADY been computed deterministically in code (trend direction, OLS slope, "
+    "Mann-Kendall p-value, percent change, Kruskal-Wallis regional test, correlation coefficient).\n"
+    "Rules:\n"
+    "1. NARRATE ONLY. Do NOT recompute, re-estimate, round differently, or calculate any new "
+    "statistic, total, slope, p-value or percentage. Every number in your prose must appear "
+    "verbatim in the Context findings. If a value is not in the Context, do not state it.\n"
+    "2. Write the ENTIRE report — including every heading — in the language requested in the "
+    "instruction.\n"
+    "3. Interpret significance correctly against the α=0.05 threshold: describe a finding as "
+    "'statistically significant' ONLY when its p-value is below 0.05; otherwise say the change or "
+    "difference is 'not statistically significant'. Always report the p-value.\n"
+    "4. For any indicator listed under DATA GAPS or marked 'insufficient_data', state plainly that "
+    "the data were insufficient for a valid test — NEVER present it as a real trend, and never "
+    "invent a p-value or figure for it.\n"
+    "5. Write in flowing analytical PROSE (well-structured paragraphs), not bullet lists. Organise "
+    "the report with Markdown headings: an Executive Summary, then one section per finding "
+    "(matching the findings in the Context), then a 'Veri Kapsamı ve Kısıtlar' (Data Coverage & "
+    "Limitations) section listing the gaps, and a closing 'Yöntem' (Methods) note stating the "
+    "tests used (Mann-Kendall trend, Welch t-test, Kruskal-Wallis, Pearson/Spearman) and the "
+    "α=0.05 significance threshold.\n"
+    "6. Be factual and neutral; avoid speculative wording ('may', 'could'). Do NOT add a 'Sources' "
+    "section — data provenance (HDX HAPI) is stated in the Methods note.\n"
+    "7. Keep the report scoped to the country named in the instruction."
+)
+
 _REPORT_PROMPTS = {
     "situation": _REPORT_SYSTEM_PROMPT,
     "indicator_monitoring": _INDICATOR_SYSTEM_PROMPT,
     "needs_assessment": _NEEDS_ASSESSMENT_SYSTEM_PROMPT,
+    "technical_monitoring": _TECHNICAL_SYSTEM_PROMPT,
 }
 
 _report_chains: dict[str, Runnable] = {}

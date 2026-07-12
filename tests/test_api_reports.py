@@ -353,7 +353,7 @@ class TestReportService:
 
     def test_report_types_constant(self):
         from rag.report_service import REPORT_TYPES
-        assert REPORT_TYPES == ("situation", "indicator_monitoring", "needs_assessment")
+        assert REPORT_TYPES == ("situation", "indicator_monitoring", "needs_assessment", "technical_monitoring")
 
 
 # --- analytics distinct countries -------------------------------------------
@@ -670,6 +670,7 @@ class TestReportPdf:
         assert _type_label("situation") == "M&E Situation Report"
         assert _type_label("indicator_monitoring") == "M&E Indicator Monitoring Report"
         assert _type_label("needs_assessment") == "M&E Needs Assessment Brief"
+        assert _type_label("technical_monitoring") == "M&E Technical Monitoring Report"
         assert _type_label("unknown_type") == "M&E Situation Report"
 
     def test_render_pdf_with_indicator_table(self):
