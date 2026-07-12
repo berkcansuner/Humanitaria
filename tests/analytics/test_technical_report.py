@@ -1,0 +1,102 @@
+from unittest.mock import patch
+
+import requests
+
+from analytics.technical_report import (
+    compute_findings, findings_to_context, assemble_section_images,
+    Findings, ReportSection,
+)
+
+
+def _rows_for(key):
+    # 4 dönemlik artan ulusal seri, tek bölge — trend testini tetikler.
+    if key == "idps":
+        return [
+            {"population": v, "reference_period_start": p, "admin1_name": "North",
+             "admin1_code": "AF01"}
+            for v, p in [(100, "2025-01-01"), (200, "2025-04-01"),
+                         (300, "2025-07-01"), (400, "2025-10-01")]
+        ]
+    return []   # diğer indikatörler boş → gaps
+
+
+@patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _rows_for(
+    "idps" if ep.endswith("idps") else "other"))
+def test_compute_findings_builds_trend_section(_mock):
+    f = compute_findings("AFG", "2025-01-01", "2025-12-31")
+    assert isinstance(f, Findings)
+    assert "idps" in f.indicators_covered
+    # Boş dönen indikatörler gaps'e düştü:
+    assert any("humanitarian_needs" in g or "İnsani" in g for g in f.gaps)
+    trend_sections = [s for s in f.sections if s.stat_result.get("kind") == "trend"]
+    assert trend_sections and trend_sections[0].stat_result["direction"] == "increasing"
+    assert trend_sections[0].chart is not None
+
+
+@patch("analytics.technical_report.fetch_rows", side_effect=lambda *a, **k: [])
+def test_all_empty_yields_only_gaps(_mock):
+    f = compute_findings("XYZ", None, None)
+    assert f.indicators_covered == []
+    assert len(f.gaps) == len(__import__("analytics.indicators", fromlist=["INDICATORS"]).INDICATORS)
+    assert f.sections == []
+
+
+@patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _rows_for(
+    "idps" if ep.endswith("idps") else "other"))
+def test_findings_to_context_is_string_with_numbers(_mock):
+    f = compute_findings("AFG", None, None)
+    ctx = findings_to_context(f)
+    assert isinstance(ctx, str)
+    assert "idps" in ctx.lower() or "IDP" in ctx
+    assert "p=" in ctx or "p-value" in ctx.lower()
+
+
+@patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _rows_for(
+    "idps" if ep.endswith("idps") else "other"))
+def test_assemble_section_images_shape(_mock):
+    f = compute_findings("AFG", None, None)
+    imgs = assemble_section_images(f)
+    assert all(set(d.keys()) == {"heading", "image"} for d in imgs)
+    assert all(d["image"].startswith("data:image/png;base64,") for d in imgs)
+
+
+def _two_indicator_rows(ep):
+    # idps ve food_security için ortak dönemli, ilişkili iki seri → korelasyon.
+    base = {
+        "idps": [(100, "2025-01-01"), (200, "2025-04-01"), (300, "2025-07-01"),
+                 (400, "2025-10-01")],
+        "food_security": [(120, "2025-01-01"), (240, "2025-04-01"), (360, "2025-07-01"),
+                          (480, "2025-10-01")],
+    }
+    key = "idps" if ep.endswith("idps") else ("food_security" if "food-security" in ep else None)
+    if key is None:
+        return []
+    return [{"population": v, "reference_period_start": p, "admin1_name": "North",
+             "admin1_code": "AF01"} for v, p in base[key]]
+
+
+@patch("analytics.technical_report.fetch_rows",
+       side_effect=lambda ep, iso3, **k: _two_indicator_rows(ep))
+def test_correlation_section_for_two_indicators(_mock):
+    f = compute_findings("AFG", "2025-01-01", "2025-12-31")
+    corr = [s for s in f.sections if s.stat_result.get("kind") == "correlation"]
+    assert corr, "iki ilişkili indikatör korelasyon bölümü üretmeli"
+    assert corr[0].stat_result["coefficient"] is not None
+    assert corr[0].chart is not None
+
+
+def test_network_error_on_one_indicator_becomes_gap_not_abort():
+    # HAPI ağ kesintisi (ConnectionError) yalnızca ilgili indikatörü gaps'e
+    # düşürmeli; tüm raporu iptal etmemeli — diğer indikatörler işlenmeye devam eder.
+    def _side_effect(ep, iso3, **k):
+        if ep.endswith("idps"):
+            raise requests.exceptions.ConnectionError("network down")
+        return _rows_for("other")
+
+    with patch("analytics.technical_report.fetch_rows", side_effect=_side_effect):
+        f = compute_findings("AFG", None, None)
+
+    assert any("idps" in g or "Yerinden edilmiş" in g for g in f.gaps)
+    assert "idps" not in f.indicators_covered
+    # Diğer indikatörler (hepsi boş döner) yine de işlendi → kendi gaps'lerine düştü.
+    assert len(f.gaps) == len(__import__("analytics.indicators", fromlist=["INDICATORS"]).INDICATORS)
