@@ -46,6 +46,10 @@ Kullanıcı → Vue 3 Frontend → FastAPI (localhost:8001) → RAG Engine (Lang
 - **`ingestion/`** — `client.py`, `parser.py`, `chunker.py`, `store.py`,
   `pipeline.py`, `file_loader.py` (HTML strip + PDF), `scheduler.py` (APScheduler)
 - **`rag/`** — `embeddings.py`, `retriever.py`, `chain.py`, `query_processor.py`, `history.py`
+- **`analytics/`** — teknik izleme raporu: `hapi_client.py` (HDX HAPI fetch),
+  `indicators.py` (indikatör→endpoint eşleme), `datasets.py` (HAPI→zaman serisi),
+  `stat_tests.py` (saf istatistik: trend/karşılaştırma/bölge/korelasyon),
+  `charts.py` (matplotlib→base64), `technical_report.py` (orkestratör), `countries.py` (ISO3)
 - **`tests/`** — pytest, modül yapısını yansıtır
 - **`scripts/`** — CLI (`ingest.py`, `setup_pinecone.py`)
 
