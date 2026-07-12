@@ -181,7 +181,7 @@ import { handleSessionExpired } from '../utils/authStore.js'
 
 // Prod retains ~1 year of data; clamp the date pickers to [one year ago, today]
 // so a user can't pick a window with no indexed reports (or a future date).
-const minDate = computed(() => minReportDate())
+const minDate = computed(() => minReportDate(new Date(), form.value.report_type))
 const maxDate = computed(() => maxReportDate())
 
 const countries = ref([])
