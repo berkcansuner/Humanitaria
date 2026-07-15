@@ -2,7 +2,7 @@ from config import Settings
 
 
 def test_hapi_settings_have_defaults():
-    s = Settings()
+    s = Settings(_env_file=None)
     assert s.HDX_HAPI_BASE_URL == "https://hapi.humdata.org/api/v1"
     assert s.HDX_HAPI_TIMEOUT == 30
     assert s.HDX_HAPI_ADMIN_LEVEL == 1
