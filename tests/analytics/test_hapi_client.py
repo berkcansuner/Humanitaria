@@ -52,3 +52,25 @@ def test_4xx_raises_without_retry(mock_get):
     with pytest.raises(HapiError):
         fetch_rows("affected-people/idps", "AFG")
     assert mock_get.call_count == 1
+
+
+def test_fetch_rows_uses_explicit_admin_level(monkeypatch):
+    captured = {}
+    def fake_get(url, params, timeout):
+        captured.update(params)
+        return []
+    monkeypatch.setattr("analytics.hapi_client._get_page", fake_get)
+    from analytics.hapi_client import fetch_rows
+    fetch_rows("food/food-security", "AFG", extra_params={"ipc_phase": "3+"}, admin_level=0)
+    assert captured["admin_level"] == 0
+    assert captured["ipc_phase"] == "3+"
+
+
+def test_fetch_rows_admin_level_defaults_to_settings(monkeypatch):
+    captured = {}
+    monkeypatch.setattr("analytics.hapi_client._get_page",
+                        lambda url, params, timeout: captured.update(params) or [])
+    from analytics.hapi_client import fetch_rows
+    fetch_rows("affected-people/idps", "AFG")
+    from config import get_settings
+    assert captured["admin_level"] == get_settings().HDX_HAPI_ADMIN_LEVEL

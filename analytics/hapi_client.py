@@ -23,21 +23,20 @@ class HapiError(Exception):
     """HAPI'den kurtarılamaz hata (4xx veya retry'lar tükendi)."""
 
 
-def fetch_rows(endpoint: str, iso3: str, extra_params: dict | None = None) -> list[dict]:
+def fetch_rows(endpoint: str, iso3: str, extra_params: dict | None = None,
+               admin_level: int | None = None) -> list[dict]:
     settings = get_settings()
     base = settings.HDX_HAPI_BASE_URL.rstrip("/")
     url = f"{base}/{endpoint}"
+    lvl = admin_level if admin_level is not None else settings.HDX_HAPI_ADMIN_LEVEL
     params = {
         "output_format": "json",
         "location_code": iso3,
-        "admin_level": settings.HDX_HAPI_ADMIN_LEVEL,
+        "admin_level": lvl,
         "limit": _PAGE_LIMIT,
         "offset": 0,
     }
-    if settings.HDX_APP_IDENTIFIER:
-        params["app_identifier"] = settings.HDX_APP_IDENTIFIER
-    else:
-        params["app_identifier"] = ""
+    params["app_identifier"] = settings.HDX_APP_IDENTIFIER or ""
     if extra_params:
         params.update(extra_params)
 
@@ -48,7 +47,7 @@ def fetch_rows(endpoint: str, iso3: str, extra_params: dict | None = None) -> li
         if len(page) < _PAGE_LIMIT:
             break
         params["offset"] += _PAGE_LIMIT
-    logger.info("HAPI %s %s → %d satır", endpoint, iso3, len(rows))
+    logger.info("HAPI %s %s -> %d satir", endpoint, iso3, len(rows))
     return rows
 
 
