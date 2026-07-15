@@ -1,28 +1,43 @@
-from analytics.indicators import INDICATORS, Indicator, by_key
+from analytics.indicators import INDICATORS, by_key
 
 
-def test_registry_nonempty_and_typed():
-    assert len(INDICATORS) >= 5
-    assert all(isinstance(i, Indicator) for i in INDICATORS)
+def test_food_security_config():
+    i = by_key("food_security")
+    assert i.endpoint == "food/food-security"
+    assert i.value_field == "population_in_phase"
+    assert i.admin_level == 0
+    assert i.query_params == {"ipc_type": "current", "ipc_phase": "3+"}
 
 
-def test_each_indicator_has_endpoint_and_value_field():
-    for i in INDICATORS:
-        assert "/" in i.endpoint            # theme/subcategory
-        assert i.value_field
-        assert i.aggregation in ("sum", "mean", "latest")
+def test_conflict_events_config():
+    i = by_key("conflict_events")
+    assert i.endpoint == "coordination-context/conflict-event"
+    assert i.value_field == "fatalities"
+    assert i.admin_level == 2
 
 
-def test_by_key_lookup():
-    idps = by_key("idps")
-    assert idps is not None
-    assert idps.endpoint == "affected-people/idps"
-    assert idps.value_field == "population"
-    assert by_key("nonexistent") is None
+def test_refugees_origin_semantics():
+    i = by_key("refugees")
+    assert i.query_params == {"gender": "all", "age_range": "all", "population_group": "REF"}
+    assert i.admin_level == 0
 
 
-def test_humanitarian_needs_has_dedup_filter():
-    # HNO sektör satırlarını üst üste toplamamak için population_status filtresi.
-    hn = by_key("humanitarian_needs")
-    assert hn is not None
-    assert hn.filters.get("population_status") == "INN"
+def test_returnees_config():
+    i = by_key("returnees")
+    assert i.query_params["population_group"] == "RET"
+
+
+def test_humanitarian_needs_config():
+    i = by_key("humanitarian_needs")
+    assert i.endpoint == "affected-people/humanitarian-needs"
+    assert i.value_field == "population"
+    assert i.query_params == {"population_status": "INN", "sector_code": "Intersectoral"}
+    assert i.admin_level == 0
+
+
+def test_funding_value_field():
+    assert by_key("funding").value_field == "funding_usd"
+
+
+def test_all_indicators_have_admin_level():
+    assert all(isinstance(i.admin_level, int) for i in INDICATORS)
