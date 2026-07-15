@@ -41,3 +41,41 @@ def test_conflict_regional_rollup_admin1():
 def test_regional_empty_when_no_admin1_name():
     rows = [{"reference_period_start": "2024-01-01", "population": 100, "asylum_location_code": "PAK"}]
     assert regional_series(rows, by_key("refugees")) == {}
+
+def test_regional_empty_when_admin1_name_all_none():
+    # M-2: admin1_name kolonu VAR ama tüm değerler None — kolon-yok testinden ayrık yol.
+    rows = [
+        {"reference_period_start": "2024-01-01", "population": 100, "admin1_name": None},
+        {"reference_period_start": "2024-01-01", "population": 50, "admin1_name": None},
+    ]
+    assert regional_series(rows, by_key("refugees")) == {}
+
+def test_national_series_empty_rows():
+    # M-1: boş rows sanity — regresyona karşı.
+    assert national_series([], by_key("idps")) == ([], [])
+
+def test_regional_series_empty_rows():
+    # M-1: boş rows sanity — regresyona karşı.
+    assert regional_series([], by_key("idps")) == {}
+
+def test_humanitarian_needs_dedup_picks_true_total_over_leaked_subrow():
+    # I-1: sabitlenmemiş bir boyuttan sızan category="" alt-küme satırı, gerçek
+    # sektörler-arası toplamı EZMEMELİ — en büyük değer (= toplam) seçilmeli.
+    rows = [
+        {"reference_period_start": "2024-01-01", "population": 5000, "category": ""},
+        {"reference_period_start": "2024-01-01", "population": 23666389, "category": ""},
+    ]
+    periods, values = national_series(rows, by_key("humanitarian_needs"))
+    assert periods == ["2024-01-01"]
+    assert values == [23666389]
+
+def test_humanitarian_needs_dedup_survives_null_first_row():
+    # I-2: dönemin ilk-listelenen agregat satırı population=None olsa da, sonraki
+    # geçerli category="total" satırı sayesinde dönem KAYBOLMAMALI.
+    rows = [
+        {"reference_period_start": "2024-01-01", "population": None, "category": ""},
+        {"reference_period_start": "2024-01-01", "population": 23666389, "category": "total"},
+    ]
+    periods, values = national_series(rows, by_key("humanitarian_needs"))
+    assert periods == ["2024-01-01"]
+    assert values == [23666389]

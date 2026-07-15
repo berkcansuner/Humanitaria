@@ -18,7 +18,10 @@ def _dedup_aggregate_rows(df: pd.DataFrame, indicator: Indicator) -> pd.DataFram
     if indicator.key == "humanitarian_needs" and "category" in df.columns:
         cat = df["category"].fillna("").astype(str).str.strip().str.lower()
         df = df[cat.isin(["", "total"])]
-        df = df.drop_duplicates(subset=["reference_period_start"], keep="first")
+        # Dönem başına en büyük (= sektörler-arası toplam) satırı tut: sabitlenmemiş
+        # bir boyuttan sızan alt-küme satırlarına ve '' / 'total' çift kaydına karşı sağlam.
+        df = df.sort_values("_value", ascending=False).drop_duplicates(
+            subset=["reference_period_start"], keep="first")
     return df
 
 
@@ -28,10 +31,10 @@ def _frame(rows: list[dict], indicator: Indicator) -> pd.DataFrame:
     df = pd.DataFrame(rows)
     if indicator.value_field not in df.columns or "reference_period_start" not in df.columns:
         return pd.DataFrame()
-    df = _dedup_aggregate_rows(df, indicator)
     df = df.copy()
     df["_value"] = pd.to_numeric(df[indicator.value_field], errors="coerce")
     df = df.dropna(subset=["_value", "reference_period_start"])
+    df = _dedup_aggregate_rows(df, indicator)
     return df
 
 
