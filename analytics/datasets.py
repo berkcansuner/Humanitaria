@@ -1,9 +1,9 @@
 """HAPI satırlarını istatistik motorunun beklediği seri yapılarına dönüştürür.
 
-national_series: dönem×ulusal-toplam zaman serisi (indicator.filters uygulanır,
-aggregation ile birleştirilir). regional_series: admin1 bölgesi başına dönemsel
-seri (bölgeler-arası test için). pandas ile gruplama; sayısal olmayan değerler
-sessizce düşürülür.
+Sunucu-tarafı query_params agregat satırları getirdiğinden client-tarafı filtre
+gerekmez; tek istisna humanitarian_needs'in Intersectoral+INN içindeki `category`
+kırılımıdır — dönem-agregat satırı (boş/None/'total' kategorisi) dedup edilir,
+aksi hâlde demografik alt-kırılımlar toplanıp şişik değer üretir.
 """
 import logging
 
@@ -14,32 +14,25 @@ from analytics.indicators import Indicator
 logger = logging.getLogger(__name__)
 
 
+def _dedup_aggregate_rows(df: pd.DataFrame, indicator: Indicator) -> pd.DataFrame:
+    if indicator.key == "humanitarian_needs" and "category" in df.columns:
+        cat = df["category"].fillna("").astype(str).str.strip().str.lower()
+        df = df[cat.isin(["", "total"])]
+        df = df.drop_duplicates(subset=["reference_period_start"], keep="first")
+    return df
+
+
 def _frame(rows: list[dict], indicator: Indicator) -> pd.DataFrame:
     if not rows:
         return pd.DataFrame()
     df = pd.DataFrame(rows)
-    for key, val in indicator.filters.items():
-        if key in df.columns:
-            df = df[df[key] == val]
     if indicator.value_field not in df.columns or "reference_period_start" not in df.columns:
         return pd.DataFrame()
+    df = _dedup_aggregate_rows(df, indicator)
     df = df.copy()
     df["_value"] = pd.to_numeric(df[indicator.value_field], errors="coerce")
     df = df.dropna(subset=["_value", "reference_period_start"])
     return df
-
-
-def has_required_filter_columns(rows: list[dict], indicator: Indicator) -> bool:
-    """indicator.filters uygulanabilir mi? Filtre yoksa her zaman True. Satırlar
-    boşsa karar national_series'in kendi 'veri yok' dalına bırakılır (True).
-    Filtre alanı satırlarda hiç yoksa False — çağıran, double-counting riskine
-    karşı bu indikatörü unfiltered toplamak yerine gap'e düşürmeli."""
-    if not indicator.filters or not rows:
-        return True
-    columns: set[str] = set()
-    for r in rows:
-        columns.update(r.keys())
-    return all(key in columns for key in indicator.filters)
 
 
 def _agg(series: pd.Series, how: str) -> float:
@@ -56,8 +49,7 @@ def national_series(rows: list[dict], indicator: Indicator) -> tuple[list[str], 
         return [], []
     grouped = df.groupby("reference_period_start")["_value"].apply(
         lambda s: _agg(s, indicator.aggregation)
-    )
-    grouped = grouped.sort_index()
+    ).sort_index()
     periods = [str(p) for p in grouped.index.tolist()]
     values = [float(v) for v in grouped.tolist()]
     return periods, values
@@ -66,6 +58,9 @@ def national_series(rows: list[dict], indicator: Indicator) -> tuple[list[str], 
 def regional_series(rows: list[dict], indicator: Indicator) -> dict[str, list[float]]:
     df = _frame(rows, indicator)
     if df.empty or "admin1_name" not in df.columns:
+        return {}
+    df = df[df["admin1_name"].notna()]
+    if df.empty:
         return {}
     out: dict[str, list[float]] = {}
     for region, sub in df.groupby("admin1_name"):
