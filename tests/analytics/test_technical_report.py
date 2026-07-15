@@ -95,7 +95,8 @@ def _two_indicator_rows(ep):
     key = "idps" if ep.endswith("idps") else ("food_security" if "food-security" in ep else None)
     if key is None:
         return []
-    return [{"population": v, "reference_period_start": p, "admin1_name": "North",
+    value_field = "population" if key == "idps" else "population_in_phase"
+    return [{value_field: v, "reference_period_start": p, "admin1_name": "North",
              "admin1_code": "AF01"} for v, p in base[key]]
 
 
@@ -169,25 +170,19 @@ def test_indicator_analysis_error_becomes_gap_not_abort():
     assert len(f.gaps) == len(INDICATORS)
 
 
-# --- FIX I3: filtre alanı (örn. population_status) veride yoksa unfiltered toplam
-# yerine gap'e düşmeli — double-counting koruması sessizce devre dışı kalmamalı. ---
+# --- Orkestratör fetch_rows'a Indicator.query_params + admin_level'i geçirmeli
+# (double-counting koruması artık server-side query_params + datasets category-dedup
+# ile sağlanıyor; has_required_filter_columns client-side guard'ı KALDIRILDI). ---
 
-def _humanitarian_needs_rows_without_filter_column(ep):
-    if not ep.endswith("humanitarian-needs"):
-        return []
-    return [
-        {"population": v, "reference_period_start": p, "admin1_name": "North",
-         "admin1_code": "AF01"}   # population_status YOK
-        for v, p in [(1000, "2025-01-01"), (2000, "2025-04-01"),
-                     (3000, "2025-07-01"), (4000, "2025-10-01")]
-    ]
-
-
-@patch("analytics.technical_report.fetch_rows",
-       side_effect=lambda ep, iso3, **k: _humanitarian_needs_rows_without_filter_column(ep))
-def test_missing_filter_column_becomes_gap_not_unfiltered_sum(_mock):
-    f = compute_findings("AFG", "2025-01-01", "2025-12-31")
-    assert "humanitarian_needs" not in f.indicators_covered
-    assert any("population_status" in g for g in f.gaps)
-    # Hiçbir bölüm İnsani ihtiyaç indikatörü için üretilmemeli (unfiltered sum yok):
-    assert not any(s.stat_result.get("indicator") == "İnsani ihtiyaç (kişi)" for s in f.sections)
+def test_orchestrator_passes_query_params_and_admin_level(monkeypatch):
+    calls = []
+    def fake_fetch(endpoint, iso3, extra_params=None, admin_level=None):
+        calls.append((endpoint, extra_params, admin_level))
+        return []   # boş → hepsi gap, ama çağrı imzası doğrulanır
+    monkeypatch.setattr("analytics.technical_report.fetch_rows", fake_fetch)
+    from analytics.technical_report import compute_findings
+    compute_findings("AFG", None, None)
+    by_ep = {c[0]: c for c in calls}
+    assert by_ep["food/food-security"][1] == {"ipc_type": "current", "ipc_phase": "3+"}
+    assert by_ep["food/food-security"][2] == 0
+    assert by_ep["coordination-context/conflict-event"][2] == 2

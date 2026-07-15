@@ -11,7 +11,7 @@ from dataclasses import dataclass
 import requests
 
 from analytics.charts import comparison_chart, correlation_chart, trend_chart
-from analytics.datasets import has_required_filter_columns, national_series, regional_series
+from analytics.datasets import national_series, regional_series
 from analytics.hapi_client import HapiError, fetch_rows
 from analytics.indicators import INDICATORS
 from analytics.stat_tests import by_region, compare, correlate, trend
@@ -44,10 +44,9 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None) -> F
     national_by_label: dict[str, tuple[list, list]] = {}   # korelasyon için (periods, values)
 
     for ind in INDICATORS:
-        # Filtreler client-side (datasets._frame) uygulanır; HAPI query'sine
-        # geçirilmez — endpoint'e göre param adı/kodu değişebildiğinden savunmacı.
         try:
-            rows = fetch_rows(ind.endpoint, iso3)
+            rows = fetch_rows(ind.endpoint, iso3,
+                              extra_params=ind.query_params, admin_level=ind.admin_level)
         except (HapiError, requests.exceptions.RequestException) as exc:
             # HapiError: HAPI'nin kendi 4xx/retry-tükendi hatası. RequestException:
             # hapi_client ağ-seviyesi hatayı (ConnectionError/Timeout) HapiError'a
@@ -63,13 +62,6 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None) -> F
         # indikatör gap'e düşer — diğer indikatörler işlenmeye devam eder.
         try:
             rows = _filter_period(rows, date_from, date_to)
-            if not has_required_filter_columns(rows, ind):
-                # Filtre alanı (örn. population_status) veride yoksa filtre
-                # sessizce no-op olur ve tüm sektörler toplanır → şişirilmiş,
-                # yanlış "otoriter" toplam. Unfiltered toplamak yerine atla.
-                missing = ", ".join(ind.filters.keys())
-                gaps.append(f"{ind.label}: beklenen filtre alanı ({missing}) veride yok, atlandı")
-                continue
             periods, values = national_series(rows, ind)
             if not values:
                 gaps.append(f"{ind.label}: dönem içinde veri yok")
