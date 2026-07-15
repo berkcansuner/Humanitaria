@@ -9,11 +9,8 @@ def test_food_security_config():
     assert i.query_params == {"ipc_type": "current", "ipc_phase": "3+"}
 
 
-def test_conflict_events_config():
-    i = by_key("conflict_events")
-    assert i.endpoint == "coordination-context/conflict-event"
-    assert i.value_field == "fatalities"
-    assert i.admin_level == 2
+def test_conflict_events_removed():
+    assert by_key("conflict_events") is None
 
 
 def test_refugees_origin_semantics():
@@ -25,6 +22,27 @@ def test_refugees_origin_semantics():
 def test_returnees_config():
     i = by_key("returnees")
     assert i.query_params["population_group"] == "RET"
+
+
+def test_refugees_uses_origin_location():
+    i = by_key("refugees")
+    assert i.location_param == "origin_location_code"
+    assert i.query_params == {"gender": "all", "age_range": "all", "population_group": "REF"}
+
+
+def test_returnees_uses_origin_location():
+    assert by_key("returnees").location_param == "origin_location_code"
+
+
+def test_default_indicators_use_location_code():
+    for key in ("humanitarian_needs", "food_security", "idps", "funding"):
+        assert by_key(key).location_param == "location_code"
+
+
+def test_indicator_count():
+    assert len(INDICATORS) == 6
+    assert {i.key for i in INDICATORS} == {
+        "humanitarian_needs", "food_security", "idps", "funding", "refugees", "returnees"}
 
 
 def test_humanitarian_needs_config():

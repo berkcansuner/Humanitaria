@@ -1,6 +1,6 @@
 import pandas as pd
 from analytics.datasets import national_series, regional_series
-from analytics.indicators import by_key
+from analytics.indicators import Indicator, by_key
 
 def test_humanitarian_needs_dedup_aggregate_row():
     # Intersectoral+INN server-side geldi varsay; category kırılımı client'ta dedup edilmeli.
@@ -24,12 +24,17 @@ def test_refugees_sums_asylum_countries_per_period():
     assert values == [300, 300]
 
 def test_conflict_regional_rollup_admin1():
+    # conflict_events indikatörü rapordan kaldırıldı (Task 6); regional_series'in
+    # admin1 üzerinden çoklu-satır toplama davranışı yine de conflict-şekilli veriyle
+    # sınanır (event_type'lar toplanır) — ad-hoc Indicator, by_key üzerinden değil.
     rows = [
         {"reference_period_start": "2024-01-01", "fatalities": 5, "admin1_name": "Kabul", "event_type": "battles"},
         {"reference_period_start": "2024-01-01", "fatalities": 3, "admin1_name": "Kabul", "event_type": "civilian_targeting"},
         {"reference_period_start": "2024-01-01", "fatalities": 2, "admin1_name": "Herat", "event_type": "battles"},
     ]
-    reg = regional_series(rows, by_key("conflict_events"))
+    ind = Indicator("conflict_events", "Çatışma kaynaklı ölüm",
+                    "coordination-context/conflict-event", "fatalities", "sum", 2)
+    reg = regional_series(rows, ind)
     assert reg["Kabul"] == [8]   # event_type'lar toplandı
     assert reg["Herat"] == [2]
 

@@ -3,9 +3,11 @@ sunucu-tarafı query_params.
 
 `query_params`: HAPI'ye sunucu-tarafı gönderilen boyut filtreleri; demografik
 fan-out'u kaynağında keser ve agregat (doğru toplam) satırları getirir. `admin_level`:
-bu indikatörün çekileceği idari düzey (conflict yalnız admin2'de veri taşır).
-`aggregation`: aynı dönem için birden çok satır (sığınma ülkeleri / ilçeler) nasıl
-birleştirilir (sum = topla).
+bu indikatörün çekileceği idari düzey. `aggregation`: aynı dönem için birden çok
+satır (sığınma ülkeleri / ilçeler) nasıl birleştirilir (sum = topla).
+`location_param`: HAPI'ye ülke filtresi hangi query param ile gönderilir; sınır-ötesi
+endpoint'ler (refugees/returnees) `location_code`'u yok sayıp global veri döndürür —
+bunlar `origin_location_code` (menşe ülke) kullanır. Diğerleri varsayılan `location_code`.
 """
 import logging
 from dataclasses import dataclass, field
@@ -22,6 +24,7 @@ class Indicator:
     aggregation: str         # sum | mean | latest
     admin_level: int         # 0 = ulusal agregat, 1/2 = alt-ulusal
     query_params: dict = field(default_factory=dict)
+    location_param: str = "location_code"
 
 
 INDICATORS: list[Indicator] = [
@@ -31,14 +34,14 @@ INDICATORS: list[Indicator] = [
     Indicator("food_security", "Gıda güvensizliği (kişi)",
               "food/food-security", "population_in_phase", "sum", 0,
               {"ipc_type": "current", "ipc_phase": "3+"}),
-    Indicator("conflict_events", "Çatışma kaynaklı ölüm",
-              "coordination-context/conflict-event", "fatalities", "sum", 2, {}),
     Indicator("refugees", "Mülteci (kişi)",
               "affected-people/refugees", "population", "sum", 0,
-              {"gender": "all", "age_range": "all", "population_group": "REF"}),
+              {"gender": "all", "age_range": "all", "population_group": "REF"},
+              location_param="origin_location_code"),
     Indicator("returnees", "Dönüş yapan (kişi)",
               "affected-people/returnees", "population", "sum", 0,
-              {"gender": "all", "age_range": "all", "population_group": "RET"}),
+              {"gender": "all", "age_range": "all", "population_group": "RET"},
+              location_param="origin_location_code"),
     Indicator("idps", "Yerinden edilmiş kişi (IDP)",
               "affected-people/idps", "population", "sum", 1,
               {"gender": "all", "age_range": "all"}),

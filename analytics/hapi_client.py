@@ -24,14 +24,15 @@ class HapiError(Exception):
 
 
 def fetch_rows(endpoint: str, iso3: str, extra_params: dict | None = None,
-               admin_level: int | None = None) -> list[dict]:
+               admin_level: int | None = None,
+               location_param: str = "location_code") -> list[dict]:
     settings = get_settings()
     base = settings.HDX_HAPI_BASE_URL.rstrip("/")
     url = f"{base}/{endpoint}"
     lvl = admin_level if admin_level is not None else settings.HDX_HAPI_ADMIN_LEVEL
     params = {
         "output_format": "json",
-        "location_code": iso3,
+        location_param: iso3,
         "admin_level": lvl,
         "limit": _PAGE_LIMIT,
         "offset": 0,

@@ -176,8 +176,8 @@ def test_indicator_analysis_error_becomes_gap_not_abort():
 
 def test_orchestrator_passes_query_params_and_admin_level(monkeypatch):
     calls = []
-    def fake_fetch(endpoint, iso3, extra_params=None, admin_level=None):
-        calls.append((endpoint, extra_params, admin_level))
+    def fake_fetch(endpoint, iso3, extra_params=None, admin_level=None, location_param="location_code"):
+        calls.append((endpoint, extra_params, admin_level, location_param))
         return []   # boş → hepsi gap, ama çağrı imzası doğrulanır
     monkeypatch.setattr("analytics.technical_report.fetch_rows", fake_fetch)
     from analytics.technical_report import compute_findings
@@ -185,4 +185,5 @@ def test_orchestrator_passes_query_params_and_admin_level(monkeypatch):
     by_ep = {c[0]: c for c in calls}
     assert by_ep["food/food-security"][1] == {"ipc_type": "current", "ipc_phase": "3+"}
     assert by_ep["food/food-security"][2] == 0
-    assert by_ep["coordination-context/conflict-event"][2] == 2
+    assert by_ep["affected-people/refugees"][3] == "origin_location_code"
+    assert "coordination-context/conflict-event" not in by_ep

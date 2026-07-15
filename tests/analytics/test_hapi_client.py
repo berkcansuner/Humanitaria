@@ -74,3 +74,22 @@ def test_fetch_rows_admin_level_defaults_to_settings(monkeypatch):
     fetch_rows("affected-people/idps", "AFG")
     from config import get_settings
     assert captured["admin_level"] == get_settings().HDX_HAPI_ADMIN_LEVEL
+
+
+def test_fetch_rows_uses_custom_location_param(monkeypatch):
+    captured = {}
+    monkeypatch.setattr("analytics.hapi_client._get_page",
+                        lambda url, params, timeout: captured.update(params) or [])
+    from analytics.hapi_client import fetch_rows
+    fetch_rows("affected-people/refugees", "AFG", location_param="origin_location_code")
+    assert captured["origin_location_code"] == "AFG"
+    assert "location_code" not in captured
+
+
+def test_fetch_rows_defaults_location_code(monkeypatch):
+    captured = {}
+    monkeypatch.setattr("analytics.hapi_client._get_page",
+                        lambda url, params, timeout: captured.update(params) or [])
+    from analytics.hapi_client import fetch_rows
+    fetch_rows("affected-people/idps", "AFG")
+    assert captured["location_code"] == "AFG"

@@ -46,7 +46,8 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None) -> F
     for ind in INDICATORS:
         try:
             rows = fetch_rows(ind.endpoint, iso3,
-                              extra_params=ind.query_params, admin_level=ind.admin_level)
+                              extra_params=ind.query_params, admin_level=ind.admin_level,
+                              location_param=ind.location_param)
         except (HapiError, requests.exceptions.RequestException) as exc:
             # HapiError: HAPI'nin kendi 4xx/retry-tükendi hatası. RequestException:
             # hapi_client ağ-seviyesi hatayı (ConnectionError/Timeout) HapiError'a
