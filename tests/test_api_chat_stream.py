@@ -611,3 +611,52 @@ class TestContextDateLabel:
         artifact = self._doc(title="Syria", url="https://x/1", country="Syria", doctype="country")
         context, _ = _build_context_and_sources([artifact])
         assert "[1]" in context
+
+
+class TestQuotaExhausted:
+    """A Gemini 402 'prepayment credits are depleted' (RESOURCE_EXHAUSTED) is a
+    billing/quota problem, not a transient busy signal: surface a clear quota
+    message instead of the generic one so operators can act on it."""
+
+    _QUOTA_ERR = (
+        "Error code: 402 - {'error': {'code': 402, 'message': 'Your prepayment "
+        "credits are depleted.', 'status': 'RESOURCE_EXHAUSTED'}}"
+    )
+
+    def test_stream_402_emits_quota_message(self):
+        with patch("api.routes.chat.build_retriever") as mock_retriever_builder, \
+             patch("api.routes.chat.extract_filters", return_value={}):
+            mock_retriever = MagicMock()
+            mock_retriever.ainvoke = AsyncMock(side_effect=Exception(self._QUOTA_ERR))
+            mock_retriever_builder.return_value = mock_retriever
+
+            from api.main import app
+            from fastapi.testclient import TestClient
+            client = TestClient(app)
+            response = client.post("/chat/stream", json={"message": "Sudan situation"})
+            events = _parse_sse_events(response.text)
+            err = [e for e in events if e["event"] == "error"]
+            assert len(err) == 1
+            assert "quota" in err[0]["data"]["message"].lower()
+            assert "busy" not in err[0]["data"]["message"].lower()
+            assert events[-1]["event"] == "done"
+
+    def test_non_stream_402_returns_503_with_quota_message(self):
+        with patch("api.routes.chat.build_retriever") as mock_retriever_builder, \
+             patch("api.routes.chat.extract_filters", return_value={}):
+            mock_retriever = MagicMock()
+            mock_retriever.ainvoke = AsyncMock(side_effect=Exception(self._QUOTA_ERR))
+            mock_retriever_builder.return_value = mock_retriever
+
+            from api.main import app
+            from fastapi.testclient import TestClient
+            client = TestClient(app)
+            response = client.post("/chat", json={"message": "Sudan situation"})
+            assert response.status_code == 503
+            assert "quota" in response.json()["detail"].lower()
+
+    def test_is_quota_exhausted_does_not_match_generic_or_busy(self):
+        from api.routes.chat import _is_quota_exhausted
+        assert _is_quota_exhausted(Exception(self._QUOTA_ERR))
+        assert not _is_quota_exhausted(Exception("Error code: 503 - high demand UNAVAILABLE"))
+        assert not _is_quota_exhausted(RuntimeError("retriever offline"))

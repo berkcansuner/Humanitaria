@@ -300,7 +300,9 @@ async function sendMessage(opts = {}) {
           try {
             const data = JSON.parse(sse.data)
             console.error('SSE error event:', data.message)
-            assistantMsg.error = ERROR_MESSAGES.sse_parse
+            // The backend sends a curated, user-safe message (busy / quota /
+            // generic) — show it so the user knows whether retrying can help.
+            assistantMsg.error = data.message || ERROR_MESSAGES.sse_parse
             messages.value[msgIndex] = { ...assistantMsg }
           } catch (e) {
             console.error('SSE error parse error:', e, sse.data)
@@ -311,7 +313,9 @@ async function sendMessage(opts = {}) {
       }
     }
 
-    if (!assistantMsg.content.trim() && !assistantMsg.clarification) {
+    // An error event already explains the empty answer — don't overwrite it
+    // with the generic "no response" banner.
+    if (!assistantMsg.content.trim() && !assistantMsg.clarification && !assistantMsg.error) {
       console.error('Empty response received from stream')
       assistantMsg.error = ERROR_MESSAGES.empty_response
       messages.value[msgIndex] = { ...assistantMsg }

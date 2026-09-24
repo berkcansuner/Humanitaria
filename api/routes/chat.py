@@ -111,6 +111,10 @@ def _plan_retrieval(session_id: str, message: str) -> tuple:
 
 _BUSY_MESSAGE = "The model is busy right now (high demand). Please try again in a moment."
 _GENERIC_ERROR_MESSAGE = "Something went wrong while generating the answer. Please try again."
+_QUOTA_MESSAGE = (
+    "The AI service quota is exhausted (API credits/billing). "
+    "Please contact the administrator."
+)
 
 
 def _is_high_demand(exc: Exception) -> bool:
@@ -121,6 +125,15 @@ def _is_high_demand(exc: Exception) -> bool:
     masked as transient, silently retried, and surfaced as a misleading 503."""
     msg = str(exc)
     return "503" in msg or "UNAVAILABLE" in msg or "high demand" in msg.lower()
+
+
+def _is_quota_exhausted(exc: Exception) -> bool:
+    """True for a Gemini 402 'prepayment credits are depleted' (RESOURCE_EXHAUSTED).
+
+    A billing/quota problem: retrying cannot help and it is not the user's fault,
+    so it is surfaced as a distinct, actionable message instead of the generic one."""
+    msg = str(exc)
+    return "402" in msg or "RESOURCE_EXHAUSTED" in msg or "credits are depleted" in msg
 
 
 async def _astream_with_retry(chain, payload, retries: int, backoff: float = 1.5):
@@ -283,6 +296,9 @@ async def chat(request: Request, req: ChatRequest, user: dict = Depends(get_curr
     except Exception as e:
         # Transient upstream 'high demand' 503 → clear, retryable message; a genuine
         # bug becomes a logged 500 (with stack) instead of being masked as transient.
+        if _is_quota_exhausted(e):
+            logger.error("Chat upstream quota exhausted: %s", e)
+            raise HTTPException(status_code=503, detail=_QUOTA_MESSAGE)
         if _is_high_demand(e):
             logger.warning("Chat upstream busy: %s", e)
             raise HTTPException(status_code=503, detail=_BUSY_MESSAGE)
@@ -405,7 +421,12 @@ async def chat_stream(request: Request, req: ChatRequest, user: dict = Depends(g
 
         except Exception as e:
             logger.error("Streaming error: %s", e)
-            friendly = _BUSY_MESSAGE if _is_high_demand(e) else _GENERIC_ERROR_MESSAGE
+            if _is_quota_exhausted(e):
+                friendly = _QUOTA_MESSAGE
+            elif _is_high_demand(e):
+                friendly = _BUSY_MESSAGE
+            else:
+                friendly = _GENERIC_ERROR_MESSAGE
             yield ServerSentEvent(
                 event="error",
                 data=json.dumps({"message": friendly}, ensure_ascii=False),

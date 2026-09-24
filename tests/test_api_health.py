@@ -24,17 +24,19 @@ def test_health_liveness_is_cheap(client):
 
 def test_health_deep_ok(client):
     with patch("api.routes.health._check_pinecone", return_value=True), \
-         patch("api.routes.health._check_database", return_value=True):
+         patch("api.routes.health._check_database", return_value=True), \
+         patch("api.routes.health._check_gemini", return_value=True):
         r = client.get("/health?deep=true")
         assert r.status_code == 200
         body = r.json()
         assert body["status"] == "ok"
-        assert body["checks"] == {"pinecone": "ok", "database": "ok"}
+        assert body["checks"] == {"pinecone": "ok", "database": "ok", "gemini": "ok"}
 
 
 def test_health_deep_reports_503_when_pinecone_down(client):
     with patch("api.routes.health._check_pinecone", side_effect=RuntimeError("pinecone down")), \
-         patch("api.routes.health._check_database", return_value=True):
+         patch("api.routes.health._check_database", return_value=True), \
+         patch("api.routes.health._check_gemini", return_value=True):
         r = client.get("/health?deep=true")
         assert r.status_code == 503
         checks = r.json()["detail"]["checks"]
@@ -44,7 +46,32 @@ def test_health_deep_reports_503_when_pinecone_down(client):
 
 def test_health_deep_reports_503_when_db_down(client):
     with patch("api.routes.health._check_pinecone", return_value=True), \
-         patch("api.routes.health._check_database", side_effect=RuntimeError("db down")):
+         patch("api.routes.health._check_database", side_effect=RuntimeError("db down")), \
+         patch("api.routes.health._check_gemini", return_value=True):
         r = client.get("/health?deep=true")
         assert r.status_code == 503
         assert r.json()["detail"]["checks"]["database"] == "error"
+
+
+def test_health_deep_includes_gemini(client):
+    with patch("api.routes.health._check_pinecone", return_value=True), \
+         patch("api.routes.health._check_database", return_value=True), \
+         patch("api.routes.health._check_gemini", return_value=True):
+        r = client.get("/health?deep=true")
+        assert r.status_code == 200
+        assert r.json()["checks"] == {"pinecone": "ok", "database": "ok", "gemini": "ok"}
+
+
+def test_health_deep_reports_503_when_gemini_quota_exhausted(client):
+    with patch("api.routes.health._check_pinecone", return_value=True), \
+         patch("api.routes.health._check_database", return_value=True), \
+         patch("api.routes.health._check_gemini", side_effect=RuntimeError("402 credits depleted")):
+        r = client.get("/health?deep=true")
+        assert r.status_code == 503
+        assert r.json()["detail"]["checks"]["gemini"] == "error"
+
+
+def test_health_liveness_skips_gemini(client):
+    with patch("api.routes.health._check_gemini") as gm:
+        client.get("/health")
+        gm.assert_not_called()

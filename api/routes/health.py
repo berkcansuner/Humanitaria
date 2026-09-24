@@ -24,18 +24,28 @@ def _check_database() -> bool:
     return True
 
 
+def _check_gemini() -> bool:
+    """Probe the Gemini API with a minimal embedding call (raises on auth/quota
+    errors, e.g. 402 'prepayment credits are depleted')."""
+    from rag.embeddings import GeminiLangChainEmbeddings
+    emb = GeminiLangChainEmbeddings()
+    emb.client.embeddings.create(model=emb.model, input=["ping"])
+    return True
+
+
 @router.get("/health")
 async def health(deep: bool = False):
     """Liveness by default (cheap, always 200 — used by the platform health check).
 
-    With ``?deep=true`` it also probes the external dependencies (Pinecone + the
-    DB) and returns 503 if any is unavailable, for readiness/diagnostics.
+    With ``?deep=true`` it also probes the external dependencies (Pinecone, the
+    DB and Gemini) and returns 503 if any is unavailable, for readiness/diagnostics.
     """
     if not deep:
         return {"status": "ok"}
 
     checks: dict[str, str] = {}
-    for name, probe in (("pinecone", _check_pinecone), ("database", _check_database)):
+    probes = (("pinecone", _check_pinecone), ("database", _check_database), ("gemini", _check_gemini))
+    for name, probe in probes:
         try:
             await anyio.to_thread.run_sync(probe)
             checks[name] = "ok"
