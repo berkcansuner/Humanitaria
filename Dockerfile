@@ -23,6 +23,7 @@ COPY config.py ./
 COPY api/ ./api/
 COPY rag/ ./rag/
 COPY ingestion/ ./ingestion/
+COPY analytics/ ./analytics/
 
 # Built SPA from stage 1 → served by FastAPI's history-mode fallback (api/main.py
 # resolves <repo>/frontend/dist relative to api/main.py).
