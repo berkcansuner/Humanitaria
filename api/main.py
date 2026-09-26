@@ -228,7 +228,14 @@ if frontend_dir.exists():
     @app.get("/{full_path:path}")
     async def spa_fallback(full_path: str):
         target = _safe_spa_file(full_path)              # None → traversal/miss → SPA shell
-        return FileResponse(target if target is not None else frontend_dir / "index.html")
+        # The shell (and any un-hashed dist file) must be revalidated on every
+        # load: with only Last-Modified, browsers cache it heuristically, so after
+        # a deploy a stale index.html points at hashed chunks that no longer exist
+        # and lazy routes silently fail. ETag still yields cheap 304s.
+        return FileResponse(
+            target if target is not None else frontend_dir / "index.html",
+            headers={"Cache-Control": "no-cache"},
+        )
 
 
 if __name__ == "__main__":

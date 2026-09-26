@@ -11,6 +11,11 @@ import './style.css'
 import './marketing/marketing.css'
 import { router } from './router/index.js'
 import { getInitialTheme, applyTheme } from './utils/theme.js'
+import { installStaleChunkReload } from './utils/staleChunkReload.js'
+
+// A tab left open across a deploy still runs the old shell, whose lazy route
+// chunks were replaced → reload once to fetch the new index.html.
+installStaleChunkReload()
 
 // Apply the theme before mount to avoid a flash of the default (light) palette.
 applyTheme(getInitialTheme())
