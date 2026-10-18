@@ -1,11 +1,12 @@
 import logging
+import os
 import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.datastructures import MutableHeaders
 from pathlib import Path
@@ -203,39 +204,57 @@ app.include_router(reports.router, tags=["reports"])
 frontend_dir = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 
 
-def _safe_spa_file(full_path: str):
+def _safe_spa_file(full_path: str, root: Path = frontend_dir):
     """Return the real file to serve for a SPA request path, but ONLY if it is contained
     within the built dist dir; else None (→ caller falls back to index.html). Blocks path
     traversal (../ or the encoded ..%2f, which uvicorn decodes) from escaping to arbitrary
     files — config.py, conversations.db, /proc/self/environ. Audit P1-01."""
     if not full_path:
         return None
-    candidate = (frontend_dir / full_path).resolve()
-    if candidate.is_file() and candidate.is_relative_to(frontend_dir.resolve()):
+    candidate = (root / full_path).resolve()
+    if candidate.is_file() and candidate.is_relative_to(root.resolve()):
         return candidate
     return None
 
 
-if frontend_dir.exists():
-    # Vite's hashed assets are served directly. Everything else falls back to
-    # index.html so vue-router history-mode client routes (/pricing, /app) work
-    # on refresh. This block is defined AFTER the API routers so it only catches
-    # GET paths the API didn't claim.
-    assets_dir = frontend_dir / "assets"
-    if assets_dir.exists():
-        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+def _etag_matches(if_none_match: str | None, etag: str) -> bool:
+    """RFC 9110 weak comparison of an If-None-Match header against our ETag."""
+    if not if_none_match:
+        return False
+    if if_none_match.strip() == "*":
+        return True
+    tags = {t.strip().removeprefix("W/") for t in if_none_match.split(",")}
+    return etag.removeprefix("W/") in tags
 
-    @app.get("/{full_path:path}")
-    async def spa_fallback(full_path: str):
-        target = _safe_spa_file(full_path)              # None → traversal/miss → SPA shell
+
+def mount_spa(target_app: FastAPI, dist: Path) -> None:
+    """Serve the built Vue SPA from `dist`. Vite's hashed assets are served directly.
+    Everything else falls back to index.html so vue-router history-mode client routes
+    (/pricing, /app) work on refresh. Must be called AFTER the API routers are included
+    so the catch-all only claims GET paths the API didn't."""
+    assets_dir = dist / "assets"
+    if assets_dir.exists():
+        target_app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @target_app.get("/{full_path:path}")
+    async def spa_fallback(full_path: str, request: Request):
+        target = _safe_spa_file(full_path, dist)       # None → traversal/miss → SPA shell
+        path = target if target is not None else dist / "index.html"
         # The shell (and any un-hashed dist file) must be revalidated on every
         # load: with only Last-Modified, browsers cache it heuristically, so after
         # a deploy a stale index.html points at hashed chunks that no longer exist
-        # and lazy routes silently fail. ETag still yields cheap 304s.
-        return FileResponse(
-            target if target is not None else frontend_dir / "index.html",
-            headers={"Cache-Control": "no-cache"},
-        )
+        # and lazy routes silently fail. FileResponse never answers conditional
+        # requests itself (only StaticFiles does), so the 304 is done here.
+        headers = {"Cache-Control": "no-cache"}
+        response = FileResponse(path, headers=headers, stat_result=os.stat(path))
+        etag = response.headers["etag"]
+        if _etag_matches(request.headers.get("if-none-match"), etag):
+            return Response(status_code=304, headers={**headers, "ETag": etag})
+        return response
+
+
+if frontend_dir.exists():
+    mount_spa(app, frontend_dir)
 
 
 if __name__ == "__main__":

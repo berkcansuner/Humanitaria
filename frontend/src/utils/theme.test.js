@@ -1,5 +1,12 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { getInitialTheme, applyTheme, setTheme } from './theme.js'
+
+function blockedStorage() {
+  const blocked = () => {
+    throw new DOMException('blocked', 'SecurityError')
+  }
+  return { getItem: blocked, setItem: blocked, clear: blocked }
+}
 
 describe('theme', () => {
   beforeEach(() => {
@@ -7,6 +14,10 @@ describe('theme', () => {
     document.documentElement.removeAttribute('data-theme')
     // Default matchMedia: not dark, unless a test overrides it.
     vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: false }))
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   describe('getInitialTheme', () => {
@@ -25,6 +36,11 @@ describe('theme', () => {
       vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true }))
       expect(getInitialTheme()).toBe('light')
     })
+
+    it('defaults to light instead of throwing when storage is blocked', () => {
+      vi.stubGlobal('localStorage', blockedStorage())
+      expect(getInitialTheme()).toBe('light')
+    })
   })
 
   describe('applyTheme', () => {
@@ -38,6 +54,12 @@ describe('theme', () => {
     it('persists the theme and applies it', () => {
       setTheme('dark')
       expect(localStorage.getItem('theme')).toBe('dark')
+      expect(document.documentElement.dataset.theme).toBe('dark')
+    })
+
+    it('still applies the theme when storage is blocked', () => {
+      vi.stubGlobal('localStorage', blockedStorage())
+      setTheme('dark')
       expect(document.documentElement.dataset.theme).toBe('dark')
     })
   })

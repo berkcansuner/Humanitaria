@@ -14,7 +14,14 @@ const VALID = ['light', 'dark']
  * @returns {'light'|'dark'}
  */
 export function getInitialTheme() {
-  const stored = localStorage.getItem(STORAGE_KEY)
+  let stored
+  try {
+    // Even reading `localStorage` throws when site data is blocked; this runs
+    // before mount, so an escape here would leave a blank page.
+    stored = localStorage.getItem(STORAGE_KEY)
+  } catch {
+    stored = null
+  }
   if (VALID.includes(stored)) return stored
   return 'light'
 }
@@ -41,6 +48,10 @@ export function applyTheme(theme) {
 
 /** Persist the chosen theme and apply it immediately. */
 export function setTheme(theme) {
-  localStorage.setItem(STORAGE_KEY, theme)
+  try {
+    localStorage.setItem(STORAGE_KEY, theme)
+  } catch {
+    // storage blocked — the theme still applies for this page load
+  }
   applyTheme(theme)
 }
