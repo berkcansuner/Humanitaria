@@ -1,21 +1,28 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { installStaleChunkReload, isChunkLoadError } from './staleChunkReload.js'
 
+const ENTRY = 'https://x.test/assets/index-old.js'
 const OLD_SHELL = '<script type="module" crossorigin src="/assets/index-old.js"></script>'
 const NEW_SHELL = '<script type="module" crossorigin src="/assets/index-new.js"></script>'
 const CHUNK_404 = new TypeError(
-  'Failed to fetch dynamically imported module: https://x/assets/ReportsView-old.js',
+  'Failed to fetch dynamically imported module: https://x.test/assets/ReportsView-old.js',
 )
 const TO_REPORTS = { fullPath: '/reports?tab=saved' }
 
-function makeEnv({ shell = NEW_SHELL, fetchFails = false, now = 100000, storage } = {}) {
+function makeRouter(base = '') {
   let onError
-  const router = { onError: (fn) => (onError = fn) }
+  const router = {
+    options: { history: { base } },
+    resolve: (to) => ({ href: base + to.fullPath }),
+    onError: (fn) => (onError = fn),
+  }
+  return { router, fire: (err, to) => onError(err, to, { fullPath: '/' }) }
+}
+
+function makeEnv({ shell = NEW_SHELL, fetchFails = false, now = 100000, storage, base } = {}) {
+  const { router, fire } = makeRouter(base)
   const store = new Map()
   const win = {
-    document: {
-      querySelector: () => ({ getAttribute: () => '/assets/index-old.js' }),
-    },
     fetch: vi.fn(async () => {
       if (fetchFails) throw new TypeError('Failed to fetch')
       return { ok: true, text: async () => shell }
@@ -27,15 +34,23 @@ function makeEnv({ shell = NEW_SHELL, fetchFails = false, now = 100000, storage 
     },
   }
   const clock = { now: () => now }
-  installStaleChunkReload(router, { win, clock })
+  installStaleChunkReload(router, { entry: ENTRY, win, clock })
   return {
     win,
-    fail: (err = CHUNK_404, to = TO_REPORTS) => onError(err, to, { fullPath: '/' }),
+    fail: (err = CHUNK_404, to = TO_REPORTS) => fire(err, to),
     set: (t) => {
       now = t
     },
   }
 }
+
+let consoleError
+beforeEach(() => {
+  consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+})
+afterEach(() => {
+  consoleError.mockRestore()
+})
 
 describe('isChunkLoadError', () => {
   it.each([
@@ -59,25 +74,46 @@ describe('installStaleChunkReload', () => {
     await fail()
     expect(win.fetch).toHaveBeenCalledWith('/', { cache: 'no-store' })
     expect(win.location.assign).toHaveBeenCalledWith('/reports?tab=saved')
+    expect(consoleError).not.toHaveBeenCalled()
   })
 
-  it('leaves the error alone when the shell is unchanged (blocked or broken chunk)', async () => {
+  it('respects the router base for both the shell fetch and the target', async () => {
+    const { win, fail } = makeEnv({ base: '/app' })
+    await fail()
+    expect(win.fetch).toHaveBeenCalledWith('/app/', { cache: 'no-store' })
+    expect(win.location.assign).toHaveBeenCalledWith('/app/reports?tab=saved')
+  })
+
+  it('logs and leaves the page alone when the shell is unchanged (blocked or broken chunk)', async () => {
     const { win, fail } = makeEnv({ shell: OLD_SHELL })
     await fail()
     expect(win.location.assign).not.toHaveBeenCalled()
+    expect(consoleError).toHaveBeenCalledWith(CHUNK_404)
   })
 
-  it('leaves the error alone when offline', async () => {
+  it('logs and leaves the page alone when offline', async () => {
     const { win, fail } = makeEnv({ fetchFails: true })
     await fail()
     expect(win.location.assign).not.toHaveBeenCalled()
+    expect(consoleError).toHaveBeenCalledWith(CHUNK_404)
   })
 
-  it('ignores errors that are not chunk-load failures', async () => {
+  it('logs errors that are not chunk-load failures (vue-router no longer does)', async () => {
     const { win, fail } = makeEnv()
-    await fail(new Error('Network Error'))
+    const guardError = new Error('Network Error')
+    await fail(guardError)
     expect(win.fetch).not.toHaveBeenCalled()
     expect(win.location.assign).not.toHaveBeenCalled()
+    expect(consoleError).toHaveBeenCalledWith(guardError)
+  })
+
+  it('identifies the build by the entry chunk, not by other module scripts', async () => {
+    // A third-party module script that never changes must not mask a deploy.
+    const { win, fail } = makeEnv({
+      shell: '<script type="module" src="/vendor/lib.js"></script>' + NEW_SHELL,
+    })
+    await fail()
+    expect(win.location.assign).toHaveBeenCalledTimes(1)
   })
 
   it('handles concurrent failures once', async () => {
@@ -87,12 +123,14 @@ describe('installStaleChunkReload', () => {
     expect(win.location.assign).toHaveBeenCalledTimes(1)
   })
 
-  it('does not loop: a second failure inside the guard window is left to surface', async () => {
+  it('inside the guard window: logs without refetching the shell', async () => {
     const { win, fail, set } = makeEnv()
     await fail()
     set(100000 + 5000)
     await fail()
+    expect(win.fetch).toHaveBeenCalledTimes(1)
     expect(win.location.assign).toHaveBeenCalledTimes(1)
+    expect(consoleError).toHaveBeenCalledWith(CHUNK_404)
   })
 
   it('navigates again once the guard window has passed', async () => {
@@ -104,19 +142,16 @@ describe('installStaleChunkReload', () => {
   })
 
   it('still recovers when reading window.sessionStorage throws (site data blocked)', async () => {
-    let onError
+    const { router, fire } = makeRouter()
     const win = {
-      document: { querySelector: () => ({ getAttribute: () => '/assets/index-old.js' }) },
       fetch: async () => ({ ok: true, text: async () => NEW_SHELL }),
       location: { assign: vi.fn() },
       get sessionStorage() {
         throw new DOMException('blocked', 'SecurityError')
       },
     }
-    expect(() =>
-      installStaleChunkReload({ onError: (fn) => (onError = fn) }, { win }),
-    ).not.toThrow()
-    await onError(CHUNK_404, TO_REPORTS)
+    expect(() => installStaleChunkReload(router, { entry: ENTRY, win })).not.toThrow()
+    await fire(CHUNK_404, TO_REPORTS)
     expect(win.location.assign).toHaveBeenCalledWith('/reports?tab=saved')
   })
 

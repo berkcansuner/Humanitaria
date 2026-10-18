@@ -1,5 +1,5 @@
+import hashlib
 import logging
-import os
 import uuid
 from contextlib import asynccontextmanager
 
@@ -7,7 +7,9 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, Response
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.staticfiles import NotModifiedResponse
 from starlette.datastructures import MutableHeaders
 from pathlib import Path
 from slowapi import _rate_limit_exceeded_handler
@@ -217,39 +219,43 @@ def _safe_spa_file(full_path: str, root: Path = frontend_dir):
     return None
 
 
-def _etag_matches(if_none_match: str | None, etag: str) -> bool:
-    """RFC 9110 weak comparison of an If-None-Match header against our ETag."""
-    if not if_none_match:
-        return False
-    if if_none_match.strip() == "*":
-        return True
-    tags = {t.strip().removeprefix("W/") for t in if_none_match.split(",")}
-    return etag.removeprefix("W/") in tags
-
-
 def mount_spa(target_app: FastAPI, dist: Path) -> None:
     """Serve the built Vue SPA from `dist`. Vite's hashed assets are served directly.
     Everything else falls back to index.html so vue-router history-mode client routes
     (/pricing, /app) work on refresh. Must be called AFTER the API routers are included
     so the catch-all only claims GET paths the API didn't."""
+    shell = dist / "index.html"
+    if not shell.is_file():
+        logger.warning("SPA not mounted: %s missing (incomplete frontend build?)", shell)
+        return
     assets_dir = dist / "assets"
     if assets_dir.exists():
         target_app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+    # Only used for Starlette's conditional-request check (If-None-Match).
+    conditional = StaticFiles(directory=dist, check_dir=False)
+    # The shell (and any un-hashed dist file) must be revalidated on every load:
+    # with only Last-Modified, browsers cache it heuristically, so after a deploy
+    # a stale index.html points at hashed chunks that no longer exist and lazy
+    # routes silently fail.
+    no_cache = {"Cache-Control": "no-cache"}
 
     @target_app.get("/{full_path:path}")
     async def spa_fallback(full_path: str, request: Request):
         target = _safe_spa_file(full_path, dist)       # None → traversal/miss → SPA shell
-        path = target if target is not None else dist / "index.html"
-        # The shell (and any un-hashed dist file) must be revalidated on every
-        # load: with only Last-Modified, browsers cache it heuristically, so after
-        # a deploy a stale index.html points at hashed chunks that no longer exist
-        # and lazy routes silently fail. FileResponse never answers conditional
-        # requests itself (only StaticFiles does), so the 304 is done here.
-        headers = {"Cache-Control": "no-cache"}
-        response = FileResponse(path, headers=headers, stat_result=os.stat(path))
-        etag = response.headers["etag"]
-        if _etag_matches(request.headers.get("if-none-match"), etag):
-            return Response(status_code=304, headers={**headers, "ETag": etag})
+        if target is not None and target != shell.resolve():
+            return FileResponse(target, headers=no_cache)
+        try:
+            body = await run_in_threadpool(shell.read_bytes)
+        except FileNotFoundError:                       # dist being rebuilt in place
+            return Response("Frontend is being rebuilt", status_code=503,
+                            headers={"Retry-After": "5"})
+        # Content-hash ETag, not Starlette's mtime+size one: Vite's index.html is
+        # the same size every build, so a deploy that preserves mtimes would keep
+        # answering 304 with the old shell.
+        etag = '"' + hashlib.md5(body, usedforsecurity=False).hexdigest() + '"'
+        response = Response(body, media_type="text/html", headers={**no_cache, "ETag": etag})
+        if conditional.is_not_modified(response.headers, request.headers):
+            return NotModifiedResponse(response.headers)
         return response
 
 

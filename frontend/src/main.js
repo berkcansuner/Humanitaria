@@ -15,7 +15,7 @@ import { installStaleChunkReload } from './utils/staleChunkReload.js'
 
 // A tab left open across a deploy still runs the old shell, whose lazy route
 // chunks were replaced → load the target route from the new index.html.
-installStaleChunkReload(router)
+installStaleChunkReload(router, { entry: import.meta.url })
 
 // Apply the theme before mount to avoid a flash of the default (light) palette.
 applyTheme(getInitialTheme())

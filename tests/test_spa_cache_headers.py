@@ -9,6 +9,8 @@ references hashed chunks which no longer exist → lazy routes (e.g. /reports)
 The SPA is mounted on a fresh app over a temporary dist dir, so these run in CI
 (which does not build frontend/dist) instead of being skipped.
 """
+import os
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -55,6 +57,47 @@ def test_stale_etag_gets_the_full_shell(client):
     r = client.get("/app", headers={"If-None-Match": '"from-the-previous-deploy"'})
     assert r.status_code == 200
     assert r.text == _SHELL
+
+
+def test_etag_tracks_content_even_when_size_and_mtime_are_unchanged(client, tmp_path):
+    # Vite's shell is the same size every build; a deploy that preserves mtimes
+    # must still produce a new ETag, or browsers get 304 for the old shell.
+    shell = tmp_path / "index.html"
+    old_etag = client.get("/").headers["etag"]
+    st = shell.stat()
+    shell.write_text(_SHELL.replace("abc123", "def456"), encoding="utf-8")
+    os.utime(shell, ns=(st.st_atime_ns, st.st_mtime_ns))
+    r = client.get("/reports", headers={"If-None-Match": old_etag})
+    assert r.status_code == 200
+    assert "index-def456.js" in r.text
+    assert r.headers["etag"] != old_etag
+
+
+def test_direct_index_html_request_gets_the_same_shell_handling(client):
+    etag = client.get("/").headers["etag"]
+    assert client.get("/index.html", headers={"If-None-Match": etag}).status_code == 304
+
+
+def test_other_dist_files_are_served_with_no_cache(client, tmp_path):
+    (tmp_path / "favicon.svg").write_text("<svg/>", encoding="utf-8")
+    r = client.get("/favicon.svg")
+    assert r.status_code == 200
+    assert r.text == "<svg/>"
+    assert r.headers.get("cache-control") == "no-cache"
+
+
+def test_shell_missing_mid_rebuild_returns_503_not_500(client, tmp_path):
+    (tmp_path / "index.html").unlink()
+    r = client.get("/app")
+    assert r.status_code == 503
+    assert r.headers.get("retry-after")
+
+
+def test_dist_without_index_html_is_not_mounted(tmp_path):
+    (tmp_path / "assets").mkdir()
+    app = FastAPI()
+    mount_spa(app, tmp_path)
+    assert TestClient(app).get("/app").status_code == 404
 
 
 def test_hashed_assets_are_not_marked_no_cache(client):
