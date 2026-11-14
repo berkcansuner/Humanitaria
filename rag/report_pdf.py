@@ -157,7 +157,13 @@ def _sources_rows(sources) -> str:
 def _body_html(markdown_text: str, section_images=None) -> str:
     """Markdown → HTML, tint citation markers, and inject each section image right
     after its matching <h2> heading."""
-    html_body = _markdown.markdown(markdown_text or "", extensions=["extra", "sane_lists"])
+    # Report content is model output: disable raw HTML so text like <style>/<img>/
+    # <pdf:...> is rendered literally instead of being interpreted by xhtml2pdf
+    # (a <style> @font-face could replace the process-wide font for every user).
+    md = _markdown.Markdown(extensions=["extra", "sane_lists"])
+    md.preprocessors.deregister("html_block")
+    md.inlinePatterns.deregister("html")
+    html_body = md.convert(markdown_text or "")
     html_body = re.sub(r"\[(\d+)\]", r'<span class="cite">[\1]</span>', html_body)
     for item in (section_images or []):
         # quote=False: Python-Markdown's renderer only escapes & < > in heading text
