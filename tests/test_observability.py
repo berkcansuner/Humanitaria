@@ -38,6 +38,10 @@ class TestInitSentry:
         assert kwargs["dsn"] == "https://example@sentry.io/1"
         assert kwargs["environment"] == "production"
         assert kwargs["traces_sample_rate"] == 0.1
+        # Never ship request bodies (passwords, chat text) or frame locals to Sentry.
+        assert kwargs["send_default_pii"] is False
+        assert kwargs["max_request_body_size"] == "never"
+        assert kwargs["include_local_variables"] is False
 
     def test_noop_when_sdk_missing(self):
         # DSN set but the SDK cannot be imported → graceful no-op, never raises.

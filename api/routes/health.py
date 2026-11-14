@@ -1,8 +1,11 @@
 import logging
+from typing import Optional
 
 import anyio
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
+
+from api.routes.auth import _is_admin, get_optional_user
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +37,7 @@ def _check_gemini() -> bool:
 
 
 @router.get("/health")
-async def health(deep: bool = False):
+async def health(deep: bool = False, user: Optional[dict] = Depends(get_optional_user)):
     """Liveness by default (cheap, always 200 — used by the platform health check).
 
     With ``?deep=true`` it also probes the external dependencies (Pinecone, the
@@ -42,6 +45,9 @@ async def health(deep: bool = False):
     """
     if not deep:
         return {"status": "ok"}
+    # The deep probe makes billed Gemini/Pinecone calls: admins only.
+    if not (user and _is_admin(user)):
+        raise HTTPException(status_code=403, detail="Admin access required")
 
     checks: dict[str, str] = {}
     probes = (("pinecone", _check_pinecone), ("database", _check_database), ("gemini", _check_gemini))

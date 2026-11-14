@@ -72,6 +72,11 @@ def init_sentry(dsn: str, environment: str = "development", traces_sample_rate: 
         dsn=dsn,
         environment=environment,
         traces_sample_rate=traces_sample_rate,
+        # SDK defaults attach JSON request bodies and frame locals regardless of
+        # send_default_pii, which would ship passwords and chat text to Sentry.
+        send_default_pii=False,
+        max_request_body_size="never",
+        include_local_variables=False,
     )
     logger.info("Sentry initialised (environment=%s)", environment)
     return True

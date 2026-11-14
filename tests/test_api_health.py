@@ -11,6 +11,39 @@ def client():
     return TestClient(app)
 
 
+@pytest.fixture(autouse=True)
+def _deep_probe_as_admin(request):
+    """The deep probe is admin-only; existing readiness tests run as an admin.
+    Tests marked anonymous_health exercise the anonymous path instead."""
+    from unittest.mock import MagicMock
+    from api.main import app
+    from api.routes.auth import get_optional_user
+    if request.node.get_closest_marker("anonymous_health"):
+        yield
+        return
+    settings = MagicMock()
+    settings.ADMIN_EMAILS = "ops@example.com"
+    app.dependency_overrides[get_optional_user] = lambda: {
+        "id": "ops", "email": "ops@example.com", "name": "Ops", "google_sub": "g-ops"}
+    with patch("api.routes.auth.get_settings", return_value=settings):
+        yield
+    app.dependency_overrides.pop(get_optional_user, None)
+
+
+@pytest.mark.anonymous_health
+def test_deep_probe_requires_admin(client):
+    """Anonymous callers must not be able to trigger billed provider calls."""
+    with patch("api.routes.health._check_pinecone") as pc,          patch("api.routes.health._check_database") as db,          patch("api.routes.health._check_gemini") as gm:
+        r = client.get("/health?deep=true")
+    assert r.status_code == 403
+    pc.assert_not_called(); db.assert_not_called(); gm.assert_not_called()
+
+
+@pytest.mark.anonymous_health
+def test_liveness_stays_public(client):
+    assert client.get("/health").status_code == 200
+
+
 def test_health_liveness_is_cheap(client):
     # Default probe must NOT touch Pinecone/DB (Render polls this frequently).
     with patch("api.routes.health._check_pinecone") as pc, \
