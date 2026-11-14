@@ -7,6 +7,8 @@ directive. The route layer (api/routes/reports.py) streams the report chain and
 persists the result. Pure rag layer — no FastAPI/route imports.
 """
 import logging
+
+import anyio
 import re
 from collections import defaultdict
 from typing import List, Optional
@@ -231,7 +233,7 @@ async def retrieve_for_report(country: str, theme: Optional[str],
     docs = apply_date_filter(docs, filters.get("date"))
     docs = dedupe_by_document(docs)
     docs = _collapse_near_duplicates(docs)
-    docs = rerank_by_relevance(query, docs, top_k)
+    docs = await anyio.to_thread.run_sync(rerank_by_relevance, query, docs, top_k)  # blocking Pinecone call
     docs = rerank_by_recency(docs)
     return docs[:top_k]
 

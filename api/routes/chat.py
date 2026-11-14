@@ -203,11 +203,11 @@ async def _retrieve_docs(query: str, filters: dict):
     docs = dedupe_by_document(docs)
     if should_boost_recency(query, filters):
         pool = max(settings.RECENCY_RERANK_POOL, settings.TOP_K_RETRIEVAL)
-        docs = rerank_by_relevance(query, docs, pool)
+        docs = await anyio.to_thread.run_sync(rerank_by_relevance, query, docs, pool)
         docs = rerank_by_recency(docs, decay_factor=settings.RECENCY_BOOST_FACTOR)
         docs = docs[:settings.TOP_K_RETRIEVAL]
     else:
-        docs = rerank_by_relevance(query, docs, settings.TOP_K_RETRIEVAL)
+        docs = await anyio.to_thread.run_sync(rerank_by_relevance, query, docs, settings.TOP_K_RETRIEVAL)
         docs = rerank_by_recency(docs)
     return docs
 
@@ -263,7 +263,7 @@ async def chat(request: Request, req: ChatRequest, user: dict = Depends(get_curr
         return ChatResponse(answer=_GREETING_REPLY, sources=[], session_id=session_id)
 
     try:
-        retrieval_query, filters = _plan_retrieval(session_id, req.message)
+        retrieval_query, filters = await anyio.to_thread.run_sync(_plan_retrieval, session_id, req.message)
         docs = await _retrieve_docs(retrieval_query, filters)
 
         if not docs:
@@ -332,7 +332,7 @@ async def chat_stream(request: Request, req: ChatRequest, user: dict = Depends(g
         _filter_ms = _retrieval_ms = 0.0
         _ttft_ms = None
         try:
-            retrieval_query, filters = _plan_retrieval(session_id, req.message)
+            retrieval_query, filters = await anyio.to_thread.run_sync(_plan_retrieval, session_id, req.message)
             _filter_ms = (time.perf_counter() - _t0) * 1000
             docs = await _retrieve_docs(retrieval_query, filters)
             _retrieval_ms = (time.perf_counter() - _t0) * 1000 - _filter_ms
