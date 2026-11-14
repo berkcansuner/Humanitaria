@@ -46,6 +46,7 @@ def _auth_override(request):
         "id": _TEST_USER_ID,
         "email": "test@example.com",
         "name": "Test User",
+        "google_sub": "test-google-sub",   # admin authority requires a Google-verified identity
     }
     yield
     app.dependency_overrides.pop(get_current_user, None)

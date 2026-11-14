@@ -111,13 +111,20 @@ def _is_admin_email(email: str) -> bool:
     return bool(email) and email.strip().lower() in admins
 
 
+def _is_admin(user: dict) -> bool:
+    """Admin = allowlisted email AND a Google-verified identity on the account.
+    Password signup never proves mailbox ownership, so the email alone is not
+    enough (anyone could register an allowlisted address that has no account)."""
+    return bool(user.get("google_sub")) and _is_admin_email(user.get("email", ""))
+
+
 def _user_out(user: dict) -> UserOut:
-    """Public user payload; computes is_admin from the ADMIN_EMAILS allowlist.
+    """Public user payload; computes is_admin via _is_admin.
     has_password drives the settings page (password section hidden for
     Google-only accounts)."""
     return UserOut(
         id=user["id"], email=user["email"], name=user["name"],
-        is_admin=_is_admin_email(user["email"]),
+        is_admin=_is_admin(user),
         auth_provider=user.get("auth_provider", "password"),
         has_password=bool(user.get("password_hash")),
     )
@@ -159,8 +166,8 @@ async def get_current_user(request: Request) -> dict:
 
 
 async def get_admin_user(user: dict = Depends(get_current_user)) -> dict:
-    """FastAPI dependency: require an authenticated user in ADMIN_EMAILS, else 403."""
-    if not _is_admin_email(user.get("email", "")):
+    """FastAPI dependency: require an allowlisted, Google-verified user, else 403."""
+    if not _is_admin(user):
         logger.warning("auth: admin access denied (user=%s)", user.get("id"))
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
@@ -171,6 +178,9 @@ async def get_admin_user(user: dict = Depends(get_current_user)) -> dict:
 @router.post("/signup", response_model=UserOut)
 @limiter.limit(_signup_rate_limit)
 async def signup(request: Request, body: SignupIn, response: Response):
+    # Admin addresses sign in with Google only; same reply as a taken address.
+    if _is_admin_email(body.email):
+        raise HTTPException(status_code=409, detail="Email already registered")
     try:
         uid = await anyio.to_thread.run_sync(
             users_store.create_user, body.email, body.name.strip(), body.password

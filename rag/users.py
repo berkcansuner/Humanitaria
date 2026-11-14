@@ -105,10 +105,15 @@ def get_or_create_google_user(google_sub: str, email: str, name: str) -> dict:
             text("SELECT * FROM users WHERE email = :email"), {"email": email}
         ).mappings().fetchone()
         if row:
+            # Password signup never verifies the email, so this account may have
+            # been pre-registered by someone else. The verified Google owner takes
+            # it over: drop the unverified password and every existing session.
             conn.execute(
-                text("UPDATE users SET google_sub = :sub WHERE id = :id"),
+                text("UPDATE users SET google_sub = :sub, password_hash = NULL, "
+                     "auth_provider = 'google' WHERE id = :id"),
                 {"sub": google_sub, "id": row["id"]},
             )
+            conn.execute(text("DELETE FROM sessions WHERE user_id = :id"), {"id": row["id"]})
             updated = conn.execute(
                 text("SELECT * FROM users WHERE id = :id"), {"id": row["id"]}
             ).mappings().fetchone()
@@ -201,6 +206,7 @@ def list_users(q: str = "", offset: int = 0, limit: int = 50) -> tuple[list[dict
         rows = conn.execute(
             text(
                 "SELECT u.id, u.email, u.name, u.auth_provider, u.created_at, "
+                "CASE WHEN u.google_sub IS NULL THEN 0 ELSE 1 END AS google_linked, "
                 "(SELECT MAX(s.created_at) FROM sessions s WHERE s.user_id = u.id) AS last_login "
                 f"FROM users u {where} "
                 "ORDER BY u.created_at DESC, u.id LIMIT :limit OFFSET :offset"

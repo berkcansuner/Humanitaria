@@ -50,8 +50,40 @@ def test_is_admin_email_allowlist():
 def test_user_out_sets_is_admin():
     from api.routes import auth
     with patch.object(auth, "get_settings", return_value=_admin_settings("a@b.com")):
-        assert auth._user_out({"id": "1", "email": "a@b.com", "name": "A"}).is_admin is True
-        assert auth._user_out({"id": "2", "email": "c@d.com", "name": "C"}).is_admin is False
+        assert auth._user_out({"id": "1", "email": "a@b.com", "name": "A", "google_sub": "g1"}).is_admin is True
+        assert auth._user_out({"id": "2", "email": "c@d.com", "name": "C", "google_sub": "g2"}).is_admin is False
+
+
+def test_admin_requires_google_verified_identity():
+    """Password signup never proves mailbox ownership, so an allowlisted email on a
+    password-only account (no google_sub) must not carry admin authority."""
+    from api.routes import auth
+    with patch.object(auth, "get_settings", return_value=_admin_settings("a@b.com")):
+        assert auth._user_out({"id": "1", "email": "a@b.com", "name": "A"}).is_admin is False
+
+
+@pytest.mark.real_auth
+def test_signup_with_admin_email_is_refused(client):
+    with patch("api.routes.auth.get_settings") as gs:
+        gs.return_value = _admin_settings("boss@example.com")
+        gs.return_value.SESSION_TTL_HOURS = 1
+        gs.return_value.SESSION_COOKIE_NAME = "rw_session"
+        gs.return_value.SESSION_COOKIE_SECURE = False
+        gs.return_value.AUTH_SIGNUP_RATE_LIMIT = "1000/minute"
+        r = client.post("/auth/signup", json={"email": "Boss@Example.com",
+                                              "password": "pw-12345678", "name": "X"})
+    assert r.status_code == 409
+    assert "rw_session" not in r.cookies
+
+
+def test_admin_user_list_badge_requires_google_link(client):
+    from rag import users as users_store
+    users_store.create_user("boss@example.com", "Pre-registered", password="pw-12345678")
+    with patch("api.routes.auth.get_settings", return_value=_admin_settings("boss@example.com, test@example.com")):
+        r = client.get("/admin/users")
+    assert r.status_code == 200
+    row = next(u for u in r.json()["users"] if u["email"] == "boss@example.com")
+    assert row["is_admin"] is False
 
 
 # --- /admin/ingest/status ---------------------------------------------------
@@ -319,7 +351,7 @@ def test_admin_users_unauthenticated(client):
 def test_admin_users_lists_with_admin_badge_and_search(client):
     from rag import users as users_store
 
-    users_store.create_user("boss@example.com", "Boss", password="pw-123456")
+    users_store.get_or_create_google_user("g-boss", "boss@example.com", "Boss")
     users_store.create_user("member@example.com", "Member", password="pw-123456")
     with patch("api.routes.auth.get_settings",
                return_value=_admin_settings("test@example.com, boss@example.com")):

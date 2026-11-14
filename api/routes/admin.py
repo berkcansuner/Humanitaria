@@ -12,7 +12,7 @@ import anyio
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 
-from api.routes.auth import get_admin_user, _is_admin_email
+from api.routes.auth import get_admin_user, _is_admin
 from config import get_settings
 from ingestion import analytics
 from ingestion import runner
@@ -112,10 +112,14 @@ async def list_users(
     limit: int = Query(50, ge=1, le=100),
 ):
     """Paginated, searchable read-only user list (admin-only). is_admin is
-    computed server-side from the ADMIN_EMAILS allowlist for the badge."""
+    computed server-side (allowlist + Google link) for the badge."""
     rows, total = await anyio.to_thread.run_sync(users_store.list_users, q, offset, limit)
+    out = []
+    for r in rows:
+        linked = bool(r.pop("google_linked", 0))
+        out.append({**r, "is_admin": _is_admin({"email": r["email"], "google_sub": linked})})
     return {
-        "users": [{**r, "is_admin": _is_admin_email(r["email"])} for r in rows],
+        "users": out,
         "total": total,
     }
 

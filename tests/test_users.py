@@ -112,6 +112,27 @@ def test_google_user_links_to_existing_email(users):
     assert linked["google_sub"] == "sub-xyz"
 
 
+def test_google_link_revokes_preexisting_password_and_sessions(users):
+    """Signup never verifies the email, so a password account may have been
+    pre-registered by someone else. Linking the verified Google owner must cut
+    that party out: the old password stops working and its sessions die."""
+    uid = users.create_user("victim@example.com", "Pre", password="attacker-pw")
+    old_token = users.create_session(uid)
+    linked = users.get_or_create_google_user("sub-real", "victim@example.com", "Real")
+    assert linked["id"] == uid
+    assert linked["password_hash"] is None
+    assert linked["auth_provider"] == "google"
+    assert users.get_user_by_session(old_token) is None
+
+
+def test_google_relogin_keeps_sessions_of_already_linked_account(users):
+    """Only the first link revokes; a returning Google user's other sessions stay."""
+    first = users.get_or_create_google_user("sub-1", "g@example.com", "G")
+    token = users.create_session(first["id"])
+    users.get_or_create_google_user("sub-1", "g@example.com", "G")
+    assert users.get_user_by_session(token) is not None
+
+
 def test_google_user_links_case_insensitively(users):
     """Google may return the email in a different case than the stored (lowercased)
     password account. Normalising avoids a silent account split / missed link."""
@@ -130,7 +151,8 @@ def test_list_users_returns_public_fields_newest_first(users):
     assert total == 2
     assert [r["id"] for r in rows] == [u2, u1] or rows[0]["created_at"] >= rows[1]["created_at"]
     for r in rows:
-        assert set(r) == {"id", "email", "name", "auth_provider", "created_at", "last_login"}
+        assert set(r) == {"id", "email", "name", "auth_provider", "created_at", "last_login",
+                          "google_linked"}
         assert "password_hash" not in r and "google_sub" not in r
 
 
