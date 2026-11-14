@@ -23,6 +23,19 @@ class IngestionStats:
     failed: int = 0
     skipped: int = 0
     errors: list = field(default_factory=list)
+    # Earliest ReliefWeb date.created the next incremental run must restart from
+    # (a failed embed/upsert batch, or the run stopped at `limit`); None = all done.
+    resume_from: Optional[str] = None
+
+
+def _created(raw: Dict[str, Any]) -> str:
+    date = (raw.get("fields") or {}).get("date")
+    return (date.get("created") or "") if isinstance(date, dict) else ""
+
+
+def _hold(stats: "IngestionStats", created: str) -> None:
+    if created and (stats.resume_from is None or created < stats.resume_from):
+        stats.resume_from = created
 
 
 def run_pipeline(
@@ -55,14 +68,21 @@ def run_pipeline(
         start_time = time.time()
         logger.info("Ingesting endpoint '%s' (limit=%d)", endpoint, limit)
 
+        # Incremental runs go oldest-first, so stopping at `limit` leaves a clean
+        # resume point (the newest item processed) instead of silently dropping the
+        # oldest new items; a full run keeps newest-first ("latest N").
+        sort = "date.created:asc" if date_from else None
         while processed < limit:
             batch_limit = min(BATCH_SIZE, limit - processed)
-            items = client.fetch(endpoint, limit=batch_limit, offset=offset, date_from=date_from, country=country)
+            items = client.fetch(endpoint, limit=batch_limit, offset=offset, sort=sort,
+                                 date_from=date_from, country=country)
             if not items:
                 break
+            if date_from and processed + len(items) >= limit and len(items) == batch_limit:
+                _hold(stats, _created(items[-1]))   # more may remain past the limit
 
             # Phase 1: parse + optionally enrich with PDF content
-            doc_batch: List[Tuple[Dict[str, Any], List[Dict[str, Any]]]] = []
+            doc_batch: List[Tuple[Dict[str, Any], List[Dict[str, Any]], str]] = []
             for raw in items:
                 stats.total += 1
                 processed += 1
@@ -84,7 +104,7 @@ def run_pipeline(
                         stats.skipped += 1
                         continue
 
-                    doc_batch.append((doc, chunks))
+                    doc_batch.append((doc, chunks, _created(raw)))
                 except Exception as e:
                     stats.failed += 1
                     if len(stats.errors) < 10:
@@ -100,7 +120,7 @@ def run_pipeline(
             # embed step fails (e.g. a transient Gemini rate limit), the existing
             # chunks must stay in place rather than leaving the document with zero
             # chunks until a later successful re-ingest.
-            all_chunks = [c for _, chunks in doc_batch for c in chunks]
+            all_chunks = [c for _, chunks, _ in doc_batch for c in chunks]
             try:
                 texts = [c["content"] for c in all_chunks]
                 all_embeddings = embedder.embed_documents(texts)
@@ -109,12 +129,14 @@ def run_pipeline(
                 # previous, longer version of the document. Deleting after the upsert
                 # means a failed write never leaves a document with zero vectors.
                 store.upsert_chunks(all_chunks, all_embeddings)
-                for doc, chunks in doc_batch:
+                for doc, chunks, _ in doc_batch:
                     keep_ids = {c["id"] for c in chunks}
                     store.delete_document_chunks(doc["id"], keep_ids=keep_ids)
                 stats.succeeded += len(doc_batch)
             except Exception as e:
                 stats.failed += len(doc_batch)
+                for _, _, created in doc_batch:   # retried by the next incremental run
+                    _hold(stats, created)
                 logger.error(
                     "Batch embed/upsert failed for %d docs (%d chunks): %s",
                     len(doc_batch), len(all_chunks), e,

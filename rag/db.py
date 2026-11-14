@@ -97,6 +97,15 @@ reports_table = Table(
 )
 Index("idx_reports_user", reports_table.c.user_id, reports_table.c.created_at)
 
+# Small durable key/value state (e.g. the incremental-ingest watermark). It lives
+# in the DB because Render's free-tier disk is wiped on every sleep/deploy.
+ingest_state_table = Table(
+    "ingest_state", metadata,
+    Column("key", Text, primary_key=True),
+    Column("value", Text, nullable=False),
+    Column("updated_at", Text, nullable=False),
+)
+
 
 _engines: dict[str, Engine] = {}
 
@@ -174,6 +183,27 @@ def _ensure_schema(engine: Engine) -> None:
                 conn.exec_driver_sql("ALTER TABLE reports ADD COLUMN IF NOT EXISTS cover_image TEXT")
                 conn.exec_driver_sql("ALTER TABLE reports ADD COLUMN IF NOT EXISTS section_images TEXT")
     metadata.create_all(engine)
+    if engine.dialect.name == "postgresql":
+        _close_supabase_data_api(engine)
+
+
+def _close_supabase_data_api(engine: Engine) -> None:
+    """Supabase grants its public API roles (anon/authenticated) access to every new
+    table in the public schema. The app talks to Postgres directly and never uses
+    that API, so keep every app table (including ones added later) closed to it:
+    RLS on with no policies, and the role grants revoked. Idempotent; a failure is
+    logged, never fatal (plain Postgres has no such roles)."""
+    names = ", ".join(f'"{t.name}"' for t in metadata.sorted_tables)
+    try:
+        with engine.begin() as conn:
+            for t in metadata.sorted_tables:
+                conn.exec_driver_sql(f'ALTER TABLE "{t.name}" ENABLE ROW LEVEL SECURITY')
+            roles = [r[0] for r in conn.exec_driver_sql(
+                "SELECT rolname FROM pg_roles WHERE rolname IN ('anon', 'authenticated')")]
+            if roles:
+                conn.exec_driver_sql(f"REVOKE ALL ON {names} FROM {', '.join(roles)}")
+    except Exception as e:
+        logger.warning("Could not close app tables to the Supabase Data API: %s", e)
 
 
 @contextmanager

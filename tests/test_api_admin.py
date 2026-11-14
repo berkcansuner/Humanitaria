@@ -108,10 +108,8 @@ def test_status_ok_for_admin(client, tmp_path):
         "total_vector_count": 123,
         "namespaces": {"": {"vector_count": 100}, "v2": {"vector_count": 23}},
     }
-    wm = tmp_path / ".last_ingest.json"
     with patch("api.routes.auth.get_settings", return_value=_admin_settings("test@example.com")), \
-         patch("api.routes.admin.get_store", return_value=mock_store), \
-         patch("ingestion.scheduler._watermark_path", return_value=wm):
+         patch("api.routes.admin.get_store", return_value=mock_store):
         r = client.get("/admin/ingest/status")
     assert r.status_code == 200
     body = r.json()
@@ -127,10 +125,8 @@ def test_status_ok_for_admin(client, tmp_path):
 
 
 def test_status_vector_error_does_not_500(client, tmp_path):
-    wm = tmp_path / ".last_ingest.json"
     with patch("api.routes.auth.get_settings", return_value=_admin_settings("test@example.com")), \
-         patch("api.routes.admin.get_store", side_effect=RuntimeError("pinecone down")), \
-         patch("ingestion.scheduler._watermark_path", return_value=wm):
+         patch("api.routes.admin.get_store", side_effect=RuntimeError("pinecone down")):
         r = client.get("/admin/ingest/status")
     assert r.status_code == 200
     body = r.json()

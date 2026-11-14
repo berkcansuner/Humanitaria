@@ -1,7 +1,5 @@
-import json
 import logging
-import os
-from pathlib import Path
+from datetime import datetime, timezone
 from typing import Optional
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -14,30 +12,36 @@ from ingestion.pipeline import run_pipeline  # noqa: F401
 logger = logging.getLogger(__name__)
 
 
-def _watermark_path() -> Path:
-    """Return the path to the incremental ingest watermark file."""
-    return Path(get_settings().INGEST_WATERMARK_PATH)
+_WATERMARK_KEY = "ingest_watermark"
 
 
 def _load_watermark() -> Optional[str]:
-    """Return the ISO date string of the last successful ingest, or None."""
-    path = _watermark_path()
-    if path.exists():
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-            return data.get("last_ingest")
-        except Exception as e:
-            logger.warning("Failed to read ingest watermark: %s", e)
-    return None
+    """Where the next incremental ingest starts (ReliefWeb date.created, a
+    YYYY-MM-DD date or an ISO timestamp), or None for a full ingest. Stored in the
+    app DB: Render's free-tier disk is wiped on every sleep/deploy."""
+    from sqlalchemy import text
+
+    from rag.db import connect
+    try:
+        with connect() as conn:
+            row = conn.execute(text("SELECT value FROM ingest_state WHERE key = :k"),
+                               {"k": _WATERMARK_KEY}).fetchone()
+        return row[0] if row else None
+    except Exception as e:
+        logger.warning("Failed to read ingest watermark: %s", e)
+        return None
 
 
 def _save_watermark(timestamp: str) -> None:
-    path = _watermark_path()
+    from sqlalchemy import text
+
+    from rag.db import connect
     try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = path.with_name(path.name + ".tmp")
-        tmp.write_text(json.dumps({"last_ingest": timestamp}), encoding="utf-8")
-        os.replace(tmp, path)   # atomic: a crash never leaves a half-written watermark
+        with connect() as conn:
+            conn.execute(text(
+                "INSERT INTO ingest_state (key, value, updated_at) VALUES (:k, :v, :u) "
+                "ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at"),
+                {"k": _WATERMARK_KEY, "v": timestamp, "u": datetime.now(timezone.utc).isoformat()})
     except Exception as e:
         logger.error("Failed to save ingest watermark: %s", e)
 

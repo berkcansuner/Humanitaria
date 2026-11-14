@@ -97,7 +97,6 @@ API_HOST=127.0.0.1
 API_PORT=8001
 FETCH_PDF_CONTENT=False         # PDF eklerini indir+parse et (yavaş, opsiyonel)
 INGEST_SCHEDULE_HOURS=12
-INGEST_WATERMARK_PATH=./.last_ingest.json
 INGEST_LOOKBACK_YEARS=3         # --date-from yoksa manuel ingest tazelik tabanı (0 = sınır yok)
 ```
 
@@ -117,7 +116,9 @@ primary_country.name, theme.name, format.name, file`. Sıralama `date.created:de
 - Embedding'ler dokümanlar arası toplu (`EMBED_BATCH_SIZE`), upsert tek seferde
 - 429/5xx → exponential backoff; 4xx → hemen başarısız (retry yok)
 - Ülke adları normalize edilir ("Iran (Islamic Republic of)" → retriever `$in` ile eşler)
-- `scheduler.py` — APScheduler + watermark (`INGEST_WATERMARK_PATH`, varsayılan `./.last_ingest.json`) ile incremental
+- `scheduler.py` — APScheduler + watermark (DB `ingest_state` tablosu; Render diski geçici) ile incremental.
+  Artımlı çalışma eskiden yeniye işler; başarısız batch ya da limitte kesilen çalışma watermark'ı
+  o belgenin `date.created` değerinde tutar (sonraki çalışma oradan devam eder)
 
 ---
 

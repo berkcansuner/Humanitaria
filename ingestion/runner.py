@@ -6,7 +6,7 @@ run and a manual run can never overlap — the non-blocking ``threading.Lock`` i
 the guarantee (the scheduled job runs on an APScheduler background thread, the
 manual trigger on an ``anyio.to_thread`` worker thread; a thread lock is the one
 primitive both can share). State is in-memory (lost on restart); the durable
-watermark file still records the last successful ingest date.
+watermark (app DB, ``ingest_state``) records where the next run starts.
 """
 import logging
 import threading
@@ -43,26 +43,11 @@ def get_state() -> dict:
     return asdict(_state)
 
 
-def _ping_database() -> None:
-    """Touch the app DB once per ingest run. The nightly cron then produces
-    daily database activity, which keeps a free-tier Supabase project from
-    being paused for inactivity. Never blocks the ingest itself."""
-    try:
-        from sqlalchemy import text
-
-        from rag.db import get_engine
-
-        with get_engine().connect() as conn:
-            conn.execute(text("SELECT 1"))
-    except Exception as exc:
-        logger.warning("DB keep-alive ping failed: %s", exc)
-
-
 def run_ingest_once(source: str) -> bool:
     """Run one incremental ingest. Returns False immediately if a run is already
     in progress (no overlap); True once this call has run (success or handled
-    error). The watermark is advanced only on success, mirroring the previous
-    scheduled-ingest behaviour.
+    error). The watermark is not advanced when the run raises, and never past a
+    document that failed or was left beyond the run's limit.
     """
     if not _lock.acquire(blocking=False):
         return False
@@ -72,7 +57,9 @@ def run_ingest_once(source: str) -> bool:
         _state.started_at = datetime.now(timezone.utc).isoformat()
         _state.finished_at = None
         _state.last_error = None
-        run_start = datetime.now().strftime("%Y-%m-%d")
+        run_start = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        # Reading (and later saving) the DB-stored watermark is also the daily DB
+        # activity that keeps a free-tier Supabase project from pausing.
         date_from = sched._load_watermark()
         # Endpoints ingested by every automatic/admin-triggered run (scheduled job,
         # admin "run now", daily cron) — configurable via INGEST_ENDPOINTS so
@@ -81,10 +68,17 @@ def run_ingest_once(source: str) -> bool:
         endpoints = [e.strip() for e in get_settings().INGEST_ENDPOINTS.split(",") if e.strip()]
         logger.info("Ingest starting (source=%s, date_from=%s, endpoints=%s)",
                     source, date_from or "full", endpoints)
-        _ping_database()
         try:
             stats = sched.run_pipeline(date_from=date_from, endpoints=endpoints)
-            sched._save_watermark(run_start)
+            # Advance only past what actually landed: a failed batch or a run cut
+            # off at its limit holds the watermark at the earliest such item, so
+            # the next run picks it up again (re-ingest is idempotent).
+            held = [s.resume_from for s in (stats or {}).values() if s.resume_from]
+            watermark = min([run_start, *held])
+            sched._save_watermark(watermark)
+            if held:
+                _state.last_error = f"Not every document was ingested; next run resumes from {watermark}"
+                logger.warning("Ingest incomplete (source=%s), watermark held at %s", source, watermark)
             _state.last_stats = {
                 ep: {"total": s.total, "succeeded": s.succeeded,
                      "failed": s.failed, "skipped": s.skipped}
@@ -98,7 +92,7 @@ def run_ingest_once(source: str) -> bool:
                 analytics.rebuild_documents(apply_retention=True)
             except Exception:
                 pass
-            logger.info("Ingest complete (source=%s), watermark=%s", source, run_start)
+            logger.info("Ingest complete (source=%s), watermark=%s", source, watermark)
         except Exception as exc:
             _state.last_error = str(exc)
             logger.error("Ingest failed (source=%s, watermark NOT updated): %s", source, exc)

@@ -1,7 +1,6 @@
-"""P13-02: state files (ingest watermark + reports cache) must be written
+"""P13-02: state files (the reports cache) must be written
 atomically (temp file + os.replace) so a crash mid-write never leaves a corrupt /
 partial JSON that the reader then fails to parse."""
-import json
 from pathlib import Path
 
 
@@ -16,19 +15,6 @@ def _record_write_paths(monkeypatch):
 
     monkeypatch.setattr(Path, "write_text", rec)
     return written
-
-
-def test_watermark_write_is_atomic(tmp_path, monkeypatch):
-    from ingestion import scheduler
-    wm = tmp_path / ".last_ingest.json"
-    monkeypatch.setattr(scheduler, "_watermark_path", lambda: wm)
-    written = _record_write_paths(monkeypatch)
-
-    scheduler._save_watermark("2024-01-01")
-
-    assert any(p.endswith(".tmp") for p in written), "watermark must be written via a temp file"
-    assert json.loads(wm.read_text(encoding="utf-8"))["last_ingest"] == "2024-01-01"
-    assert not (tmp_path / ".last_ingest.json.tmp").exists()  # temp renamed away
 
 
 def test_reports_cache_write_is_atomic(tmp_path, monkeypatch):
