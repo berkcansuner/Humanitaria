@@ -31,18 +31,38 @@ export function expandCitationGroups(text) {
 export function renderMarkdown(text, sources = null) {
   if (!text) return ''
   const html = marked.parse(text, { gfm: true, breaks: true })
-  const clean = DOMPurify.sanitize(html)
-  // Expand groups, then turn each [n] into a chip. Done AFTER sanitize so the
-  // injected anchors (digits only — no injection risk) are not stripped; the
-  // click handler in Chat.vue scrolls to the matching source within the message.
-  const expanded = expandCitationGroups(clean)
+  const fragment = DOMPurify.sanitize(html, { RETURN_DOM_FRAGMENT: true })
   const validIndexes =
     sources && sources.length ? new Set(sources.filter(isValidSource).map((s) => s.index)) : null
-  return expanded.replace(/( ?)\[(\d+)\]/g, (_full, space, n) => {
-    // A citation with no displayed source is dropped (with a leading space) rather
-    // than left as a dead [n] the reader can't click. During streaming (no sources
-    // yet) every [n] is chipped, then re-rendered once sources arrive.
-    if (validIndexes && !validIndexes.has(Number(n))) return ''
-    return `${space}<a class="cite" data-cite="${n}" href="#src-${n}">${n}</a>`
-  })
+  // Turn each [n] into a chip by editing TEXT NODES only. Rewriting the sanitized
+  // HTML string also matched [n] inside attribute values and broke out of them.
+  // The click handler in Chat.vue scrolls to the matching source within the message.
+  const walker = document.createTreeWalker(fragment, NodeFilter.SHOW_TEXT)
+  const textNodes = []
+  while (walker.nextNode()) textNodes.push(walker.currentNode)
+  for (const node of textNodes) {
+    const text = expandCitationGroups(node.nodeValue)
+    if (!/\[\d+\]/.test(text)) continue
+    const parts = document.createDocumentFragment()
+    let last = 0
+    for (const m of text.matchAll(/( ?)\[(\d+)\]/g)) {
+      parts.append(text.slice(last, m.index))
+      last = m.index + m[0].length
+      // A citation with no displayed source is dropped (with a leading space) rather
+      // than left as a dead [n] the reader can't click. During streaming (no sources
+      // yet) every [n] is chipped, then re-rendered once sources arrive.
+      if (validIndexes && !validIndexes.has(Number(m[2]))) continue
+      const a = document.createElement('a')
+      a.className = 'cite'
+      a.dataset.cite = m[2]
+      a.href = `#src-${m[2]}`
+      a.textContent = m[2]
+      parts.append(m[1], a)
+    }
+    parts.append(text.slice(last))
+    node.replaceWith(parts)
+  }
+  const out = document.createElement('div')
+  out.append(fragment)
+  return out.innerHTML
 }

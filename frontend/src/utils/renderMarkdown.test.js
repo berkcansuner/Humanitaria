@@ -43,3 +43,24 @@ describe('renderMarkdown citations', () => {
     expect(html).not.toContain('[4]')
   })
 })
+
+describe('renderMarkdown citation chips stay out of attributes (security audit run-1)', () => {
+  it('does not rewrite [n] inside a sanitized attribute value', () => {
+    const md = '<span title="[1] <img src=x onerror=alert(1)>">t</span> and [1]'
+    const host = document.createElement('div')
+    host.innerHTML = renderMarkdown(md)
+    expect(host.querySelector('img')).toBeNull()
+    expect(host.querySelector('span').getAttribute('title')).toBe(
+      '[1] <img src=x onerror=alert(1)>',
+    )
+    expect(host.querySelectorAll('a.cite').length).toBe(1) // only the text-node citation
+  })
+
+  it('does not create elements from a meta-refresh tail in a link title', () => {
+    const md =
+      '[x](https://example.org "[2] <meta http-equiv=refresh content=0;url=https://evil.test>")'
+    const host = document.createElement('div')
+    host.innerHTML = renderMarkdown(md)
+    expect(host.querySelector('meta')).toBeNull()
+  })
+})
