@@ -4,7 +4,7 @@
 > Bu bir tarihçe değil — GÜNCEL durumu yansıtır. Eskiyen satırları sil/değiştir.
 > "Nerede kalmıştık?" sorusunun cevabı burasıdır.
 
-**Son güncelleme:** 2026-11-15 — **VEKTÖR INDEX'İ PINECONE'DAN SUPABASE PGVECTOR'A TAŞINDI → CANLI.** Neden: admin listesi/rapor ülkeleri/retention tüm Pinecone index'ini tarıyordu → 512 MB Render instance'ı OOM ile yeniden başlıyordu, ayrıca Pinecone aylık 1 GB okuma (egress) kotası bitti → canlı sohbet kapandı. `1a3b77a` + `befd826` (master'a push, CI yeşil, Render canlı): `chunks` (halfvec(768) + HNSW, filtre kolonları) + `documents` tabloları; retriever = SQL cosine + Python MMR; admin listesi/ülkeler/retention düz SQL; embedding 768 boyut (`dimensions`); Pinecone YALNIZ reranker (veri yok). Yeni tablolarda RLS açık + anon/authenticated REVOKE. Önceki iş `f23c637`: ingest watermark DB'de (`ingest_state`), başarısız batch / limit kesiği watermark'ı tutar; watermark çalışmaları eskiden yeniye (`oldest_first`), CLI yüklemesi en yeniden. **Veri (15 Kasım yüklemesi):** 248 ülke × son 1 yıl × ülke başına 200 → 9.038 belge, 24.872 chunk, 0 hata, DB 161 MB / 500 MB. Watermark 2026-11-14. Cloudflare cron `0 3 * * *` yeniden açıldı. **KALAN:** canlıda sohbet/admin/`/health?deep=true` kullanıcı doğrulaması; Pinecone'daki eski index verisini sil (API anahtarı reranker için KALSIN); dev-only vitest/vite major; Google OAuth uygulamasını yayınlamak.
+**Son güncelleme:** 2026-11-15 — **VEKTÖR INDEX'İ PINECONE'DAN SUPABASE PGVECTOR'A TAŞINDI → CANLI.** Neden: admin listesi/rapor ülkeleri/retention tüm Pinecone index'ini tarıyordu → 512 MB Render instance'ı OOM ile yeniden başlıyordu, ayrıca Pinecone aylık 1 GB okuma (egress) kotası bitti → canlı sohbet kapandı. `1a3b77a` + `befd826` (master'a push, CI yeşil, Render canlı): `chunks` (halfvec(768) + HNSW, filtre kolonları) + `documents` tabloları; retriever = SQL cosine + Python MMR; admin listesi/ülkeler/retention düz SQL; embedding 768 boyut (`dimensions`); Pinecone YALNIZ reranker (veri yok). Yeni tablolarda RLS açık + anon/authenticated REVOKE. Önceki iş `f23c637`: ingest watermark DB'de (`ingest_state`), başarısız batch / limit kesiği watermark'ı tutar; watermark çalışmaları eskiden yeniye (`oldest_first`), CLI yüklemesi en yeniden. **Veri (15 Kasım yüklemesi):** 248 ülke × son 1 yıl × ülke başına 200 → 9.038 belge, 24.872 chunk, 0 hata, DB 161 MB / 500 MB. Watermark 2026-11-14. Cloudflare cron `0 3 * * *` yeniden açıldı. Canlıda kullanıcı doğruladı (sohbet + admin sayıları). Pinecone `reliefweb-docs` index'i SİLİNDİ; reranker (Inference API) index'siz çalışıyor, doğrulandı — `PINECONE_API_KEY` KALSIN. **KALAN:** ilk gece cron'u kontrolü; dev-only vitest/vite major; Google OAuth uygulamasını yayınlamak.
 
 **(önceki) Son güncelleme:** 2026-11-14 — **LANGCHAIN 1.x CANLIDA + TAKİP SORUSU DİL HATASI DÜZELTİLDİ.** `8c79038`: langchain-core/openai 1.x (`use_responses_api=False` — Gemini yalnız Chat Completions), kullanılmayan langchain/community + Redis desteği kaldırıldı; pip-audit 0. `1f8506a`: yeniden başlatma/uyku sonrası ilk takip sorusu ("peki kuzeyde durum ne?") bağlamsız ve filtresiz aranıyor, çok dilli alakasız belgeler geliyor ve cevap İspanyolca dönebiliyordu. Kök neden: soğuk pencere `messages` tablosundan planlamadan SONRA dolduruluyordu. Artık `_plan_retrieval` önce pencereyi dolduruyor; cevap dili `rag/chain.py` `answer_language` (langdetect, yalnız tr/en; kısa takip sorusu sohbetin dilini alır) ile kodda belirlenip istemde `{answer_language}` olarak veriliyor. Canlıda kullanıcıyla doğrulandı. 728 backend testi yeşil. **KALAN:** dev-only vitest/vite major; ingest watermark başarısız batch'leri atlıyor (doğruluk hatası); Google OAuth uygulamasını yayınlamak (Branding → Publish).
 
@@ -376,7 +376,7 @@ Plan/spec: `docs/superpowers/{plans,specs}/2026-06-02-reingest-pilot-syria*` (gi
   artımlı ingest + retention. Watermark `ingest_state` tablosunda (2026-11-14'ten başladı).
 - Yeniden yükleme: `python scripts/ingest.py --all-countries --limit 200 --endpoints reports disasters` (yerelden,
   `.env` DATABASE_URL = prod Supabase; ~1 saat; idempotent, `--force` gereksiz).
-- Pinecone'daki eski `reliefweb-docs` index'i (3072-dim) artık KULLANILMIYOR → silinebilir; API anahtarı reranker için kalsın.
+- Pinecone'daki eski `reliefweb-docs` index'i 2026-11-15'te SİLİNDİ; Pinecone yalnız reranker (API anahtarı kalsın).
 - ⚠️ `tests/test_pgvector_store.py` tabloları DROP eder → yalnız yerel/CI Postgres; Supabase URL'si reddedilir.
 
 ## Önemli Komutlar
@@ -397,9 +397,7 @@ Plan/spec: `docs/superpowers/{plans,specs}/2026-06-02-reingest-pilot-syria*` (gi
 - Remote: **https://github.com/berkcansuner/Humanitaria** (private).
 
 ## Sıradaki Adımlar (kullanıcı yönlendirir)
-- [ ] Canlıda pgvector doğrulaması (kullanıcı): sohbet + takip sorusu, Admin → Ingestion sayıları, `/health?deep=true`.
 - [ ] İlk gece cron'u (03:00 UTC) sonrası `ingest_state` watermark'ının ilerlediğini ve hata olmadığını kontrol et.
-- [ ] Pinecone'daki eski index verisini sil (reranker anahtarı kalsın).
 - [ ] Diğer Faz 2 eksenleri: hibrit (keyword+vektör) arama; kaynak snippet/önizleme.
 - [x] ~~Conversation kullanıcı modeli / IDOR~~ → **YAPILDI** (auth sistemi, 2026-06-07, commit bekliyor). Kalan deploy-öncesi: conv rate-limit; CORS daraltma; prod `.env`'e güçlü `AUTH_SESSION_SECRET` + Google cred'leri.
 - [x] ~~**İş Kolu 2 — RAG kalite & ölçüm**~~ → **YAPILDI** (eval metrikleri + etiketli set + A/B + sorgu yeniden yazımı; commit bekliyor). A/B: v2≈default doküman düzeyinde.
