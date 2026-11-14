@@ -195,10 +195,7 @@ async def login(request: Request, body: LoginIn, response: Response):
     stored_hash = user["password_hash"] if (user and user["password_hash"]) else users_store.DUMMY_PASSWORD_HASH
     valid = await anyio.to_thread.run_sync(users_store.verify_password, body.password, stored_hash)
     if not user or not valid:
-        # shortcut: raw X-Forwarded-For is logged temporarily to measure the real proxy
-        # depth for RATE_LIMIT_TRUSTED_HOPS; remove once render.yaml is corrected.
-        logger.warning("auth: login failed (ip=%s, xff=%r)", _client_ip(request),
-                       (request.headers.get("x-forwarded-for") or "")[:200])
+        logger.warning("auth: login failed (ip=%s)", _client_ip(request))
         raise HTTPException(status_code=401, detail="Invalid email or password")
     token = await anyio.to_thread.run_sync(
         users_store.create_session, user["id"], get_settings().SESSION_TTL_HOURS

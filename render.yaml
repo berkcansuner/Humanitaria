@@ -27,8 +27,10 @@ services:
         value: "365"
       - key: RETENTION_PER_COUNTRY_CAP
         value: "200"
-      - key: RATE_LIMIT_TRUSTED_HOPS   # Render = single reverse proxy → real client IP = rightmost XFF entry (audit P2-01)
-        value: "1"
+      # Observed XFF on Render (2026-11): client, Cloudflare edge, Render internal 10.x
+      # → real client IP = 3rd entry from the right. 1 keyed every user on 10.x.
+      - key: RATE_LIMIT_TRUSTED_HOPS
+        value: "3"
       # URLs assume the predicted host below. If Render appends a suffix to the
       # name, update these three + the Google redirect URI (see DEPLOY.md).
       - key: FRONTEND_URL

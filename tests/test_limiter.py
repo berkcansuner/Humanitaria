@@ -42,6 +42,22 @@ def test_single_entry_xff_with_one_hop():
         assert _client_ip(_FakeRequest(xff="1.2.3.4")) == "1.2.3.4"
 
 
+def test_render_chain_three_hops_picks_client_not_proxies():
+    # Observed on Render: client, Cloudflare edge (162.x), Render internal (10.x).
+    # A client-forged prefix must not shift the selected entry.
+    with _with_hops(3):
+        assert _client_ip(_FakeRequest(xff="9.9.9.9, 151.0.0.1, 162.158.0.1, 10.0.0.2")) == "151.0.0.1"
+        assert _client_ip(_FakeRequest(xff="151.0.0.1, 162.158.0.1, 10.0.0.2")) == "151.0.0.1"
+
+
+def test_render_blueprint_trusts_three_hops():
+    import pathlib
+    import yaml
+    spec = yaml.safe_load(pathlib.Path(__file__).resolve().parent.parent.joinpath("render.yaml").read_text())
+    env = {e["key"]: e.get("value") for e in spec["services"][0]["envVars"]}
+    assert env["RATE_LIMIT_TRUSTED_HOPS"] == "3"
+
+
 def test_missing_xff_falls_back_to_socket_peer():
     with _with_hops(1):
         assert _client_ip(_FakeRequest(xff=None, client_host="10.0.0.9")) == "10.0.0.9"
