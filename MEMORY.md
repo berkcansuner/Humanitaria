@@ -4,7 +4,9 @@
 > Bu bir tarihçe değil — GÜNCEL durumu yansıtır. Eskiyen satırları sil/değiştir.
 > "Nerede kalmıştık?" sorusunun cevabı burasıdır.
 
-**Son güncelleme:** 2026-11-14 — **LANGCHAIN 1.x CANLIDA + TAKİP SORUSU DİL HATASI DÜZELTİLDİ.** `8c79038`: langchain-core/openai 1.x (`use_responses_api=False` — Gemini yalnız Chat Completions), kullanılmayan langchain/community + Redis desteği kaldırıldı; pip-audit 0. `1f8506a`: yeniden başlatma/uyku sonrası ilk takip sorusu ("peki kuzeyde durum ne?") bağlamsız ve filtresiz aranıyor, çok dilli alakasız belgeler geliyor ve cevap İspanyolca dönebiliyordu. Kök neden: soğuk pencere `messages` tablosundan planlamadan SONRA dolduruluyordu. Artık `_plan_retrieval` önce pencereyi dolduruyor; cevap dili `rag/chain.py` `answer_language` (langdetect, yalnız tr/en; kısa takip sorusu sohbetin dilini alır) ile kodda belirlenip istemde `{answer_language}` olarak veriliyor. Canlıda kullanıcıyla doğrulandı. 728 backend testi yeşil. **KALAN:** dev-only vitest/vite major; ingest watermark başarısız batch'leri atlıyor (doğruluk hatası); Google OAuth uygulamasını yayınlamak (Branding → Publish).
+**Son güncelleme:** 2026-11-15 — **VEKTÖR INDEX'İ PINECONE'DAN SUPABASE PGVECTOR'A TAŞINDI → CANLI.** Neden: admin listesi/rapor ülkeleri/retention tüm Pinecone index'ini tarıyordu → 512 MB Render instance'ı OOM ile yeniden başlıyordu, ayrıca Pinecone aylık 1 GB okuma (egress) kotası bitti → canlı sohbet kapandı. `1a3b77a` + `befd826` (master'a push, CI yeşil, Render canlı): `chunks` (halfvec(768) + HNSW, filtre kolonları) + `documents` tabloları; retriever = SQL cosine + Python MMR; admin listesi/ülkeler/retention düz SQL; embedding 768 boyut (`dimensions`); Pinecone YALNIZ reranker (veri yok). Yeni tablolarda RLS açık + anon/authenticated REVOKE. Önceki iş `f23c637`: ingest watermark DB'de (`ingest_state`), başarısız batch / limit kesiği watermark'ı tutar; watermark çalışmaları eskiden yeniye (`oldest_first`), CLI yüklemesi en yeniden. **Veri (15 Kasım yüklemesi):** 248 ülke × son 1 yıl × ülke başına 200 → 9.038 belge, 24.872 chunk, 0 hata, DB 161 MB / 500 MB. Watermark 2026-11-14. Cloudflare cron `0 3 * * *` yeniden açıldı. **KALAN:** canlıda sohbet/admin/`/health?deep=true` kullanıcı doğrulaması; Pinecone'daki eski index verisini sil (API anahtarı reranker için KALSIN); dev-only vitest/vite major; Google OAuth uygulamasını yayınlamak.
+
+**(önceki) Son güncelleme:** 2026-11-14 — **LANGCHAIN 1.x CANLIDA + TAKİP SORUSU DİL HATASI DÜZELTİLDİ.** `8c79038`: langchain-core/openai 1.x (`use_responses_api=False` — Gemini yalnız Chat Completions), kullanılmayan langchain/community + Redis desteği kaldırıldı; pip-audit 0. `1f8506a`: yeniden başlatma/uyku sonrası ilk takip sorusu ("peki kuzeyde durum ne?") bağlamsız ve filtresiz aranıyor, çok dilli alakasız belgeler geliyor ve cevap İspanyolca dönebiliyordu. Kök neden: soğuk pencere `messages` tablosundan planlamadan SONRA dolduruluyordu. Artık `_plan_retrieval` önce pencereyi dolduruyor; cevap dili `rag/chain.py` `answer_language` (langdetect, yalnız tr/en; kısa takip sorusu sohbetin dilini alır) ile kodda belirlenip istemde `{answer_language}` olarak veriliyor. Canlıda kullanıcıyla doğrulandı. 728 backend testi yeşil. **KALAN:** dev-only vitest/vite major; ingest watermark başarısız batch'leri atlıyor (doğruluk hatası); Google OAuth uygulamasını yayınlamak (Branding → Publish).
 
 **(önceki) Son güncelleme:** 2026-11-14 — **GÜVENLİK DENETİMİ (run-1) + DÜZELTMELER.** Cloudflare `security-audit` skill'iyle tam denetim (kaynak-only, sandbox yok); rapor repo dışında `~/security-audit-skill/Humanitaria/run-1/REPORT.md`. Branch `fix/security-audit-run1`. **Canlıya alınan:** `RATE_LIMIT_TRUSTED_HOPS=3` (Render'da XFF = istemci, Cloudflare kenarı, Render 10.x; 1 iken herkes 10.x kovasını paylaşıyordu — canlı logla doğrulandı). **Canlıda (push edildi):** admin = allowlist e-posta **VE** Google bağlı hesap (`_is_admin`; admin adresleriyle parolalı signup 409); Google e-posta bağlamada eski parola + tüm oturumlar iptal; 64 KB istek gövdesi sınırı (413, JSON parse'tan önce); `session_id` ≤64 `[A-Za-z0-9-]`; rapor `theme` ∈ THEMES + tarih `YYYY-MM-DD`; filtre LLM'i ve Pinecone rerank worker thread'de; `/health?deep=true` yalnız admin; Sentry body/locals göndermez; PDF'te ham HTML metin olarak (global font ele geçirme kapandı); kullanıcı başına 500 sohbet / 200 rapor + sohbet yazmalarında rate limit; citation chip'leri yalnız text node'lara (öznitelik kırılması jsdom'da yeniden üretildi, düzeltildi); fastapi 0.162.7 / starlette 1.10.0 / authlib 1.9.5 / pypdf / requests; npm prod açığı 0. **Canlı kontroller (kullanıcıyla):** Supabase 5 tabloda RLS açık, politika yok, `anon`/`authenticated` yetkileri REVOKE edildi; Cloudflare worker güncel, token rastgele; Google OAuth'tan sahipsiz `reliefweb-rag.onrender.com` redirect URI silindi, uygulama Testing modunda (yayına almadan önce bu branch deploy edilmeli). **Repo HERKESE AÇIK** — kişisel değerleri bu dosyaya yazma. **Sızan sırlar kapandı (2026-11-14):** Render API anahtarı silindi (hiçbir yerde kullanılmıyordu), Google client secret yenilendi + eskisi silindi; aşağıdaki eski notlardaki "Render key + Google secret rotasyonu" maddesi TAMAMLANDI. Branch master'a push edildi, canlıda doğrulandı (CI yeşil; anonim `/health?deep=true` 403, 70 KB gövde 413; admin Google ile giriyor). LangChain 1.x göçü ve kalan işler için yukarıdaki güncel girişe bak.
 
@@ -75,7 +77,7 @@
 
 **M&E RAPORLARI özelliği + rapor kalite cilası — CANLI (2026-06-28/29):** Ayrı **`/reports`** sayfası: ülke/sektör/dönem/dil formu → çoklu ReliefWeb raporunu sentezleyen yapılandırılmış **durum raporu** (SSE streaming + otomatik kaydet + listele/görüntüle/sil + yeşil temalı **PDF export**). **Rapor kalitesi bu seansta 5 turda cilalandı, hepsi master'da canlı:** yetkili **tek-atıf** + **adaptif kaynak-dili** (anglofon→İngilizce, frankofon→Fransızca korunur; langdetect, içerikten) + **yinelenen-belge birleştirme** (EN/FR çift + taban/companion → tek temsilci) + **Yönetici Özeti damıtma** (rakamlar yalnız gövdede) + **corroboration-piling cap 2** (tek iddiaya çok kaynak yığma → kırpılır) + **SAM atıf nudge**. **Anahtar-rakam paneli denendi → kullanıcı isteğiyle TAMAMEN kaldırıldı (`d03d50d`) — tekrar önerme.** Dosyalar: `rag/report_service.py`, `rag/reports.py` (SQLite), `rag/report_pdf.py` (xhtml2pdf), `rag/citations.py`, `api/routes/reports.py`, `frontend ReportsView.vue`. **419 backend + 81 frontend yeşil.** Tam tarihçe: auto-memory `current-state-2026-06-28.md`.
 
-**🌐 ARTIK CANLI YAYINDA: https://humanitaria.onrender.com** (Render ücretsiz Docker; servis adı `humanitaria`, id `srv-d8uo70ernols73fgenr0`, bölge frankfurt). Uygulama sağlıklı: Gemini `gemini-2.5-flash` (chat) + `gemini-embedding-001` (3072) + Pinecone (default namespace, **31.628 vektör**) — tamamen bulut. Vue 3 SPA, zorunlu giriş (Google + e-posta/şifre), **Humanitaria** markası. GitHub: **`berkcansuner/Humanitaria`** (master = origin, güncel).
+**🌐 ARTIK CANLI YAYINDA: https://humanitaria.onrender.com** (Render ücretsiz Docker; servis adı `humanitaria`, id `srv-d8uo70ernols73fgenr0`, bölge frankfurt). Uygulama: Gemini `gemini-2.5-flash` (chat) + `gemini-embedding-001` (768) + Supabase Postgres/pgvector (9.038 belge, 24.872 chunk; 2026-11-15) — tamamen bulut. Vue 3 SPA, zorunlu giriş (Google + e-posta/şifre), **Humanitaria** markası. GitHub: **`berkcansuner/Humanitaria`** (master = origin, güncel).
 
 **Bu seansta (2026-06-28, 2. tur) — veri stratejisi otomasyonu (kod yazıldı + master'a push, PASİF):** Eski plan (5-yıl prune + v2-tamamlama) İPTAL. Yeni: **tüm ülkeler (249) × son 1 yıl × ülke-başı cap** → temiz `v3` + cutover; **günlük kayan pencere** (yeni ingest + >1yıl sil + ülke-başı cap fazlasını sil) Cloudflare Worker cron → token'lı `POST /admin/ingest/cron`. ŞİMDİ eklendi: `ingest.py --all-countries` (`client.list_country_codes`), `ingestion/retention.py` (`select_expired` saf + `apply_retention`), `rebuild_documents(apply_retention=True)` (runner ingest sonrası; tek tarama trim+liste; admin lazy-GET silmez), `config` `RETENTION_DAYS`/`RETENTION_PER_COUNTRY_CAP`/`INGEST_TRIGGER_TOKEN` (hepsi **0/boş = KAPALI**, cutover'da açılır), `cloudflare-cron/` worker. **381 backend yeşil.** Ingest zaten `date.created:desc` (en güncelden eskiye). Çalıştırma 1 Temmuz (kota). Detay: aşağıdaki strateji bölümü + plan dosyası.
 
@@ -358,21 +360,24 @@ Plan/spec: `docs/superpowers/{plans,specs}/2026-06-02-reingest-pilot-syria*` (gi
 İnsani yardım M&E ekibi için ReliefWeb belgeleri üzerinden RAG sohbet sistemi. **UI İngilizce (global), sohbet çok dilli.** Marka: **Humanitaria**. Yerel geliştirme aşaması.
 
 ## Mevcut Durum (çalışıyor)
-- **Mimari:** Gemini (chat/query/embed) + Pinecone — tek sağlayıcı, provider flag YOK. Tamamen bulut.
+- **Mimari:** Gemini (chat/query/embed) + Supabase Postgres (app tabloları + pgvector index'i) + Pinecone Inference (yalnız reranker). Tamamen bulut.
 - **Chat LLM:** Gemini **`gemini-2.5-flash`** (GA, çok dilli; thinking modeli, `reasoning_effort="low"`). `gemini-3.5-flash`'ten geçildi (kronik 503 "high demand"). Transient 503'e karşı bounded retry: non-stream `_ainvoke_with_retry` + stream `_astream_with_retry` (ortak `_is_high_demand`); `except` busy→503/beklenmeyen→500. System prompt İngilizce; yanıt kullanıcının dilinde. Rule 9 = recency.
-- **Query processor:** Gemini `gemini-2.5-flash` (DEĞİŞMEDİ). **Embedding:** `gemini-embedding-001` (3072-dim).
+- **Query processor:** Gemini `gemini-2.5-flash` (DEĞİŞMEDİ). **Embedding:** `gemini-embedding-001` (768-dim; API'de `dimensions=768`).
 - **Chunker:** **`RecursiveCharacterTextSplitter` ~1500 char/200 overlap** (yeni default). NOT: mevcut default-namespace verisi hâlâ ESKİ 800-kelime chunk'larda — rollout'a kadar karışık durum.
 - **Retrieval:** güncellik-farkında + alaka reranker'ı (truncate=END); recency blend ham alaka skoruyla. `RECENCY_RERANK_POOL=10`, `RECENCY_BOOST_FACTOR=0.6`.
 - **Backend:** FastAPI, port `.env`'deki `API_PORT`. SSE streaming. Vue dist'i **SPA history-mode fallback** ile sunar (`api/main.py`: `/assets` mount + index.html catch-all). Kod değişikliğinden sonra restart (`--reload` yok).
 - **Frontend:** Vue 3 + **vue-router** SPA, Humanitaria (yeşil/antrasit, dark+light), İngilizce. Rotalar: **`/` Landing** (marketing, `.mkt-scope` izole CSS) + **`/login`+`/signup`** (`views/AuthView.vue`) + **`/app` Chat** (`views/ChatView.vue`, **router guard'lı — zorunlu giriş**). **Pricing sayfası KALDIRILDI** (route+view+CSS); navbar: Product/Sources/Use cases (Citations nav linki de kaldırıldı, sayfa bölümü+footer linki kaldı). Marketing döküman-scroll (global viewport-lock yalnız chat'e özel: `ChatView .app{height:100vh;overflow:hidden}`). `frontend/dist/` gitignore'da.
 - **Test:** **335 backend** + 62 frontend yeşil. Judge groundedness 5.0/5 (doygun); etiketli retrieval metrikleri baseline recall@5=0.224/MRR=0.672/nDCG=0.426 (MMR/havuz tuning A/B'de baseline optimal çıktı — bkz. 2026-06-24 İK3).
 
-## Veri Durumu (Pinecone `reliefweb-docs`, 3072-dim)
-- **default namespace (''): 31.628 vektör** — ESKİ 800-kelime chunk, 10 ülke. **App bunu kullanıyor** (cutover henüz YOK).
-- **"v2" namespace: 68.936 vektör** — rollout, YENİ ~1500-char chunk. **8/10 ülke** (IRN/IRQ/SYR/TUR/YEM/AFG/SOM/SDN). EKSİK: Palestine (kısmi), Ukraine (0) → Pinecone aylık kotası doldu. 8-ülke A/B GO.
-- **"pilot" namespace: 4.892 vektör** — Suriye son-1-yıl, YENİ chunk. v2 onu kapsıyor → cutover'da temizlenebilir.
-- ⚠️ **Pinecone AYLIK write-unit kotası (2M) DOLU** — kota reset / plan upgrade olmadan YENİ yazma yapılamaz (ingest 429). Reset sonrası PSE+UKR tamamlanır.
-- Yalnız `reports` endpoint. Daha fazla veri: `PINECONE_NAMESPACE=v2 scripts/ingest.py --country X --date-from YYYY-MM-DD --limit N` (`--force` KULLANMA; idempotent).
+## Veri Durumu (Supabase pgvector, 768-dim halfvec) — 2026-11-15
+- **`chunks`: 24.872 · `documents`: 9.038** (89 afet kaydı), 200 ülke; 248 ülke × son 1 yıl × ülke başına en yeni 200
+  (`reports` + `disasters`). 3.184 belge metinsiz (yalnız PDF/infografik) → atlandı. DB 161 MB / 500 MB (ücretsiz plan).
+- Günlük kayan pencere: Cloudflare Worker cron `0 3 * * *` (03:00 UTC) → `POST /admin/ingest/cron` → watermark'tan
+  artımlı ingest + retention. Watermark `ingest_state` tablosunda (2026-11-14'ten başladı).
+- Yeniden yükleme: `python scripts/ingest.py --all-countries --limit 200 --endpoints reports disasters` (yerelden,
+  `.env` DATABASE_URL = prod Supabase; ~1 saat; idempotent, `--force` gereksiz).
+- Pinecone'daki eski `reliefweb-docs` index'i (3072-dim) artık KULLANILMIYOR → silinebilir; API anahtarı reranker için kalsın.
+- ⚠️ `tests/test_pgvector_store.py` tabloları DROP eder → yalnız yerel/CI Postgres; Supabase URL'si reddedilir.
 
 ## Önemli Komutlar
 | İş | Komut |
@@ -381,7 +386,7 @@ Plan/spec: `docs/superpowers/{plans,specs}/2026-06-02-reingest-pilot-syria*` (gi
 | Backend testleri | `./venv/Scripts/python.exe -m pytest tests/ -q` |
 | Frontend build / test | `cd frontend && npm run build` / `npm test -- --run` |
 | RAG eval (judge) | `./venv/Scripts/python.exe scripts/eval_rag.py --judge` |
-| Pinecone namespace stats | `./venv/Scripts/python.exe -c "from config import get_settings; from pinecone import Pinecone; s=get_settings(); print(Pinecone(api_key=s.PINECONE_API_KEY).Index(s.PINECONE_INDEX).describe_index_stats())"` |
+| DB sayımları | admin paneli (`chunk_count`/`document_count`) veya `select count(*) from chunks` (Supabase SQL editor) |
 
 > **Bash gotcha:** kabuk cwd kalıcı; her komutta önce `cd "C:/Projeler/Humanitaria"`. Inline env var (`PINECONE_NAMESPACE=pilot cmd`, `$(...)`) Bash tool'unda çalışır, PowerShell'de DEĞİL.
 
@@ -392,17 +397,16 @@ Plan/spec: `docs/superpowers/{plans,specs}/2026-06-02-reingest-pilot-syria*` (gi
 - Remote: **https://github.com/berkcansuner/Humanitaria** (private).
 
 ## Sıradaki Adımlar (kullanıcı yönlendirir)
-- [ ] **Kotayı çöz** (aylık reset bekle VEYA Pinecone plan upgrade) → `PINECONE_NAMESPACE=v2 ingest --country PSE UKR --date-from 2023-06-05 --limit 2000` ile v2'yi tamamla.
-- [ ] v2 tamla → **CUTOVER:** `PINECONE_NAMESPACE=v2` (config default + .env) commit/push → app v2'ye geçer. Eski default rollback olarak TUT; pilot namespace temizle.
-- [ ] (Karar) "pilot" + (cutover sonrası) eski default namespace temizliği.
+- [ ] Canlıda pgvector doğrulaması (kullanıcı): sohbet + takip sorusu, Admin → Ingestion sayıları, `/health?deep=true`.
+- [ ] İlk gece cron'u (03:00 UTC) sonrası `ingest_state` watermark'ının ilerlediğini ve hata olmadığını kontrol et.
+- [ ] Pinecone'daki eski index verisini sil (reranker anahtarı kalsın).
 - [ ] Diğer Faz 2 eksenleri: hibrit (keyword+vektör) arama; kaynak snippet/önizleme.
 - [x] ~~Conversation kullanıcı modeli / IDOR~~ → **YAPILDI** (auth sistemi, 2026-06-07, commit bekliyor). Kalan deploy-öncesi: conv rate-limit; CORS daraltma; prod `.env`'e güçlü `AUTH_SESSION_SECRET` + Google cred'leri.
 - [x] ~~**İş Kolu 2 — RAG kalite & ölçüm**~~ → **YAPILDI** (eval metrikleri + etiketli set + A/B + sorgu yeniden yazımı; commit bekliyor). A/B: v2≈default doküman düzeyinde.
 - [x] ~~**İş Kolu 3 — Veri derinliği** (kod)~~ → **YAPILDI** (parser/chunker/client/retriever zenginleştirme; commit bekliyor). **Çalıştırma:** kota reset'inde `ingest.py` ile re-index (yeni alanlar + chunker o zaman uygulanır).
 
 ## Bilinen Sorunlar / Kısıtlamalar
-- **Pinecone aylık write-unit kotası (2M):** rollout bunu doldurdu → yeni yazma 429 ("write unit limit for the current month"). Sabit kota; retry çare değil. Reset/plan-upgrade gerek. Büyük ingest planlarken hesaba kat.
-- **Karışık chunk durumu:** chunker yeni default (~1500 char) ama mevcut default-namespace verisi hâlâ eski 800-kelime — cutover'a kadar böyle. Yeni ingest'ler yeni chunk üretir.
+- **Supabase ücretsiz plan:** 500 MB DB sınırı (şu an 161 MB) ve 7 gün hareketsizlikte duraklama (gece cron'u önler).
 - 1-yıl ingest penceresi tarihsel büyük olayları kaçırır (deprem) → rollout'ta ≥2-3 yıl.
 - ~~Conversation IDOR~~ → **ÇÖZÜLDÜ** (auth sistemi; sohbetler `user_id`-sahipli, non-owner 404). Mevcut conversations.db satırları migration'da `user_id=NULL` → görünmez (dev verisi; kabul).
 - Şablon/sistem mesajları (greeting, no-docs) İngilizce; yalnız LLM yanıtı çok dilli (bilinçli).
