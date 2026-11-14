@@ -15,6 +15,11 @@ from config import get_settings
 PG_URL = os.environ.get("TEST_DATABASE_URL", "")
 pytestmark = pytest.mark.skipif(not PG_URL, reason="TEST_DATABASE_URL not set")
 
+# The fixture DROPs chunks/documents. A hosted database (Supabase's pooler may also
+# ignore a search_path option) would lose the real corpus — refuse it outright.
+if "supabase" in PG_URL:
+    raise RuntimeError("TEST_DATABASE_URL must be a disposable local Postgres, not Supabase")
+
 DIM = 3
 
 

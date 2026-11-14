@@ -74,10 +74,9 @@ THEMES = [
     "Water Sanitation Hygiene",
 ]
 
-# Static fallback country list — the canonical country names as they appear in the
-# Pinecone metadata (snapshot of the indexed `country` values), so the $eq/$in filter
-# matches. Used when the scan cache is cold (e.g. a fresh deploy on Render's ephemeral
-# filesystem wipes .reports_cache.json) so the form's country dropdown is never empty.
+# Static fallback country list — canonical country names as indexed in the `country`
+# column, so the retriever's country filter matches. Used when the `documents` table
+# cannot be read (or is still empty) so the form's country dropdown is never empty.
 COUNTRIES = [
     "Afghanistan", "Albania", "Algeria", "Angola", "Antigua and Barbuda", "Argentina",
     "Armenia", "Azerbaijan", "Bahamas", "Bangladesh", "Barbados", "Belarus", "Belgium",
@@ -120,7 +119,7 @@ class ReportRequest(BaseModel):
     @field_validator("theme")
     @classmethod
     def _known_theme(cls, v: Optional[str]) -> Optional[str]:
-        # theme lands in the report prompt and the Pinecone filter: only the form's values.
+        # theme lands in the report prompt and the SQL filter: only the form's values.
         if v is not None and v not in THEMES:
             raise ValueError("unknown theme")
         return v

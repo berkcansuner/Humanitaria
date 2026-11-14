@@ -41,7 +41,7 @@ def chunk_document(doc: Dict[str, Any], chunk_size: int = None, chunk_overlap: i
             "format": doc.get("format", ""),
             "doctype": doc.get("doctype", ""),
         }
-        # Pinecone metadata rejects empty lists → only include themes when present.
+        # Only include themes when present (keeps metadata and the themes[] column lean).
         if themes:
             metadata["themes"] = themes
         chunks.append({"id": f"{doc['id']}_{i}", "content": chunk_text, "metadata": metadata})

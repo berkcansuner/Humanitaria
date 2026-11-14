@@ -16,7 +16,7 @@ def _raw(i, created):
     return {"id": str(i), "fields": {"date": {"created": created}}}
 
 
-def _run(items_per_call, *, date_from=None, limit=1000, embed=None):
+def _run(items_per_call, *, date_from=None, limit=1000, embed=None, oldest_first=False):
     """run_pipeline with fetch returning the given pages, then []."""
     with patch("ingestion.pipeline.ReliefWebClient") as MockClient, \
          patch("ingestion.pipeline.parse", side_effect=lambda raw, ep: {"id": raw["id"], "body": "b"}), \
@@ -28,7 +28,8 @@ def _run(items_per_call, *, date_from=None, limit=1000, embed=None):
         MockClient.return_value = client
         mock_get_emb.return_value = MagicMock(
             embed_documents=embed or (lambda texts: [[0.1] for _ in texts]))
-        stats = run_pipeline(limit=limit, date_from=date_from)["reports"]
+        stats = run_pipeline(limit=limit, date_from=date_from,
+                             oldest_first=oldest_first)["reports"]
     return stats, client
 
 
@@ -44,7 +45,7 @@ def test_failed_batch_holds_resume_point_at_its_earliest_document():
     pages = [[_raw(1, "2026-11-10T08:00:00+00:00")],
              [_raw(2, "2026-11-11T09:00:00+00:00"), _raw(3, "2026-11-11T07:00:00+00:00")],
              [_raw(4, "2026-11-12T10:00:00+00:00")]]
-    stats, _ = _run(pages, date_from="2026-11-10", embed=embed)
+    stats, _ = _run(pages, date_from="2026-11-10", embed=embed, oldest_first=True)
     assert stats.failed == 2 and stats.succeeded == 2
     assert stats.resume_from == "2026-11-11T07:00:00+00:00"
 
@@ -56,9 +57,18 @@ def test_clean_run_has_no_resume_point():
 
 def test_incremental_run_goes_oldest_first_and_resumes_after_its_limit():
     page = [_raw(1, "2026-11-10T08:00:00+00:00"), _raw(2, "2026-11-10T09:00:00+00:00")]
-    stats, client = _run([page], date_from="2026-11-09", limit=2)
+    stats, client = _run([page], date_from="2026-11-09", limit=2, oldest_first=True)
     assert client.fetch.call_args.kwargs["sort"] == "date.created:asc"
     assert stats.resume_from == "2026-11-10T09:00:00+00:00"
+
+
+def test_capped_load_with_a_date_floor_keeps_the_newest_documents():
+    """scripts/ingest.py always passes a freshness floor; with a per-country cap it
+    must still take each country's newest N, not the oldest N of the window."""
+    page = [_raw(1, "2026-11-10T09:00:00+00:00"), _raw(2, "2026-11-10T08:00:00+00:00")]
+    stats, client = _run([page], date_from="2025-11-15", limit=2)
+    assert client.fetch.call_args.kwargs["sort"] is None   # endpoint default: newest first
+    assert stats.resume_from is None
 
 
 def test_full_run_keeps_newest_first_and_does_not_resume_past_its_limit():

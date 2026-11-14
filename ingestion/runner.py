@@ -69,7 +69,8 @@ def run_ingest_once(source: str) -> bool:
         logger.info("Ingest starting (source=%s, date_from=%s, endpoints=%s)",
                     source, date_from or "full", endpoints)
         try:
-            stats = sched.run_pipeline(date_from=date_from, endpoints=endpoints)
+            stats = sched.run_pipeline(date_from=date_from, endpoints=endpoints,
+                                       oldest_first=bool(date_from))
             # Advance only past what actually landed: a failed batch or a run cut
             # off at its limit holds the watermark at the earliest such item, so
             # the next run picks it up again (re-ingest is idempotent).

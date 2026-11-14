@@ -71,3 +71,5 @@ def test_run_ingest_once_passes_endpoints_from_settings(tmp_path):
         assert runner.run_ingest_once("manual") is True
         _, kwargs = mock_pipeline.call_args
         assert kwargs.get("endpoints") == ["reports", "disasters"]
+        # A watermark run goes oldest-first so a limit cut leaves a resume point.
+        assert kwargs.get("oldest_first") is bool(kwargs.get("date_from"))

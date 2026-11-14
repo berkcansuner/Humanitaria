@@ -44,6 +44,7 @@ def run_pipeline(
     endpoints: Optional[List[str]] = None,
     date_from: Optional[str] = None,
     country: Optional[str] = None,
+    oldest_first: bool = False,
 ) -> Dict[str, IngestionStats]:
     if endpoints is None:
         endpoints = ["reports"]
@@ -68,17 +69,19 @@ def run_pipeline(
         start_time = time.time()
         logger.info("Ingesting endpoint '%s' (limit=%d)", endpoint, limit)
 
-        # Incremental runs go oldest-first, so stopping at `limit` leaves a clean
-        # resume point (the newest item processed) instead of silently dropping the
-        # oldest new items; a full run keeps newest-first ("latest N").
-        sort = "date.created:asc" if date_from else None
+        # Watermark-driven incremental runs (oldest_first) go oldest-first, so stopping
+        # at `limit` leaves a clean resume point (the newest item processed) instead of
+        # silently dropping the oldest new items. Every other run — including a CLI
+        # load with a freshness floor and a per-country cap — keeps newest-first
+        # ("latest N").
+        sort = "date.created:asc" if oldest_first else None
         while processed < limit:
             batch_limit = min(BATCH_SIZE, limit - processed)
             items = client.fetch(endpoint, limit=batch_limit, offset=offset, sort=sort,
                                  date_from=date_from, country=country)
             if not items:
                 break
-            if date_from and processed + len(items) >= limit and len(items) == batch_limit:
+            if oldest_first and processed + len(items) >= limit and len(items) == batch_limit:
                 _hold(stats, _created(items[-1]))   # more may remain past the limit
 
             # Phase 1: parse + optionally enrich with PDF content
