@@ -41,6 +41,17 @@ class TestGeminiLangChainEmbeddings:
             assert len(result) == 2
             assert len(result[0]) == 3072
 
+    def test_requests_the_configured_dimension(self):
+        # gemini-embedding-001 is truncated server-side to EMBED_DIM (768 in prod);
+        # the pgvector column is sized to it, so every call must ask for it.
+        from rag.embeddings import GeminiLangChainEmbeddings
+        with patch("rag.embeddings.get_settings", return_value=_mock_gemini_settings(embed_dim=768)),              patch("rag.embeddings.OpenAI") as MockOpenAI:
+            client = MagicMock()
+            client.embeddings.create.return_value = _gemini_response(1, dim=768)
+            MockOpenAI.return_value = client
+            GeminiLangChainEmbeddings().embed_documents(["a"])
+            assert client.embeddings.create.call_args.kwargs["dimensions"] == 768
+
     def test_embed_query(self):
         from rag.embeddings import GeminiLangChainEmbeddings
         with patch("rag.embeddings.get_settings", return_value=_mock_gemini_settings()), \

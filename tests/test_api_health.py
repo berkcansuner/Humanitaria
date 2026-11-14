@@ -33,10 +33,12 @@ def _deep_probe_as_admin(request):
 @pytest.mark.anonymous_health
 def test_deep_probe_requires_admin(client):
     """Anonymous callers must not be able to trigger billed provider calls."""
-    with patch("api.routes.health._check_pinecone") as pc,          patch("api.routes.health._check_database") as db,          patch("api.routes.health._check_gemini") as gm:
+    with patch("api.routes.health._check_database") as db, \
+         patch("api.routes.health._check_gemini") as gm:
         r = client.get("/health?deep=true")
     assert r.status_code == 403
-    pc.assert_not_called(); db.assert_not_called(); gm.assert_not_called()
+    db.assert_not_called()
+    gm.assert_not_called()
 
 
 @pytest.mark.anonymous_health
@@ -45,41 +47,26 @@ def test_liveness_stays_public(client):
 
 
 def test_health_liveness_is_cheap(client):
-    # Default probe must NOT touch Pinecone/DB (Render polls this frequently).
-    with patch("api.routes.health._check_pinecone") as pc, \
-         patch("api.routes.health._check_database") as db:
+    # Default probe must NOT touch the DB (Render polls this frequently).
+    with patch("api.routes.health._check_database") as db:
         r = client.get("/health")
         assert r.status_code == 200
         assert r.json() == {"status": "ok"}
-        pc.assert_not_called()
         db.assert_not_called()
 
 
 def test_health_deep_ok(client):
-    with patch("api.routes.health._check_pinecone", return_value=True), \
-         patch("api.routes.health._check_database", return_value=True), \
+    with patch("api.routes.health._check_database", return_value=True), \
          patch("api.routes.health._check_gemini", return_value=True):
         r = client.get("/health?deep=true")
         assert r.status_code == 200
         body = r.json()
         assert body["status"] == "ok"
-        assert body["checks"] == {"pinecone": "ok", "database": "ok", "gemini": "ok"}
-
-
-def test_health_deep_reports_503_when_pinecone_down(client):
-    with patch("api.routes.health._check_pinecone", side_effect=RuntimeError("pinecone down")), \
-         patch("api.routes.health._check_database", return_value=True), \
-         patch("api.routes.health._check_gemini", return_value=True):
-        r = client.get("/health?deep=true")
-        assert r.status_code == 503
-        checks = r.json()["detail"]["checks"]
-        assert checks["pinecone"] == "error"
-        assert checks["database"] == "ok"
+        assert body["checks"] == {"database": "ok", "gemini": "ok"}
 
 
 def test_health_deep_reports_503_when_db_down(client):
-    with patch("api.routes.health._check_pinecone", return_value=True), \
-         patch("api.routes.health._check_database", side_effect=RuntimeError("db down")), \
+    with patch("api.routes.health._check_database", side_effect=RuntimeError("db down")), \
          patch("api.routes.health._check_gemini", return_value=True):
         r = client.get("/health?deep=true")
         assert r.status_code == 503
@@ -87,17 +74,15 @@ def test_health_deep_reports_503_when_db_down(client):
 
 
 def test_health_deep_includes_gemini(client):
-    with patch("api.routes.health._check_pinecone", return_value=True), \
-         patch("api.routes.health._check_database", return_value=True), \
+    with patch("api.routes.health._check_database", return_value=True), \
          patch("api.routes.health._check_gemini", return_value=True):
         r = client.get("/health?deep=true")
         assert r.status_code == 200
-        assert r.json()["checks"] == {"pinecone": "ok", "database": "ok", "gemini": "ok"}
+        assert r.json()["checks"] == {"database": "ok", "gemini": "ok"}
 
 
 def test_health_deep_reports_503_when_gemini_quota_exhausted(client):
-    with patch("api.routes.health._check_pinecone", return_value=True), \
-         patch("api.routes.health._check_database", return_value=True), \
+    with patch("api.routes.health._check_database", return_value=True), \
          patch("api.routes.health._check_gemini", side_effect=RuntimeError("402 credits depleted")):
         r = client.get("/health?deep=true")
         assert r.status_code == 503

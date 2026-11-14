@@ -84,14 +84,13 @@ def run_ingest_once(source: str) -> bool:
                      "failed": s.failed, "skipped": s.skipped}
                 for ep, s in (stats or {}).items()
             }
-            # New data landed — rebuild the cached reports list (and re-persist it),
-            # and apply the rolling-window retention (drop >RETENTION_DAYS old and
-            # per-country-cap overflow) in the same scan. Both off by default → inert.
+            # Rolling-window retention (drop >RETENTION_DAYS old and per-country-cap
+            # overflow). Both off by default → inert. Never fails the ingest.
             try:
                 from ingestion import analytics
-                analytics.rebuild_documents(apply_retention=True)
-            except Exception:
-                pass
+                analytics.apply_retention()
+            except Exception as exc:
+                logger.warning("Retention failed: %s", exc)
             logger.info("Ingest complete (source=%s), watermark=%s", source, watermark)
         except Exception as exc:
             _state.last_error = str(exc)

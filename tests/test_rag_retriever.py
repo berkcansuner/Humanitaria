@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 from langchain_core.documents import Document
 from rag.retriever import (
-    build_retriever, _get_vectorstore, _build_pinecone_filter,
+    PgVectorRetriever, build_retriever, build_sql_filter,
     dedupe_by_document, rerank_by_relevance,
 )
 from config import get_settings
@@ -11,8 +11,7 @@ from config import get_settings
 class TestApplyDateFilter:
     """Defensive post-retrieval date filter (rag.retriever.apply_date_filter).
 
-    Pinecone already applies a server-side numeric date_ts $gte; this is the
-    in-Python backstop. Comparison is lexicographic on YYYY-MM-DD strings."""
+    SQL already applies a numeric date_ts range; this is the in-Python backstop. Comparison is lexicographic on YYYY-MM-DD strings."""
 
     def _doc(self, date):
         meta = {"date": date} if date is not None else {}
@@ -48,171 +47,74 @@ class TestApplyDateFilter:
 
 
 class TestRetriever:
-    def setup_method(self):
-        _get_vectorstore.cache_clear()
+    def test_build_retriever_defaults(self):
+        settings = get_settings()
+        r = build_retriever(filter={"country": "Iran"})
+        assert isinstance(r, PgVectorRetriever)
+        assert r.filters == {"country": "Iran"}
+        assert (r.k, r.fetch_k) == (settings.TOP_K_RETRIEVAL, settings.MMR_FETCH_K)
 
-    def test_build_retriever_returns_retriever(self):
-        with patch("rag.retriever._get_vectorstore") as mock_get_vs:
-            settings = get_settings()
-            mock_vs = MagicMock()
-            mock_retriever = MagicMock()
-            mock_vs.as_retriever.return_value = mock_retriever
-            mock_get_vs.return_value = mock_vs
-            retriever = build_retriever(filter={"country": "Iran"})
-            assert retriever is mock_retriever
-            mock_vs.as_retriever.assert_called_once_with(
-                search_type="mmr",
-                search_kwargs={
-                    "k": settings.TOP_K_RETRIEVAL,
-                    "fetch_k": settings.MMR_FETCH_K,
-                    "lambda_mult": settings.MMR_LAMBDA,
-                    "filter": {"country": {"$in": ["Iran", "Iran (Islamic Republic of)"]}},
-                },
-            )
+    def test_build_retriever_no_filter(self):
+        assert build_retriever().filters is None
 
     def test_build_retriever_k_override(self):
         # Caller raises k to fetch a larger candidate pool; fetch_k must stay
-        # strictly larger so MMR has headroom to diversify (was max(MMR_FETCH_K, k),
-        # which collapsed to k==20 and made the diversity step a no-op).
-        with patch("rag.retriever._get_vectorstore") as mock_get_vs:
-            mock_vs = MagicMock()
-            mock_vs.as_retriever.return_value = MagicMock()
-            mock_get_vs.return_value = mock_vs
-            build_retriever(k=20)
-            call_kwargs = mock_vs.as_retriever.call_args[1]["search_kwargs"]
-            assert call_kwargs["k"] == 20
-            assert call_kwargs["fetch_k"] >= 20 * 3
+        # strictly larger so MMR has headroom to diversify.
+        r = build_retriever(k=20)
+        assert r.k == 20 and r.fetch_k >= 20 * 3
 
     def test_build_retriever_date_filter_widens_pool(self):
         # A date filter thins the pool in Python afterwards, so fetch even more.
-        with patch("rag.retriever._get_vectorstore") as mock_get_vs:
-            mock_vs = MagicMock()
-            mock_vs.as_retriever.return_value = MagicMock()
-            mock_get_vs.return_value = mock_vs
-            build_retriever(filter={"date": {"from": "2024-01-01"}}, k=20)
-            dated_fetch_k = mock_vs.as_retriever.call_args[1]["search_kwargs"]["fetch_k"]
-        with patch("rag.retriever._get_vectorstore") as mock_get_vs:
-            mock_vs = MagicMock()
-            mock_vs.as_retriever.return_value = MagicMock()
-            mock_get_vs.return_value = mock_vs
-            build_retriever(k=20)
-            plain_fetch_k = mock_vs.as_retriever.call_args[1]["search_kwargs"]["fetch_k"]
-        assert dated_fetch_k > plain_fetch_k
+        dated = build_retriever(filter={"date": {"$gte": "2024-01-01"}}, k=20).fetch_k
+        assert dated > build_retriever(k=20).fetch_k
 
     def test_build_retriever_fetch_k_capped_for_wide_k(self):
-        # An indicator report's wide candidate pool (top_k 16 → candidate_k 64) with a
-        # date filter would compute fetch_k = 64*12 = 768; MMR over that many 3072-dim
-        # vectors is slow enough on constrained CPU to blow the request timeout (the
-        # indicator-report 502 bug). fetch_k must be capped at MMR_FETCH_K_CAP.
-        with patch("rag.retriever._get_vectorstore") as mock_get_vs:
-            settings = get_settings()
-            mock_vs = MagicMock()
-            mock_vs.as_retriever.return_value = MagicMock()
-            mock_get_vs.return_value = mock_vs
-            build_retriever(filter={"date": {"from": "2024-01-01"}}, k=64)
-            fetch_k = mock_vs.as_retriever.call_args[1]["search_kwargs"]["fetch_k"]
-        assert fetch_k == settings.MMR_FETCH_K_CAP
-        assert fetch_k < 64 * 12  # not the uncapped 768
+        # An indicator report's wide pool (candidate_k 64) with a date filter would be
+        # 64*12 = 768; MMR over that many on a constrained CPU blew the request timeout.
+        fetch_k = build_retriever(filter={"date": {"$gte": "2024-01-01"}}, k=64).fetch_k
+        assert fetch_k == get_settings().MMR_FETCH_K_CAP
 
-    def test_build_retriever_no_filter(self):
-        with patch("rag.retriever._get_vectorstore") as mock_get_vs:
-            settings = get_settings()
-            mock_vs = MagicMock()
-            mock_retriever = MagicMock()
-            mock_vs.as_retriever.return_value = mock_retriever
-            mock_get_vs.return_value = mock_vs
-            retriever = build_retriever()
-            mock_vs.as_retriever.assert_called_once_with(
-                search_type="mmr",
-                search_kwargs={
-                    "k": settings.TOP_K_RETRIEVAL,
-                    "fetch_k": settings.MMR_FETCH_K,
-                    "lambda_mult": settings.MMR_LAMBDA,
-                    "filter": None,
-                },
-            )
+    def test_ainvoke_runs_the_search_with_the_retriever_settings(self):
+        import asyncio
+        doc = Document(page_content="x", metadata={"doc_id": "a"})
+        with patch("rag.retriever.search", return_value=[doc]) as mock_search:
+            r = build_retriever(filter={"country": "Yemen"}, k=7)
+            assert asyncio.run(r.ainvoke("food")) == [doc]
+        mock_search.assert_called_once_with("food", {"country": "Yemen"}, 7, r.fetch_k)
 
 
-class TestPineconeFilter:
-    def test_empty_returns_none(self):
-        from rag.retriever import _build_pinecone_filter
-        assert _build_pinecone_filter({}) is None
-        assert _build_pinecone_filter(None) is None
+class TestSqlFilter:
+    def test_empty(self):
+        assert build_sql_filter({}) == ([], {})
+        assert build_sql_filter(None) == ([], {})
 
-    def test_country_alias_uses_in(self):
-        from rag.retriever import _build_pinecone_filter
-        assert _build_pinecone_filter({"country": "Iran"}) == {
-            "country": {"$in": ["Iran", "Iran (Islamic Republic of)"]}
-        }
+    def test_country_alias_matches_both_names(self):
+        clauses, params = build_sql_filter({"country": "Iran"})
+        assert clauses == ["country = ANY(:countries)"]
+        assert params == {"countries": ["Iran", "Iran (Islamic Republic of)"]}
 
-    def test_country_non_alias_uses_eq(self):
-        from rag.retriever import _build_pinecone_filter
-        assert _build_pinecone_filter({"country": "Yemen"}) == {"country": {"$eq": "Yemen"}}
+    def test_country_without_alias(self):
+        assert build_sql_filter({"country": "Yemen"})[1] == {"countries": ["Yemen"]}
 
-    def test_date_becomes_numeric_date_ts_gte(self):
-        from rag.retriever import _build_pinecone_filter
-        assert _build_pinecone_filter({"date": {"$gte": "2024-01-01"}}) == {
-            "date_ts": {"$gte": 20240101}
-        }
+    def test_date_becomes_numeric_date_ts_range(self):
+        clauses, params = build_sql_filter({"date": {"$gte": "2024-01-01", "$lte": "2024-06-30"}})
+        assert clauses == ["date_ts >= :date_from", "date_ts <= :date_to"]
+        assert params == {"date_from": 20240101, "date_to": 20240630}
 
-    def test_multi_field_implicit_and(self):
-        from rag.retriever import _build_pinecone_filter
-        assert _build_pinecone_filter({"country": "Yemen", "date": {"$gte": "2024-06-01"}}) == {
-            "country": {"$eq": "Yemen"},
-            "date_ts": {"$gte": 20240601},
-        }
+    def test_theme_matches_primary_theme_or_theme_list(self):
+        clauses, params = build_sql_filter({"theme": "Health"})
+        assert clauses == ["(theme = :theme OR :theme = ANY(themes))"]
+        assert params == {"theme": "Health"}
 
-    def test_theme_matches_old_string_or_new_themes_list(self):
-        from rag.retriever import _build_pinecone_filter
-        # Old records carry `theme` (string); enriched records carry `themes` (list).
-        # $or matches both so a re-index never regresses theme filtering.
-        assert _build_pinecone_filter({"theme": "Health"}) == {
-            "$or": [{"theme": {"$eq": "Health"}}, {"themes": {"$in": ["Health"]}}]
-        }
+    def test_equality_columns(self):
+        clauses, params = build_sql_filter({"doctype": "report", "source": "OCHA", "format": "News"})
+        assert clauses == ["doctype = :doctype", "source = :source", "format = :format"]
+        assert params == {"doctype": "report", "source": "OCHA", "format": "News"}
 
-    def test_theme_combines_with_country(self):
-        from rag.retriever import _build_pinecone_filter
-        f = _build_pinecone_filter({"country": "Yemen", "theme": "Health"})
-        assert f["country"] == {"$eq": "Yemen"}
-        assert f["$or"] == [{"theme": {"$eq": "Health"}}, {"themes": {"$in": ["Health"]}}]
-
-
-class TestProviderVectorstore:
-    def setup_method(self):
-        from rag.retriever import _get_vectorstore
-        _get_vectorstore.cache_clear()
-
-    def teardown_method(self):
-        from rag.retriever import _get_vectorstore
-        _get_vectorstore.cache_clear()
-
-    def test_pinecone_vectorstore_built(self):
-        from rag.retriever import _get_vectorstore
-        s = MagicMock(PINECONE_API_KEY="k", PINECONE_INDEX="reliefweb-docs", PINECONE_NAMESPACE="")
-        with patch("rag.retriever.get_settings", return_value=s), \
-             patch("rag.retriever.get_embeddings", return_value=MagicMock()), \
-             patch("rag.retriever.Pinecone") as MockPC, \
-             patch("rag.retriever.PineconeVectorStore") as MockPVS:
-            MockPC.return_value.Index.return_value = MagicMock()
-            _get_vectorstore.cache_clear()
-            _get_vectorstore()
-            MockPVS.assert_called_once()
-
-    def test_vectorstore_result_is_cached(self):
-        from rag.retriever import _get_vectorstore
-        s = MagicMock(PINECONE_API_KEY="k", PINECONE_INDEX="reliefweb-docs", PINECONE_NAMESPACE="")
-        with patch("rag.retriever.get_settings", return_value=s), \
-             patch("rag.retriever.get_embeddings", return_value=MagicMock()), \
-             patch("rag.retriever.Pinecone") as MockPC, \
-             patch("rag.retriever.PineconeVectorStore") as MockPVS:
-            MockPC.return_value.Index.return_value = MagicMock()
-            mock_vs = MagicMock()
-            MockPVS.return_value = mock_vs
-            _get_vectorstore.cache_clear()
-            vs1 = _get_vectorstore()
-            vs2 = _get_vectorstore()
-            assert vs1 is vs2
-            MockPVS.assert_called_once()
+    def test_unknown_keys_and_non_string_values_never_reach_sql(self):
+        # Column names come only from the whitelist; a hostile key is dropped.
+        clauses, params = build_sql_filter({"country; DROP TABLE chunks": "x", "source": ["a"], "theme": ""})
+        assert clauses == [] and params == {}
 
 
 def _doc(doc_id, content="text", url=None):

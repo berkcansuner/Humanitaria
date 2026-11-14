@@ -72,7 +72,7 @@ def test_runner_holds_watermark_at_earliest_unfinished_document():
     stats = {"reports": IngestionStats(endpoint="reports", failed=3, resume_from="2026-11-11T07:00:00+00:00"),
              "disasters": IngestionStats(endpoint="disasters")}
     with patch("ingestion.scheduler.run_pipeline", return_value=stats), \
-         patch("ingestion.analytics.rebuild_documents"):
+         patch("ingestion.analytics.apply_retention"):
         assert runner.run_ingest_once("manual") is True
     assert sched._load_watermark() == "2026-11-11T07:00:00+00:00"
     assert "resumes from 2026-11-11T07:00:00+00:00" in runner.get_state()["last_error"]
@@ -81,7 +81,7 @@ def test_runner_holds_watermark_at_earliest_unfinished_document():
 def test_runner_advances_watermark_when_everything_landed():
     stats = {"reports": IngestionStats(endpoint="reports", succeeded=5)}
     with patch("ingestion.scheduler.run_pipeline", return_value=stats), \
-         patch("ingestion.analytics.rebuild_documents"):
+         patch("ingestion.analytics.apply_retention"):
         runner.run_ingest_once("manual")
     wm = sched._load_watermark()
     assert wm and len(wm) == 10   # the run's (UTC) start date

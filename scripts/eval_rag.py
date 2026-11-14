@@ -233,20 +233,18 @@ _LABELS_PATH = Path(__file__).resolve().parent / "eval_data" / "labeled_queries.
 def _run_metrics():
     """Recall@k / MRR / nDCG@k for the CURRENT namespace against the labeled set.
 
-    Run with PINECONE_NAMESPACE=v2 vs '' to get the numeric v2-vs-default A/B
-    (the labeled set is namespace-independent → a fair comparison)."""
+    The labels are keyed by canonical doc_id, so they stay valid across re-ingests."""
     from rag.eval_metrics import recall_at_k, reciprocal_rank, ndcg_at_k
     from config import get_settings
 
     settings = get_settings()
     k = settings.TOP_K_RETRIEVAL
     if not _LABELS_PATH.exists():
-        print(f"Etiketli set yok: {_LABELS_PATH}\n→ önce: python scripts/build_eval_labels.py")
+        print(f"Etiketli set yok: {_LABELS_PATH}")
         sys.exit(1)
     dataset = [d for d in json.loads(_LABELS_PATH.read_text(encoding="utf-8"))
                if d.get("relevant_doc_ids")]
-    ns = settings.PINECONE_NAMESPACE or "(default)"
-    print(f"\nRetrieval metrikleri — namespace='{ns}', {len(dataset)} etiketli sorgu, k={k}\n"
+    print(f"\nRetrieval metrikleri — {len(dataset)} etiketli sorgu, k={k}\n"
           + "=" * 70)
     recalls, rrs, ndcgs = [], [], []
     for d in dataset:
@@ -263,7 +261,7 @@ def _run_metrics():
         print(f"  recall@{k}={r:.2f}  RR={rr:.2f}  nDCG@{k}={n:.2f}  | {d['query']}")
     if recalls:
         print("=" * 70)
-        print(f"ORTALAMA ({len(recalls)} sorgu, namespace='{ns}') — "
+        print(f"ORTALAMA ({len(recalls)} sorgu) — "
               f"recall@{k}={sum(recalls)/len(recalls):.3f}  "
               f"MRR={sum(rrs)/len(rrs):.3f}  nDCG@{k}={sum(ndcgs)/len(ndcgs):.3f}")
 

@@ -1,5 +1,9 @@
 """Shared database engine: SQLite by default, Postgres when DATABASE_URL is set.
 
+Postgres (production, Supabase) also holds the vector index: the ``chunks`` table
+(pgvector ``halfvec`` embeddings, created by ``_ensure_vector_schema``) next to the
+``documents`` table (one row per indexed report — the admin list and retention).
+
 One SQLAlchemy Core engine per database URL. The three stores
 (``rag/users.py``, ``rag/conversations.py``, ``rag/reports.py``) share it and
 keep issuing plain SQL via ``text()`` — the SQL used is valid in both dialects
@@ -106,6 +110,23 @@ ingest_state_table = Table(
     Column("updated_at", Text, nullable=False),
 )
 
+# One row per indexed document, written with its chunks at ingest time. Serves the
+# admin reports list, the report-form country list and retention with plain SQL —
+# no scan of the vector index.
+documents_table = Table(
+    "documents", metadata,
+    Column("doc_id", Text, primary_key=True),
+    Column("title", Text, nullable=False, server_default=""),
+    Column("url", Text, nullable=False, server_default=""),
+    Column("source", Text, nullable=False, server_default=""),
+    Column("country", Text, nullable=False, server_default=""),
+    Column("doctype", Text, nullable=False, server_default=""),
+    Column("date", Text, nullable=False, server_default=""),      # YYYY-MM-DD ('' = unknown)
+    Column("updated_at", Text, nullable=False),
+)
+Index("idx_documents_date", documents_table.c.date)
+Index("idx_documents_country", documents_table.c.country)
+
 
 _engines: dict[str, Engine] = {}
 
@@ -175,16 +196,48 @@ def _ensure_schema(engine: Engine) -> None:
         # database has no reports table yet — create_all() below creates it
         # fresh, already including report_type).
         with engine.begin() as conn:
-            exists = conn.exec_driver_sql(
-                "SELECT 1 FROM information_schema.tables WHERE table_name = 'reports'"
-            ).fetchone()
+            # to_regclass resolves through search_path, like the ALTERs below.
+            exists = conn.exec_driver_sql("SELECT to_regclass('reports')").scalar()
             if exists:
                 conn.exec_driver_sql("ALTER TABLE reports ADD COLUMN IF NOT EXISTS report_type TEXT")
                 conn.exec_driver_sql("ALTER TABLE reports ADD COLUMN IF NOT EXISTS cover_image TEXT")
                 conn.exec_driver_sql("ALTER TABLE reports ADD COLUMN IF NOT EXISTS section_images TEXT")
     metadata.create_all(engine)
     if engine.dialect.name == "postgresql":
+        _ensure_vector_schema(engine)
         _close_supabase_data_api(engine)
+
+
+def _ensure_vector_schema(engine: Engine) -> None:
+    """The pgvector chunk table (Postgres only — SQLite dev/test runs have no vector
+    search). Embeddings are ``halfvec`` (2 bytes/dim): at EMBED_DIM=768 the whole
+    corpus fits the Supabase free-tier 500 MB. Filter fields are real columns so the
+    retriever's WHERE clause is plain SQL; ``metadata`` keeps the full chunk metadata
+    returned to the RAG chain."""
+    dim = int(get_settings().EMBED_DIM)
+    with engine.begin() as conn:
+        conn.exec_driver_sql("CREATE EXTENSION IF NOT EXISTS vector")
+        conn.exec_driver_sql(f"""
+            CREATE TABLE IF NOT EXISTS chunks (
+                id        TEXT PRIMARY KEY,
+                doc_id    TEXT NOT NULL,
+                content   TEXT NOT NULL,
+                metadata  JSONB NOT NULL,
+                embedding HALFVEC({dim}) NOT NULL,
+                country   TEXT NOT NULL DEFAULT '',
+                theme     TEXT NOT NULL DEFAULT '',
+                themes    TEXT[],
+                doctype   TEXT NOT NULL DEFAULT '',
+                source    TEXT NOT NULL DEFAULT '',
+                format    TEXT NOT NULL DEFAULT '',
+                date_ts   INTEGER NOT NULL DEFAULT 0
+            )""")
+        conn.exec_driver_sql("CREATE INDEX IF NOT EXISTS idx_chunks_doc ON chunks (doc_id)")
+        conn.exec_driver_sql("CREATE INDEX IF NOT EXISTS idx_chunks_country ON chunks (country)")
+        conn.exec_driver_sql("CREATE INDEX IF NOT EXISTS idx_chunks_date ON chunks (date_ts)")
+        conn.exec_driver_sql(
+            "CREATE INDEX IF NOT EXISTS idx_chunks_embedding ON chunks "
+            "USING hnsw (embedding halfvec_cosine_ops)")
 
 
 def _close_supabase_data_api(engine: Engine) -> None:
@@ -193,11 +246,12 @@ def _close_supabase_data_api(engine: Engine) -> None:
     that API, so keep every app table (including ones added later) closed to it:
     RLS on with no policies, and the role grants revoked. Idempotent; a failure is
     logged, never fatal (plain Postgres has no such roles)."""
-    names = ", ".join(f'"{t.name}"' for t in metadata.sorted_tables)
+    tables = [t.name for t in metadata.sorted_tables] + ["chunks"]
+    names = ", ".join(f'"{t}"' for t in tables)
     try:
         with engine.begin() as conn:
-            for t in metadata.sorted_tables:
-                conn.exec_driver_sql(f'ALTER TABLE "{t.name}" ENABLE ROW LEVEL SECURITY')
+            for t in tables:
+                conn.exec_driver_sql(f'ALTER TABLE "{t}" ENABLE ROW LEVEL SECURITY')
             roles = [r[0] for r in conn.exec_driver_sql(
                 "SELECT rolname FROM pg_roles WHERE rolname IN ('anon', 'authenticated')")]
             if roles:

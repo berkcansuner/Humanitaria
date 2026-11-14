@@ -77,13 +77,11 @@ def clean_singletons():
 
 
 def _reset():
-    from rag.retriever import _get_vectorstore
     from rag.history import _session_histories
     from rag.query_processor import _llm_cache
     import rag.chain as _chain_mod
     import rag.query_processor as _qp
 
-    _get_vectorstore.cache_clear()
     _session_histories.clear()
     _llm_cache.clear()
     _chain_mod._chain = None

@@ -1,12 +1,12 @@
-"""Rolling-window retention for the active Pinecone namespace.
+"""Rolling-window retention for the vector index.
 
 Keeps the indexed dataset current and quota-friendly. After each ingest we drop:
   - documents older than RETENTION_DAYS (rolling date window), and
   - per country, everything beyond the newest RETENTION_PER_COUNTRY_CAP documents.
 
-``select_expired`` is a PURE function over the metadata the admin reports scan already
-collected (one namespace scan feeds both the reports list and this trim — no extra
-scan). Deletion reuses ``store.delete_document_chunks`` (chunk-id prefix list+delete).
+``select_expired`` is a PURE function over the ``documents`` table rows
+(``ingestion/analytics.apply_retention``). Deletion reuses
+``store.delete_document_chunks`` (chunks + the document row).
 Both rules are OFF by default (0) so retention is inert until explicitly enabled.
 """
 import logging

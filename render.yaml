@@ -15,14 +15,16 @@ services:
         value: production
       - key: SESSION_COOKIE_SECURE
         value: "true"
-      - key: INGEST_SCHEDULE_HOURS   # disable scheduler (Pinecone write quota full; not needed)
+      - key: INGEST_SCHEDULE_HOURS   # no in-process scheduler; the Cloudflare Worker cron triggers ingest
         value: "0"
       - key: GEMINI_REASONING_EFFORT
         value: low
-      # v3 cutover: all-country × last-1-year corpus + daily rolling-window retention
+      # All-country × last-1-year corpus + daily rolling-window retention
       # (ingest via Cloudflare Worker cron → POST /admin/ingest/cron).
-      - key: PINECONE_NAMESPACE
-        value: v3
+      # Vector index = Supabase pgvector (DATABASE_URL); EMBED_DIM must match the
+      # chunks.embedding column (halfvec(768)).
+      - key: EMBED_DIM
+        value: "768"
       - key: RETENTION_DAYS
         value: "365"
       - key: RETENTION_PER_COUNTRY_CAP
@@ -43,13 +45,13 @@ services:
       - key: AUTH_SESSION_SECRET
         generateValue: true
       # Secrets — set these in the Render dashboard (never committed).
-      - key: DATABASE_URL           # Supabase Postgres (session pooler URI); empty = ephemeral SQLite
+      - key: DATABASE_URL           # Supabase Postgres (session pooler URI): app tables + pgvector index
         sync: false
       - key: INGEST_TRIGGER_TOKEN   # shared secret for POST /admin/ingest/cron (Cloudflare Worker)
         sync: false
       - key: GEMINI_API_KEY
         sync: false
-      - key: PINECONE_API_KEY
+      - key: PINECONE_API_KEY       # hosted reranker only (Pinecone Inference)
         sync: false
       - key: RELIEFWEB_APPNAME
         sync: false

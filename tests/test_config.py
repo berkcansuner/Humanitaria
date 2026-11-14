@@ -26,8 +26,7 @@ def test_recency_boost_defaults():
 def test_provider_and_ingest_defaults():
     from config import Settings
     s = Settings(_env_file=None)
-    assert s.PINECONE_INDEX == "reliefweb-docs"
-    assert s.EMBED_DIM == 3072
+    assert s.EMBED_DIM == 768   # pgvector halfvec index sized for the Supabase free tier
     assert s.INGEST_LOOKBACK_YEARS == 1   # rolling 1-year strategy (was 5)
     assert s.INGEST_ENDPOINTS == "reports,disasters"
     assert s.GEMINI_LLM_MODEL == "gemini-2.5-flash"

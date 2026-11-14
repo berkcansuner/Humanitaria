@@ -157,14 +157,14 @@ class TestReportStore:
 
 class TestDateRangeFilter:
     def test_build_filter_range(self):
-        from rag.retriever import _build_pinecone_filter
-        out = _build_pinecone_filter({"date": {"$gte": "2024-01-01", "$lte": "2024-06-30"}})
-        assert out["date_ts"] == {"$gte": 20240101, "$lte": 20240630}
+        from rag.retriever import build_sql_filter
+        _, params = build_sql_filter({"date": {"$gte": "2024-01-01", "$lte": "2024-06-30"}})
+        assert params == {"date_from": 20240101, "date_to": 20240630}
 
     def test_build_filter_gte_only_backcompat(self):
-        from rag.retriever import _build_pinecone_filter
-        out = _build_pinecone_filter({"date": {"$gte": "2024-01-01"}})
-        assert out["date_ts"] == {"$gte": 20240101}
+        from rag.retriever import build_sql_filter
+        _, params = build_sql_filter({"date": {"$gte": "2024-01-01"}})
+        assert params == {"date_from": 20240101}
 
     def test_apply_date_filter_upper_bound(self):
         from rag.retriever import apply_date_filter
@@ -360,21 +360,6 @@ class TestReportService:
         )
 
 
-# --- analytics distinct countries -------------------------------------------
-
-class TestDistinctCountries:
-    def test_distinct_sorted_nonempty(self):
-        from ingestion import analytics
-        prev = analytics._state.documents
-        analytics._state.documents = [
-            {"country": "Sudan"}, {"country": "Yemen"}, {"country": "Sudan"}, {"country": ""},
-        ]
-        try:
-            assert analytics.distinct_countries() == ["Sudan", "Yemen"]
-        finally:
-            analytics._state.documents = prev
-
-
 # --- endpoints ---------------------------------------------------------------
 
 def _client():
@@ -393,14 +378,15 @@ class TestReportEndpoints:
         assert "Health" in body["themes"]
 
     def test_options_cold_cache_falls_back_to_static(self):
-        # Fresh deploy: scan cache empty → distinct_countries() == [] → the dropdown
-        # must still be populated from the static COUNTRIES snapshot (never empty).
-        with patch("ingestion.analytics.distinct_countries", return_value=[]):
-            r = _client().get("/reports/options")
-        assert r.status_code == 200
-        countries = r.json()["countries"]
-        assert len(countries) > 100
-        assert "Sudan" in countries and "Yemen" in countries
+        # Empty index (or the list query failing) → the dropdown must still be
+        # populated from the static COUNTRIES snapshot (never empty, never a 500).
+        for patched in ({"return_value": []}, {"side_effect": RuntimeError("db down")}):
+            with patch("ingestion.analytics.distinct_countries", **patched):
+                r = _client().get("/reports/options")
+            assert r.status_code == 200
+            countries = r.json()["countries"]
+            assert len(countries) > 100
+            assert "Sudan" in countries and "Yemen" in countries
 
     def test_stream_then_persist_and_list(self):
         async def mock_astream(*args, **kwargs):

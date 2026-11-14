@@ -21,7 +21,8 @@ _query_embed_cache: "OrderedDict[str, List[float]]" = OrderedDict()
 
 
 class GeminiLangChainEmbeddings(Embeddings):
-    """Gemini embedding via the OpenAI-compatible endpoint (gemini-embedding-001, 3072 dim).
+    """Gemini embedding via the OpenAI-compatible endpoint (gemini-embedding-001,
+    truncated to EMBED_DIM dimensions by the API).
 
     Reuses GEMINI_API_KEY / GEMINI_BASE_URL — the same auth the chat LLM uses.
     """
@@ -42,7 +43,8 @@ class GeminiLangChainEmbeddings(Embeddings):
         backoff = _RETRY_BACKOFF_S
         for attempt in range(_RETRY_COUNT):
             try:
-                resp = self.client.embeddings.create(model=self.model, input=texts)
+                resp = self.client.embeddings.create(
+                    model=self.model, input=texts, dimensions=self.expected_dim)
                 vectors = [d.embedding for d in resp.data]
                 if len(vectors) != len(texts):
                     raise ValueError(

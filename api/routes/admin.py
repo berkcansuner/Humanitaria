@@ -1,7 +1,7 @@
 """Admin-only ingestion status & management endpoints.
 
 Gated by ``get_admin_user`` (the ADMIN_EMAILS allowlist). Surfaces ingestion
-health (last/next run, Pinecone vector count, scheduler state, last-run summary)
+health (last/next run, indexed chunk/document counts, scheduler state, last-run summary)
 and a manual "run now" trigger that reuses the shared ingest runner.
 """
 import asyncio
@@ -40,26 +40,19 @@ async def ingest_status(request: Request, admin: dict = Depends(get_admin_user))
             scheduler_active = True
             next_run = job.next_run_time.isoformat()
 
-    namespace, namespace_vectors, total_vectors, vector_error = None, None, None, None
+    counts, vector_error = {}, None
     try:
-        store = get_store()
-        namespace = store.namespace or ""   # the namespace retrieval actually queries
-        stats = await anyio.to_thread.run_sync(store.index.describe_index_stats)
-        total_vectors = stats.get("total_vector_count")          # index-wide (all namespaces)
-        ns_summary = (stats.get("namespaces") or {}).get(namespace)
-        if ns_summary is not None:
-            namespace_vectors = ns_summary.get("vector_count")   # what the app queries
-    except Exception as exc:  # Pinecone network call — never fail the whole status
+        counts = await anyio.to_thread.run_sync(get_store().counts)
+    except Exception as exc:  # never fail the whole status
         vector_error = str(exc)
-        logger.warning("Failed to read Pinecone index stats: %s", exc)
+        logger.warning("Failed to count indexed chunks: %s", exc)
 
     return {
         "last_ingest": sched._load_watermark(),
         "next_scheduled_run": next_run,
         "scheduler_active": scheduler_active,
-        "namespace": namespace,
-        "namespace_vectors": namespace_vectors,
-        "total_vectors": total_vectors,
+        "chunk_count": counts.get("chunks"),
+        "document_count": counts.get("documents"),
         "vector_count_error": vector_error,
         "run": runner.get_state(),
     }
@@ -89,19 +82,8 @@ async def ingest_documents(
     offset: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
 ):
-    """Paginated, optionally-filtered list of indexed reports for the active
-    namespace, newest-first (admin-only). The list auto-builds: if nothing is
-    cached yet (first visit / after an error) and no scan is running, a background
-    rebuild is kicked off and ``computing`` returns True so the UI can poll until
-    it lands. Afterwards each ingest refreshes the cache automatically."""
-    if analytics._state.documents is None and not analytics.is_computing():
-        task = asyncio.create_task(anyio.to_thread.run_sync(analytics.rebuild_documents))
-        _bg_tasks.add(task)
-        task.add_done_callback(_bg_tasks.discard)
-        page = analytics.get_documents(q=q, offset=offset, limit=limit)
-        page["computing"] = True   # the scan was just scheduled; tell the UI to poll
-        return page
-    return analytics.get_documents(q=q, offset=offset, limit=limit)
+    """Paginated, optionally-filtered list of indexed reports, newest-first (admin-only)."""
+    return await anyio.to_thread.run_sync(analytics.get_documents, q, offset, limit)
 
 
 @router.get("/users")

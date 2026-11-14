@@ -20,7 +20,7 @@ def test_run_ingest_once_skips_when_locked():
 def test_run_ingest_once_runs_and_writes_watermark(tmp_path):
     stats = {"reports": IngestionStats(endpoint="reports", total=5, succeeded=4, failed=0, skipped=1)}
     with patch("ingestion.scheduler.run_pipeline", return_value=stats) as mock_pipeline, \
-         patch("ingestion.analytics.rebuild_documents") as mock_rebuild:
+         patch("ingestion.analytics.apply_retention") as mock_rebuild:
         assert runner.run_ingest_once("manual") is True
         mock_pipeline.assert_called_once()
         mock_rebuild.assert_called_once()   # a successful ingest refreshes the reports list
@@ -37,7 +37,7 @@ def test_run_ingest_once_touches_database(tmp_path):
     free-tier Postgres); a DB failure must not fail the ingest."""
     stats = {"reports": IngestionStats(endpoint="reports", total=1, succeeded=1, failed=0, skipped=0)}
     with patch("ingestion.scheduler.run_pipeline", return_value=stats), \
-         patch("ingestion.analytics.rebuild_documents"), \
+         patch("ingestion.analytics.apply_retention"), \
          patch("rag.db.get_engine", side_effect=RuntimeError("db down")) as mock_engine:
         assert runner.run_ingest_once("cron") is True
         assert mock_engine.called
@@ -66,7 +66,7 @@ def test_run_ingest_once_passes_endpoints_from_settings(tmp_path):
     settings = MagicMock()
     settings.INGEST_ENDPOINTS = "reports, disasters"   # tolerate whitespace
     with patch("ingestion.scheduler.run_pipeline", return_value=stats) as mock_pipeline, \
-         patch("ingestion.analytics.rebuild_documents"), \
+         patch("ingestion.analytics.apply_retention"), \
          patch("ingestion.runner.get_settings", return_value=settings):
         assert runner.run_ingest_once("manual") is True
         _, kwargs = mock_pipeline.call_args

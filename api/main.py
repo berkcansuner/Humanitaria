@@ -164,26 +164,18 @@ async def lifespan(app: FastAPI):
     # Warm up RAG components so the first request is not slow.
     # Embedding warmup runs a dummy query to load the model into memory.
     try:
-        from rag.retriever import _get_vectorstore
         from rag.chain import build_chain
+        from rag.db import get_engine
         from rag.embeddings import get_embeddings
-        _get_vectorstore()
+        get_engine()   # schema (incl. the pgvector chunk table) + connection pool
         build_chain()
-        logger.info("RAG vectorstore + chain warmed up")
+        logger.info("RAG database + chain warmed up")
         # Embed a short dummy text to load the model into GPU/CPU memory.
         embedder = get_embeddings()
         embedder.embed_query("warmup")
         logger.info("Embedding model warmed up")
     except Exception as exc:
         logger.warning("Startup warmup failed (non-fatal, will retry on first request): %s", exc)
-
-    # Load the persisted reports cache so the admin list is served instantly after
-    # a restart (the first-ever build is kicked off lazily by the documents route).
-    try:
-        from ingestion import analytics
-        analytics.load_persisted()
-    except Exception as exc:
-        logger.warning("Failed to load reports cache (non-fatal): %s", exc)
 
     # Start background ingestion scheduler
     scheduler = None

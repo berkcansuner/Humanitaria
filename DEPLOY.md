@@ -42,7 +42,9 @@ origin, so no CORS in the browser). Config lives in `render.yaml` + `Dockerfile`
   conversations) resets on every deploy and on wake-from-sleep. Re-signup after a
   reset. For persistence: upgrade to a paid instance + disk, or migrate to Postgres.
 - **Cold start.** Spins down after ~15 min idle; the next request takes ~30–60 s.
-- **Pinecone write quota is full** → ingestion is disabled (`INGEST_SCHEDULE_HOURS=0`).
-  Chat (reads) works against the existing index.
+- **Vector index lives in Supabase (pgvector).** Free tier: 500 MB database limit
+  (~40K chunks at 768-dim halfvec ≈ 200 MB) and the project pauses after 7 idle days
+  (the nightly ingest cron keeps it active). Ingest is triggered by the Cloudflare
+  Worker cron (`INGEST_SCHEDULE_HOURS=0`, no in-process scheduler).
 - **Gemini 503 ("high demand")** is transient/external; the chat route fast-fails
   with a "model busy" message instead of hanging.

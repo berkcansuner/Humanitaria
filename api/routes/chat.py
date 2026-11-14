@@ -195,7 +195,7 @@ async def _retrieve_docs(query: str, filters: dict):
     """Shared retrieval pipeline used by both chat routes.
 
     candidates (larger k) -> date filter -> dedupe by document ->
-    relevance rerank (Pinecone) -> recency blend -> final top-k.
+    relevance rerank (hosted reranker) -> recency blend -> final top-k.
 
     For "current"-style queries (no explicit date window, no historical intent)
     the recency boost reranks a wider relevance pool by recency so the newest
@@ -426,10 +426,9 @@ async def chat_stream(request: Request, req: ChatRequest, user: dict = Depends(g
                 )
 
             logger.info(
-                "chat latency: filter=%.0fms retrieval=%.0fms ttft=%.0fms total=%.0fms ns=%s",
+                "chat latency: filter=%.0fms retrieval=%.0fms ttft=%.0fms total=%.0fms",
                 _filter_ms, _retrieval_ms, (_ttft_ms if _ttft_ms is not None else -1),
                 (time.perf_counter() - _t0) * 1000,
-                get_settings().PINECONE_NAMESPACE or "(default)",
             )
             yield ServerSentEvent(event="session", data=json.dumps({"session_id": session_id}))
             yield ServerSentEvent(event="done", data="{}")

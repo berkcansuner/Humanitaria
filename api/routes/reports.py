@@ -161,7 +161,11 @@ def _countries() -> list[str]:
     cache is warm (precise, data-backed); fall back to the static COUNTRIES snapshot
     when the cache is cold — e.g. a fresh deploy on Render's ephemeral filesystem — so
     the dropdown is never empty and report generation is never blocked."""
-    return analytics.distinct_countries() or COUNTRIES
+    try:
+        return analytics.distinct_countries() or COUNTRIES
+    except Exception as exc:   # the form must never be blocked by the list query
+        logger.warning("Indexed country list unavailable: %s", exc)
+        return COUNTRIES
 
 
 @router.get("/reports/options")

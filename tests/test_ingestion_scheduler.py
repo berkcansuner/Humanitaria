@@ -25,7 +25,7 @@ class TestWatermark:
 class TestScheduledIngest:
     def test_scheduled_ingest_updates_watermark_on_success(self, tmp_path):
         with patch("ingestion.scheduler.run_pipeline") as mock_pipeline, \
-             patch("ingestion.analytics.rebuild_documents"):
+             patch("ingestion.analytics.apply_retention"):
             mock_pipeline.return_value = {}
             from ingestion.scheduler import _run_scheduled_ingest
             _run_scheduled_ingest()
@@ -37,7 +37,7 @@ class TestScheduledIngest:
         from ingestion.scheduler import _save_watermark
         _save_watermark("2026-04-01")
         with patch("ingestion.scheduler.run_pipeline") as mock_pipeline, \
-             patch("ingestion.analytics.rebuild_documents"):
+             patch("ingestion.analytics.apply_retention"):
             mock_pipeline.return_value = {}
             from ingestion.scheduler import _run_scheduled_ingest
             _run_scheduled_ingest()
@@ -48,7 +48,7 @@ class TestScheduledIngest:
         settings = MagicMock()
         settings.INGEST_ENDPOINTS = "reports,disasters"
         with patch("ingestion.scheduler.run_pipeline") as mock_pipeline, \
-             patch("ingestion.analytics.rebuild_documents"), \
+             patch("ingestion.analytics.apply_retention"), \
              patch("ingestion.runner.get_settings", return_value=settings):
             mock_pipeline.return_value = {}
             from ingestion.scheduler import _run_scheduled_ingest

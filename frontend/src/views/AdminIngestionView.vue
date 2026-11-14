@@ -64,16 +64,15 @@
                 <dd>{{ status?.scheduler_active ? 'Active' : 'Inactive' }}</dd>
               </div>
               <div>
-                <dt>Vectors (active namespace)</dt>
+                <dt>Indexed chunks</dt>
                 <dd>
-                  <span v-if="status?.vector_count_error" title="Pinecone unavailable"
+                  <span v-if="status?.vector_count_error" title="Database unavailable"
                     >unavailable</span
                   >
                   <template v-else>
-                    {{ formatNumber(status?.namespace_vectors) }}
+                    {{ formatNumber(status?.chunk_count) }}
                     <span class="dd-note"
-                      >{{ namespaceLabel }} · {{ formatNumber(status?.total_vectors) }} in
-                      index</span
+                      >{{ formatNumber(status?.document_count) }} documents</span
                     >
                   </template>
                 </dd>
@@ -135,8 +134,7 @@
               </span>
             </div>
             <p class="muted">
-              Indexed reports in the active namespace, newest first. The list builds automatically
-              and refreshes after each ingest.
+              Indexed reports, newest first. The list updates as each ingest writes new documents.
             </p>
 
             <div class="bd-actions">
@@ -230,10 +228,6 @@ const running = computed(() => run.value.running === true)
 const lastStatsRows = computed(() =>
   Object.entries(run.value.last_stats || {}).map(([endpoint, s]) => ({ endpoint, ...s })),
 )
-const namespaceLabel = computed(() => {
-  const ns = status.value?.namespace
-  return ns ? `“${ns}” namespace` : 'default namespace'
-})
 
 // --- reports list (indexed documents, newest-first) ---
 const docState = ref(null) // last /admin/ingest/documents response

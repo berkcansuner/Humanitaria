@@ -10,17 +10,18 @@ deployment kararı proje olgunlaştıktan sonra verilecek.
 ## Mimari
 
 ```
-ReliefWeb API → Ingestion Pipeline → Pinecone (serverless vektör DB)
+ReliefWeb API → Ingestion Pipeline → Postgres + pgvector (Supabase; chunks + documents)
                                             ↓
 Kullanıcı → Vue 3 Frontend → FastAPI (localhost:8001) → RAG Engine (LangChain LCEL)
                                           ↓                        ↓
-                  Gemini embedding (gemini-embedding-001, 3072 boyut)    Gemini (chat yanıtı)
+                  Gemini embedding (gemini-embedding-001, 768 boyut)     Gemini (chat yanıtı)
                   + query processor (gemini-2.5-flash)
 ```
 
 - **Chat yanıtı:** Google Gemini `gemini-2.5-flash` (OpenAI-uyumlu endpoint).
 - **Query processor + embedding:** Google Gemini (`gemini-2.5-flash` + `gemini-embedding-001`).
-- **Vector DB:** Pinecone serverless (`reliefweb-docs`).
+- **Vector DB:** Postgres + pgvector (prod: Supabase, `chunks` tablosu, `halfvec(768)` + HNSW).
+- **Reranker:** Pinecone Inference (`bge-reranker-v2-m3`) — Pinecone'da VERİ TUTULMAZ, yalnız rerank API'si.
 
 ---
 
@@ -30,8 +31,8 @@ Kullanıcı → Vue 3 Frontend → FastAPI (localhost:8001) → RAG Engine (Lang
 |--------|-----------|--------|
 | Chat LLM | Google Gemini `gemini-2.5-flash` | OpenAI-uyumlu endpoint |
 | Query processor LLM | Google Gemini `gemini-2.5-flash` | Filtre çıkarma (json_mode) + rule-based fallback |
-| Embedding | Google Gemini `gemini-embedding-001` | 3072 boyut |
-| Vector DB | Pinecone serverless | Bulut; `reliefweb-docs` index |
+| Embedding | Google Gemini `gemini-embedding-001` | 768 boyut (API'de kırpılır) |
+| Vector DB | Postgres + pgvector | Supabase; `chunks` (halfvec + HNSW) + `documents` |
 | Backend | Python 3.12 / FastAPI | REST + SSE; Vue statik sunumu; port **8001** |
 | RAG Framework | LangChain LCEL | Düz `prompt \| llm \| StrOutputParser`; history route'da manuel beslenir |
 | Web UI | Vue 3 + Vite | Chat arayüzü, SSE streaming, kaynak gösterimi |
@@ -51,7 +52,7 @@ Kullanıcı → Vue 3 Frontend → FastAPI (localhost:8001) → RAG Engine (Lang
   `stat_tests.py` (saf istatistik: trend/karşılaştırma/bölge/korelasyon),
   `charts.py` (matplotlib→base64), `technical_report.py` (orkestratör), `countries.py` (ISO3)
 - **`tests/`** — pytest, modül yapısını yansıtır
-- **`scripts/`** — CLI (`ingest.py`, `setup_pinecone.py`)
+- **`scripts/`** — CLI (`ingest.py`, `eval_rag.py`)
 
 ---
 
@@ -65,19 +66,18 @@ GEMINI_LLM_MODEL=gemini-2.5-flash      # chat yanıtı
 GEMINI_QUERY_MODEL=gemini-2.5-flash    # filtre çıkarma
 GEMINI_EMBED_MODEL=gemini-embedding-001
 
-# Pinecone (serverless vektör DB)
+# Veritabanı: app tabloları + vektör index'i (pgvector). Boş = yerel SQLite (vektör araması YOK)
+DATABASE_URL=
+
+# Pinecone — yalnız hosted reranker (Pinecone Inference)
 PINECONE_API_KEY=xxx
-PINECONE_INDEX=reliefweb-docs
-PINECONE_CLOUD=aws
-PINECONE_REGION=us-east-1
-PINECONE_NAMESPACE=
 
 # ReliefWeb
 RELIEFWEB_APPNAME=xxx           # URL param: ?appname=...  (Bearer auth YOK)
 RELIEFWEB_BASE_URL=https://api.reliefweb.int/v2
 
 # Embedding
-EMBED_DIM=3072                  # gemini-embedding-001 → 3072
+EMBED_DIM=768                   # gemini-embedding-001, API'de 768'e kırpılır (chunks.embedding halfvec(768))
 EMBED_BATCH_SIZE=32
 
 # RAG retrieval
@@ -130,23 +130,22 @@ primary_country.name, theme.name, format.name, file`. Sıralama `date.created:de
 "şu anda / güncel / latest" gibi belirsiz ifadeler date filtresi ÜRETMEZ; `date_from`
 bugün/gelecek ise reddedilir.
 
-**Retriever** (`rag/retriever.py`): Pinecone MMR
-(`k=TOP_K_RETRIEVAL`, `fetch_k=MMR_FETCH_K`, `lambda_mult=MMR_LAMBDA`). `_build_pinecone_filter`
-→ `$eq`/`$in`; country `$in` (kısa+tam ad).
-**Tarih filtresi:** Pinecone'da sunucu tarafında sayısal `date_ts` `$gte`; `apply_date_filter`
-ek savunmacı katman.
+**Retriever** (`rag/retriever.py`): pgvector cosine araması (`fetch_k`, HNSW + `iterative_scan`)
+→ Python'da MMR (`k`, `MMR_LAMBDA`). `build_sql_filter` → beyaz listeli kolonlar + bind parametreleri;
+country `= ANY` (kısa+tam ad), theme `theme = :t OR :t = ANY(themes)`.
+**Tarih filtresi:** SQL'de sayısal `date_ts` aralığı; `apply_date_filter` ek savunmacı katman.
 `rerank_by_recency` → MMR + üstel recency blend.
 
 **Chain** (`rag/chain.py`): düz LCEL `prompt | llm | StrOutputParser`. Gemini `ChatOpenAI`.
 History route'da `get_session_history` ile alınır,
 `chat_history` olarak geçilir, yanıt sonrası kaydedilir (RunnableWithMessageHistory YOK).
 
-**Metadata şeması (her chunk, Pinecone):**
+**Metadata şeması (her chunk; `chunks.metadata` JSONB, filtre alanları ayrıca kolon):**
 ```python
 {"doc_id", "url", "title", "country", "iso3", "theme", "themes" (varsa; tüm sektör
  temaları), "language", "glide" (bağlı/ilgili afetin GLIDE kodu), "disaster_type"
  (yalnız doctype=disaster; primary_type.name → yoksa type[0].name fallback),
- "date" (YYYY-MM-DD), "date_ts" (sayısal YYYYMMDD, Pinecone $gte için), "source",
+ "date" (YYYY-MM-DD), "date_ts" (sayısal YYYYMMDD, SQL tarih aralığı için), "source",
  "format", "doctype"}  # doc_id orphan cleanup için kullanılır
 ```
 
@@ -182,5 +181,7 @@ Selamlaşma → retrieval atlanır. Mesaj doğrulama: boş/4000+ karakter redded
 - Pipeline resume kısmi (watermark var, uzun kesinti tam test edilmedi).
 - CORS şu an localhost origin'leri — production'da `CORS_ORIGINS` daraltılmalı.
 - PDF içerik ingestion opsiyonel (`FETCH_PDF_CONTENT=False`); varsayılan sadece HTML `body`.
-- Pinecone serverless metadata-filtreli silme desteklemez; orphan temizliği chunk-id prefix (`{doc_id}_`) list+delete ile yapılır.
+- Vektör araması yalnız Postgres'te (pgvector ≥0.7 `halfvec`, ≥0.8 `iterative_scan`); yerel SQLite'ta yok.
+  Entegrasyon testleri `TEST_DATABASE_URL` ile (CI: `pgvector/pgvector:pg17` servisi).
+- Supabase ücretsiz plan: 500 MB DB sınırı (768-dim halfvec ile ~40K chunk ≈ 200 MB) ve 7 gün hareketsizlikte duraklama (gece cron'u önler).
 - Gemini embedding OpenAI-uyumlu endpoint üzerinden çalışır; `task_type` (`RETRIEVAL_DOCUMENT`/`QUERY`) ayrımı yok (küçük kalite ödünü).

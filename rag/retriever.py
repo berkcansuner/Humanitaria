@@ -1,37 +1,28 @@
+import json
 import logging
 import math
 from datetime import datetime
 from functools import lru_cache
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 
+import numpy as np
+from langchain_core.callbacks import CallbackManagerForRetrieverRun
 from langchain_core.documents import Document
-from langchain_core.vectorstores import VectorStore
-from langchain_pinecone import PineconeVectorStore
+from langchain_core.retrievers import BaseRetriever
+from langchain_core.vectorstores.utils import maximal_marginal_relevance
 from pinecone import Pinecone
+from sqlalchemy import text
 
 from config import get_settings
+from rag.db import connect
 from rag.embeddings import get_embeddings
 
 logger = logging.getLogger(__name__)
 
 
-@lru_cache(maxsize=1)
-def _get_vectorstore() -> VectorStore:
-    settings = get_settings()
-    embeddings = get_embeddings()
-    pc = Pinecone(api_key=settings.PINECONE_API_KEY)
-    index = pc.Index(settings.PINECONE_INDEX)
-    return PineconeVectorStore(
-        index=index,
-        embedding=embeddings,
-        text_key="text",
-        namespace=settings.PINECONE_NAMESPACE or None,
-    )
-
-
 # ReliefWeb stores some countries under their full official UN names.
 # ingestion/parser._normalize_country_name strips these for new ingests,
-# but existing data uses the full forms. $in covers both.
+# but existing data uses the full forms. Matching both covers either.
 _COUNTRY_RELIEFWEB_ALIASES: Dict[str, str] = {
     "Iran":               "Iran (Islamic Republic of)",
     "Syria":              "Syrian Arab Republic",
@@ -45,6 +36,9 @@ _COUNTRY_RELIEFWEB_ALIASES: Dict[str, str] = {
     "North Korea":        "Democratic People's Republic of Korea",
 }
 
+# Filter keys that map 1:1 onto a chunks column (equality match).
+_EQ_COLUMNS = ("doctype", "source", "format")
+
 
 def _date_to_int(date_str: str) -> Optional[int]:
     """'2024-01-01' -> 20240101; invalid/empty -> None."""
@@ -56,54 +50,95 @@ def _date_to_int(date_str: str) -> Optional[int]:
     return None
 
 
-def _build_pinecone_filter(filters: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
-    """Pinecone metadata filter (keys are implicitly AND-ed).
+def build_sql_filter(filters: Optional[Dict[str, Any]]) -> Tuple[List[str], Dict[str, Any]]:
+    """WHERE clauses (AND-ed) + bind params for the query-processor filters.
 
-    Date is pushed into the DB as a numeric `date_ts` $gte range for
-    server-side date filtering.
-    """
-    if not filters:
-        return None
-    conditions: Dict[str, Any] = {}
-    for key, val in filters.items():
+    Only known keys become SQL (column names are never taken from input); values are
+    always bound. ``date`` is a numeric ``date_ts`` range ($gte, optional $lte);
+    ``country`` also matches ReliefWeb's long official name; ``theme`` matches the
+    primary theme or any entry of the multi-theme list."""
+    clauses: List[str] = []
+    params: Dict[str, Any] = {}
+    for key, val in (filters or {}).items():
         if key == "date":
-            # Lower bound ($gte) and optional upper bound ($lte) → numeric date_ts
-            # range. Report queries pass a full from–to window; chat passes $gte only.
-            rng: Dict[str, Any] = {}
             if isinstance(val, dict):
                 ts_from = _date_to_int(val["$gte"]) if val.get("$gte") else None
                 ts_to = _date_to_int(val["$lte"]) if val.get("$lte") else None
                 if ts_from is not None:
-                    rng["$gte"] = ts_from
+                    clauses.append("date_ts >= :date_from")
+                    params["date_from"] = ts_from
                 if ts_to is not None:
-                    rng["$lte"] = ts_to
-            if rng:
-                conditions["date_ts"] = rng
+                    clauses.append("date_ts <= :date_to")
+                    params["date_to"] = ts_to
+        elif not isinstance(val, str) or not val:
+            logger.debug("Ignoring non-string filter %s=%r", key, val)
         elif key == "country":
-            full_name = _COUNTRY_RELIEFWEB_ALIASES.get(val)
-            if full_name:
-                conditions[key] = {"$in": [val, full_name]}
-            else:
-                conditions[key] = {"$eq": val}
+            clauses.append("country = ANY(:countries)")
+            params["countries"] = [val, *([_COUNTRY_RELIEFWEB_ALIASES[val]]
+                                          if val in _COUNTRY_RELIEFWEB_ALIASES else [])]
         elif key == "theme":
-            # Legacy records store a single `theme` string; enriched records store
-            # all sector themes in a `themes` list. Match either so re-indexed data
-            # gains multi-theme recall without regressing the existing namespace.
-            conditions["$or"] = [{"theme": {"$eq": val}}, {"themes": {"$in": [val]}}]
-        elif isinstance(val, dict):
-            conditions[key] = val
+            clauses.append("(theme = :theme OR :theme = ANY(themes))")
+            params["theme"] = val
+        elif key in _EQ_COLUMNS:
+            clauses.append(f"{key} = :{key}")
+            params[key] = val
         else:
-            conditions[key] = {"$eq": val}
-    return conditions or None
+            logger.debug("Ignoring unknown filter key %r", key)
+    return clauses, params
+
+
+def search(query: str, filters: Optional[Dict[str, Any]], k: int, fetch_k: int) -> List[Document]:
+    """Nearest *fetch_k* chunks (cosine) under *filters*, then MMR down to *k*.
+
+    HNSW with iterative scan keeps filtered searches from coming back short (a
+    plain HNSW scan stops after ef_search candidates, before the WHERE clause)."""
+    settings = get_settings()
+    query_vec = get_embeddings().embed_query(query)
+    clauses, params = build_sql_filter(filters)
+    where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    sql = text(f"""
+        SELECT content, metadata, embedding::text AS emb,
+               embedding <=> CAST(:q AS halfvec) AS dist
+        FROM chunks {where}
+        ORDER BY embedding <=> CAST(:q AS halfvec)
+        LIMIT :fetch_k""")
+    from ingestion.store import vector_literal
+    with connect() as conn:
+        conn.execute(text("SELECT set_config('hnsw.iterative_scan', 'relaxed_order', true)"))
+        conn.execute(text("SELECT set_config('hnsw.ef_search', :ef, true)"),
+                     {"ef": str(min(1000, max(40, fetch_k)))})
+        rows = conn.execute(sql, {**params, "q": vector_literal(query_vec), "fetch_k": fetch_k}).fetchall()
+    if not rows:
+        return []
+    rows = sorted(rows, key=lambda r: r.dist)   # relaxed_order may be slightly out of order
+    picked = maximal_marginal_relevance(
+        np.array(query_vec, dtype=np.float32),
+        [json.loads(r.emb) for r in rows],
+        lambda_mult=settings.MMR_LAMBDA,
+        k=min(k, len(rows)),
+    )
+    return [Document(page_content=rows[i].content, metadata=dict(rows[i].metadata)) for i in picked]
+
+
+class PgVectorRetriever(BaseRetriever):
+    """LangChain retriever over the pgvector chunk table (MMR). ``ainvoke`` runs the
+    blocking search in a worker thread (BaseRetriever's default async path)."""
+
+    filters: Optional[Dict[str, Any]] = None
+    k: int
+    fetch_k: int
+
+    def _get_relevant_documents(
+        self, query: str, *, run_manager: CallbackManagerForRetrieverRun
+    ) -> List[Document]:
+        return search(query, self.filters, self.k, self.fetch_k)
 
 
 def build_retriever(filter: Optional[Dict[str, Any]] = None, k: Optional[int] = None):
-    vectorstore = _get_vectorstore()
     settings = get_settings()
     # k may be raised by the caller to fetch a larger candidate pool for
     # dedup + reranking; defaults to the final top-k.
     k = k or settings.TOP_K_RETRIEVAL
-    store_filter = _build_pinecone_filter(filter)
     # MMR only adds value when the candidate pool (fetch_k) is meaningfully larger
     # than k — otherwise it selects every candidate and the diversity step is a
     # no-op. The caller often raises k to a rerank pool (TOP_K * multiplier), so
@@ -111,21 +146,10 @@ def build_retriever(filter: Optional[Dict[str, Any]] = None, k: Optional[int] = 
     # date filter will thin the pool in Python afterwards.
     has_date_filter = isinstance(filter, dict) and "date" in filter
     fetch_multiplier = 12 if has_date_filter else 3
-    # Cap the candidate pool: a report's wide k (indicator top_k 16 → candidate_k 64)
-    # combined with the date over-fetch reaches k*12 = 768, and MMR over that many
-    # 3072-dim vectors is slow enough on constrained CPU to blow the request timeout
-    # (the indicator-report 502). The date filter is already applied server-side by
-    # Pinecone (date_ts $gte/$lte), so a smaller pool loses little recall.
+    # Cap the candidate pool: MMR is O(fetch_k * k) vector math on a constrained CPU,
+    # and the date filter already runs in SQL, so a wider pool adds little recall.
     fetch_k = min(max(settings.MMR_FETCH_K, k * fetch_multiplier), settings.MMR_FETCH_K_CAP)
-    return vectorstore.as_retriever(
-        search_type="mmr",
-        search_kwargs={
-            "k": k,
-            "fetch_k": fetch_k,
-            "lambda_mult": settings.MMR_LAMBDA,
-            "filter": store_filter,
-        },
-    )
+    return PgVectorRetriever(filters=filter or None, k=k, fetch_k=fetch_k)
 
 
 @lru_cache(maxsize=1)
@@ -189,7 +213,7 @@ def rerank_by_relevance(query: str, docs: List[Document], top_n: int) -> List[Do
 def apply_date_filter(docs: List[Document], date_filter: Optional[Dict[str, Any]]) -> List[Document]:
     """Post-retrieval date filter (YYYY-MM-DD lexicographic compare).
 
-    Defensive layer on top of Pinecone's server-side date_ts $gte filter.
+    Defensive layer on top of the SQL date_ts range filter.
     """
     if not date_filter or not isinstance(date_filter, dict):
         return docs

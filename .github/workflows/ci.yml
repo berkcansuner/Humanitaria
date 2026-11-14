@@ -9,6 +9,16 @@ on:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    services:
+      # Real Postgres + pgvector for tests/test_pgvector_store.py (the vector index).
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
 
@@ -35,6 +45,7 @@ jobs:
           GEMINI_API_KEY: test
           PINECONE_API_KEY: test
           RELIEFWEB_APPNAME: test
+          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
         run: pytest tests/ -q --cov
 
       - name: Dependency audit (pip-audit, advisory)

@@ -34,7 +34,9 @@ class Settings(BaseSettings):
     RELIEFWEB_APPNAME: str = ""
     RELIEFWEB_BASE_URL: str = "https://api.reliefweb.int/v2"
 
-    EMBED_DIM: int = 3072          # Gemini gemini-embedding-001 → 3072
+    # gemini-embedding-001 is trained to be truncated (3072 native); 768 keeps the
+    # pgvector index (halfvec) well inside the Supabase free-tier 500 MB.
+    EMBED_DIM: int = 768
     EMBED_BATCH_SIZE: int = 32
     # Explicit timeout (s) for the embedding client. Without it the OpenAI SDK default
     # (~600s) can hang query vectorization — which runs before the LLM in every
@@ -62,12 +64,9 @@ class Settings(BaseSettings):
     # Altındaki serilerde inferential test çalıştırılmaz ("insufficient_data").
     TECHNICAL_REPORT_MIN_POINTS: int = 4
 
-    # Pinecone (serverless)
+    # Pinecone — used ONLY for the hosted reranker (Pinecone Inference); the vector
+    # index itself lives in Postgres (pgvector).
     PINECONE_API_KEY: str = ""
-    PINECONE_INDEX: str = "reliefweb-docs"
-    PINECONE_CLOUD: str = "aws"
-    PINECONE_REGION: str = "us-east-1"
-    PINECONE_NAMESPACE: str = "v3"
 
     # RAG
     CHUNK_SIZE: int = 1500        # characters per chunk (recursive splitter)
@@ -77,9 +76,9 @@ class Settings(BaseSettings):
     # history (resolves anaphora like "what about the north?"). Kill-switch.
     QUERY_REWRITE_ENABLED: bool = True
     MMR_FETCH_K: int = 20          # candidate pool for MMR diversity
-    MMR_FETCH_K_CAP: int = 256     # upper bound on the MMR candidate pool — keeps MMR over 3072-dim vectors tractable on constrained CPU (a wide report top_k × the date over-fetch could otherwise reach ~768 and blow the request timeout)
+    MMR_FETCH_K_CAP: int = 256     # upper bound on the MMR candidate pool — keeps MMR tractable on constrained CPU (a wide report top_k × the date over-fetch could otherwise reach ~768)
     MMR_LAMBDA: float = 0.5        # 0=max diversity, 1=max relevance
-    # Two-stage retrieval: Pinecone hosted reranker over a larger candidate pool.
+    # Two-stage retrieval: hosted reranker (Pinecone Inference) over a larger candidate pool.
     RERANK_ENABLED: bool = True
     RERANK_MODEL: str = "bge-reranker-v2-m3"
     RERANK_CANDIDATE_MULTIPLIER: int = 4   # candidate pool = TOP_K_RETRIEVAL * this
@@ -156,7 +155,6 @@ class Settings(BaseSettings):
     # (its own --endpoints flag/default).
     INGEST_ENDPOINTS: str = "reports,disasters"
     FETCH_PDF_CONTENT: bool = False   # download and index PDF attachments (slow, opt-in)
-    REPORTS_CACHE_PATH: str = "./.reports_cache.json"    # admin reports list (persisted scan)
     # Default freshness floor for manual ingest: when --date-from is not given,
     # ingest.py only pulls documents from the last N years (0 = no floor / full history).
     # Prevents re-pulling ancient ReliefWeb history (e.g. a country's reports back to the 1990s).

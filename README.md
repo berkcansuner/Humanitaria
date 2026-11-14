@@ -6,16 +6,17 @@ ReliefWeb insani yardım veritabanı üzerinden Türkçe/İngilizce çok dilli s
 ## Mimari
 
 ```
-ReliefWeb API → Ingestion Pipeline → Pinecone (serverless vektör DB)
+ReliefWeb API → Ingestion Pipeline → Postgres + pgvector (Supabase)
                                             ↓
 Kullanıcı → Vue 3 Frontend → FastAPI → RAG Engine (LangChain LCEL) → Google Gemini (chat yanıtı)
                                               ↑
-                       Gemini embedding (gemini-embedding-001, 3072 boyut) + query processor
+                       Gemini embedding (gemini-embedding-001, 768 boyut) + query processor
 ```
 
 - **Chat & sorgu-işleme LLM'i:** Google Gemini (`gemini-2.5-flash`, OpenAI-uyumlu endpoint).
-- **Embedding:** Google Gemini (`gemini-embedding-001`, 3072 boyut).
-- **Vektör DB:** Pinecone serverless (`reliefweb-docs`).
+- **Embedding:** Google Gemini (`gemini-embedding-001`, 768 boyut).
+- **Vektör DB:** Postgres + pgvector (Supabase; `chunks` tablosu, `halfvec` + HNSW). Sıralama için
+  Pinecone Inference reranker'ı (veri tutulmaz).
 - **Kimlik doğrulama:** httpOnly cookie session — e-posta/şifre + opsiyonel Google OAuth.
 - **Tamamen bulut** — yerel model sunucusu gerektirmez.
 
@@ -36,13 +37,12 @@ Kullanıcı → Vue 3 Frontend → FastAPI → RAG Engine (LangChain LCEL) → G
    ```bash
    cp .env.example .env
    ```
-   En az şunlar gerekir: `GEMINI_API_KEY` (chat + embedding), `PINECONE_API_KEY` (vektör DB),
-   `RELIEFWEB_APPNAME` (ReliefWeb API). Kimlik doğrulama e-posta/şifre ile kutudan çıktığı gibi
+   En az şunlar gerekir: `GEMINI_API_KEY` (chat + embedding), `DATABASE_URL` (pgvector'lü
+   Postgres — vektör araması yalnız Postgres'te), `RELIEFWEB_APPNAME` (ReliefWeb API);
+   `PINECONE_API_KEY` opsiyonel (reranker). Kimlik doğrulama e-posta/şifre ile kutudan çıktığı gibi
    çalışır; production için `AUTH_SESSION_SECRET`'i değiştirin (bkz. Kimlik Doğrulama bölümü).
-5. Pinecone index'ini oluşturun:
-   ```bash
-   python scripts/setup_pinecone.py
-   ```
+5. Veritabanında `vector` eklentisini açın (Supabase: Database → Extensions → vector).
+   Tablolar (`chunks`, `documents`, …) uygulama ilk açıldığında otomatik oluşturulur.
 6. Frontend bağımlılıklarını yükleyin ve build edin:
    ```bash
    cd frontend
@@ -98,7 +98,7 @@ arkasında `SESSION_COOKIE_SECURE=True` yapın.
 │   └── dist/            # Build edilmiş production bundle (gitignore'da)
 ├── ingestion/           # ReliefWeb'den veri çekme, parse, chunk, store
 ├── rag/                 # Embedding, retriever, LangChain zinciri, query processor
-├── scripts/             # CLI komutları (ingest.py, setup_pinecone.py, eval_rag.py, prune_old_vectors.py)
+├── scripts/             # CLI komutları (ingest.py, eval_rag.py)
 ├── tests/               # pytest testleri
 └── conversations.db     # Sohbet geçmişi (SQLite; gitignore'da)
 ```

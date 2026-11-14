@@ -5,10 +5,10 @@
 langchain-core==1.8.0
 langchain-openai==1.8.0
 langchain-text-splitters==1.1.3
-langchain-pinecone==0.2.13
 
-# Vector stores
-pinecone==7.3.0
+# Reranker (Pinecone Inference) + vector math (MMR)
+pinecone==7.3.0      # hosted reranker only (Pinecone Inference)
+numpy==2.5.4
 
 # Web / API
 fastapi==0.162.7

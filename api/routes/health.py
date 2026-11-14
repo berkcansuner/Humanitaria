@@ -12,18 +12,15 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _check_pinecone() -> bool:
-    """Probe the Pinecone index (raises if unreachable/misconfigured)."""
-    from ingestion.store import get_store
-    get_store().index.describe_index_stats()
-    return True
-
-
 def _check_database() -> bool:
-    """Probe the users/conversations DB (raises if it cannot be reached)."""
+    """Probe the database — app tables and, on Postgres, the vector index (raises
+    if it cannot be reached)."""
     from rag.db import get_engine
-    with get_engine().connect() as conn:
+    engine = get_engine()
+    with engine.connect() as conn:
         conn.execute(text("SELECT 1"))
+        if engine.dialect.name == "postgresql":
+            conn.execute(text("SELECT 1 FROM chunks LIMIT 1"))
     return True
 
 
@@ -40,17 +37,18 @@ def _check_gemini() -> bool:
 async def health(deep: bool = False, user: Optional[dict] = Depends(get_optional_user)):
     """Liveness by default (cheap, always 200 — used by the platform health check).
 
-    With ``?deep=true`` it also probes the external dependencies (Pinecone, the
-    DB and Gemini) and returns 503 if any is unavailable, for readiness/diagnostics.
+    With ``?deep=true`` it also probes the external dependencies (the DB with its
+    vector index, and Gemini) and returns 503 if any is unavailable, for
+    readiness/diagnostics.
     """
     if not deep:
         return {"status": "ok"}
-    # The deep probe makes billed Gemini/Pinecone calls: admins only.
+    # The deep probe makes a billed Gemini call: admins only.
     if not (user and _is_admin(user)):
         raise HTTPException(status_code=403, detail="Admin access required")
 
     checks: dict[str, str] = {}
-    probes = (("pinecone", _check_pinecone), ("database", _check_database), ("gemini", _check_gemini))
+    probes = (("database", _check_database), ("gemini", _check_gemini))
     for name, probe in probes:
         try:
             await anyio.to_thread.run_sync(probe)
