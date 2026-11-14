@@ -77,3 +77,15 @@ class TestSecurityAuditLog:
             )
         assert any("login failed" in r.getMessage().lower() for r in caplog.records), \
             "a failed login must leave a WARNING audit record"
+
+    def test_failed_login_logs_forwarded_for_chain(self, caplog):
+        # Temporary diagnostic: the raw X-Forwarded-For chain is needed to set
+        # RATE_LIMIT_TRUSTED_HOPS to the real proxy depth on the hosting platform.
+        with caplog.at_level(logging.WARNING, logger="api.routes.auth"):
+            TestClient(app).post(
+                "/auth/login",
+                json={"email": "nobody@example.com", "password": "whatever123"},
+                headers={"X-Forwarded-For": "203.0.113.7, 10.1.2.3"},
+            )
+        msgs = [r.getMessage() for r in caplog.records if "login failed" in r.getMessage().lower()]
+        assert any("203.0.113.7, 10.1.2.3" in m for m in msgs)
