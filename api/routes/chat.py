@@ -222,7 +222,9 @@ class ChatRequest(BaseModel):
     # history is accepted for backward compatibility but ignored —
     # server-side session history is the single source of truth.
     history: Optional[List[ChatMessage]] = Field(default_factory=list)
-    session_id: Optional[str] = None
+    # Ids are server-issued UUIDs; bound the client-supplied value because it is
+    # kept as an in-memory history key and a conversations primary key.
+    session_id: Optional[str] = Field(default=None, max_length=64, pattern=r"^[A-Za-z0-9-]+$")
 
     @field_validator("message")
     @classmethod

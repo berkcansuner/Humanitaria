@@ -13,7 +13,7 @@ from uuid import uuid4
 import anyio
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Literal, Optional
 from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 
@@ -110,12 +110,20 @@ COUNTRIES = [
 class ReportRequest(BaseModel):
     country: str = Field(..., min_length=1, max_length=120)
     theme: Optional[str] = None
-    date_from: Optional[str] = None
-    date_to: Optional[str] = None
+    date_from: Optional[str] = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+    date_to: Optional[str] = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
     language: Literal["tr", "en"] = "en"
     report_type: Literal[
         "situation", "indicator_monitoring", "needs_assessment", "technical_monitoring"
     ] = "situation"
+
+    @field_validator("theme")
+    @classmethod
+    def _known_theme(cls, v: Optional[str]) -> Optional[str]:
+        # theme lands in the report prompt and the Pinecone filter: only the form's values.
+        if v is not None and v not in THEMES:
+            raise ValueError("unknown theme")
+        return v
 
 
 def _no_docs_message(req: ReportRequest) -> str:

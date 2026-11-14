@@ -3,10 +3,10 @@ import logging
 import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.staticfiles import NotModifiedResponse
@@ -65,6 +65,47 @@ class SecurityHeadersMiddleware:
             await send(message)
 
         await self.app(scope, receive, send_wrapper)
+
+
+MAX_BODY_BYTES = 64 * 1024   # every JSON body model here is far smaller (chat message ≤ 4000 chars)
+
+
+class _BodyTooLarge(HTTPException):
+    def __init__(self):
+        super().__init__(status_code=413, detail="Request body too large")
+
+
+class BodySizeLimitMiddleware:
+    """Reject request bodies over MAX_BODY_BYTES before they are buffered and
+    JSON-decoded (which happens before auth and rate limiting). Declared
+    Content-Length is checked up front; chunked bodies are counted as they stream.
+    The over-limit error subclasses HTTPException because FastAPI re-raises those
+    from body parsing unchanged (anything else becomes a generic 400)."""
+
+    def __init__(self, app, max_bytes: int = MAX_BODY_BYTES):
+        self.app = app
+        self.max_bytes = max_bytes
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        for k, v in scope.get("headers", []):
+            if k == b"content-length" and v.isdigit() and int(v) > self.max_bytes:
+                await JSONResponse({"detail": "Request body too large"}, status_code=413)(scope, receive, send)
+                return
+        seen = 0
+
+        async def counting_receive():
+            nonlocal seen
+            message = await receive()
+            if message["type"] == "http.request":
+                seen += len(message.get("body", b""))
+                if seen > self.max_bytes:
+                    raise _BodyTooLarge()
+            return message
+
+        await self.app(scope, counting_receive, send)
 
 
 class RequestIDMiddleware:
@@ -193,6 +234,8 @@ app.add_middleware(
 app.add_middleware(SessionMiddleware, secret_key=settings.AUTH_SESSION_SECRET)
 # Baseline security headers on every response (pure-ASGI → SSE streaming unaffected).
 app.add_middleware(SecurityHeadersMiddleware, csp=_CSP, hsts=settings.is_production)
+# Cap request bodies before anything buffers or parses them.
+app.add_middleware(BodySizeLimitMiddleware)
 # Outermost: assign a correlation id early so it is present for all inner logging.
 app.add_middleware(RequestIDMiddleware)
 
