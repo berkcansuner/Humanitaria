@@ -118,6 +118,9 @@ class Settings(BaseSettings):
     # shared proxy IP. 0 = trust nothing (audit P2-01). Render = 3 (Cloudflare + 2 hops), see render.yaml.
     RATE_LIMIT_TRUSTED_HOPS: int = 0
     # Per-IP limits on the auth endpoints (brute-force / signup-spam guard).
+    # Per-user storage caps (bound DB growth from one account).
+    MAX_CONVERSATIONS_PER_USER: int = 500
+    MAX_REPORTS_PER_USER: int = 200
     AUTH_LOGIN_RATE_LIMIT: str = "5/minute"
     AUTH_SIGNUP_RATE_LIMIT: str = "3/minute"
 

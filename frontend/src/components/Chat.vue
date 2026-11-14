@@ -217,7 +217,9 @@ async function sendMessage(opts = {}) {
         handleSessionExpired()
         return
       }
-      assistantMsg.error = ERROR_MESSAGES.connection
+      // 409 = per-user conversation limit; show the server's reason, not "connection".
+      const detail = res.status === 409 ? (await res.json().catch(() => ({}))).detail : null
+      assistantMsg.error = detail || ERROR_MESSAGES.connection
       messages.value[msgIndex] = { ...assistantMsg }
       return
     }

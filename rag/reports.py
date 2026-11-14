@@ -46,6 +46,13 @@ def create_report(report_id: str, user_id: str, *, country: str, theme: str | No
         )
 
 
+def count_reports(user_id: str) -> int:
+    with _connect() as conn:
+        return int(conn.execute(
+            text("SELECT COUNT(*) FROM reports WHERE user_id = :uid"), {"uid": user_id}
+        ).scalar_one())
+
+
 def list_reports(user_id: str) -> list[dict]:
     """Lean rows for the saved-reports list (no body), newest first."""
     with _connect() as conn:

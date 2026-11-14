@@ -57,6 +57,24 @@ def is_owner(user_id: str, conv_id: str) -> bool:
     return row is not None
 
 
+def count_conversations(user_id: str) -> int:
+    with _connect() as conn:
+        return int(conn.execute(
+            text("SELECT COUNT(*) FROM conversations WHERE user_id = :uid"), {"uid": user_id}
+        ).scalar_one())
+
+
+def get_conversation(user_id: str, conv_id: str) -> dict | None:
+    """One conversation row owned by user_id, or None."""
+    with _connect() as conn:
+        row = conn.execute(
+            text("SELECT id, title, created_at, updated_at FROM conversations "
+                 "WHERE id = :id AND user_id = :uid"),
+            {"id": conv_id, "uid": user_id},
+        ).mappings().fetchone()
+    return dict(row) if row else None
+
+
 def list_conversations(user_id: str) -> list[dict]:
     with _connect() as conn:
         rows = conn.execute(

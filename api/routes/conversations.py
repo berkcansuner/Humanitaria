@@ -10,11 +10,13 @@ import logging
 from typing import List, Optional
 
 import anyio
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from uuid import uuid4
 
+from api.limiter import limiter
 from api.routes.auth import get_current_user
+from config import get_settings
 from rag import conversations as store
 from rag.history import clear_session
 
@@ -52,6 +54,18 @@ class TruncateIn(BaseModel):
     keep_through_message_id: int = Field(..., ge=0)
 
 
+def _rate_limit() -> str:
+    return get_settings().RATE_LIMIT
+
+
+def can_open_conversation(user_id: str) -> bool:
+    """False once the user holds MAX_CONVERSATIONS_PER_USER conversations. Sync."""
+    return store.count_conversations(user_id) < get_settings().MAX_CONVERSATIONS_PER_USER
+
+
+_LIMIT_DETAIL = "Conversation limit reached; delete old conversations to start a new one."
+
+
 async def _require_owner(user_id: str, conv_id: str) -> None:
     """404 unless conv_id exists and belongs to user_id (don't leak existence)."""
     if not await anyio.to_thread.run_sync(store.is_owner, user_id, conv_id):
@@ -64,14 +78,17 @@ async def list_conversations(user: dict = Depends(get_current_user)):
 
 
 @router.post("", response_model=ConversationOut)
-async def create_conversation(body: CreateConversationIn, user: dict = Depends(get_current_user)):
+@limiter.limit(_rate_limit)
+async def create_conversation(request: Request, body: CreateConversationIn,
+                              user: dict = Depends(get_current_user)):
+    if not await anyio.to_thread.run_sync(can_open_conversation, user["id"]):
+        raise HTTPException(status_code=409, detail=_LIMIT_DETAIL)
     conv_id = str(uuid4())
     await anyio.to_thread.run_sync(store.create_conversation, user["id"], conv_id, body.title)
-    rows = await anyio.to_thread.run_sync(store.list_conversations, user["id"])
-    for r in rows:
-        if r["id"] == conv_id:
-            return r
-    raise HTTPException(status_code=500, detail="Conversation create failed")
+    row = await anyio.to_thread.run_sync(store.get_conversation, user["id"], conv_id)
+    if row is None:
+        raise HTTPException(status_code=500, detail="Conversation create failed")
+    return row
 
 
 @router.get("/{conv_id}/messages", response_model=List[MessageOut])
@@ -81,11 +98,15 @@ async def get_messages(conv_id: str, user: dict = Depends(get_current_user)):
 
 
 @router.patch("/{conv_id}", response_model=ConversationOut)
-async def rename_conversation(conv_id: str, body: RenameIn, user: dict = Depends(get_current_user)):
+@limiter.limit(_rate_limit)
+async def rename_conversation(request: Request, conv_id: str, body: RenameIn,
+                              user: dict = Depends(get_current_user)):
     await _require_owner(user["id"], conv_id)
     await anyio.to_thread.run_sync(store.rename_conversation, conv_id, body.title)
-    rows = await anyio.to_thread.run_sync(store.list_conversations, user["id"])
-    return next(r for r in rows if r["id"] == conv_id)
+    row = await anyio.to_thread.run_sync(store.get_conversation, user["id"], conv_id)
+    if row is None:   # deleted concurrently
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return row
 
 
 @router.delete("/{conv_id}", status_code=204)

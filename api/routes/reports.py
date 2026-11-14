@@ -173,6 +173,9 @@ async def report_options(user: dict = Depends(get_current_user)):
 @router.post("/reports/stream")
 @limiter.limit(_rate_limit)
 async def report_stream(request: Request, req: ReportRequest, user: dict = Depends(get_current_user)):
+    if await anyio.to_thread.run_sync(report_store.count_reports, user["id"]) >= get_settings().MAX_REPORTS_PER_USER:
+        raise HTTPException(status_code=409,
+                            detail="Report limit reached; delete old reports to generate a new one.")
     async def event_generator():
         try:
             # technical_monitoring: HAPI+istatistik pipeline'ı — belge-retrieval yoluna

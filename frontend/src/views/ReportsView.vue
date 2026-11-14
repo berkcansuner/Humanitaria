@@ -357,7 +357,9 @@ async function generate() {
         handleSessionExpired()
         return
       }
-      genError.value = 'Could not generate the report. Please try again.'
+      // 409 = per-user report limit; show the server's reason.
+      const detail = res.status === 409 ? (await res.json().catch(() => ({}))).detail : null
+      genError.value = detail || 'Could not generate the report. Please try again.'
       return
     }
     const reader = res.body.getReader()

@@ -21,6 +21,7 @@ from rag.retriever import (
 from rag.chain import build_chain
 from rag.history import get_session_history, has_session, populate_history_from_messages
 from rag import conversations as convo_store
+from api.routes.conversations import can_open_conversation, _LIMIT_DETAIL as _CONVO_LIMIT_DETAIL
 from rag.rag_context import (
     _build_context_and_sources,
     _filter_cited_sources,
@@ -85,6 +86,12 @@ def _ensure_conversation_and_seed(user_id: str, session_id: str, message: str) -
         populate_history_from_messages(
             session_id, convo_store.messages_as_langchain(session_id)
         )
+
+
+def _may_open(user_id: str, session_id: str) -> bool:
+    """An existing (owned) conversation is always usable; a new one only under
+    the per-user cap. Sync — call via anyio.to_thread."""
+    return convo_store.conversation_exists(session_id) or can_open_conversation(user_id)
 
 
 def _verify_session_owner(user_id: str, session_id: str) -> bool:
@@ -258,6 +265,8 @@ async def chat(request: Request, req: ChatRequest, user: dict = Depends(get_curr
         _verify_session_owner, user["id"], session_id
     ):
         raise HTTPException(status_code=404, detail="Conversation not found")
+    if not await anyio.to_thread.run_sync(_may_open, user["id"], session_id):
+        raise HTTPException(status_code=409, detail=_CONVO_LIMIT_DETAIL)
 
     if _is_greeting(req.message):
         return ChatResponse(answer=_GREETING_REPLY, sources=[], session_id=session_id)
@@ -316,6 +325,8 @@ async def chat_stream(request: Request, req: ChatRequest, user: dict = Depends(g
         _verify_session_owner, user["id"], session_id
     ):
         raise HTTPException(status_code=404, detail="Conversation not found")
+    if not await anyio.to_thread.run_sync(_may_open, user["id"], session_id):
+        raise HTTPException(status_code=409, detail=_CONVO_LIMIT_DETAIL)
 
     if _is_greeting(req.message):
         async def greeting_generator():
