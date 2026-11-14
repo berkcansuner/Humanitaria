@@ -1,16 +1,10 @@
 import logging
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Union
 
 from langchain_core.chat_history import InMemoryChatMessageHistory
 from langchain_core.messages import BaseMessage
 
 from config import get_settings
-
-if TYPE_CHECKING:
-    # Imported lazily at runtime (only when REDIS_URL is set); declared here so the
-    # return-type forward reference resolves for linters/type-checkers.
-    from langchain_community.chat_message_histories import RedisChatMessageHistory
 
 logger = logging.getLogger(__name__)
 
@@ -44,23 +38,11 @@ def _get_memory_history(session_id: str, k: int, max_sessions: int) -> WindowedC
     return history
 
 
-def get_session_history(session_id: str) -> Union[WindowedChatMessageHistory, "RedisChatMessageHistory"]:
+def get_session_history(session_id: str) -> WindowedChatMessageHistory:
+    """In-memory window for a session. Durable history lives in the messages
+    table; a cold window is re-seeded from it (see populate_history_from_messages)."""
     settings = get_settings()
-    k = settings.HISTORY_WINDOW_K
-    max_sessions = settings.SESSION_MAX_MEMORY
-
-    if settings.REDIS_URL:
-        try:
-            from langchain_community.chat_message_histories import RedisChatMessageHistory
-            return RedisChatMessageHistory(
-                session_id,
-                url=settings.REDIS_URL,
-                ttl=settings.SESSION_TTL_HOURS * 3600,
-            )
-        except Exception as e:
-            logger.warning("Redis session unavailable, falling back to in-memory: %s", e)
-
-    return _get_memory_history(session_id, k, max_sessions)
+    return _get_memory_history(session_id, settings.HISTORY_WINDOW_K, settings.SESSION_MAX_MEMORY)
 
 
 def has_session(session_id: str) -> bool:

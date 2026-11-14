@@ -156,6 +156,7 @@ def _get_llm_extractor():
             base_url=settings.GEMINI_BASE_URL,
             api_key=settings.GEMINI_API_KEY,
             temperature=0.0,
+            use_responses_api=False,  # Gemini's OpenAI-compatible API is Chat Completions only
             timeout=10,
         )
         _llm_extractor = llm.with_structured_output(QueryFilters, method="json_mode")
@@ -387,6 +388,7 @@ def _get_llm_planner():
             base_url=settings.GEMINI_BASE_URL,
             api_key=settings.GEMINI_API_KEY,
             temperature=0.0,
+            use_responses_api=False,  # Gemini's OpenAI-compatible API is Chat Completions only
             timeout=10,
         )
         _llm_planner = llm.with_structured_output(QueryPlan, method="json_mode")

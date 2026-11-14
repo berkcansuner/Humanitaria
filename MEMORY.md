@@ -404,5 +404,5 @@ Plan/spec: `docs/superpowers/{plans,specs}/2026-06-02-reingest-pilot-syria*` (gi
 - 1-yıl ingest penceresi tarihsel büyük olayları kaçırır (deprem) → rollout'ta ≥2-3 yıl.
 - ~~Conversation IDOR~~ → **ÇÖZÜLDÜ** (auth sistemi; sohbetler `user_id`-sahipli, non-owner 404). Mevcut conversations.db satırları migration'da `user_id=NULL` → görünmez (dev verisi; kabul).
 - Şablon/sistem mesajları (greeting, no-docs) İngilizce; yalnız LLM yanıtı çok dilli (bilinçli).
-- Session history varsayılan in-memory (restart'ta silinir); `REDIS_URL` ile kalıcı.
+- Sohbet geçmişi penceresi in-memory (LRU); restart sonrası `messages` tablosundan yeniden yüklenir (Redis desteği 2026-11-14'te kaldırıldı).
 - Görseller/infografikler doğrudan sorgulanamaz (246 Suriye raporu boş body → atlandı).

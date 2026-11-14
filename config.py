@@ -138,8 +138,7 @@ class Settings(BaseSettings):
     # Session history
     HISTORY_WINDOW_K: int = 5         # number of exchanges (user+assistant pairs) to keep
     SESSION_MAX_MEMORY: int = 1000    # max in-memory sessions before LRU eviction
-    REDIS_URL: str = ""               # e.g. redis://localhost:6379 — empty = in-memory
-    SESSION_TTL_HOURS: int = 24       # Redis session TTL
+    SESSION_TTL_HOURS: int = 24       # login session (cookie) lifetime
     # Persistent conversation store (SQLite, file-based).
     # Holds the named conversations + messages shown in the sidebar.
     CONVERSATION_DB_PATH: str = "./conversations.db"

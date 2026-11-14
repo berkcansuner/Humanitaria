@@ -38,6 +38,7 @@ def _get_rewriter():
             base_url=s.GEMINI_BASE_URL,
             api_key=s.GEMINI_API_KEY,
             temperature=0.0,
+            use_responses_api=False,  # Gemini's OpenAI-compatible API is Chat Completions only
             timeout=5,
         )
     return _rewriter

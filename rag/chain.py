@@ -58,6 +58,7 @@ def build_chain() -> Runnable:
         model=settings.GEMINI_LLM_MODEL,
         base_url=settings.GEMINI_BASE_URL,
         api_key=settings.GEMINI_API_KEY,
+        use_responses_api=False,  # Gemini's OpenAI-compatible API is Chat Completions only
         temperature=0.3,
         streaming=True,
         timeout=settings.CHAT_LLM_TIMEOUT,
@@ -328,6 +329,7 @@ def build_report_chain(report_type: str = "situation") -> Runnable:
         model=settings.GEMINI_LLM_MODEL,
         base_url=settings.GEMINI_BASE_URL,
         api_key=settings.GEMINI_API_KEY,
+        use_responses_api=False,  # Gemini's OpenAI-compatible API is Chat Completions only
         temperature=0.2,
         streaming=True,
         timeout=settings.CHAT_LLM_TIMEOUT,

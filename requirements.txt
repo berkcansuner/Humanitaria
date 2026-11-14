@@ -2,9 +2,9 @@
 # project venv.
 
 # Core LangChain stack
-langchain==0.3.24
-langchain-community==0.3.22
-langchain-openai==0.3.14
+langchain-core==1.8.0
+langchain-openai==1.8.0
+langchain-text-splitters==1.1.3
 langchain-pinecone==0.2.13
 
 # Vector stores
@@ -31,7 +31,6 @@ httpx==0.28.1
 # Ingestion / utilities
 pypdf==6.21.4
 apscheduler==3.10.4
-redis==5.2.1
 requests==2.34.2
 python-dotenv==1.2.4
 python-dateutil==2.9.0
@@ -47,7 +46,7 @@ reportlab==4.5.1
 sentry-sdk==2.20.0
 
 # Testing + dev tooling (also run in CI: pytest+coverage, lint, type-check, audit)
-pytest==8.3.5
+pytest==9.2.0
 pytest-cov==6.0.0
 ruff==0.9.6
 mypy==1.15.0

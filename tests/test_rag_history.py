@@ -10,11 +10,10 @@ from rag.history import (
 )
 
 
-def _mock_settings(k=5, max_sessions=1000, redis_url=""):
+def _mock_settings(k=5, max_sessions=1000):
     s = MagicMock()
     s.HISTORY_WINDOW_K = k
     s.SESSION_MAX_MEMORY = max_sessions
-    s.REDIS_URL = redis_url
     s.SESSION_TTL_HOURS = 24
     return s
 

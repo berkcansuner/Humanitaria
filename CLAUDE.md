@@ -92,7 +92,6 @@ DATE_DECAY_FACTOR=0.3
 # Session / API / Ingestion
 HISTORY_WINDOW_K=5
 SESSION_MAX_MEMORY=1000
-REDIS_URL=                      # boşsa in-memory (LRU eviction)
 CORS_ORIGINS=http://localhost:5173,http://localhost:8001
 API_HOST=127.0.0.1
 API_PORT=8001
@@ -178,10 +177,9 @@ Selamlaşma → retrieval atlanır. Mesaj doğrulama: boş/4000+ karakter redded
 ## Bilinen Kısıtlamalar
 
 - Görseller/infografikler doğrudan sorgulanamaz; başlık + açıklama metadata'sı index'lenir.
-- Session history varsayılan in-memory (restart'ta silinir); `REDIS_URL` ile kalıcı yapılabilir.
+- Sohbet geçmişi penceresi in-memory (LRU); restart sonrası `messages` tablosundan yeniden yüklenir.
 - Pipeline resume kısmi (watermark var, uzun kesinti tam test edilmedi).
 - CORS şu an localhost origin'leri — production'da `CORS_ORIGINS` daraltılmalı.
 - PDF içerik ingestion opsiyonel (`FETCH_PDF_CONTENT=False`); varsayılan sadece HTML `body`.
 - Pinecone serverless metadata-filtreli silme desteklemez; orphan temizliği chunk-id prefix (`{doc_id}_`) list+delete ile yapılır.
 - Gemini embedding OpenAI-uyumlu endpoint üzerinden çalışır; `task_type` (`RETRIEVAL_DOCUMENT`/`QUERY`) ayrımı yok (küçük kalite ödünü).
-- Hesap silme (DELETE /auth/me) in-memory chat history pencerelerini temizler; REDIS_URL ile kalıcı history kullanılıyorsa Redis'teki pencereler TTL dolana dek kalır (bugünkü deploy in-memory).
