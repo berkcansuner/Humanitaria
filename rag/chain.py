@@ -1,19 +1,52 @@
 import logging
 
+from langchain_core.messages import HumanMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import Runnable
 from langchain_openai import ChatOpenAI
+from langdetect import DetectorFactory, detect_langs
 
 from config import get_settings
 
 logger = logging.getLogger(__name__)
 
+DetectorFactory.seed = 0   # deterministic language detection
+
+# Used when the code cannot tell the question's language (see answer_language).
+DEFAULT_ANSWER_LANGUAGE = "the language of the user's latest question"
+_LANGUAGE_NAMES = {"tr": "Turkish", "en": "English"}
+
+
+def _confident_language(text: str, min_prob: float) -> str | None:
+    """'tr'/'en' when langdetect is confident, else None. Short texts are unreliable
+    on their own ('neden?' detects as Danish), hence the caller's fallback."""
+    try:
+        best = detect_langs(text)[0]
+    except Exception:
+        return None
+    return best.lang if best.lang in _LANGUAGE_NAMES and best.prob >= min_prob else None
+
+
+def answer_language(message: str, history: list) -> str:
+    """Language the answer must be written in. The latest message decides when it is
+    long enough to detect reliably; a short follow-up inherits the language of the
+    user's recent messages. Supported: Turkish, English; otherwise the model rule."""
+    if len(message.split()) >= 4:
+        lang = _confident_language(message, 0.95)
+        if lang:
+            return _LANGUAGE_NAMES[lang]
+    recent = [m.content for m in history if isinstance(m, HumanMessage)][-3:]
+    lang = _confident_language(" ".join([*recent, message]), 0.9)
+    return _LANGUAGE_NAMES[lang] if lang else DEFAULT_ANSWER_LANGUAGE
+
+
 _SYSTEM_PROMPT = (
     "You are an assistant that analyzes humanitarian aid documents from the ReliefWeb database.\n"
     "Rules:\n"
     "1. Only provide information from the documents in the supplied Context. Never fabricate or guess.\n"
-    "2. Answer in the user's language (e.g. English or Turkish) — match the language of the question.\n"
+    "2. Answer in {answer_language}. The Context documents may be written in other languages (French, Spanish, "
+    "Arabic, ...) — never take the answer language from them.\n"
     "3. Respond briefly and politely to general greetings or questions unrelated to the documents, without citing sources.\n"
     "4. For document-based questions, take the information from the documents. Do NOT write source titles or a source "
     "list in the body — sources are shown in a separate SOURCES section below; you only add [n] citations.\n"
@@ -25,7 +58,7 @@ _SYSTEM_PROMPT = (
     "citation number that is not shown in the Context.\n"
     "8. If the query is vague (no country, date, or topic specified), briefly note in your answer what information is "
     "missing and which details the user could provide (country, time period, topic).\n"
-    "9. If the Context section is empty or contains documents irrelevant to the question, tell the user — in their own "
+    "9. If the Context section is empty or contains documents irrelevant to the question, tell the user — in the answer "
     "language — that no relevant documents were found in the database and suggest specifying a more specific country, "
     "topic, or date range, or that new documents may need to be added. Never answer from your own general knowledge.\n"
     "10. Each document in the Context is labeled with its publication date as (YYYY-MM-DD). For questions about the "
@@ -75,7 +108,7 @@ def build_chain() -> Runnable:
         ("system", _SYSTEM_PROMPT + "\n\nContext:\n{context}"),
         MessagesPlaceholder("chat_history"),
         ("human", "{question}"),
-    ])
+    ]).partial(answer_language=DEFAULT_ANSWER_LANGUAGE)
 
     _chain = prompt | llm | StrOutputParser()
     return _chain

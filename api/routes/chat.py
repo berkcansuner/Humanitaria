@@ -18,7 +18,7 @@ from rag.retriever import (
     build_retriever, rerank_by_recency, apply_date_filter,
     dedupe_by_document, rerank_by_relevance,
 )
-from rag.chain import build_chain
+from rag.chain import answer_language, build_chain
 from rag.history import get_session_history, has_session, populate_history_from_messages
 from rag import conversations as convo_store
 from api.routes.conversations import can_open_conversation, _LIMIT_DETAIL as _CONVO_LIMIT_DETAIL
@@ -75,17 +75,12 @@ def _derive_title(text: str) -> str:
 
 
 def _ensure_conversation_and_seed(user_id: str, session_id: str, message: str) -> None:
-    """Create the conversation (owned by user_id) on its first real message, and
-    on a cold request for an existing conversation (e.g. after a restart) seed the
-    in-memory window from the persistent store so the LLM keeps its context. The
+    """Create the conversation (owned by user_id) on its first real message. A cold
+    window for an existing conversation was already seeded by _plan_retrieval. The
     route has already verified session_id is new or owned by user_id. Sync — call
     via anyio.to_thread.run_sync."""
     if not convo_store.conversation_exists(session_id):
         convo_store.create_conversation(user_id, session_id, _derive_title(message))
-    elif not has_session(session_id):
-        populate_history_from_messages(
-            session_id, convo_store.messages_as_langchain(session_id)
-        )
 
 
 def _may_open(user_id: str, session_id: str) -> bool:
@@ -108,6 +103,11 @@ def _plan_retrieval(session_id: str, message: str) -> tuple:
     LLM call rewrites the follow-up and extracts filters together (one
     round-trip instead of two before retrieval). The answer is always generated
     from the original message."""
+    # A cold window (restart / free-tier wake-up) for an existing conversation is
+    # seeded from the DB first; otherwise its first follow-up would be planned as
+    # a standalone query (no rewrite, no filters) against the whole index.
+    if not has_session(session_id) and convo_store.conversation_exists(session_id):
+        populate_history_from_messages(session_id, convo_store.messages_as_langchain(session_id))
     if not get_settings().QUERY_REWRITE_ENABLED or not has_session(session_id):
         return message, extract_filters(message)
     prior = list(get_session_history(session_id).messages)
@@ -291,6 +291,7 @@ async def chat(request: Request, req: ChatRequest, user: dict = Depends(get_curr
             "question": req.message,
             "context": context,
             "chat_history": chat_history,
+            "answer_language": answer_language(req.message, chat_history),
         }, get_settings().CHAT_LLM_MAX_RETRIES)
 
         history.add_message(HumanMessage(content=req.message))
@@ -373,6 +374,7 @@ async def chat_stream(request: Request, req: ChatRequest, user: dict = Depends(g
                 "question": req.message,
                 "context": context,
                 "chat_history": chat_history,
+                "answer_language": answer_language(req.message, chat_history),
             }, get_settings().CHAT_LLM_MAX_RETRIES):
                 if chunk:
                     if _ttft_ms is None:
