@@ -367,7 +367,21 @@
           <p v-if="current.stopped" class="stopped-note" role="status">
             Stopped. This report was not saved.
           </p>
-          <div v-if="genError" class="error-banner"><AlertCircle :size="16" /> {{ genError }}</div>
+          <!-- Chat's error: hairline border, the alert icon and "Try again" in place;
+               the form still holds what was asked for. -->
+          <div v-if="genError" class="error-banner">
+            <AlertCircle :size="16" class="error-icon" aria-hidden="true" />
+            <span class="error-text">{{ genError }}</span>
+            <button
+              v-if="!generating && form.country"
+              type="button"
+              class="retry-btn"
+              @click="generate"
+            >
+              <RotateCcw :size="14" aria-hidden="true" />
+              Try again
+            </button>
+          </div>
           <SourceList v-if="current.sources" :sources="current.sources" />
         </div>
         <div v-else class="report-empty">
@@ -405,6 +419,7 @@ import {
   CalendarPlus,
   Square,
   Plus,
+  RotateCcw,
 } from 'lucide-vue-next'
 import AppTopbar from '../components/AppTopbar.vue'
 import SourceList from '../components/SourceList.vue'
@@ -1633,9 +1648,11 @@ function onCiteClick(e) {
   text-align: center;
 }
 
+/* As in Chat: a full hairline tinted from the error color, never a side rule. */
 .error-banner {
   margin: var(--space-4) 0 0;
   padding: var(--space-3) var(--space-4);
+  border: 1px solid color-mix(in oklch, var(--color-error) 35%, transparent);
   background-color: var(--color-error-bg);
   color: var(--color-error);
   border-radius: var(--radius-md);
@@ -1643,6 +1660,34 @@ function onCiteClick(e) {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+.error-text {
+  flex: 1;
+  min-width: 0;
+}
+.error-icon {
+  flex-shrink: 0;
+}
+.retry-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-error);
+  background: transparent;
+  border: 1px solid color-mix(in oklch, var(--color-error) 45%, transparent);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.retry-btn:hover {
+  background-color: color-mix(in oklch, var(--color-error) 10%, transparent);
+}
+.retry-btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 .spin {
