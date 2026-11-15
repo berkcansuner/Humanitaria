@@ -81,34 +81,109 @@
           <template v-if="loadingList && !reports.length">
             <span v-for="n in 4" :key="'sk-' + n" class="skeleton saved-skel"></span>
           </template>
-          <ul v-else-if="visibleReports.length" class="saved-list">
-            <li
-              v-for="r in visibleReports"
-              :key="r.id"
-              :class="[
-                'saved-item',
-                { active: current && current.id === r.id, opening: openingId === r.id },
-              ]"
-              :aria-busy="openingId === r.id ? 'true' : undefined"
+          <ul v-else-if="savedEntries.length" class="saved-list">
+            <template
+              v-for="(e, i) in savedEntries"
+              :key="e.kind === 'single' ? e.report.id : 'series:' + e.key"
             >
-              <button type="button" class="saved-open" :title="r.title" @click="openReport(r.id)">
-                <span class="saved-name">{{ savedName(r) }}</span>
-                <span class="saved-meta"
-                  >{{ savedType(r)
-                  }}<template v-if="savedPeriod(r)">
-                    · <span class="saved-period">{{ savedPeriod(r) }}</span></template
-                  ></span
-                >
-              </button>
-              <button
-                type="button"
-                class="saved-del"
-                aria-label="Delete report"
-                @click.stop="onDelete(r.id)"
+              <li
+                v-if="e.kind === 'single'"
+                :class="[
+                  'saved-item',
+                  {
+                    active: current && current.id === e.report.id,
+                    opening: openingId === e.report.id,
+                  },
+                ]"
+                :aria-busy="openingId === e.report.id ? 'true' : undefined"
               >
-                <Trash2 :size="13" />
-              </button>
-            </li>
+                <button
+                  type="button"
+                  class="saved-open"
+                  :title="e.report.title"
+                  @click="openReport(e.report.id)"
+                >
+                  <span class="saved-name">{{ savedName(e.report) }}</span>
+                  <span class="saved-meta"
+                    >{{ savedType(e.report)
+                    }}<template v-if="savedPeriod(e.report)">
+                      · <span class="saved-period">{{ savedPeriod(e.report) }}</span></template
+                    ></span
+                  >
+                </button>
+                <button
+                  type="button"
+                  class="saved-del"
+                  aria-label="Delete report"
+                  @click.stop="onDelete(e.report.id)"
+                >
+                  <Trash2 :size="13" />
+                </button>
+              </li>
+
+              <!-- A series: same type + country + sector + language, one row that
+                   expands to its periods, newest first. -->
+              <li
+                v-else
+                :class="[
+                  'saved-series',
+                  {
+                    expanded: expandedSeries.has(e.key),
+                    'holds-active': current && e.reports.some((r) => r.id === current.id),
+                  },
+                ]"
+              >
+                <button
+                  type="button"
+                  class="saved-series-head"
+                  :aria-expanded="expandedSeries.has(e.key) ? 'true' : 'false'"
+                  :aria-controls="'saved-series-' + i"
+                  @click="toggleSeries(e.key)"
+                >
+                  <span class="saved-series-text">
+                    <span class="saved-name">{{ savedName(e.latest) }}</span>
+                    <span class="saved-meta"
+                      >{{ savedType(e.latest) }} · {{ e.reports.length }} reports</span
+                    >
+                  </span>
+                  <ChevronRight :size="14" class="saved-series-chevron" aria-hidden="true" />
+                </button>
+                <ul
+                  v-show="expandedSeries.has(e.key)"
+                  :id="'saved-series-' + i"
+                  class="saved-periods"
+                >
+                  <li
+                    v-for="r in e.reports"
+                    :key="r.id"
+                    :class="[
+                      'saved-item',
+                      { active: current && current.id === r.id, opening: openingId === r.id },
+                    ]"
+                    :aria-busy="openingId === r.id ? 'true' : undefined"
+                  >
+                    <button
+                      type="button"
+                      class="saved-open"
+                      :title="r.title"
+                      @click="openReport(r.id)"
+                    >
+                      <span class="saved-name saved-period-name">{{
+                        savedPeriod(r) || 'No period set'
+                      }}</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="saved-del"
+                      aria-label="Delete report"
+                      @click.stop="onDelete(r.id)"
+                    >
+                      <Trash2 :size="13" />
+                    </button>
+                  </li>
+                </ul>
+              </li>
+            </template>
           </ul>
           <p v-else class="form-hint">No saved reports yet.</p>
         </div>
@@ -211,6 +286,7 @@ import {
   Copy,
   Check,
   ArrowLeft,
+  ChevronRight,
 } from 'lucide-vue-next'
 import AppTopbar from '../components/AppTopbar.vue'
 import SourceList from '../components/SourceList.vue'
@@ -224,6 +300,7 @@ import { parseSSE } from '../utils/parseSSE.js'
 import { getReportOptions, listReports, getReport, deleteReport } from '../utils/reportsApi.js'
 import { REPORT_TYPES, reportTypeBadge } from '../utils/reportTypes.js'
 import { splitReportTitle } from '../utils/reportTitle.js'
+import { groupSeries, seriesKey } from '../utils/reportSeries.js'
 import { copyWithSources } from '../utils/citationCopy.js'
 import { minReportDate, maxReportDate } from '../utils/reportDateBounds.js'
 import { handleSessionExpired } from '../utils/authStore.js'
@@ -443,6 +520,30 @@ const {
 })
 
 const visibleReports = computed(() => reports.value.filter((r) => !hiddenIds.value.has(r.id)))
+// The saved list with each series folded into one expandable row.
+const savedEntries = computed(() => groupSeries(visibleReports.value))
+
+// Series rows the user opened. The series holding the open report opens with it,
+// so the active period is always visible in the list.
+const expandedSeries = ref(new Set())
+function toggleSeries(key) {
+  const next = new Set(expandedSeries.value)
+  if (next.has(key)) next.delete(key)
+  else next.add(key)
+  expandedSeries.value = next
+}
+// Keyed from the list row, which always carries the series fields (a just-generated
+// report can be open before the list reloads; the watch fires again once it does).
+const activeSeriesKey = computed(() => {
+  const id = current.value && current.value.id
+  const row = id && reports.value.find((r) => r.id === id)
+  return row ? seriesKey(row) : null
+})
+watch(activeSeriesKey, (key) => {
+  if (key && !expandedSeries.value.has(key)) {
+    expandedSeries.value = new Set([...expandedSeries.value, key])
+  }
+})
 const toastMessage = computed(() => (pendingDelete.value ? 'Report deleted.' : notice.value))
 
 function onDelete(id) {
@@ -870,6 +971,65 @@ function onCiteClick(e) {
   display: block;
   height: 32px;
   border-radius: var(--radius-md);
+}
+
+/* Series: one row that opens to its periods (newest first). */
+.saved-series-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  padding: var(--space-2) var(--space-3);
+  transition: background-color 0.15s;
+}
+.saved-series-head:hover {
+  background-color: var(--color-surface-container);
+}
+.saved-series-head:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+.saved-series-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.saved-series-chevron {
+  flex-shrink: 0;
+  color: var(--color-muted);
+  transition: transform 0.15s;
+}
+.saved-series.expanded .saved-series-chevron {
+  transform: rotate(90deg);
+}
+/* Folded with the open report inside: the row says where the report lives. */
+.saved-series.holds-active:not(.expanded) .saved-name {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+.saved-periods {
+  list-style: none;
+  margin: 2px 0 var(--space-1) var(--space-4);
+  padding: 0 0 0 var(--space-1);
+  border-left: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.saved-periods .saved-open {
+  padding-block: 6px;
+}
+.saved-period-name {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 
 .report-main {
