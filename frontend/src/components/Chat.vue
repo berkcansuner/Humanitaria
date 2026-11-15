@@ -80,6 +80,7 @@
                   v-if="msg.content && !msg.error && !(loading && idx === messages.length - 1)"
                   :role="msg.role"
                   :content="msg.content"
+                  :sources="msg.role === 'assistant' ? msg.sources : null"
                   :can-regenerate="idx === messages.length - 1"
                   @regenerate="regenerate"
                   @edit="startEdit(idx)"

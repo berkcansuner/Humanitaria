@@ -132,19 +132,24 @@
           <header v-if="titleParts.heading || current.id" class="report-head">
             <div class="report-head-text">
               <h2 v-if="titleParts.heading" class="report-title-h">{{ titleParts.heading }}</h2>
-              <p v-if="reportMeta" class="report-meta">{{ reportMeta }}</p>
+              <p v-if="metaParts.length" class="report-meta">
+                <span v-for="(part, i) in metaParts" :key="i" class="meta-part"
+                  >{{ i ? '· ' : '' }}{{ part }}</span
+                >
+              </p>
             </div>
-            <button
-              v-if="current.id"
-              type="button"
-              class="pdf-btn"
-              :disabled="pdfLoading"
-              @click="downloadPdf"
-            >
-              <Loader2 v-if="pdfLoading" :size="15" class="spin" />
-              <FileDown v-else :size="15" />
-              {{ pdfLoading ? 'Preparing…' : 'Download PDF' }}
-            </button>
+            <div v-if="current.id" class="report-actions">
+              <button type="button" class="pdf-btn" @click="copyReport">
+                <Check v-if="reportCopied" :size="15" />
+                <Copy v-else :size="15" />
+                {{ reportCopied ? 'Copied' : 'Copy with sources' }}
+              </button>
+              <button type="button" class="pdf-btn" :disabled="pdfLoading" @click="downloadPdf">
+                <Loader2 v-if="pdfLoading" :size="15" class="spin" />
+                <FileDown v-else :size="15" />
+                {{ pdfLoading ? 'Preparing…' : 'Download PDF' }}
+              </button>
+            </div>
           </header>
           <p v-if="pdfError" class="pdf-error">{{ pdfError }}</p>
           <div v-if="!current.content && generating" class="report-loading">
@@ -185,7 +190,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { FileText, Trash2, Loader2, AlertCircle, FileDown } from 'lucide-vue-next'
+import { FileText, Trash2, Loader2, AlertCircle, FileDown, Copy, Check } from 'lucide-vue-next'
 import AppTopbar from '../components/AppTopbar.vue'
 import SourceList from '../components/SourceList.vue'
 import UndoToast from '../components/UndoToast.vue'
@@ -197,6 +202,7 @@ import { parseSSE } from '../utils/parseSSE.js'
 import { getReportOptions, listReports, getReport, deleteReport } from '../utils/reportsApi.js'
 import { REPORT_TYPES, reportTypeBadge } from '../utils/reportTypes.js'
 import { splitReportTitle } from '../utils/reportTitle.js'
+import { copyWithSources } from '../utils/citationCopy.js'
 import { minReportDate, maxReportDate } from '../utils/reportDateBounds.js'
 import { handleSessionExpired } from '../utils/authStore.js'
 
@@ -260,11 +266,28 @@ function savedPeriod(r) {
   return splitReportTitle(r.title).period
 }
 
+// Copy the report text with its numbered Sources list (the PDF stays separate).
+const reportCopied = ref(false)
+let copiedTimer = null
+async function copyReport() {
+  if (!current.value) return
+  const ok = await copyWithSources(current.value.content, current.value.sources)
+  if (!ok) {
+    showNotice('Could not copy the report. Your browser blocked clipboard access.')
+    return
+  }
+  reportCopied.value = true
+  clearTimeout(copiedTimer)
+  copiedTimer = setTimeout(() => (reportCopied.value = false), 1500)
+}
+
 const titleParts = computed(() => splitReportTitle(current.value && current.value.title))
-const reportMeta = computed(() => {
-  if (!current.value || !current.value.title) return ''
+// Type · sector · period, each kept whole: the line only wraps between parts,
+// and a part carries its leading "·" so no separator is left at a line end.
+const metaParts = computed(() => {
+  if (!current.value || !current.value.title) return []
   const { sector, period } = titleParts.value
-  return [typeLabel(current.value.report_type), sector, period].filter(Boolean).join(' · ')
+  return [typeLabel(current.value.report_type), sector, period].filter(Boolean)
 })
 
 onMounted(async () => {
@@ -786,7 +809,13 @@ function onCiteClick(e) {
   text-wrap: balance;
   margin: 0;
 }
+.meta-part {
+  white-space: nowrap;
+}
 .report-meta {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 1ch;
   margin: 6px 0 0;
   font-family: var(--font-mono);
   font-size: 12px;
@@ -812,6 +841,13 @@ function onCiteClick(e) {
   border-radius: var(--radius-md);
 }
 
+.report-actions {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
 .pdf-btn {
   flex-shrink: 0;
   display: inline-flex;

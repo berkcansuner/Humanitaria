@@ -256,6 +256,7 @@ Quiet at rest, a ledger when opened (`SourceList.vue`, a native `<details>`).
 - **Opened:** a ledger table on a white surface with a hairline border and 6px radius: columns # · Source · Date. Row numbers use the quiet citation chip; the title is a Field Green link with an external-link icon; publisher and country sit under it in Graphite; dates are ISO (YYYY-MM-DD) in mono with tabular figures. Header labels are mono uppercase, rows divided by hairlines. The toggle reads Hide.
 - **From a citation:** activating `[n]` opens the ledger, scrolls to the row, flashes it in Citation Mist, and turns that row's number green until another citation is activated.
 - **Focus:** the summary line takes the standard 2px Field Green focus outline.
+- **Leaving the app:** copying an answer ("Copy answer with sources") or a report ("Copy with sources", beside Download PDF) appends a numbered Sources list: `[n] Title. Publisher, YYYY-MM-DD. URL` as text, and a linked `<ol>` as HTML, so pasted `[n]` markers still resolve (`utils/citationCopy.js`).
 
 ### Undo Toast
 Deleting a conversation or saved report is never instant (`UndoToast.vue`, `useUndoableDelete`).
