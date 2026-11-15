@@ -27,6 +27,12 @@ class Settings(BaseSettings):
     # ~60s on its internal backoff; CHAT_LLM_TIMEOUT caps a stuck request.
     CHAT_LLM_TIMEOUT: int = 45
     CHAT_LLM_MAX_RETRIES: int = 2
+    # Reports think harder than chat: at "low" the report model did not apply the
+    # "What changed" comparison rules (live checks 2026-11-15). Gemini 2.5 budgets:
+    # low 1,024 / medium 8,192 / high 24,576 thinking tokens (billed as output).
+    # The first token arrives only after the thinking, hence the longer timeout.
+    REPORT_REASONING_EFFORT: str = "medium"
+    REPORT_LLM_TIMEOUT: int = 150
     GEMINI_QUERY_MODEL: str = "gemini-2.5-flash"  # filtre çıkarma için hızlı/ucuz model
 
     # ReliefWeb

@@ -365,11 +365,11 @@ def build_report_chain(report_type: str = "situation") -> Runnable:
         use_responses_api=False,  # Gemini's OpenAI-compatible API is Chat Completions only
         temperature=0.2,
         streaming=True,
-        timeout=settings.CHAT_LLM_TIMEOUT,
+        timeout=settings.REPORT_LLM_TIMEOUT,
         max_retries=0,
     )
-    if settings.GEMINI_REASONING_EFFORT:
-        llm_kwargs["reasoning_effort"] = settings.GEMINI_REASONING_EFFORT
+    if settings.REPORT_REASONING_EFFORT:
+        llm_kwargs["reasoning_effort"] = settings.REPORT_REASONING_EFFORT
     llm = ChatOpenAI(**llm_kwargs)
 
     system_prompt = _REPORT_PROMPTS.get(report_type, _REPORT_SYSTEM_PROMPT)
