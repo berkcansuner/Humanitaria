@@ -396,9 +396,43 @@
           </div>
           <SourceList v-if="current.sources" :sources="current.sources" />
         </div>
+        <!-- Nothing open: Chat's empty pattern (left-aligned promise, coverage line,
+             hairline rows), with the user's series as the starting points. -->
         <div v-else class="report-empty">
-          <FileText :size="40" />
-          <p>Generate a report, or open a saved one.</p>
+          <div class="empty-inner">
+            <h2 class="empty-title">Build an M&amp;E report from the record.</h2>
+            <p class="empty-lede">
+              Each report draws on many ReliefWeb reports at once and cites every one, so you can
+              check it and quote it.
+            </p>
+            <p class="empty-coverage">ReliefWeb reports · last 12 months · updated daily</p>
+            <template v-if="emptyRows.length">
+              <p class="empty-pick">
+                {{
+                  emptyRows[0].series
+                    ? 'Pick up a series where it left off.'
+                    : 'Open a recent report.'
+                }}
+              </p>
+              <ul
+                class="empty-list"
+                :aria-label="emptyRows[0].series ? 'Your report series' : 'Recent reports'"
+              >
+                <li v-for="row in emptyRows" :key="row.report.id">
+                  <button type="button" class="empty-row" @click="openReport(row.report.id)">
+                    <span class="empty-row-text">
+                      <span class="empty-row-name">{{ savedName(row.report) }}</span>
+                      <span class="empty-row-meta">{{ row.meta }}</span>
+                    </span>
+                    <ArrowRight :size="15" class="empty-row-arrow" aria-hidden="true" />
+                  </button>
+                </li>
+              </ul>
+            </template>
+            <p v-else-if="listLoaded" class="empty-pick">
+              Choose a country, sector and period in the form to start.
+            </p>
+          </div>
         </div>
       </main>
     </div>
@@ -427,6 +461,7 @@ import {
   Copy,
   Check,
   ArrowLeft,
+  ArrowRight,
   ChevronRight,
   CalendarPlus,
   Square,
@@ -738,6 +773,36 @@ const seriesLatest = computed(() => {
   }
   return current.value
 })
+// Starting points in the empty viewer: the user's series (latest report, and
+// whether its next period can be run yet), else their most recent reports.
+const emptyRows = computed(() => {
+  const series = savedEntries.value.filter((e) => e.kind === 'series').slice(0, 4)
+  if (series.length) {
+    return series.map((e) => {
+      const next = nextPeriod(e.latest, new Date())
+      const when = !next
+        ? e.latest.date_to
+          ? `to ${e.latest.date_to}`
+          : ''
+        : next.notStarted
+          ? `next period starts ${next.startsOn}`
+          : `next period ready, from ${next.date_from}`
+      return {
+        series: true,
+        report: e.latest,
+        meta: [savedType(e.latest), `${e.reports.length} reports`, when]
+          .filter(Boolean)
+          .join(' · '),
+      }
+    })
+  }
+  return savedEntries.value.slice(0, 3).map((e) => ({
+    series: false,
+    report: e.report,
+    meta: [savedType(e.report), savedPeriod(e.report)].filter(Boolean).join(' · '),
+  }))
+})
+
 // The earlier period of the open report's series that it was not compared with
 // (made as a one-off, so no previous_report_id).
 const notComparedWith = computed(() => {
@@ -1659,15 +1724,102 @@ function onCiteClick(e) {
   color: var(--color-text-secondary);
 }
 
+/* Nothing open: Chat's empty pattern (EmptyState.vue), left-aligned at 560px. */
 .report-empty {
   height: 100%;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-3);
+  padding: var(--space-6) var(--space-4);
+}
+.empty-inner {
+  width: 100%;
+  max-width: 560px;
+}
+.empty-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+.empty-lede {
+  margin: var(--space-2) 0 0;
+  max-width: 48ch;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+}
+.empty-coverage {
+  margin: var(--space-3) 0 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--color-muted);
-  text-align: center;
+}
+.empty-pick {
+  margin: var(--space-6) 0 var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+.empty-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--color-border);
+}
+.empty-list li {
+  border-bottom: 1px solid var(--color-border);
+}
+.empty-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-2);
+  text-align: left;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+.empty-row:hover {
+  background-color: var(--color-surface-container-low);
+}
+.empty-row:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.empty-row-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.empty-row-name {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+}
+.empty-row-meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
+.empty-row-arrow {
+  flex-shrink: 0;
+  color: var(--color-muted);
+  transition:
+    color 0.15s,
+    transform 0.15s;
+}
+.empty-row:hover .empty-row-arrow {
+  color: var(--color-accent);
+  transform: translateX(2px);
 }
 
 /* As in Chat: a full hairline tinted from the error color, never a side rule. */
