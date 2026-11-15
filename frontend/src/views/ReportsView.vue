@@ -355,6 +355,11 @@
           </header>
           <p v-if="pdfError" class="pdf-error">{{ pdfError }}</p>
           <div v-if="!current.content && generating" class="report-loading">
+            <!-- The report model reads all sources before writing its first word
+                 (about a minute and a half), so the wait is named, not silent. -->
+            <p class="report-loading-note" role="status">
+              Reading the sources. The first words usually appear within two minutes.
+            </p>
             <span class="skeleton skel-line"></span>
             <span class="skeleton skel-line"></span>
             <span class="skeleton skel-line short"></span>
@@ -1706,6 +1711,11 @@ function onCiteClick(e) {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+.report-loading-note {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
 }
 .skel-line {
   display: block;
