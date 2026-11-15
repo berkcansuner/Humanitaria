@@ -192,7 +192,10 @@
                   <span class="saved-series-text">
                     <span class="saved-name">{{ savedName(e.latest) }}</span>
                     <span class="saved-meta"
-                      >{{ savedType(e.latest) }} · {{ e.reports.length }} reports</span
+                      >{{ savedType(e.latest) }} · {{ e.reports.length }} reports{{ ' '
+                      }}<span v-if="e.latest.date_to" class="saved-period"
+                        >· to {{ e.latest.date_to }}</span
+                      ></span
                     >
                   </span>
                   <ChevronRight :size="14" class="saved-series-chevron" aria-hidden="true" />
