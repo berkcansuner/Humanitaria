@@ -89,3 +89,19 @@ def test_block_requires_like_with_like_comparison():
     assert "LIKE WITH LIKE" in block
     assert "not its publication date" in block
     assert "earlier year or event is background, not a change" in block
+
+
+def test_block_closes_the_not_covered_before_loophole():
+    """Live check 2 (2026-11-15): the model kept an August 2025 earthquake in the
+    section because "the previous report did not cover it". First mention in this
+    series does not make an older event new."""
+    block = build_comparison_block(_prev(), "en", date_from="2026-07-15", date_to="2026-11-15")
+    assert "does NOT make it new" in block
+    assert "dated before 2026-07-15" in block
+
+
+def test_block_forbids_comparing_different_reference_periods():
+    """Live check 2: a 2025 calendar-year returns figure was compared with the
+    previous report's "3.4 million over sixteen months"."""
+    block = build_comparison_block(_prev(), "en", date_from="2026-07-15", date_to="2026-11-15")
+    assert "different reference periods" in block
