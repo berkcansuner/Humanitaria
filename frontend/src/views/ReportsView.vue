@@ -173,6 +173,7 @@ import HelpingHandLogo from '../components/HelpingHandLogo.vue'
 import SourceList from '../components/SourceList.vue'
 import { renderMarkdown } from '../utils/renderMarkdown.js'
 import { injectSectionImages } from '../utils/reportImages.js'
+import { revealSource } from '../utils/sources.js'
 import { parseSSE } from '../utils/parseSSE.js'
 import { getReportOptions, listReports, getReport, deleteReport } from '../utils/reportsApi.js'
 import { REPORT_TYPES, reportTypeBadge } from '../utils/reportTypes.js'
@@ -450,16 +451,7 @@ function onCiteClick(e) {
   const cite = e.target.closest && e.target.closest('.cite')
   if (!cite) return
   e.preventDefault()
-  const id = cite.getAttribute('data-cite')
-  const item = viewer.value && viewer.value.querySelector(`.source-item[data-srcid="${id}"]`)
-  if (!item) return
-  viewer.value
-    .querySelectorAll('.source-item.active')
-    .forEach((el) => el.classList.remove('active'))
-  item.classList.add('active')
-  item.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  item.classList.add('flash')
-  setTimeout(() => item.classList.remove('flash'), 1500)
+  revealSource(viewer.value, cite.getAttribute('data-cite'))
 }
 </script>
 

@@ -249,9 +249,11 @@ Every claim's `[n]` reference, quiet at rest so the answer reads first.
 - **Exception:** the landing page's sample answer (`.mkt-scope .cite`) keeps its green chip; it is a marketing surface showing citations off.
 
 ### Sources (signature)
-- **Today:** always open under the answer: "SOURCES (n)" header, then one row per source with mono `[n]`, a Field Green title link with an external-link icon, and muted metadata.
-- **Target, at rest:** a single quiet line under the answer: "N sources · publishers · Show", in muted text above a hairline divider.
-- **Target, opened:** a ledger table on a white surface with a hairline border: columns # · Source · Date; source numbers use the quiet citation style above; dates in mono with tabular figures; rows divided by hairlines. Each title still links to the report. Activating `[n]` in the answer opens the ledger and marks that row.
+Quiet at rest, a ledger when opened (`SourceList.vue`, a native `<details>`).
+- **At rest:** one line under the answer above a hairline divider: "N sources · publishers · Show" in Graphite at 0.75rem, with up to three publishers and "+N" for the rest. Show is Field Green, 600 weight.
+- **Opened:** a ledger table on a white surface with a hairline border and 6px radius: columns # · Source · Date. Row numbers use the quiet citation chip; the title is a Field Green link with an external-link icon; publisher and country sit under it in Graphite; dates are ISO (YYYY-MM-DD) in mono with tabular figures. Header labels are mono uppercase, rows divided by hairlines. The toggle reads Hide.
+- **From a citation:** activating `[n]` opens the ledger, scrolls to the row, flashes it in Citation Mist, and turns that row's number green until another citation is activated.
+- **Focus:** the summary line takes the standard 2px Field Green focus outline.
 
 ### Navigation
 - **Sidebar:** Reading Room ground, 1px right border. Primary "New chat" button at the top, a search field, then the conversation list.

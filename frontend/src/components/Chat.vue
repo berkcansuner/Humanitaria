@@ -139,6 +139,7 @@ const SuggestionCardIsland = defineAsyncComponent(() => import('./SuggestionCard
 import { renderMarkdown } from '../utils/renderMarkdown.js'
 import { parseSSE } from '../utils/parseSSE.js'
 import { renumberCitations } from '../utils/renumberCitations.js'
+import { revealSource } from '../utils/sources.js'
 import { decorateCodeBlocks } from '../utils/codeCopy.js'
 import { findLastUserIndex, lastServerIdBefore, planResend } from '../utils/conversationOps.js'
 import { getMessages, truncateConversation } from '../utils/api.js'
@@ -358,19 +359,11 @@ function stopGenerating() {
   controller.value?.abort()
 }
 
-// Scroll to a citation chip's source within the same message and briefly
-// highlight it. The chips are <a> elements injected by renderMarkdown().
+// Reveal a citation chip's source within the same message: open the collapsed
+// sources ledger, mark the row and scroll to it. The chips are <a> elements
+// injected by renderMarkdown().
 function scrollToCitedSource(cite) {
-  const id = cite.getAttribute('data-cite')
-  const message = cite.closest('.message')
-  const item = message?.querySelector(`.source-item[data-srcid="${id}"]`)
-  if (!item) return
-  // Persistent active marker (one per message) + a brief flash pulse.
-  message.querySelectorAll('.source-item.active').forEach((el) => el.classList.remove('active'))
-  item.classList.add('active')
-  item.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  item.classList.add('flash')
-  setTimeout(() => item.classList.remove('flash'), 1500)
+  revealSource(cite.closest('.message'), cite.getAttribute('data-cite'))
 }
 
 function onCiteClick(e) {
