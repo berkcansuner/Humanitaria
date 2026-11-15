@@ -13,7 +13,7 @@ colors:
   shelf-gray-deep: "#e9e8e5"
   archive-ink: "#1a1c1a"
   graphite: "#5f5e5e"
-  clay-gray: "#8e706b"
+  margin-gray: "#6b7470"
   paper-edge: "#e3e2e0"
   charcoal: "#2b2d2d"
   alert-red: "#ba1a1a"
@@ -161,7 +161,7 @@ A warm-neutral paper palette with a single green voice.
 - **Shelf Gray / Shelf Gray Deep** (`shelf-gray`, `shelf-gray-deep`): the user's message bubble; hover and active fills for list rows; skeleton shimmer.
 - **Archive Ink** (`archive-ink`): primary text.
 - **Graphite** (`graphite`): secondary text.
-- **Clay Gray** (`clay-gray`): muted text, placeholders, metadata, and input outlines in light theme. Its red-brown cast does not match the green-neutral family; dark theme already uses a neutral green-gray here. A neutral replacement is an open decision, not yet applied.
+- **Margin Gray** (`margin-gray`): muted text, placeholders, metadata, and input outlines in light theme. A green-leaning neutral like the rest of the family (dark theme uses its own neutral green-gray), at 4.58:1 on Archive Paper so metadata stays readable. It replaced a red-brown Clay Gray (`#8e706b`) that fell below 4.5:1.
 - **Paper Edge** (`paper-edge`): borders and dividers.
 - **Charcoal** (`charcoal`): the Stop button while a reply streams.
 
@@ -230,9 +230,9 @@ Refined and restrained: a solid green primary, quiet secondaries, no shadow.
 - **Stop:** Charcoal fill while a reply streams.
 
 ### Inputs / Fields
-- **Style:** white ground, 1px Clay Gray outline, 6px radius, 8px 10px padding.
+- **Style:** white ground, 1px Margin Gray outline, 6px radius, 8px 10px padding.
 - **Focus:** border turns Field Green plus a 3px green ring at 30% (`--focus-ring`).
-- **Composer:** the chat input is a 16px-radius white bar with the send button inside; on focus the whole bar takes the green border and a 16% ring. Placeholder is italic Clay Gray.
+- **Composer:** the chat input is a 16px-radius white bar with the send button inside; on focus the whole bar takes the green border and a 16% ring. Placeholder is italic Margin Gray.
 
 ### Messages
 - **User:** quiet Shelf Gray bubble with Archive Ink text, right-aligned, so the question never outweighs the answer.
@@ -243,7 +243,7 @@ Refined and restrained: a solid green primary, quiet secondaries, no shadow.
 
 ### Citation Chip (signature)
 Every claim's `[n]` reference, quiet at rest so the answer reads first.
-- **Rest:** 18px mono chip with tabular figures, transparent ground, Graphite number, 1px Paper Edge outline, 5px radius. Graphite rather than Clay Gray keeps the number at ≥4.5:1 contrast.
+- **Rest:** 18px mono chip with tabular figures, transparent ground, Graphite number, 1px Paper Edge outline, 5px radius. Graphite rather than Margin Gray keeps the number quieter than body text yet well above 4.5:1.
 - **Hover / focus:** Field Green fill and border with the number in On Green, so the link to the source is always one gesture away.
 - **Activate:** reveals and marks its source (see Sources).
 - **Landing sample:** the landing page's sample answer (`SampleAnswer.vue`) uses the same chip and the same Sources ledger, so the page shows the product as it is.

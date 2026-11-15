@@ -13,10 +13,10 @@
   --color-accent-container: oklch(0.52 0.11 152); /* birincil butonlar (gönder, yeni sohbet) */
   --color-accent-soft: oklch(0.93 0.03 152); /* atıf rozetleri · flash zemini */
   --color-on-accent: #ffffff;
-  --color-muted: #8e706b;
+  --color-muted: #6b7470; /* Margin Gray: nötr yeşil-gri, metinde AA (4.58:1 kâğıt zeminde) */
   --color-border: #e3e2e0;
   --color-border-subtle: #e5e4e1;
-  --color-outline: #8e706b;
+  --color-outline: #6b7470;
   --color-tertiary: #2b2d2d;
   --color-on-tertiary: #ffffff;
   --color-error: #ba1a1a;
