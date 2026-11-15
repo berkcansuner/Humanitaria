@@ -264,6 +264,14 @@ Deleting a conversation or saved report is never instant (`UndoToast.vue`, `useU
 - **Errors:** list actions that fail (open, load, delete) use the same toast in Alert Blush with an alert icon and a dismiss button, instead of failing silently.
 - **Row actions:** rename and delete are revealed on hover, on keyboard focus (`:focus-within`) and always on touch screens.
 
+### Settings & Admin
+Operate surfaces in the same archive voice, never stacked cards.
+- **Sections:** hairline-separated bands. Settings puts the heading in a 180px left column and the controls right (one column under 640px); Admin stacks heading, note and table over a 1120px width.
+- **Labels:** one style for facts and fields: 12px, weight 600, Graphite, sentence case.
+- **Data:** counts and dates in mono with tabular figures, dates as ISO (`2026-11-15`, `2026-11-15 16:31`); table headers in the ledger's mono 10px uppercase. Wide tables scroll inside their section on phones.
+- **Status:** plain text with a 7px dot, Field Green and pulsing only while work runs. No status or role pills.
+- **Destructive actions:** the trigger is an outlined Alert Red button; the solid red fill appears only in the confirmation dialog.
+
 ### Navigation
 - **Sidebar:** Reading Room ground, 1px right border. Primary "New chat" button at the top, a search field, then the conversation list.
 - **Conversation rows:** 6px radius; hover Shelf Gray, active Shelf Gray Deep with Field Green text.

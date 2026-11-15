@@ -35,8 +35,8 @@
           <section class="card">
             <div class="card-head">
               <h2>Ingestion status</h2>
-              <span :class="['pill', running ? 'pill-run' : 'pill-idle']">
-                <span class="dot"></span>{{ running ? 'Running' : 'Idle' }}
+              <span :class="['state', { 'state-on': running }]">
+                <span class="dot" aria-hidden="true"></span>{{ running ? 'Running' : 'Idle' }}
               </span>
             </div>
 
@@ -126,8 +126,8 @@
           <section class="card">
             <div class="card-head">
               <h2>Reports</h2>
-              <span :class="['pill', docComputing ? 'pill-run' : 'pill-idle']">
-                <span class="dot"></span>{{ docComputing ? 'Building' : 'Idle' }}
+              <span :class="['state', { 'state-on': docComputing }]">
+                <span class="dot" aria-hidden="true"></span>{{ docComputing ? 'Building' : 'Idle' }}
               </span>
             </div>
             <p class="muted">
@@ -161,29 +161,31 @@
             </p>
 
             <template v-if="docItems.length">
-              <table class="doc-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Title</th>
-                    <th>Source</th>
-                    <th>Country</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="row in docItems" :key="row.doc_id">
-                    <td class="doc-date">{{ formatDate(row.date) }}</td>
-                    <td class="doc-title">
-                      <a v-if="row.url" :href="row.url" target="_blank" rel="noopener">{{
-                        row.title || '(untitled)'
-                      }}</a>
-                      <span v-else>{{ row.title || '(untitled)' }}</span>
-                    </td>
-                    <td>{{ row.source || '—' }}</td>
-                    <td>{{ row.country || '—' }}</td>
-                  </tr>
-                </tbody>
-              </table>
+              <div class="table-scroll">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Title</th>
+                      <th>Source</th>
+                      <th>Country</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="row in docItems" :key="row.doc_id">
+                      <td class="doc-date">{{ formatDate(row.date) }}</td>
+                      <td class="doc-title">
+                        <a v-if="row.url" :href="row.url" target="_blank" rel="noopener">{{
+                          row.title || '(untitled)'
+                        }}</a>
+                        <span v-else>{{ row.title || '(untitled)' }}</span>
+                      </td>
+                      <td>{{ row.source || '—' }}</td>
+                      <td>{{ row.country || '—' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
 
               <div class="doc-pager">
                 <button class="pager-btn" :disabled="docOffset === 0" @click="prevPage">
@@ -210,6 +212,7 @@ import { RefreshCw } from 'lucide-vue-next'
 import AppTopbar from '../components/AppTopbar.vue'
 import AdminUsersPanel from '../components/AdminUsersPanel.vue'
 import { getIngestStatus, triggerIngest, getIngestDocuments } from '../utils/adminApi.js'
+import { isoDate, isoDateTime } from '../utils/isoDate.js'
 
 const tab = ref('ingestion')
 const status = ref(null)
@@ -245,19 +248,9 @@ function formatNumber(n) {
   return typeof n === 'number' ? n.toLocaleString('en-US') : '—'
 }
 
-function formatDateTime(iso) {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  return isNaN(d.getTime())
-    ? '—'
-    : d.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })
-}
+const formatDateTime = isoDateTime
 
-function formatDate(iso) {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  return isNaN(d.getTime()) ? iso : d.toLocaleDateString('en-GB', { dateStyle: 'medium' })
-}
+const formatDate = isoDate
 
 async function fetchStatus() {
   try {
@@ -377,7 +370,7 @@ onUnmounted(() => {
 
 .content {
   width: 100%;
-  max-width: 760px;
+  max-width: 1120px;
   margin: 0 auto;
   padding: var(--space-5);
   display: flex;
@@ -409,12 +402,15 @@ onUnmounted(() => {
   border-bottom-color: var(--color-accent);
 }
 
+/* Quiet Archive: sections are hairline-separated bands, not shadowed cards. */
 .card {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  padding: var(--space-5);
-  box-shadow: var(--shadow-sm);
+  padding: var(--space-5) 0 var(--space-6);
+  border-top: 1px solid var(--color-border);
+}
+
+.tabs + .card {
+  border-top: none;
+  padding-top: 0;
 }
 
 .card-head {
@@ -426,28 +422,29 @@ onUnmounted(() => {
 
 .card h2 {
   font-family: var(--font-display);
-  font-size: var(--text-xl);
+  font-size: var(--text-lg);
   font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--color-text);
 }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4) var(--space-6);
 }
 
 .grid dt {
-  font-size: var(--text-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
   margin-bottom: var(--space-1);
 }
 
 .grid dd {
-  font-size: var(--text-lg);
-  font-weight: 600;
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  font-weight: 500;
   color: var(--color-text);
   font-variant-numeric: tabular-nums;
 }
@@ -455,40 +452,42 @@ onUnmounted(() => {
 .dd-note {
   display: block;
   margin-top: 2px;
+  font-family: var(--font-body);
   font-size: var(--text-xs);
   font-weight: 400;
   color: var(--color-muted);
 }
 
-.pill {
+/* Status as text with a small dot, not a pill; green only while work runs. */
+.state {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
-}
-
-.pill .dot {
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-full);
-  background: currentColor;
-}
-
-.pill-idle {
+  gap: 6px;
+  font-size: var(--text-sm);
   color: var(--color-text-secondary);
-  background-color: var(--color-surface-container-high);
 }
 
-.pill-run {
-  color: var(--color-success);
-  background-color: var(--color-accent-soft);
+.state .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-muted);
 }
 
-.pill-run .dot {
+.state-on {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.state-on .dot {
+  background-color: var(--color-accent);
   animation: pulse 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .state-on .dot {
+    animation: none;
+  }
 }
 
 @keyframes pulse {
@@ -502,6 +501,7 @@ onUnmounted(() => {
 }
 
 .muted {
+  max-width: 70ch;
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
   margin-bottom: var(--space-4);
@@ -601,11 +601,12 @@ onUnmounted(() => {
 }
 
 .run-summary th {
-  color: var(--color-muted);
-  font-weight: 600;
-  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  color: var(--color-text-secondary);
 }
 
 .bd-actions {
@@ -642,6 +643,11 @@ onUnmounted(() => {
   border-color: var(--color-accent);
 }
 
+/* Wide tables scroll inside their section on narrow screens. */
+.table-scroll {
+  overflow-x: auto;
+}
+
 .doc-table {
   width: 100%;
   border-collapse: collapse;
@@ -657,14 +663,17 @@ onUnmounted(() => {
 }
 
 .doc-table th {
-  color: var(--color-muted);
-  font-weight: 600;
-  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  color: var(--color-text-secondary);
 }
 
 .doc-date {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
   color: var(--color-text-secondary);

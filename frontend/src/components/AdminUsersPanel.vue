@@ -29,31 +29,33 @@
     </p>
 
     <template v-if="items.length">
-      <table class="users-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Provider</th>
-            <th>Admin</th>
-            <th>Joined</th>
-            <th>Last login</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="u in items" :key="u.id">
-            <td>{{ u.name || '—' }}</td>
-            <td>{{ u.email }}</td>
-            <td>{{ u.auth_provider === 'google' ? 'Google' : 'Password' }}</td>
-            <td>
-              <span v-if="u.is_admin" class="admin-badge">admin</span>
-              <span v-else>—</span>
-            </td>
-            <td>{{ formatDate(u.created_at) }}</td>
-            <td>{{ u.last_login ? formatDate(u.last_login) : '—' }}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="table-scroll">
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Provider</th>
+              <th>Admin</th>
+              <th>Joined</th>
+              <th>Last login</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="u in items" :key="u.id">
+              <td>{{ u.name || '—' }}</td>
+              <td>{{ u.email }}</td>
+              <td>{{ u.auth_provider === 'google' ? 'Google' : 'Password' }}</td>
+              <td>
+                <span v-if="u.is_admin" class="role-admin">Admin</span>
+                <span v-else>—</span>
+              </td>
+              <td class="cell-date">{{ formatDate(u.created_at) }}</td>
+              <td class="cell-date">{{ u.last_login ? formatDate(u.last_login) : '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <div class="users-pager">
         <button class="pager-btn" :disabled="offset === 0" @click="prevPage">Prev</button>
@@ -67,6 +69,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { listUsers } from '../utils/adminApi.js'
+import { isoDate } from '../utils/isoDate.js'
 
 const PAGE_SIZE = 50
 
@@ -117,11 +120,7 @@ function nextPage() {
   load()
 }
 
-function formatDate(iso) {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  return isNaN(d.getTime()) ? iso : d.toLocaleDateString('en-GB', { dateStyle: 'medium' })
-}
+const formatDate = isoDate
 
 onMounted(load)
 onUnmounted(() => clearTimeout(searchTimer))
@@ -129,11 +128,7 @@ onUnmounted(() => clearTimeout(searchTimer))
 
 <style scoped>
 .card {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  padding: var(--space-5);
-  box-shadow: var(--shadow-sm);
+  padding: 0 0 var(--space-6);
 }
 
 .card-head {
@@ -145,12 +140,14 @@ onUnmounted(() => clearTimeout(searchTimer))
 
 .card-head h2 {
   font-family: var(--font-display);
-  font-size: var(--text-xl);
+  font-size: var(--text-lg);
+  letter-spacing: -0.02em;
   font-weight: 700;
   color: var(--color-text);
 }
 
 .muted {
+  max-width: 70ch;
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
   margin-bottom: var(--space-4);
@@ -185,6 +182,11 @@ onUnmounted(() => clearTimeout(searchTimer))
   color: var(--color-text-secondary);
 }
 
+/* Wide tables scroll inside their section on narrow screens. */
+.table-scroll {
+  overflow-x: auto;
+}
+
 .users-table {
   width: 100%;
   border-collapse: collapse;
@@ -195,12 +197,13 @@ onUnmounted(() => clearTimeout(searchTimer))
 .users-table th {
   text-align: left;
   padding: var(--space-2);
-  font-size: var(--text-xs);
-  font-weight: 600;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--color-muted);
-  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-outline);
 }
 
 .users-table td {
@@ -209,14 +212,15 @@ onUnmounted(() => clearTimeout(searchTimer))
   color: var(--color-text);
 }
 
-.admin-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  font-size: var(--text-xs);
+.role-admin {
   font-weight: 600;
-  color: var(--color-on-accent);
-  background-color: var(--color-accent-container);
-  border-radius: var(--radius-full);
+}
+
+.cell-date {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .users-pager {
