@@ -33,7 +33,15 @@ def _run(content=CONTENT, checker=None, **kw):
     kw.setdefault("date_from", "2026-07-15")
     kw.setdefault("date_to", "2026-11-15")
     kw.setdefault("language", "en")
-    return anyio.run(lambda: verify_comparison(content, checker=checker, **kw))
+    return anyio.run(lambda: verify_comparison(content, checker=checker, **kw)).content
+
+
+def _removed(content=CONTENT, checker=None, **kw):
+    kw.setdefault("heading", HEADING)
+    kw.setdefault("date_from", "2026-07-15")
+    kw.setdefault("date_to", "2026-11-15")
+    kw.setdefault("language", "en")
+    return anyio.run(lambda: verify_comparison(content, checker=checker, **kw)).removed
 
 
 def _checker(result, seen=None):
@@ -129,3 +137,19 @@ def test_turkish_heading():
     out = _run(content=content, heading=heading, language="tr",
                checker=_checker({"remove": [1, 2]}))
     assert f"## {heading}\n{NO_CONFIRMED_CHANGE['tr']}\n\n## Bulgular" in out
+
+
+# --- how many sentences the check removed (shown to the reader after the swap) ---
+
+def test_removed_counts_the_sentences_dropped():
+    assert _removed(checker=_checker({"remove": [2, 4]})) == 2
+
+
+def test_removed_is_zero_when_nothing_changes():
+    assert _removed(checker=_checker({"remove": []})) == 0
+    assert _removed(checker=_checker(RuntimeError("503"))) == 0
+    assert _removed(content="## Executive Summary\nX.\n", checker=_checker({"remove": [1]})) == 0
+
+
+def test_removed_counts_only_valid_numbers():
+    assert _removed(checker=_checker({"remove": [99, "x", "2", 0]})) == 1

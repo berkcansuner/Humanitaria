@@ -16,8 +16,10 @@ import pytest
 def verify():
     """The comparison check (rag.report_compare) is stubbed: no network in tests.
     It marks the content so a test can see the stored report went through it."""
+    from rag.report_compare import Checked
+
     async def mark(content, **kw):
-        return content + "\n<!-- checked -->"
+        return Checked(content + "\n<!-- checked -->", 2)
     with patch("api.routes.reports.verify_comparison", new=AsyncMock(side_effect=mark)) as m:
         yield m
 
@@ -221,3 +223,16 @@ def test_one_off_stream_has_no_checking_status():
     seen = []
     resp = _stream(_NEXT, seen)
     assert "status" not in [e["event"] for e in _parse_sse_events(resp.text)]
+
+
+def test_comparative_stream_reports_how_many_sentences_the_check_removed():
+    _save_previous()
+    seen = []
+    resp = _stream({**_NEXT, "previous_report_id": "r-prev"}, seen)
+    events = _parse_sse_events(resp.text)
+    kinds = [e["event"] for e in events]
+    statuses = [e["data"] for e in events if e["event"] == "status"]
+    assert statuses == [{"stage": "checking_comparison"},
+                        {"stage": "comparison_checked", "removed": 2}]
+    last_status = max(i for i, k in enumerate(kinds) if k == "status")
+    assert last_status < kinds.index("saved")

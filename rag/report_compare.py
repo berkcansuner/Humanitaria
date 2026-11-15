@@ -14,7 +14,7 @@ block a report.
 """
 import logging
 import re
-from typing import Awaitable, Callable, Optional
+from typing import Awaitable, Callable, NamedTuple, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -25,6 +25,13 @@ NO_CONFIRMED_CHANGE = {
     "en": "No change dated within this period could be confirmed from the sources.",
     "tr": "Kaynaklardan bu döneme tarihlenen bir değişiklik doğrulanamadı.",
 }
+
+class Checked(NamedTuple):
+    """The report after the check, and how many sentences it removed (shown to the
+    reader, since the saved text replaces what they watched stream)."""
+    content: str
+    removed: int
+
 
 _PARAGRAPH = re.compile(r"\n\s*\n")
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
@@ -145,19 +152,19 @@ def _locate(content: str, heading: str) -> Optional[tuple[int, int]]:
 async def verify_comparison(
     content: str, *, heading: str, date_from: Optional[str], date_to: Optional[str],
     language: str, checker: Optional[Callable[[str], Awaitable[dict]]] = None,
-) -> str:
-    """``content`` with the flagged sentences removed from its comparison section.
-    Returns ``content`` unchanged when there is no section, nothing is flagged, or
-    the check fails in any way."""
+) -> Checked:
+    """``content`` with the flagged sentences removed from its comparison section,
+    and how many were removed. ``content`` comes back unchanged (0 removed) when
+    there is no section, nothing is flagged, or the check fails in any way."""
     span = _locate(content, heading)
     if span is None:
-        return content
+        return Checked(content, 0)
     start, end = span
     region = content[start:end]
     body = region.strip()
     sentences = split_sentences(body)
     if not sentences:
-        return content
+        return Checked(content, 0)
 
     try:
         raw = await (checker or _llm_check)(
@@ -166,14 +173,14 @@ async def verify_comparison(
             else None
     except Exception as exc:
         logger.warning("Comparison check failed; keeping the section as generated: %s", exc)
-        return content
+        return Checked(content, 0)
     if result is None:
         logger.warning("Comparison check gave no usable answer; keeping the section")
-        return content
+        return Checked(content, 0)
 
     remove = {n for n in result.remove if 1 <= n <= len(sentences)}
     if not remove:
-        return content
+        return Checked(content, 0)
     for n in sorted(remove):
         logger.info("Comparison check removed sentence %d (%s): %s",
                     n, result.why.get(str(n), "no reason given"), sentences[n - 1][1][:160])
@@ -181,4 +188,4 @@ async def verify_comparison(
     trailing = region[len(region.rstrip()):]
     leading = region[:len(region) - len(region.lstrip())]
     new_region = leading + remove_sentences(body, remove, language) + trailing
-    return content[:start] + new_region + content[end:]
+    return Checked(content[:start] + new_region + content[end:], len(remove))

@@ -27,7 +27,7 @@ from rag.chain import build_report_chain
 from rag.rag_context import _build_context_and_sources
 from rag.citations import normalize_citations, normalize_table_delimiters
 from rag.report_pdf import render_report_pdf
-from rag.report_compare import verify_comparison
+from rag.report_compare import Checked, verify_comparison
 from rag.report_service import (
     COMPARISON_HEADINGS, build_comparison_block, build_report_directive, report_title,
     retrieve_for_report,
@@ -195,13 +195,19 @@ def _previous_in_series(user_id: str, req: ReportRequest) -> dict:
     return previous
 
 
+def _checked_event(removed: int) -> ServerSentEvent:
+    """Sent after the check: how many "What changed" sentences it removed."""
+    return ServerSentEvent(event="status",
+                           data=json.dumps({"stage": "comparison_checked", "removed": removed}))
+
+
 def _checking_event() -> ServerSentEvent:
     """Sent before the check, so the viewer can say the streamed "What changed"
     text is being checked (sentences may drop out when the saved text replaces it)."""
     return ServerSentEvent(event="status", data=json.dumps({"stage": "checking_comparison"}))
 
 
-async def _checked(full: str, req: ReportRequest) -> str:
+async def _checked(full: str, req: ReportRequest) -> Checked:
     """A next-period report's "What changed" section after the narrow check
     (rag.report_compare): sentences that present older or undated material as new
     are dropped. Never fails: any problem keeps the text as generated."""
@@ -283,7 +289,9 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
 
                 if previous:
                     yield _checking_event()
-                    full = await _checked(full, req)
+                    checked = await _checked(full, req)
+                    full = checked.content
+                    yield _checked_event(checked.removed)
                 section_images = technical_report.assemble_section_images(findings)
                 report_id = str(uuid4())
                 title = report_title(req.country, req.theme, req.date_from, req.date_to,
@@ -345,7 +353,9 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
             # undated material as new, before citations are renumbered below.
             if previous:
                 yield _checking_event()
-                full = await _checked(full, req)
+                checked = await _checked(full, req)
+                full = checked.content
+                yield _checked_event(checked.removed)
 
             # Expand grouped citations, drop uncited/invalid sources, and renumber the
             # [n] markers + sources to a contiguous 1..N so the stored content, the PDF
