@@ -70,10 +70,12 @@ defineProps({
 .brand-sub {
   font-family: var(--font-mono);
   font-size: 10px;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--color-muted);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .app-nav {
@@ -116,12 +118,14 @@ defineProps({
 .app-topbar-spacer {
   flex: 1;
 }
-/* The Chat · Reports switch stays put between screens: the brand takes the
-   width of its longest subtitle ("Humanitarian Information Assistant"), so a
-   shorter one ("M&E Reports", "Settings") no longer pulls the switch left. */
+/* The brand sits over the 288px sidebar: exactly the sidebar's width less the
+   bar's 16px padding, on every screen. The subtitle fits inside it (longest:
+   "Humanitarian Information Assistant"), and the Chat · Reports switch starts
+   just past the sidebar edge, in the same place everywhere. */
 @media (min-width: 641px) {
   .brand {
-    min-width: 296px;
+    width: 272px;
+    min-width: 272px;
   }
 }
 
