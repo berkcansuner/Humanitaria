@@ -543,7 +543,6 @@ watch(
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  scroll-behavior: smooth;
 }
 
 .message {

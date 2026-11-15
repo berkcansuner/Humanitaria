@@ -756,7 +756,6 @@ function onCiteClick(e) {
   min-width: 0;
   overflow-y: auto;
   padding: var(--space-6) var(--space-8);
-  scroll-behavior: smooth;
 }
 
 .report-column {
