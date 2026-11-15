@@ -110,8 +110,8 @@
   padding: 2px var(--space-2);
   font-size: var(--text-xs);
   color: var(--color-accent);
-  background: var(--color-primary-fixed);
-  border-radius: var(--radius-full);
+  background: var(--color-accent-soft); /* Citation Mist: the one green voice */
+  border-radius: var(--radius-md);
 }
 
 /* Options as side-by-side wrapping chips (no long vertical list) */
@@ -130,7 +130,7 @@
   color: var(--color-text);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-lg);
   cursor: pointer;
   transition:
     background-color 0.15s,
@@ -163,7 +163,7 @@
   outline-offset: 2px;
 }
 .sc-opt[aria-checked='true'] {
-  background: var(--color-primary-fixed);
+  background: var(--color-accent-soft);
   border-color: var(--color-accent);
   color: var(--color-accent);
 }
@@ -243,7 +243,7 @@
   color: var(--color-text);
   background: var(--color-surface);
   border: 1px solid var(--color-outline);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   outline: none;
   transition:
     border-color 0.15s,
@@ -268,7 +268,7 @@
   background: var(--color-accent-container);
   color: var(--color-on-accent);
   border: none;
-  border-radius: var(--radius-full);
+  border-radius: 10px; /* the send button's corner */
   cursor: pointer;
   transition:
     background-color 0.15s,
@@ -294,7 +294,7 @@
   min-height: 32px;
   background: none;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-lg);
   padding: var(--space-1) var(--space-4);
   font-family: var(--font-body);
   font-size: var(--text-xs);
