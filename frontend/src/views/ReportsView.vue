@@ -410,7 +410,6 @@
               Each report draws on many ReliefWeb reports at once and cites every one, so you can
               check it and quote it.
             </p>
-            <p class="empty-coverage">ReliefWeb reports · last 12 months · updated daily</p>
             <template v-if="emptyRows.length">
               <p class="empty-pick">
                 {{
@@ -434,9 +433,6 @@
                 </li>
               </ul>
             </template>
-            <p v-else-if="listLoaded" class="empty-pick">
-              Choose a country, sector and period in the form to start.
-            </p>
           </div>
         </div>
       </main>
@@ -1761,14 +1757,6 @@ function onCiteClick(e) {
   font-size: 15px;
   line-height: 1.55;
   color: var(--color-text-secondary);
-}
-.empty-coverage {
-  margin: var(--space-3) 0 0;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-muted);
 }
 .empty-pick {
   margin: var(--space-6) 0 var(--space-2);
