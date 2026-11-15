@@ -1,34 +1,38 @@
 <template>
   <div class="app">
-    <Sidebar
-      :conversations="visibleConversations"
-      :active-id="activeId"
-      :open="sidebarOpen"
-      :loading="isLoadingConversations"
-      @select="selectConversation"
-      @new-chat="newChat"
-      @rename="onRename"
-      @delete="onDelete"
-    />
-    <div v-if="sidebarOpen" class="sidebar-backdrop" @click="sidebarOpen = false"></div>
-
-    <div class="main">
-      <AppTopbar context="Humanitarian Information Assistant">
-        <template #start>
-          <button class="hamburger" aria-label="Toggle menu" @click="sidebarOpen = !sidebarOpen">
-            <Menu :size="20" />
-          </button>
-        </template>
-      </AppTopbar>
-      <div v-if="actionError" class="action-error" role="alert">
-        <span>{{ actionError }}</span>
-        <button class="action-error-dismiss" aria-label="Dismiss" @click="actionError = null">
-          <X :size="16" aria-hidden="true" />
+    <!-- Full-width top bar as on every other screen, so the brand and the
+         Chat · Reports switch stay put when moving between screens. -->
+    <AppTopbar context="Humanitarian Information Assistant">
+      <template #start>
+        <button class="hamburger" aria-label="Toggle menu" @click="sidebarOpen = !sidebarOpen">
+          <Menu :size="20" />
         </button>
+      </template>
+    </AppTopbar>
+    <div class="app-body">
+      <Sidebar
+        :conversations="visibleConversations"
+        :active-id="activeId"
+        :open="sidebarOpen"
+        :loading="isLoadingConversations"
+        @select="selectConversation"
+        @new-chat="newChat"
+        @rename="onRename"
+        @delete="onDelete"
+      />
+      <div v-if="sidebarOpen" class="sidebar-backdrop" @click="sidebarOpen = false"></div>
+
+      <div class="main">
+        <div v-if="actionError" class="action-error" role="alert">
+          <span>{{ actionError }}</span>
+          <button class="action-error-dismiss" aria-label="Dismiss" @click="actionError = null">
+            <X :size="16" aria-hidden="true" />
+          </button>
+        </div>
+        <main class="content">
+          <Chat :conversation-id="activeId" @session="onSession" />
+        </main>
       </div>
-      <main class="content">
-        <Chat :conversation-id="activeId" @session="onSession" />
-      </main>
     </div>
     <UndoToast
       :message="pendingDelete ? 'Conversation deleted.' : ''"
@@ -145,8 +149,14 @@ onBeforeUnmount(flushDelete)
 .app {
   height: 100vh;
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   overflow: hidden;
+}
+
+.app-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
 }
 
 .main {
