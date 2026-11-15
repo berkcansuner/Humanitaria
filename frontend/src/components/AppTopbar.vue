@@ -4,7 +4,7 @@
   <header class="app-topbar">
     <slot name="start" />
     <router-link class="brand" to="/app" title="Humanitaria: back to chat">
-      <HelpingHandLogo :size="32" :radius="10" />
+      <HelpingHandLogo :size="28" :radius="8" />
       <div class="brand-text">
         <h1 class="brand-title">Humanitaria</h1>
         <span v-if="context" class="brand-sub">{{ context }}</span>
@@ -31,11 +31,12 @@ defineProps({
 </script>
 
 <style scoped>
+/* About Claude's 41px top bar: 6px vertical padding around 28px controls. */
 .app-topbar {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-5);
+  padding: 6px var(--space-4);
   background-color: var(--color-bg);
   flex-shrink: 0;
 }
@@ -59,7 +60,7 @@ defineProps({
 .brand-title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: var(--text-lg);
+  font-size: var(--text-base);
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--color-text);
@@ -83,7 +84,7 @@ defineProps({
 }
 
 .app-nav-link {
-  padding: 6px 12px;
+  padding: 4px 10px;
   font-size: var(--text-sm);
   font-weight: 500;
   color: var(--color-text-secondary);
@@ -126,7 +127,7 @@ defineProps({
 
 @media (max-width: 640px) {
   .app-topbar {
-    padding: var(--space-3) var(--space-4);
+    padding: 6px var(--space-3);
   }
   .brand-sub {
     display: none;
