@@ -1,10 +1,12 @@
 <template>
   <div class="chat">
+    <p class="sr-only" role="status" aria-live="polite">{{ announcement }}</p>
     <div
       ref="messagesContainer"
       class="messages"
       role="log"
-      aria-live="polite"
+      aria-live="off"
+      aria-label="Conversation"
       @click="onCiteClick"
       @keydown="onCiteKeydown"
     >
@@ -138,7 +140,7 @@ const SuggestionCardIsland = defineAsyncComponent(() => import('./SuggestionCard
 import { renderMarkdown } from '../utils/renderMarkdown.js'
 import { parseSSE } from '../utils/parseSSE.js'
 import { renumberCitations } from '../utils/renumberCitations.js'
-import { revealSource } from '../utils/sources.js'
+import { revealSource, isValidSource } from '../utils/sources.js'
 import { decorateCodeBlocks } from '../utils/codeCopy.js'
 import { findLastUserIndex, lastServerIdBefore, planResend } from '../utils/conversationOps.js'
 import { getMessages, truncateConversation } from '../utils/api.js'
@@ -159,6 +161,23 @@ const emit = defineEmits(['session'])
 const messages = ref([])
 const input = ref('')
 const loading = ref(false) // a response is streaming
+// One short screen-reader message per answer (the message list itself is silent).
+const announcement = ref('')
+
+function announceAnswer(msg, stopped) {
+  if (stopped) {
+    announcement.value = 'Answer stopped.'
+  } else if (msg.error) {
+    announcement.value = `Answer failed. ${msg.error}`
+  } else if (msg.clarification) {
+    announcement.value = 'The assistant needs a clarification.'
+  } else {
+    const n = (msg.sources || []).filter(isValidSource).length
+    announcement.value = n
+      ? `Answer ready, ${n} ${n === 1 ? 'source' : 'sources'}.`
+      : 'Answer ready.'
+  }
+}
 const isLoadingMessages = ref(false) // past conversation's history is being fetched
 const sessionId = ref(null)
 const messagesContainer = ref(null)
@@ -183,6 +202,8 @@ async function sendMessage(opts = {}) {
     nextTick(autoGrow)
   }
   loading.value = true
+  announcement.value = ''
+  let stopped = false
 
   const assistantMsg = {
     role: 'assistant',
@@ -324,6 +345,7 @@ async function sendMessage(opts = {}) {
     }
   } catch (err) {
     if (err?.name === 'AbortError') {
+      stopped = true
       // User pressed Stop — keep whatever streamed so far with no error banner.
       // If nothing streamed yet, drop the empty assistant bubble.
       if (!assistantMsg.content.trim()) {
@@ -344,6 +366,7 @@ async function sendMessage(opts = {}) {
   } finally {
     controller.value = null
     loading.value = false
+    announceAnswer(assistantMsg, stopped)
     scrollToBottom()
     // Add copy buttons to any code blocks now that the message is fully rendered
     // (decorateCodeBlocks is idempotent, so re-decorating the container is safe).
