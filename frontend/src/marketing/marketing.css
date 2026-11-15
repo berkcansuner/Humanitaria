@@ -601,14 +601,14 @@
   position: sticky;
   top: 104px;
 }
-.mkt-scope .cit-grid h2 {
+.mkt-scope .cit-copy h2 {
   font-family: var(--font-display);
   font-size: clamp(30px, 3.3vw, 43px);
   line-height: 1.03;
   letter-spacing: -0.025em;
   font-weight: 700;
 }
-.mkt-scope .cit-grid p {
+.mkt-scope .cit-copy p {
   font-size: 16.5px;
   color: var(--color-text-secondary);
   margin-top: var(--space-4);
