@@ -1334,11 +1334,15 @@ function onCiteClick(e) {
   font-variant-numeric: tabular-nums;
   color: var(--color-text-secondary);
 }
+/* Three actions no longer fit beside the title, so they sit on their own row
+   under the meta line. The row may shrink (min-width: 0) so its buttons wrap on
+   a phone instead of pushing the page sideways. */
 .report-actions {
-  flex-shrink: 0;
+  flex: 0 1 auto;
+  min-width: 0;
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: var(--space-2);
 }
 .pdf-btn {
