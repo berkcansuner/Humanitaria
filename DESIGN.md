@@ -246,7 +246,7 @@ Every claim's `[n]` reference, quiet at rest so the answer reads first.
 - **Rest:** 18px mono chip with tabular figures, transparent ground, Graphite number, 1px Paper Edge outline, 5px radius. Graphite rather than Clay Gray keeps the number at ≥4.5:1 contrast.
 - **Hover / focus:** Field Green fill and border with the number in On Green, so the link to the source is always one gesture away.
 - **Activate:** reveals and marks its source (see Sources).
-- **Exception:** the landing page's sample answer (`.mkt-scope .cite`) keeps its green chip; it is a marketing surface showing citations off.
+- **Landing sample:** the landing page's sample answer (`SampleAnswer.vue`) uses the same chip and the same Sources ledger, so the page shows the product as it is.
 
 ### Sources (signature)
 Quiet at rest, a ledger when opened (`SourceList.vue`, a native `<details>`).
