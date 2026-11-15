@@ -63,7 +63,37 @@
             </select>
           </label>
 
-          <button type="submit" class="generate-btn" :disabled="!form.country || generating">
+          <!-- "Run next period": the new report continues a saved one and opens
+               with what changed since then. -->
+          <div v-if="continuation && !generating" class="continues" role="status">
+            <template v-if="continuesSeries">
+              <p>
+                Continues <strong>{{ continuation.name }}</strong
+                >, <span class="continues-period">{{ continuation.period }}</span
+                >. The new report opens with what changed since then.
+              </p>
+              <p v-if="continuationNotes.endClamped" class="form-hint">
+                This period is not over yet, so it ends today.
+              </p>
+              <p v-if="continuationNotes.startClamped" class="form-hint">
+                The start moved to {{ minDate }}: older documents are no longer indexed.
+              </p>
+            </template>
+            <p v-else>
+              These settings differ from <strong>{{ continuation.name }}</strong
+              >, so this will be a one-off report.
+            </p>
+            <button type="button" class="continues-clear" @click="continuation = null">
+              {{ continuesSeries ? 'Make it a one-off report' : 'Dismiss' }}
+            </button>
+          </div>
+
+          <button
+            ref="generateBtn"
+            type="submit"
+            class="generate-btn"
+            :disabled="!form.country || generating"
+          >
             <Loader2 v-if="generating" :size="16" class="spin" />
             <FileText v-else :size="16" />
             {{ generating ? 'Generating…' : 'Generate report' }}
@@ -222,8 +252,37 @@
                   >{{ i ? '· ' : '' }}{{ part }}</span
                 >
               </p>
+              <p v-if="comparedWith" class="report-compared">
+                <template v-if="comparedWith.deleted">
+                  Compared with an earlier report that has since been deleted.
+                </template>
+                <template v-else>
+                  Compared with
+                  <button
+                    type="button"
+                    class="report-compared-link"
+                    @click="openReport(comparedWith.id)"
+                  >
+                    {{ comparedWith.period || 'the previous report' }}
+                  </button>
+                </template>
+              </p>
             </div>
             <div v-if="current.id" class="report-actions">
+              <button
+                v-if="nextSuggestion"
+                type="button"
+                class="pdf-btn"
+                :disabled="!!nextSuggestion.notStarted || generating"
+                @click="runNextPeriod"
+              >
+                <CalendarPlus :size="15" />
+                {{
+                  nextSuggestion.notStarted
+                    ? `Next period from ${nextSuggestion.startsOn}`
+                    : 'Run next period'
+                }}
+              </button>
               <button type="button" class="pdf-btn" @click="copyReport">
                 <Check v-if="reportCopied" :size="15" />
                 <Copy v-else :size="15" />
@@ -287,6 +346,7 @@ import {
   Check,
   ArrowLeft,
   ChevronRight,
+  CalendarPlus,
 } from 'lucide-vue-next'
 import AppTopbar from '../components/AppTopbar.vue'
 import SourceList from '../components/SourceList.vue'
@@ -301,6 +361,7 @@ import { getReportOptions, listReports, getReport, deleteReport } from '../utils
 import { REPORT_TYPES, reportTypeBadge } from '../utils/reportTypes.js'
 import { splitReportTitle } from '../utils/reportTitle.js'
 import { groupSeries, seriesKey } from '../utils/reportSeries.js'
+import { nextPeriod } from '../utils/nextPeriod.js'
 import { copyWithSources } from '../utils/citationCopy.js'
 import { minReportDate, maxReportDate } from '../utils/reportDateBounds.js'
 import { handleSessionExpired } from '../utils/authStore.js'
@@ -329,7 +390,27 @@ const form = ref({
   language: 'en',
 })
 
-const current = ref(null) // { id, title, content, sources }
+const current = ref(null) // a saved report as toCurrent() shapes it, or the one streaming
+
+// The viewer's copy of a saved report. The series fields (type, country, sector,
+// language, period, previous_report_id) drive "Run next period" and "Compared with".
+function toCurrent(rep) {
+  return {
+    id: rep.id,
+    title: rep.title,
+    content: rep.content,
+    sources: rep.sources,
+    report_type: rep.report_type,
+    country: rep.country,
+    theme: rep.theme,
+    language: rep.language,
+    date_from: rep.date_from,
+    date_to: rep.date_to,
+    previous_report_id: rep.previous_report_id || null,
+    cover_image: rep.cover_image,
+    section_images: rep.section_images,
+  }
+}
 const generating = ref(false)
 const genError = ref('')
 const viewer = ref(null)
@@ -463,15 +544,7 @@ async function openReport(id, { fromRoute = false } = {}) {
   if (!fromRoute) syncUrl(id, { push: true })
   try {
     const rep = await getReport(id)
-    current.value = {
-      id: rep.id,
-      title: rep.title,
-      content: rep.content,
-      sources: rep.sources,
-      report_type: rep.report_type,
-      cover_image: rep.cover_image,
-      section_images: rep.section_images,
-    }
+    current.value = toCurrent(rep)
     genError.value = ''
     nextTick(() => {
       if (viewer.value) viewer.value.scrollTop = 0
@@ -544,6 +617,81 @@ watch(activeSeriesKey, (key) => {
     expandedSeries.value = new Set([...expandedSeries.value, key])
   }
 })
+// --- Run next period ---------------------------------------------------------
+// The series continues from its latest period, whichever of its reports is open
+// (an older one's "next period" usually exists already). Falls back to the open
+// report until the list carries it.
+const seriesLatest = computed(() => {
+  const id = current.value && current.value.id
+  if (!id) return null
+  for (const e of savedEntries.value) {
+    if (e.kind === 'single' && e.report.id === id) return e.report
+    if (e.kind === 'series' && e.reports.some((r) => r.id === id)) return e.latest
+  }
+  return current.value
+})
+// The series' next period (nextPeriod.js); null when there is no period to carry.
+const nextSuggestion = computed(() =>
+  seriesLatest.value ? nextPeriod(seriesLatest.value, new Date()) : null,
+)
+// Set by "Run next period": the saved report the form's next report continues.
+const continuation = ref(null)
+const generateBtn = ref(null)
+// The link holds only while the form keeps the series' type, country, sector and
+// language (the API refuses a mismatch); dates may change.
+const continuesSeries = computed(
+  () =>
+    !!continuation.value &&
+    seriesKey({ ...form.value, theme: form.value.theme || null }) === continuation.value.key,
+)
+// Clamp notes describe the suggested dates; once edited, they no longer apply.
+const continuationNotes = computed(() => {
+  const c = continuation.value
+  const same = c && form.value.date_from === c.date_from && form.value.date_to === c.date_to
+  return { endClamped: same && c.endClamped, startClamped: same && c.startClamped }
+})
+
+function runNextPeriod() {
+  const rep = seriesLatest.value
+  const s = nextSuggestion.value
+  if (!rep || !s || s.notStarted || generating.value) return
+  form.value = {
+    report_type: rep.report_type || 'situation',
+    country: rep.country || '',
+    theme: rep.theme || '',
+    date_from: s.date_from,
+    date_to: s.date_to,
+    language: rep.language || 'en',
+  }
+  continuation.value = {
+    id: rep.id,
+    key: seriesKey(rep),
+    name: savedName(rep),
+    period: savedPeriod(rep),
+    date_from: s.date_from,
+    date_to: s.date_to,
+    endClamped: s.endClamped,
+    startClamped: s.startClamped,
+  }
+  // Phones show one pane: go back to the form. Wide screens keep the report open.
+  if (window.matchMedia('(max-width: 760px)').matches) closeReport()
+  nextTick(() => {
+    if (generateBtn.value) {
+      generateBtn.value.scrollIntoView({ block: 'center' })
+      generateBtn.value.focus({ preventScroll: true })
+    }
+  })
+}
+
+// "Compared with <period>" under the open report's title, from the saved list.
+const comparedWith = computed(() => {
+  const pid = current.value && current.value.previous_report_id
+  if (!pid) return null
+  const row = reports.value.find((r) => r.id === pid)
+  if (row) return { id: pid, period: savedPeriod(row) }
+  return loadingList.value ? null : { deleted: true }
+})
+
 const toastMessage = computed(() => (pendingDelete.value ? 'Report deleted.' : notice.value))
 
 function onDelete(id) {
@@ -631,12 +779,22 @@ async function generate() {
         date_from: form.value.date_from || null,
         date_to: form.value.date_to || null,
         language: form.value.language,
+        previous_report_id: continuesSeries.value ? continuation.value.id : null,
       }),
       signal: controller.value.signal,
     })
     if (!res.ok) {
       if (res.status === 401) {
         handleSessionExpired()
+        return
+      }
+      // The report this one continues was deleted, or no longer matches it.
+      if (continuesSeries.value && (res.status === 404 || res.status === 422)) {
+        continuation.value = null
+        genError.value =
+          res.status === 404
+            ? 'The report this one continues was deleted, so there is nothing to compare against. Generate again for a one-off report.'
+            : 'The settings no longer match the report this one continues. Generate again for a one-off report.'
         return
       }
       // 409 = per-user report limit; show the server's reason.
@@ -682,6 +840,7 @@ async function generate() {
             current.value.imagesStatus = null
           } catch (e) {}
         } else if (sse.event === 'saved') {
+          continuation.value = null
           current.value.imagesStatus = null
           let rid = null
           try {
@@ -697,15 +856,7 @@ async function generate() {
           if (rid) {
             try {
               const rep = await getReport(rid)
-              current.value = {
-                id: rep.id,
-                title: rep.title,
-                content: rep.content,
-                sources: rep.sources,
-                report_type: rep.report_type,
-                cover_image: rep.cover_image,
-                section_images: rep.section_images,
-              }
+              current.value = toCurrent(rep)
             } catch (e) {}
           }
         } else if (sse.event === 'error') {
@@ -868,6 +1019,50 @@ function onCiteClick(e) {
 .form-hint {
   font-size: var(--text-xs);
   color: var(--color-text-secondary);
+}
+
+/* "Run next period": what the next report continues, above Generate. */
+.continues {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-left: 2px solid var(--color-accent);
+  background-color: var(--color-surface-container-low);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  color: var(--color-text);
+}
+.continues p {
+  margin: 0;
+}
+.continues-period {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.continues-clear,
+.report-compared-link {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.continues-clear {
+  font-size: var(--text-xs);
+}
+.continues-clear:focus-visible,
+.report-compared-link:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
 .saved {
@@ -1103,6 +1298,13 @@ function onCiteClick(e) {
   border-radius: var(--radius-md);
 }
 
+.report-compared {
+  margin: 4px 0 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
 .report-actions {
   flex-shrink: 0;
   display: flex;
