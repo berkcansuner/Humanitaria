@@ -29,9 +29,9 @@
                 >
                   <path d="M5 12h14M13 6l6 6-6 6" /></svg
               ></router-link>
-              <button class="btn btn-ghost" type="button" @click="sampleOpen = true">
+              <router-link class="btn btn-ghost" :to="{ path: '/', hash: '#citations' }">
                 See a sample answer
-              </button>
+              </router-link>
             </div>
           </div>
         </div>
@@ -88,10 +88,10 @@
       </section>
 
       <!-- CITATIONS HIGHLIGHT -->
-      <section id="citations" class="cit">
-        <div class="wrap section">
+      <section id="citations" class="cit section">
+        <div class="wrap">
           <div class="cit-grid">
-            <div>
+            <div class="cit-copy">
               <h2>Every claim links back to a real report.</h2>
               <p>
                 Numbered citations point straight to the source document — open the original, check
@@ -148,47 +148,7 @@
                 </li>
               </ul>
             </div>
-            <div class="srccard">
-              <div class="src-h">Sources (3)</div>
-              <div class="row hot">
-                <span class="n">[1]</span>
-                <div>
-                  <div class="t">
-                    Sudan Situation Report
-                    <svg
-                      class="ext"
-                      width="13"
-                      height="13"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="1.9"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <path d="M15 3h6v6" />
-                      <path d="M10 14 21 3" />
-                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                    </svg>
-                  </div>
-                  <div class="m">OCHA · 12 Mar 2025</div>
-                </div>
-              </div>
-              <div class="row">
-                <span class="n">[2]</span>
-                <div>
-                  <div class="t">Acute Food Insecurity Snapshot</div>
-                  <div class="m">IPC · 20 Dec 2024</div>
-                </div>
-              </div>
-              <div class="row">
-                <span class="n">[3]</span>
-                <div>
-                  <div class="t">Sudan Health Cluster Bulletin</div>
-                  <div class="m">WHO · 28 Feb 2025</div>
-                </div>
-              </div>
-            </div>
+            <SampleAnswer />
           </div>
         </div>
       </section>
@@ -251,17 +211,14 @@
     </main>
 
     <MarketingFooter />
-    <SampleAnswerModal :open="sampleOpen" @close="sampleOpen = false" />
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
 import MarketingNav from '../marketing/MarketingNav.vue'
 import MarketingFooter from '../marketing/MarketingFooter.vue'
-import SampleAnswerModal from '../marketing/SampleAnswerModal.vue'
+import SampleAnswer from '../marketing/SampleAnswer.vue'
 
-const sampleOpen = ref(false)
 const marqueeSources = [
   'OCHA',
   'ReliefWeb',

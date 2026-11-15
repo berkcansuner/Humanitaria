@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-15T04:58:31+00:00",
+  "generatedAt": "2026-11-15T05:07:09+00:00",
   "title": "Design System: Humanitaria",
   "extensions": {
     "colorMeta": {
@@ -506,7 +506,8 @@
       "**Don't** put eyebrow or kicker labels above headings; the heading carries its own weight.",
       "**Don't** build a section from same-size cards of icon tile, heading and text; use headed rows or paragraphs separated by hairlines.",
       "**Don't** add decorative green glows, ring patterns, glass blur, or gradient fade lines.",
-      "**Don't** hide content behind scroll-triggered fade-ins; everything is visible at rest, and the landing hero's underline on \"cite.\" is the page's one authored motion."
+      "**Don't** hide content behind scroll-triggered fade-ins; everything is visible at rest, and the landing hero's underline on \"cite.\" is the page's one authored motion.",
+      "**Don't** put content in a modal when it needs neither interruption nor protected focus; the landing sample answer sits inline in the citations section."
     ]
   }
 }

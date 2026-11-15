@@ -266,7 +266,39 @@
   }
 }
 
-/* answer card (used in modal) */
+/* sample answer (inline in the citations section) */
+.mkt-scope .sample {
+  margin: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.mkt-scope .sample-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-container-low);
+}
+.mkt-scope .sample-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14.5px;
+  letter-spacing: -0.01em;
+}
+.mkt-scope .sample-tag {
+  margin-left: auto;
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+}
+.mkt-scope .sample-body {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
 .mkt-scope .q {
   align-self: flex-end;
   max-width: 78%;
@@ -283,7 +315,7 @@
   padding: 16px 18px;
   box-shadow: 0 6px 18px -10px rgba(0, 0, 0, 0.1);
 }
-.mkt-scope .a h4 {
+.mkt-scope .a h3 {
   font-family: var(--font-display);
   font-size: 15.5px;
   font-weight: 700;
@@ -467,9 +499,13 @@
 }
 .mkt-scope .cit-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
   gap: 56px;
-  align-items: center;
+  align-items: start;
+}
+.mkt-scope .cit-copy {
+  position: sticky;
+  top: 104px;
 }
 .mkt-scope .cit-grid h2 {
   font-family: var(--font-display);
@@ -477,7 +513,6 @@
   line-height: 1.03;
   letter-spacing: -0.025em;
   font-weight: 700;
-  margin-top: var(--space-3);
 }
 .mkt-scope .cit-grid p {
   font-size: 16.5px;
@@ -508,48 +543,6 @@
   place-items: center;
   flex-shrink: 0;
   margin-top: 1px;
-}
-.mkt-scope .srccard {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 16px;
-  padding: 22px;
-  box-shadow: 0 24px 60px -34px rgba(30, 40, 30, 0.3);
-}
-.mkt-scope .srccard .row {
-  display: flex;
-  gap: var(--space-3);
-  align-items: flex-start;
-  padding: 14px;
-  border-radius: 11px;
-}
-.mkt-scope .srccard .row.hot {
-  background: var(--color-accent-soft);
-}
-.mkt-scope .srccard .row + .row {
-  margin-top: 6px;
-}
-.mkt-scope .srccard .n {
-  font-family: var(--font-mono);
-  font-weight: 600;
-  color: var(--color-accent);
-  font-size: 13px;
-  flex-shrink: 0;
-}
-.mkt-scope .srccard .t {
-  font-weight: 600;
-  font-size: 14.5px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.mkt-scope .srccard .m {
-  font-size: 12.5px;
-  color: var(--color-muted);
-  margin-top: 3px;
-}
-.mkt-scope .srccard .ext {
-  opacity: 0.5;
 }
 
 /* use cases */
@@ -626,106 +619,6 @@
   border-color: rgba(255, 255, 255, 0.5);
 }
 
-/* sample answer modal */
-.mkt-scope .modal {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-5);
-}
-.mkt-scope .modal.open {
-  display: flex;
-}
-.mkt-scope .modal-backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(20, 26, 20, 0.5);
-  animation: fade 0.2s ease;
-}
-.mkt-scope .modal-card {
-  position: relative;
-  width: min(560px, 100%);
-  max-height: 88vh;
-  overflow: auto;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 18px;
-  box-shadow: 0 40px 90px -30px rgba(20, 30, 20, 0.5);
-  animation: pop 0.22s cubic-bezier(0.2, 0.8, 0.3, 1);
-}
-.mkt-scope .modal-head {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  padding: 17px 22px;
-  border-bottom: 1px solid var(--color-border);
-  position: sticky;
-  top: 0;
-  background: var(--color-surface);
-  z-index: 1;
-}
-.mkt-scope .mh-title {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 14.5px;
-  letter-spacing: -0.01em;
-}
-.mkt-scope .mh-sub {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  color: var(--color-muted);
-  letter-spacing: 0.04em;
-}
-.mkt-scope .modal-x {
-  position: absolute;
-  top: 13px;
-  right: 14px;
-  z-index: 3;
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  border: none;
-  background: var(--color-surface-container-low);
-  color: var(--color-text-secondary);
-  border-radius: 9px;
-  cursor: pointer;
-  transition:
-    background-color 0.15s,
-    color 0.15s;
-}
-.mkt-scope .modal-x:hover {
-  background: var(--color-surface-container-high);
-  color: var(--color-text);
-}
-.mkt-scope .modal-body {
-  padding: 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-@keyframes fade {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-@keyframes pop {
-  from {
-    opacity: 0;
-    transform: translateY(10px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
 /* footer */
 .mkt-scope .footer {
   padding: 56px 0 40px;
@@ -796,6 +689,9 @@
   .mkt-scope .cit-grid {
     grid-template-columns: 1fr;
     gap: 36px;
+  }
+  .mkt-scope .cit-copy {
+    position: static;
   }
   .mkt-scope .feature {
     grid-template-columns: 1fr;

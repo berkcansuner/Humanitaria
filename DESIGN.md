@@ -284,3 +284,4 @@ Quiet at rest, a ledger when opened (`SourceList.vue`, a native `<details>`).
 - **Don't** build a section from same-size cards of icon tile, heading and text; use headed rows or paragraphs separated by hairlines.
 - **Don't** add decorative green glows, ring patterns, glass blur, or gradient fade lines.
 - **Don't** hide content behind scroll-triggered fade-ins; everything is visible at rest, and the landing hero's underline on "cite." is the page's one authored motion.
+- **Don't** put content in a modal when it needs neither interruption nor protected focus; the landing sample answer sits inline in the citations section.
