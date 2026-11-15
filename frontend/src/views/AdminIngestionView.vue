@@ -1,6 +1,6 @@
 <template>
   <div class="admin">
-    <AppTopbar context="Ingestion Admin" />
+    <AppTopbar context="Admin" />
 
     <main class="content">
       <div v-if="forbidden" class="card error-card" role="alert">
@@ -126,8 +126,8 @@
           <section class="card">
             <div class="card-head">
               <h2>Reports</h2>
-              <span :class="['state', { 'state-on': docComputing }]">
-                <span class="dot" aria-hidden="true"></span>{{ docComputing ? 'Building' : 'Idle' }}
+              <span v-if="docComputing" class="state state-on">
+                <span class="dot" aria-hidden="true"></span>Building
               </span>
             </div>
             <p class="muted">
@@ -187,7 +187,7 @@
                 </table>
               </div>
 
-              <div class="doc-pager">
+              <div v-if="docPageCount > 1" class="doc-pager">
                 <button class="pager-btn" :disabled="docOffset === 0" @click="prevPage">
                   Prev
                 </button>

@@ -128,6 +128,10 @@ body {
   color: var(--color-text);
 }
 
+:root:has(.settings, .admin) {
+  scrollbar-gutter: stable;
+}
+
 :root {
   scrollbar-color: color-mix(in oklch, var(--color-outline) 45%, transparent) transparent;
 }

@@ -182,7 +182,7 @@
         </div>
         <div v-else class="report-empty">
           <FileText :size="40" />
-          <p>Generate a situation report, or open a saved one.</p>
+          <p>Generate a report, or open a saved one.</p>
         </div>
       </main>
     </div>
@@ -701,12 +701,12 @@ function onCiteClick(e) {
   flex-direction: column;
   gap: 4px;
 }
+/* Same label as Settings and Admin. Small text on the Reading Room rail uses
+   Graphite: Margin Gray is 4.35:1 there, just under AA. */
 .field > span {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
 }
 .field-row {
   display: flex;
@@ -766,7 +766,7 @@ function onCiteClick(e) {
 
 .form-hint {
   font-size: var(--text-xs);
-  color: var(--color-muted);
+  color: var(--color-text-secondary);
 }
 
 .saved {
@@ -775,11 +775,10 @@ function onCiteClick(e) {
   gap: var(--space-2);
 }
 .saved-title-h {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-muted);
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--color-text);
 }
 .saved-list {
   list-style: none;
@@ -831,7 +830,7 @@ function onCiteClick(e) {
   font-family: var(--font-mono);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
-  color: var(--color-muted);
+  color: var(--color-text-secondary);
 }
 .saved-del {
   flex-shrink: 0;

@@ -55,6 +55,9 @@
       </template>
     </template>
     <li v-else-if="hasQuery" class="conv-section-label conv-empty">No results</li>
+    <li v-else-if="!loading" class="conv-none">
+      No conversations yet. Your questions and answers will be kept here.
+    </li>
   </ul>
 </template>
 
@@ -114,7 +117,7 @@ function cancelRename() {
   font-size: 10px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--color-muted);
+  color: var(--color-text-secondary);
   padding: var(--space-2) var(--space-2) var(--space-1);
 }
 
@@ -122,6 +125,13 @@ function cancelRename() {
   opacity: 0.7;
   text-transform: none;
   letter-spacing: 0;
+}
+
+.conv-none {
+  padding: var(--space-2);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--color-text-secondary);
 }
 
 .conv-skeleton-item {

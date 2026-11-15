@@ -46,7 +46,7 @@ const routes = [
     path: '/admin/ingestion',
     name: 'admin-ingestion',
     component: () => import('../views/AdminIngestionView.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true, title: 'Ingestion admin' },
+    meta: { requiresAuth: true, requiresAdmin: true, title: 'Admin' },
   },
   // Unknown paths fall back to the landing page.
   { path: '/:pathMatch(.*)*', redirect: '/' },

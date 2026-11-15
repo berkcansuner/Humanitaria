@@ -57,7 +57,7 @@
         </table>
       </div>
 
-      <div class="users-pager">
+      <div v-if="pageCount > 1" class="users-pager">
         <button class="pager-btn" :disabled="offset === 0" @click="prevPage">Prev</button>
         <span class="pager-info">Page {{ page }} of {{ pageCount }}</span>
         <button class="pager-btn" :disabled="page >= pageCount" @click="nextPage">Next</button>
