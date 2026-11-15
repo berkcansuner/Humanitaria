@@ -395,7 +395,7 @@ import { splitReportTitle } from '../utils/reportTitle.js'
 import { groupSeries, seriesKey } from '../utils/reportSeries.js'
 import { nextPeriod } from '../utils/nextPeriod.js'
 import { copyWithSources } from '../utils/citationCopy.js'
-import { minReportDate, maxReportDate } from '../utils/reportDateBounds.js'
+import { localIsoDay, minReportDate, maxReportDate } from '../utils/reportDateBounds.js'
 import { handleSessionExpired } from '../utils/authStore.js'
 
 // Prod retains ~1 year of data; clamp the date pickers to [one year ago, today]
@@ -451,14 +451,13 @@ const controller = ref(null)
 const pdfLoading = ref(false)
 const pdfError = ref('')
 
-const _iso = (d) => d.toISOString().slice(0, 10)
-
+// Default period: the last three months, in local calendar days (like the bounds).
 function setDefaultDates() {
   const to = new Date()
   const from = new Date()
   from.setMonth(from.getMonth() - 3)
-  form.value.date_from = _iso(from)
-  form.value.date_to = _iso(to)
+  form.value.date_from = localIsoDay(from)
+  form.value.date_to = localIsoDay(to)
 }
 
 // Titles carry "[Type —] Country · Sector · period"; the country leads, the rest
