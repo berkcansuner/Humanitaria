@@ -4,8 +4,20 @@
 
     <div :class="['reports-body', { 'has-report': !!(current || openingId) }]">
       <aside class="reports-aside">
-        <form class="report-form" @submit.prevent="generate">
-          <h2 class="form-title">New report</h2>
+        <!-- With saved reports, the form waits behind one button so the library
+             is in view; Run next period and generation open it. -->
+        <button
+          v-if="!showForm"
+          ref="newReportBtn"
+          type="button"
+          class="new-report-btn"
+          @click="openForm"
+        >
+          <Plus :size="16" aria-hidden="true" />
+          New report
+        </button>
+        <form v-else class="report-form" @submit.prevent="generate">
+          <h2 ref="formTitle" class="form-title" tabindex="-1">New report</h2>
 
           <label class="field">
             <span>Report type</span>
@@ -392,6 +404,7 @@ import {
   ChevronRight,
   CalendarPlus,
   Square,
+  Plus,
 } from 'lucide-vue-next'
 import AppTopbar from '../components/AppTopbar.vue'
 import SourceList from '../components/SourceList.vue'
@@ -558,6 +571,7 @@ async function loadList() {
   loadingList.value = true
   try {
     reports.value = (await listReports()).reports || []
+    listLoaded.value = true
   } catch (e) {
     console.error('Failed to load reports:', e)
     showNotice('Could not load your saved reports. Try refreshing the page.')
@@ -717,10 +731,29 @@ const continuationNotes = computed(() => {
   return { endClamped: same && c.endClamped, startClamped: same && c.startClamped }
 })
 
+// The "New report" form: open for a first-time user (no saved reports), while a
+// next period is being set up or generated, or once the user asks for it.
+const formOpen = ref(false)
+const listLoaded = ref(false)
+const newReportBtn = ref(null)
+const formTitle = ref(null)
+const showForm = computed(
+  () =>
+    formOpen.value ||
+    !!continuation.value ||
+    generating.value ||
+    (listLoaded.value && !reports.value.length),
+)
+function openForm() {
+  formOpen.value = true
+  nextTick(() => formTitle.value && formTitle.value.focus())
+}
+
 function runNextPeriod() {
   const rep = seriesLatest.value
   const s = nextSuggestion.value
   if (!rep || !s || s.notStarted || generating.value) return
+  formOpen.value = true // stays open if the user then makes it a one-off
   form.value = {
     report_type: rep.report_type || 'situation',
     country: rep.country || '',
@@ -820,6 +853,7 @@ function scrollViewerBottom() {
 async function generate() {
   if (!form.value.country || generating.value) return
   generating.value = true
+  formOpen.value = true // the form stays put when the report is saved
   // Generate is replaced by Stop; keep keyboard focus on the control that is there.
   nextTick(() => stopBtn.value && stopBtn.value.focus())
   genError.value = ''
@@ -1032,6 +1066,37 @@ function onCiteClick(e) {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+/* The collapsed form: DESIGN's secondary button, full rail width. */
+.new-report-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 10px;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+}
+.new-report-btn:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+.new-report-btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.form-title:focus {
+  outline: none;
 }
 .form-title {
   font-family: var(--font-display);
