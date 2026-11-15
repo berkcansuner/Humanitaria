@@ -121,7 +121,7 @@
         <Send :size="20" />
       </button>
     </form>
-    <p class="composer-hint">Responses are generated from real humanitarian reports.</p>
+    <p class="composer-hint">Answers cite the reports they draw on · Shift+Enter for a new line</p>
   </div>
 </template>
 
@@ -838,11 +838,18 @@ watch(
   overflow-y: auto;
 }
 
+/* The whole composer bar shows focus (.input-area:focus-within); the global
+   text-field ring (style.css) on the textarea inside it doubled the ring. */
+.chat-input:focus-visible {
+  box-shadow: none;
+}
+
 .chat-input::placeholder {
   color: var(--color-muted);
   font-style: italic;
 }
 
+/* Full Margin Gray (no extra fade) keeps the hint at AA contrast. */
 .composer-hint {
   text-align: center;
   font-size: 11px;
@@ -850,7 +857,6 @@ watch(
   margin-top: var(--space-2);
   font-family: var(--font-mono);
   letter-spacing: 0.02em;
-  opacity: 0.75;
 }
 
 .send-btn {
@@ -879,8 +885,10 @@ watch(
   transform: scale(0.94);
 }
 
+/* Nothing to send yet: a neutral fill, not a faded green that reads as broken. */
 .send-btn:disabled {
-  opacity: 0.5;
+  background-color: var(--color-surface-container-high);
+  color: var(--color-muted);
   cursor: not-allowed;
 }
 
