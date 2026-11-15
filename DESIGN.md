@@ -98,11 +98,14 @@ components:
     rounded: "{rounded.bubble}"
     padding: "6px 6px 6px 16px"
   citation-chip:
-    backgroundColor: "{colors.citation-mist}"
-    textColor: "{colors.field-green}"
+    backgroundColor: "transparent"
+    textColor: "{colors.graphite}"
     typography: "{typography.citation}"
     rounded: "5px"
     height: "18px"
+  citation-chip-hover:
+    backgroundColor: "{colors.field-green}"
+    textColor: "{colors.on-green}"
   message-user:
     backgroundColor: "{colors.charcoal}"
     textColor: "{colors.on-green}"
@@ -239,9 +242,11 @@ Refined and restrained: a solid green primary, quiet secondaries, no shadow.
 - **Target:** under The Quiet Archive the user bubble moves to a quiet Shelf Gray fill with Archive Ink text, so the question does not outweigh the answer.
 
 ### Citation Chip (signature)
-Every claim's `[n]` reference.
-- **Today:** 18px mono chip, Field Green on Citation Mist, 5px radius; hover inverts to green fill with white number. Activating one flashes and marks its source.
-- **Target:** quiet at rest: transparent ground, Clay Gray number, 1px Paper Edge outline. Hover and focus bring back the green fill, so the link to the source is always one gesture away.
+Every claim's `[n]` reference, quiet at rest so the answer reads first.
+- **Rest:** 18px mono chip with tabular figures, transparent ground, Graphite number, 1px Paper Edge outline, 5px radius. Graphite rather than Clay Gray keeps the number at ≥4.5:1 contrast.
+- **Hover / focus:** Field Green fill and border with the number in On Green, so the link to the source is always one gesture away.
+- **Activate:** reveals and marks its source (see Sources).
+- **Exception:** the landing page's sample answer (`.mkt-scope .cite`) keeps its green chip; it is a marketing surface showing citations off.
 
 ### Sources (signature)
 - **Today:** always open under the answer: "SOURCES (n)" header, then one row per source with mono `[n]`, a Field Green title link with an external-link icon, and muted metadata.

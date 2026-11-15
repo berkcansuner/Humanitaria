@@ -252,7 +252,10 @@ select:focus-visible {
 
 /* Citation chips ([n]) injected into rendered markdown by renderMarkdown().
    Global because the element is created in v-html content — used by both the chat
-   answers (.message-content) and the M&E reports (.report-content). */
+   answers (.message-content) and the M&E reports (.report-content).
+   Quiet Archive: outlined and neutral at rest so the answer reads first; hover and
+   keyboard focus bring back the green, so the source stays one gesture away.
+   The number uses text-secondary (not muted) to keep ≥4.5:1 contrast. */
 .cite {
   display: inline-flex;
   align-items: center;
@@ -264,18 +267,23 @@ select:focus-visible {
   font-family: var(--font-mono);
   font-size: 10.5px;
   font-weight: 600;
-  color: var(--color-accent);
-  background-color: var(--color-accent-soft);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+  background-color: transparent;
+  border: 1px solid var(--color-border);
   border-radius: 5px;
   text-decoration: none;
   vertical-align: text-top;
   cursor: pointer;
   transition:
     background-color 0.15s,
+    border-color 0.15s,
     color 0.15s;
 }
 
-.cite:hover {
+.cite:hover,
+.cite:focus-visible {
   background-color: var(--color-accent);
+  border-color: var(--color-accent);
   color: var(--color-on-accent);
 }
