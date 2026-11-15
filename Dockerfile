@@ -1,7 +1,7 @@
 # Multi-stage: build the Vue SPA, then serve API + built SPA from one FastAPI app.
 
 # ---- Stage 1: build the Vue frontend ----
-FROM node:20-slim AS frontend
+FROM node:24-slim AS frontend
 WORKDIR /frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
