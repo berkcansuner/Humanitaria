@@ -186,7 +186,8 @@ Dark theme redefines every color token under `:root[data-theme='dark']` in `fron
 
 ### Hierarchy
 - **Display** (700, clamp(38px, 4.4vw, 56px), 1.04): landing-page hero only.
-- **Headline** (700, 1.125rem, 1.15, −0.02em): app brand title, page and report titles.
+- **Headline** (700, 1.125rem, 1.15, −0.02em): app brand title and page titles.
+- **Document title** (700, 1.5rem, 1.15, −0.02em): a report's title (its country), one step above the report's own 1.25rem section heads, with type · sector · period beneath in mono 12px.
 - **Title** (600, 0.75rem, uppercase, 0.05em): small section headers such as the sources header.
 - **Body** (400, 1rem, 1.6): messages and reports. Assistant answers cap at 70ch.
 - **Label** (mono 400, 10–11px, uppercase, 0.14–0.18em): the brand subtitle, eyebrows, the composer hint.
@@ -205,7 +206,7 @@ Spacing follows an 8px base grid (`--space-1` 4px through `--space-12` 80px). Me
 
 Breakpoints are written as needed, not as a fixed scale: 640px is the main one (sidebar becomes a drawer, bubbles widen, radii tighten), with 480px, 560px, 760px, and 900px used on the landing page.
 
-**The Reading Measure Rule.** Answer and report text never runs wider than 70ch, whatever the window width.
+**The Reading Measure Rule.** Answer and report text never runs wider than 70ch, whatever the window width. In the report viewer the whole column (header, text, Sources) shares one 70ch measure set at body size, so smaller-type blocks never shrink or drift.
 
 ## Elevation & Depth
 

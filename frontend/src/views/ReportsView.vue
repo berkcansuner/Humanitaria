@@ -97,14 +97,14 @@
               :key="r.id"
               :class="['saved-item', { active: current && current.id === r.id }]"
             >
-              <button type="button" class="saved-open" @click="openReport(r.id)">
-                <span class="saved-name">{{ r.title }}</span>
-                <span class="saved-meta">
-                  {{ fmtDate(r.created_at) }} · {{ r.doc_count }} reports
-                  <span v-if="reportTypeBadge(r.report_type)" class="type-badge saved-type-badge">{{
-                    reportTypeBadge(r.report_type)
-                  }}</span>
-                </span>
+              <button type="button" class="saved-open" :title="r.title" @click="openReport(r.id)">
+                <span class="saved-name">{{ savedName(r) }}</span>
+                <span class="saved-meta"
+                  >{{ savedType(r)
+                  }}<template v-if="savedPeriod(r)">
+                    · <span class="saved-period">{{ savedPeriod(r) }}</span></template
+                  ></span
+                >
               </button>
               <button
                 type="button"
@@ -121,23 +121,29 @@
       </aside>
 
       <main ref="viewer" class="report-main" @click="onCiteClick">
-        <template v-if="current">
+        <!-- One reading column: every block shares its 70ch measure (set at body size),
+             so the Sources line and the header align with the text. -->
+        <div v-if="current" class="report-column">
           <img v-if="current.cover_image" class="cover-img" :src="current.cover_image" alt="" />
           <p v-if="current.imagesStatus" class="images-status">{{ current.imagesStatus }}</p>
-          <div class="report-header">
-            <h2 v-if="current.title" class="report-title-h">{{ current.title }}</h2>
-            <span v-if="reportTypeBadge(current.report_type)" class="type-badge">{{
-              reportTypeBadge(current.report_type)
-            }}</span>
-          </div>
-          <div v-if="current.id" class="report-toolbar">
-            <button type="button" class="pdf-btn" :disabled="pdfLoading" @click="downloadPdf">
+          <header v-if="titleParts.heading || current.id" class="report-head">
+            <div class="report-head-text">
+              <h2 v-if="titleParts.heading" class="report-title-h">{{ titleParts.heading }}</h2>
+              <p v-if="reportMeta" class="report-meta">{{ reportMeta }}</p>
+            </div>
+            <button
+              v-if="current.id"
+              type="button"
+              class="pdf-btn"
+              :disabled="pdfLoading"
+              @click="downloadPdf"
+            >
               <Loader2 v-if="pdfLoading" :size="15" class="spin" />
               <FileDown v-else :size="15" />
               {{ pdfLoading ? 'Preparing…' : 'Download PDF' }}
             </button>
-            <span v-if="pdfError" class="pdf-error">{{ pdfError }}</span>
-          </div>
+          </header>
+          <p v-if="pdfError" class="pdf-error">{{ pdfError }}</p>
           <div v-if="!current.content && generating" class="report-loading">
             <span class="skeleton skel-line"></span>
             <span class="skeleton skel-line"></span>
@@ -155,7 +161,7 @@
           ></article>
           <div v-if="genError" class="error-banner"><AlertCircle :size="16" /> {{ genError }}</div>
           <SourceList v-if="current.sources" :sources="current.sources" />
-        </template>
+        </div>
         <div v-else class="report-empty">
           <FileText :size="40" />
           <p>Generate a situation report, or open a saved one.</p>
@@ -188,6 +194,7 @@ import { revealSource } from '../utils/sources.js'
 import { parseSSE } from '../utils/parseSSE.js'
 import { getReportOptions, listReports, getReport, deleteReport } from '../utils/reportsApi.js'
 import { REPORT_TYPES, reportTypeBadge } from '../utils/reportTypes.js'
+import { splitReportTitle } from '../utils/reportTitle.js'
 import { minReportDate, maxReportDate } from '../utils/reportDateBounds.js'
 import { handleSessionExpired } from '../utils/authStore.js'
 
@@ -231,10 +238,31 @@ function setDefaultDates() {
   form.value.date_to = _iso(to)
 }
 
-function fmtDate(iso) {
-  if (!iso) return ''
-  return iso.slice(0, 10)
+// Titles carry "[Type —] Country · Sector · period"; the country leads, the rest
+// moves to a mono meta line (type as text, not a pill).
+function typeLabel(type) {
+  return (REPORT_TYPES.find((t) => t.value === type) || REPORT_TYPES[0]).label
 }
+
+function savedName(r) {
+  const { heading, sector } = splitReportTitle(r.title)
+  return sector && sector !== 'All sectors' ? `${heading} · ${sector}` : heading
+}
+
+function savedType(r) {
+  return reportTypeBadge(r.report_type) || 'Situation'
+}
+
+function savedPeriod(r) {
+  return splitReportTitle(r.title).period
+}
+
+const titleParts = computed(() => splitReportTitle(current.value && current.value.title))
+const reportMeta = computed(() => {
+  if (!current.value || !current.value.title) return ''
+  const { sector, period } = titleParts.value
+  return [typeLabel(current.value.report_type), sector, period].filter(Boolean).join(' · ')
+})
 
 onMounted(async () => {
   setDefaultDates()
@@ -730,8 +758,13 @@ function onCiteClick(e) {
   color: var(--color-accent);
   font-weight: 600;
 }
+.saved-period {
+  white-space: nowrap;
+}
 .saved-meta {
+  font-family: var(--font-mono);
   font-size: 11px;
+  font-variant-numeric: tabular-nums;
   color: var(--color-muted);
 }
 .saved-del {
@@ -782,45 +815,49 @@ function onCiteClick(e) {
   scroll-behavior: smooth;
 }
 
-.report-header {
-  max-width: 75ch;
-  margin: 0 auto var(--space-3);
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
+.report-column {
+  max-width: 70ch;
+  margin: 0 auto;
+  font-size: var(--text-base);
 }
+.report-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+.report-head-text {
+  min-width: 0;
+}
+/* Document title: one clear step above the report's own section heads (xl). */
 .report-title-h {
   font-family: var(--font-display);
-  font-size: var(--text-lg);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
   color: var(--color-text);
+  text-wrap: balance;
   margin: 0;
 }
-.type-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 9px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--color-accent);
-  background-color: var(--color-surface-container);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
-  white-space: nowrap;
-}
-.saved-type-badge {
-  margin-left: 6px;
+.report-meta {
+  margin: 6px 0 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
 }
 .cover-img {
   display: block;
-  max-width: 75ch;
   width: 100%;
-  margin: 0 auto var(--space-4);
+  margin: 0 0 var(--space-4);
   border-radius: var(--radius-lg);
 }
 .images-status {
-  max-width: 75ch;
-  margin: 0 auto var(--space-2);
+  margin: 0 0 var(--space-2);
   font-size: var(--text-sm);
   color: var(--color-muted);
   font-style: italic;
@@ -832,15 +869,8 @@ function onCiteClick(e) {
   border-radius: var(--radius-md);
 }
 
-.report-toolbar {
-  max-width: 75ch;
-  margin: 0 auto var(--space-3);
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-2);
-}
 .pdf-btn {
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
@@ -869,13 +899,13 @@ function onCiteClick(e) {
   cursor: default;
 }
 .pdf-error {
+  margin: calc(-1 * var(--space-3)) 0 var(--space-4);
+  text-align: right;
   font-size: var(--text-xs);
   color: var(--color-error);
 }
 
 .report-content {
-  max-width: 75ch;
-  margin: 0 auto;
   font-family: var(--font-body);
   font-size: var(--text-base);
   line-height: 1.65;
@@ -925,8 +955,6 @@ function onCiteClick(e) {
 }
 
 .report-loading {
-  max-width: 75ch;
-  margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -952,8 +980,7 @@ function onCiteClick(e) {
 }
 
 .error-banner {
-  max-width: 75ch;
-  margin: var(--space-4) auto 0;
+  margin: var(--space-4) 0 0;
   padding: var(--space-3) var(--space-4);
   background-color: var(--color-error-bg);
   color: var(--color-error);
@@ -962,12 +989,6 @@ function onCiteClick(e) {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-}
-
-.report-main :deep(.sources) {
-  max-width: 75ch;
-  margin-left: auto;
-  margin-right: auto;
 }
 
 .spin {

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-15T13:49:56+00:00",
+  "generatedAt": "2026-11-15T13:57:13+00:00",
   "title": "Design System: Humanitaria",
   "extensions": {
     "colorMeta": {
@@ -477,7 +477,7 @@
       },
       {
         "name": "The Reading Measure Rule",
-        "body": "Answer and report text never runs wider than 70ch, whatever the window width.",
+        "body": "Answer and report text never runs wider than 70ch, whatever the window width. In the report viewer the whole column (header, text, Sources) shares one 70ch measure set at body size, so smaller-type blocks never shrink or drift.",
         "section": "layout"
       },
       {
