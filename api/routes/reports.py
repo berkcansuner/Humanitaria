@@ -246,7 +246,9 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                     report_type=req.report_type,
                 )
                 if previous:
-                    directive += build_comparison_block(previous, req.language, req.report_type)
+                    directive += build_comparison_block(
+                        previous, req.language, req.report_type, req.date_from, req.date_to
+                    )
                 chain = build_report_chain(req.report_type)
 
                 full = ""
@@ -301,7 +303,9 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                 report_type=req.report_type,
             )
             if previous:
-                directive += build_comparison_block(previous, req.language, req.report_type)
+                directive += build_comparison_block(
+                    previous, req.language, req.report_type, req.date_from, req.date_to
+                )
             chain = build_report_chain(req.report_type)
 
             full = ""

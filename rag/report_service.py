@@ -290,19 +290,27 @@ _CITE_MARKER = re.compile(r"\s*\[\d+\]")
 
 
 def build_comparison_block(previous: dict, language: str,
-                           report_type: str = "situation") -> str:
+                           report_type: str = "situation",
+                           date_from: Optional[str] = None,
+                           date_to: Optional[str] = None) -> str:
     """Directive addendum for a next-period report: write a "What changed" section
     against ``previous`` (a stored report row).
 
     The previous report is comparison material, NOT a source. Its [n] markers are
     stripped: they index the old report's source list, and a copied marker would be
     renumbered onto an unrelated current source by normalize_citations.
+
+    ``date_from``/``date_to`` are the NEW report's period. The model needs it to
+    tell a change from an older event that a current document happens to describe
+    (live check 2026-11-15: an annual report for 2025 and an update on a 2025
+    earthquake were set beside the previous report's 2026 figures as changes).
     """
     heading = COMPARISON_HEADINGS.get((language or "en").lower(), COMPARISON_HEADINGS["en"])
     opening = _OPENING_SECTION.get(report_type, _OPENING_SECTION["situation"])
     period = (f"{previous.get('date_from') or 'unspecified'} to "
               f"{previous.get('date_to') or 'unspecified'}")
-    text = _CITE_MARKER.sub("", previous.get("content") or "").strip()
+    new_period = f"{date_from or 'unspecified'} to {date_to or 'unspecified'}"
+    text =_CITE_MARKER.sub("", previous.get("content") or "").strip()
     if len(text) > PREVIOUS_REPORT_MAX_CHARS:
         text = text[:PREVIOUS_REPORT_MAX_CHARS] + "\n[… previous report truncated]"
 
@@ -328,6 +336,15 @@ def build_comparison_block(previous: dict, language: str,
         f"comparing the current Context with the previous report. {new_values} Compare "
         "only what both periods report; if the previous report did not cover something, "
         "say it is new rather than inferring a change. If nothing material changed, say so.\n"
+        f"LIKE WITH LIKE: this report covers {new_period}. A change is the SAME indicator "
+        "(the same measure, for the same population and place) at a later reference time "
+        "than in the previous report. Use each figure's own reference date or year, not its "
+        "publication date: a document published in this period can describe an earlier year "
+        "(an annual report for a past year) or an earlier event (an update on an old "
+        "disaster). A figure from an earlier year or event is background, not a change: "
+        "leave it out of this section, and never set two figures for different years, or two "
+        "different events, side by side as if one replaced the other. A risk or event counts "
+        f"as new only if it happened or was first reported in {new_period}.\n"
         f"The previous report below is NOT a source: {not_a_source}, never treat "
         "its claims as current, and do not copy its wording into other sections.\n"
         f"--- PREVIOUS REPORT ({period}) ---\n{text}\n--- END OF PREVIOUS REPORT ---"

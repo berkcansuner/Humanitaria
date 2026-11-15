@@ -83,6 +83,7 @@ def test_next_period_report_gets_comparison_and_stores_link():
     assert "What changed since the last report" in question
     assert "Needs stood at 2 million" in question
     assert "2026-04-01 to 2026-06-30" in question
+    assert "this report covers 2026-07-01 to 2026-09-30" in question  # the new period
     # the previous report is comparison material, not one of the [n] sources
     assert "Needs stood at 2 million" not in seen[0]["context"]
     rid = _saved_id(resp)

@@ -72,3 +72,20 @@ def test_technical_type_does_not_ask_for_citations():
 def test_missing_period_is_said_plainly():
     block = build_comparison_block(_prev(date_from=None, date_to=None), "en")
     assert "unspecified" in block
+
+
+def test_block_names_the_new_period_when_given():
+    """Without the new period the model cannot tell a new event from an old one
+    that a current document happens to mention."""
+    block = build_comparison_block(_prev(), "en", date_from="2026-07-15", date_to="2026-11-15")
+    assert "2026-07-15 to 2026-11-15" in block
+
+
+def test_block_requires_like_with_like_comparison():
+    """Live check 2026-11-15: an annual report for 2025 and an update on a 2025
+    earthquake (both published in the new period) were set beside the previous
+    report's 2026 figures as if they were changes."""
+    block = build_comparison_block(_prev(), "en", date_from="2026-07-15", date_to="2026-11-15")
+    assert "LIKE WITH LIKE" in block
+    assert "not its publication date" in block
+    assert "earlier year or event is background, not a change" in block
