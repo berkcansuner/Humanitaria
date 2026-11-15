@@ -543,7 +543,8 @@ async function generate() {
   } catch (e) {
     if (e?.name !== 'AbortError') {
       console.error('Report stream error:', e)
-      genError.value = 'Connection lost. Please try again.'
+      genError.value =
+        "Couldn't reach the server. It may be waking up (about 30 seconds); generate again."
     }
   } finally {
     generating.value = false

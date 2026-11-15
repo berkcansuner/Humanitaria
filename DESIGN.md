@@ -240,7 +240,7 @@ Refined and restrained: a solid green primary, quiet secondaries, no shadow.
 - **Assistant:** white bubble with a Paper Edge border, left-aligned, answer text capped at 70ch.
 - **Waiting:** before the first token arrives, two shimmering skeleton lines (the shared `.skeleton` utility) stand in for the answer; no bouncing dots.
 - **Quotes:** quoted report text sits on a Reading Room fill with a 6px radius and Graphite text.
-- **Error:** Alert Blush ground, a 1px border tinted from Alert Red, 6px radius, and the alert icon.
+- **Error:** Alert Blush ground, a 1px border tinted from Alert Red, 6px radius, and the alert icon. The message says what happened (a connection failure names the free-tier wake-up, about 30 s), and on the last turn an outlined "Try again" resends the question in place.
 - **Empty chat:** no logo tile or card grid. A left-aligned 560px column: the promise as a 1.5rem title ("Ask the humanitarian record."), one Graphite line saying answers cite their reports, a mono Label line with coverage and freshness, then example questions as hairline-ruled rows (no lift on hover), and a quiet link to M&E reports.
 
 ### Citation Chip (signature)

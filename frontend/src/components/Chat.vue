@@ -67,7 +67,18 @@
                 ></div>
                 <div v-if="msg.error" class="error-banner">
                   <AlertCircle :size="16" class="error-icon" />
-                  {{ msg.error }}
+                  <span class="error-text">{{ msg.error }}</span>
+                  <!-- The failed answer is the last turn: resend its question in place
+                       (same path as Regenerate), instead of making the user retype it. -->
+                  <button
+                    v-if="idx === messages.length - 1 && !loading"
+                    type="button"
+                    class="retry-btn"
+                    @click="regenerate"
+                  >
+                    <RotateCcw :size="14" aria-hidden="true" />
+                    Try again
+                  </button>
                 </div>
                 <SuggestionCardIsland
                   v-if="msg.clarification && !msg.clarification.resolved"
@@ -128,7 +139,7 @@
 
 <script setup>
 import { ref, watch, nextTick, defineAsyncComponent } from 'vue'
-import { Send, AlertCircle, Square } from 'lucide-vue-next'
+import { Send, AlertCircle, Square, RotateCcw } from 'lucide-vue-next'
 import SourceList from './SourceList.vue'
 import EmptyState from './EmptyState.vue'
 import MessageActions from './MessageActions.vue'
@@ -147,11 +158,14 @@ import { findLastUserIndex, lastServerIdBefore, planResend } from '../utils/conv
 import { getMessages, truncateConversation } from '../utils/api.js'
 import { handleSessionExpired } from '../utils/authStore.js'
 
+// Each failure says what happened; the banner's "Try again" is the recovery.
+// The free-tier server sleeps when idle, so the first request after a pause is
+// the most likely to fail: say so instead of a generic "connection lost".
 const ERROR_MESSAGES = {
-  connection: 'Connection lost. Please try again.',
-  stream_interrupted: 'Response interrupted. Some content may be missing.',
-  empty_response: 'No response received. Please try again.',
-  sse_parse: 'Something went wrong. Please try again.',
+  connection: "Couldn't reach the server. It may be waking up, which can take about 30 seconds.",
+  stream_interrupted: 'The answer was cut off. Some content may be missing.',
+  empty_response: 'No answer came back.',
+  sse_parse: 'Something went wrong while answering.',
 }
 
 const props = defineProps({
@@ -788,6 +802,30 @@ watch(
   display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+
+.error-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.retry-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-error);
+  background: transparent;
+  border: 1px solid color-mix(in oklch, var(--color-error) 45%, transparent);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.retry-btn:hover {
+  background-color: color-mix(in oklch, var(--color-error) 10%, transparent);
 }
 
 .error-icon {
