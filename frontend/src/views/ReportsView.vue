@@ -175,7 +175,7 @@
                 <button
                   type="button"
                   class="saved-del"
-                  aria-label="Delete report"
+                  :aria-label="deleteLabel(e.report)"
                   @click.stop="onDelete(e.report.id)"
                 >
                   <Trash2 :size="13" />
@@ -240,7 +240,7 @@
                     <button
                       type="button"
                       class="saved-del"
-                      aria-label="Delete report"
+                      :aria-label="deleteLabel(r)"
                       @click.stop="onDelete(r.id)"
                     >
                       <Trash2 :size="13" />
@@ -500,6 +500,13 @@ function savedName(r) {
 
 function savedType(r) {
   return reportTypeBadge(r.report_type) || 'Situation'
+}
+
+// Each delete button names its report: a list of identical "Delete report"
+// buttons does not say which one a screen-reader user is about to remove.
+function deleteLabel(r) {
+  const period = savedPeriod(r)
+  return `Delete report: ${savedName(r)}, ${savedType(r)}${period ? `, ${period}` : ''}`
 }
 
 function savedPeriod(r) {
