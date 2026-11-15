@@ -1189,8 +1189,11 @@ function onCiteClick(e) {
 .generate-btn:active:not(:disabled) {
   transform: scale(0.98);
 }
+/* Disabled reads as off in both themes: a neutral shelf fill, not a faded green
+   (dark theme's bright green at 55% still looked live). */
 .generate-btn:disabled {
-  opacity: 0.55;
+  color: var(--color-muted);
+  background-color: var(--color-surface-container-high);
   cursor: not-allowed;
 }
 /* Stop while a report streams: Chat's Charcoal Stop (DESIGN, Buttons). */
