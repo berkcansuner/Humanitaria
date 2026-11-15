@@ -105,3 +105,24 @@ def test_block_forbids_comparing_different_reference_periods():
     previous report's "3.4 million over sixteen months"."""
     block = build_comparison_block(_prev(), "en", date_from="2026-07-15", date_to="2026-11-15")
     assert "different reference periods" in block
+
+
+def test_block_keeps_undated_figures_out_of_changes():
+    """Live check 4 (2026-11-15): "36 confirmed polio cases" (the source gives no
+    period) was called "a new specific health concern"."""
+    block = build_comparison_block(_prev(), "en", date_from="2026-07-15", date_to="2026-11-15")
+    assert "gives no reference date" in block
+
+
+def test_block_says_a_newly_quantified_figure_is_not_a_change():
+    """Live check 4: "per capita income has dropped by 5.6 per cent" (no period in
+    the source) was listed as a change because it was now given as a number."""
+    block = build_comparison_block(_prev(), "en", date_from="2026-07-15", date_to="2026-11-15")
+    assert "not a change in the situation" in block
+
+
+def test_block_requires_the_no_longer_reported_part():
+    """Live checks 3-4: what dropped out of the reporting appeared in one run and
+    not the next."""
+    block = build_comparison_block(_prev(), "en", date_from="2026-07-15", date_to="2026-11-15")
+    assert "Always say what is no longer reported" in block
