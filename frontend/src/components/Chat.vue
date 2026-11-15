@@ -567,9 +567,11 @@ watch(
   }
 }
 
+/* Quiet Archive: the question sits on a quiet shelf-gray fill so it never
+   outweighs the answer. The Stop button keeps the charcoal tertiary fill. */
 .message.user .message-bubble {
-  background-color: var(--color-tertiary);
-  color: var(--color-on-tertiary);
+  background-color: var(--color-surface-container);
+  color: var(--color-text);
   border-radius: 16px 4px 16px 16px;
 }
 

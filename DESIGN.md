@@ -107,8 +107,8 @@ components:
     backgroundColor: "{colors.field-green}"
     textColor: "{colors.on-green}"
   message-user:
-    backgroundColor: "{colors.charcoal}"
-    textColor: "{colors.on-green}"
+    backgroundColor: "{colors.shelf-gray}"
+    textColor: "{colors.archive-ink}"
     rounded: "{rounded.bubble}"
     padding: "12px 16px"
   message-assistant:
@@ -137,8 +137,6 @@ Density is moderate and generous with space. M&E staff spend long sessions here 
 
 The system explicitly rejects four looks: a generic AI chat clone, donation-campaign aesthetics, a dense enterprise dashboard, and news-site clutter.
 
-Status: the tokens and most components below describe the shipped interface. Items marked **Target** in Components are part of the chosen direction and are not built yet.
-
 **Key Characteristics:**
 - Warm paper ground, white reading surfaces, hairline borders.
 - One accent hue (green, hue 152) for actions, links, and citations; never decoration.
@@ -160,12 +158,12 @@ A warm-neutral paper palette with a single green voice.
 - **Archive Paper** (`archive-paper`): page ground.
 - **Clean Sheet** (`clean-sheet`): reading surfaces: assistant messages, inputs, cards.
 - **Reading Room** (`reading-room`): sidebar ground and low-emphasis panels.
-- **Shelf Gray / Shelf Gray Deep** (`shelf-gray`, `shelf-gray-deep`): hover and active fills for list rows; skeleton shimmer.
+- **Shelf Gray / Shelf Gray Deep** (`shelf-gray`, `shelf-gray-deep`): the user's message bubble; hover and active fills for list rows; skeleton shimmer.
 - **Archive Ink** (`archive-ink`): primary text.
 - **Graphite** (`graphite`): secondary text.
 - **Clay Gray** (`clay-gray`): muted text, placeholders, metadata, and input outlines in light theme. Its red-brown cast does not match the green-neutral family; dark theme already uses a neutral green-gray here. A neutral replacement is an open decision, not yet applied.
 - **Paper Edge** (`paper-edge`): borders and dividers.
-- **Charcoal** (`charcoal`): the user's message bubble and the Stop button.
+- **Charcoal** (`charcoal`): the Stop button while a reply streams.
 
 ### Semantic
 - **Alert Red / Alert Blush** (`alert-red`, `alert-blush`): error text and error banner ground.
@@ -237,9 +235,8 @@ Refined and restrained: a solid green primary, quiet secondaries, no shadow.
 - **Composer:** the chat input is a 16px-radius white bar with the send button inside; on focus the whole bar takes the green border and a 16% ring. Placeholder is italic Clay Gray.
 
 ### Messages
-- **User:** Charcoal bubble, white text, right-aligned.
+- **User:** quiet Shelf Gray bubble with Archive Ink text, right-aligned, so the question never outweighs the answer.
 - **Assistant:** white bubble with a Paper Edge border, left-aligned, answer text capped at 70ch.
-- **Target:** under The Quiet Archive the user bubble moves to a quiet Shelf Gray fill with Archive Ink text, so the question does not outweigh the answer.
 
 ### Citation Chip (signature)
 Every claim's `[n]` reference, quiet at rest so the answer reads first.

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-15T04:39:28+00:00",
+  "generatedAt": "2026-11-15T04:40:15+00:00",
   "title": "Design System: Humanitaria",
   "extensions": {
     "colorMeta": {
@@ -435,9 +435,9 @@
       "name": "Message Bubbles",
       "kind": "custom",
       "refersTo": "message-assistant",
-      "description": "Shipped: Charcoal user bubble, white bordered assistant bubble with a tight corner toward the speaker.",
+      "description": "Quiet Shelf Gray user bubble, white bordered assistant bubble, each with a tight corner toward the speaker.",
       "html": "<div class=\"ds-thread\"><div class=\"ds-msg-user\">What is the food security situation in Sudan?</div><div class=\"ds-msg-assistant\">Recent assessments describe acute food insecurity across several states.</div></div>",
-      "css": ".ds-thread{display:flex;flex-direction:column;gap:12px;font-family:var(--font-body);font-size:var(--text-base);line-height:1.6}.ds-msg-user{align-self:flex-end;max-width:80%;background:var(--color-tertiary);color:var(--color-on-tertiary);padding:12px 16px;border-radius:16px 4px 16px 16px}.ds-msg-assistant{align-self:flex-start;max-width:70ch;background:var(--color-surface);color:var(--color-text);border:1px solid var(--color-border);padding:12px 16px;border-radius:4px 16px 16px 16px}"
+      "css": ".ds-thread{display:flex;flex-direction:column;gap:12px;font-family:var(--font-body);font-size:var(--text-base);line-height:1.6}.ds-msg-user{align-self:flex-end;max-width:80%;background:var(--color-surface-container);color:var(--color-text);padding:12px 16px;border-radius:16px 4px 16px 16px}.ds-msg-assistant{align-self:flex-start;max-width:70ch;background:var(--color-surface);color:var(--color-text);border:1px solid var(--color-border);padding:12px 16px;border-radius:4px 16px 16px 16px}"
     },
     {
       "name": "Conversation Nav",
@@ -450,7 +450,7 @@
   ],
   "narrative": {
     "northStar": "The Quiet Archive",
-    "overview": "Humanitaria should feel like a reading room in a well-kept archive: calm, unhurried, and entirely about the material on the desk. The interface recedes so that the answer, and the report it came from, can be read without competition. Surfaces are warm paper and clean white separated by hairline edges; one green, used sparingly, marks what can be acted on or followed back to a source.\n\nDensity is moderate and generous with space. M&E staff spend long sessions here writing reports, so nothing flashes, pulses, or asks for attention it has not earned. Sources stay quiet at rest (a single line saying how many there are and who published them) and open into an orderly ledger (number, source, date) when the reader asks for them. The archive is quiet, not hidden: every citation is one click from its report.\n\nThe system explicitly rejects four looks: a generic AI chat clone, donation-campaign aesthetics, a dense enterprise dashboard, and news-site clutter.\n\nStatus: the tokens and most components below describe the shipped interface. Items marked **Target** in Components are part of the chosen direction and are not built yet.",
+    "overview": "Humanitaria should feel like a reading room in a well-kept archive: calm, unhurried, and entirely about the material on the desk. The interface recedes so that the answer, and the report it came from, can be read without competition. Surfaces are warm paper and clean white separated by hairline edges; one green, used sparingly, marks what can be acted on or followed back to a source.\n\nDensity is moderate and generous with space. M&E staff spend long sessions here writing reports, so nothing flashes, pulses, or asks for attention it has not earned. Sources stay quiet at rest (a single line saying how many there are and who published them) and open into an orderly ledger (number, source, date) when the reader asks for them. The archive is quiet, not hidden: every citation is one click from its report.\n\nThe system explicitly rejects four looks: a generic AI chat clone, donation-campaign aesthetics, a dense enterprise dashboard, and news-site clutter.",
     "keyCharacteristics": [
       "Warm paper ground, white reading surfaces, hairline borders.",
       "One accent hue (green, hue 152) for actions, links, and citations; never decoration.",
