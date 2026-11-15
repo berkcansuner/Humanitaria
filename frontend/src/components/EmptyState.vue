@@ -1,13 +1,12 @@
 <template>
-  <!-- First contact: say what the product promises (cited answers from a current
-       record) and offer M&E-shaped starting points, not a generic prompt grid. -->
+  <!-- First contact: say what the product promises (cited answers) and offer
+       M&E-shaped starting points, not a generic prompt grid. -->
   <div class="empty-state">
     <div class="empty-inner">
       <h2 class="empty-title">Ask the humanitarian record.</h2>
       <p class="empty-lede">
         Every answer cites the ReliefWeb reports it draws on, so you can check it and quote it.
       </p>
-      <p class="empty-coverage">ReliefWeb reports · last 12 months · updated daily</p>
 
       <ul class="prompt-list" aria-label="Example questions">
         <li v-for="p in prompts" :key="p">
@@ -17,11 +16,6 @@
           </button>
         </li>
       </ul>
-
-      <router-link to="/reports" class="report-link">
-        Need a structured deliverable? <span class="report-link-cta">Build an M&amp;E report</span>
-        <ArrowRight :size="14" aria-hidden="true" />
-      </router-link>
     </div>
   </div>
 </template>
@@ -73,15 +67,6 @@ const prompts = [
   color: var(--color-text-secondary);
 }
 
-.empty-coverage {
-  margin: var(--space-3) 0 0;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-muted);
-}
-
 .prompt-list {
   list-style: none;
   margin: var(--space-6) 0 0;
@@ -127,31 +112,9 @@ const prompts = [
   transform: translateX(2px);
 }
 
-.prompt-row:focus-visible,
-.report-link:focus-visible {
+.prompt-row:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
-}
-
-.report-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: var(--space-5);
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  text-decoration: none;
-  border-radius: var(--radius-sm);
-}
-
-.report-link-cta {
-  font-weight: 600;
-  color: var(--color-accent);
-}
-
-.report-link:hover .report-link-cta {
-  text-decoration: underline;
-  text-underline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
