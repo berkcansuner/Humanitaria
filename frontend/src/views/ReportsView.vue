@@ -531,13 +531,15 @@ async function loadList() {
 // bookmarks, new tabs and shared links work. A query, not /reports/:id: that
 // path is the JSON API (api/routes/reports.py) and would shadow the page on reload.
 
+// Returns the navigation promise (resolved at once when nothing changes), so a
+// caller can wait for the route watcher to settle.
 function syncUrl(id, { push = false } = {}) {
   const want = id || undefined
-  if ((route.query.report || undefined) === want) return
+  if ((route.query.report || undefined) === want) return Promise.resolve()
   const query = { ...route.query }
   if (want) query.report = want
   else delete query.report
-  ;(push ? router.push : router.replace)({ query })
+  return (push ? router.push : router.replace)({ query })
 }
 
 function closeReport() {
@@ -761,7 +763,11 @@ async function generate() {
   if (!form.value.country || generating.value) return
   generating.value = true
   genError.value = ''
-  syncUrl(null)
+  // Clear the open report from the URL BEFORE the request: the route watcher
+  // closes the viewer when ?report= disappears and nothing is generating, so a
+  // fast error (404/409/422) answered before the navigation settled used to
+  // close the viewer and hide its own message.
+  await syncUrl(null)
   current.value = {
     id: null,
     title: '',
