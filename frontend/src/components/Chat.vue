@@ -586,6 +586,12 @@ watch(
   max-width: 80%;
 }
 
+/* Answers take the whole column, as on Claude: about 736px of text. */
+.message.assistant .message-row {
+  max-width: 100%;
+  flex: 1;
+}
+
 @media (max-width: 640px) {
   .message-row {
     max-width: 92%;
@@ -599,8 +605,8 @@ watch(
 
 .message-bubble {
   padding: 12px 16px;
-  border-radius: 16px;
-  line-height: 1.6;
+  border-radius: 12px;
+  line-height: 21px;
 }
 
 @media (max-width: 640px) {
@@ -615,13 +621,13 @@ watch(
 .message.user .message-bubble {
   background-color: var(--color-surface-container);
   color: var(--color-text);
-  border-radius: 16px 4px 16px 16px;
+  border-radius: 12px;
 }
 
 .message.assistant .message-bubble {
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 4px 16px 16px 16px;
+  border-radius: 12px;
 }
 
 /* Message-history skeleton: neutral placeholder bubbles with shimmering lines,
@@ -652,15 +658,16 @@ watch(
   width: 55%;
 }
 
+/* Claude's message type: 15px on a 21px line. Questions in the interface sans,
+   answers in the reading serif. */
 .message-content {
   font-family: var(--font-body);
-  font-size: var(--text-base);
-  line-height: 1.6;
+  font-size: 15px;
+  line-height: 21px;
 }
 
-/* Cap answer line length at a comfortable reading measure on wide screens. */
 .message.assistant .message-content {
-  max-width: 70ch;
+  font-family: var(--font-serif);
 }
 
 .message-content :deep(p) {
@@ -855,7 +862,7 @@ watch(
   gap: 6px;
   padding: 6px 6px 6px 16px;
   border: 1px solid var(--color-outline);
-  border-radius: 16px;
+  border-radius: 14px;
   background-color: var(--color-surface);
   transition:
     border-color 0.15s,
@@ -873,7 +880,7 @@ watch(
   padding: 8px 4px;
   font-family: var(--font-body);
   font-size: 15px;
-  line-height: 1.5;
+  line-height: 21px;
   border: none;
   background-color: transparent;
   color: var(--color-text);
