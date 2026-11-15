@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-15T21:35:42+00:00",
+  "generatedAt": "2026-11-15T23:05:49+00:00",
   "title": "Design System: Humanitaria",
   "extensions": {
     "colorMeta": {
@@ -333,6 +333,10 @@
       "citation": {
         "displayName": "Citation",
         "purpose": "[n] chips and source numbers."
+      },
+      "reading": {
+        "displayName": "Reading",
+        "purpose": "Chat answers and report text: Source Serif 4 at 15px / 21px (Claude's message size)."
       }
     },
     "shadows": [
@@ -428,7 +432,7 @@
       "refersTo": "input-composer",
       "description": "Bottom-pinned chat input with the send button inside the bar.",
       "html": "<div class=\"ds-composer\"><textarea rows=\"1\" placeholder=\"Ask about humanitarian aid…\"></textarea><button class=\"ds-send\" aria-label=\"Send\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14M13 6l6 6-6 6\"/></svg></button></div>",
-      "css": ".ds-composer{display:flex;align-items:flex-end;gap:6px;padding:6px 6px 6px 16px;background:var(--color-surface);border:1px solid var(--color-outline);border-radius:16px;transition:border-color .15s,box-shadow .15s}.ds-composer:focus-within{border-color:var(--color-accent);box-shadow:0 0 0 3px color-mix(in oklch,var(--color-accent) 16%,transparent)}.ds-composer textarea{flex:1;padding:8px 4px;font-family:var(--font-body);font-size:15px;line-height:1.5;border:none;background:transparent;color:var(--color-text);outline:none;resize:none}.ds-composer textarea::placeholder{color:var(--color-muted);font-style:italic}.ds-send{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;flex-shrink:0;background:var(--color-accent-container);color:var(--color-on-accent);border:none;border-radius:10px;cursor:pointer;transition:background-color .2s,transform .15s}.ds-send:hover{background:var(--color-accent);transform:translateY(-1px)}.ds-send:focus-visible{outline:2px solid var(--color-accent);outline-offset:2px}"
+      "css": ".ds-composer{display:flex;align-items:flex-end;gap:6px;padding:6px 6px 6px 16px;background:var(--color-surface);border:1px solid var(--color-outline);border-radius:14px;transition:border-color .15s,box-shadow .15s}.ds-composer:focus-within{border-color:var(--color-accent);box-shadow:0 0 0 3px color-mix(in oklch,var(--color-accent) 16%,transparent)}.ds-composer textarea{flex:1;padding:8px 4px;font-family:var(--font-body);font-size:15px;line-height:21px;border:none;background:transparent;color:var(--color-text);outline:none;resize:none}.ds-composer textarea::placeholder{color:var(--color-muted);font-style:italic}.ds-send{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;flex-shrink:0;background:var(--color-accent-container);color:var(--color-on-accent);border:none;border-radius:10px;cursor:pointer;transition:background-color .2s,transform .15s}.ds-send:hover{background:var(--color-accent);transform:translateY(-1px)}.ds-send:focus-visible{outline:2px solid var(--color-accent);outline-offset:2px}"
     },
     {
       "name": "Citation Chip",
@@ -452,7 +456,7 @@
       "refersTo": "message-assistant",
       "description": "Quiet Shelf Gray user bubble, white bordered assistant bubble, each with a tight corner toward the speaker.",
       "html": "<div class=\"ds-thread\"><div class=\"ds-msg-user\">What is the food security situation in Sudan?</div><div class=\"ds-msg-assistant\">Recent assessments describe acute food insecurity across several states.</div></div>",
-      "css": ".ds-thread{display:flex;flex-direction:column;gap:12px;font-family:var(--font-body);font-size:var(--text-base);line-height:1.6}.ds-msg-user{align-self:flex-end;max-width:80%;background:var(--color-surface-container);color:var(--color-text);padding:12px 16px;border-radius:16px 4px 16px 16px}.ds-msg-assistant{align-self:flex-start;max-width:70ch;background:var(--color-surface);color:var(--color-text);border:1px solid var(--color-border);padding:12px 16px;border-radius:4px 16px 16px 16px}"
+      "css": ".ds-thread{display:flex;flex-direction:column;gap:12px;font-family:var(--font-body);font-size:15px;line-height:21px;width:770px;max-width:100%}.ds-msg-user{align-self:flex-end;max-width:80%;background:var(--color-surface-container);color:var(--color-text);padding:12px 16px;border-radius:12px}.ds-msg-assistant{align-self:stretch;font-family:var(--font-serif);background:var(--color-surface);color:var(--color-text);border:1px solid var(--color-border);padding:12px 16px;border-radius:12px}"
     },
     {
       "name": "Conversation Nav",
@@ -460,7 +464,7 @@
       "refersTo": "nav-item",
       "description": "Sidebar conversation rows on the Reading Room ground.",
       "html": "<nav class=\"ds-nav\"><a href=\"#\" class=\"ds-nav-item is-active\">Sudan food security</a><a href=\"#\" class=\"ds-nav-item\">Cholera response, Yemen</a><a href=\"#\" class=\"ds-nav-item\">Flood funding gaps</a></nav>",
-      "css": ".ds-nav{display:flex;flex-direction:column;gap:2px;padding:12px;background:var(--color-surface-container-low);border-right:1px solid var(--color-border);font-family:var(--font-body);font-size:var(--text-sm)}.ds-nav-item{padding:8px 12px;border-radius:var(--radius-md);color:var(--color-text);text-decoration:none;transition:background-color .15s}.ds-nav-item:hover{background:var(--color-surface-container)}.ds-nav-item.is-active{background:var(--color-surface-container-high);color:var(--color-accent);font-weight:600}.ds-nav-item:focus-visible{outline:2px solid var(--color-accent);outline-offset:2px}"
+      "css": ".ds-nav{display:flex;flex-direction:column;gap:2px;width:288px;padding:8px;background:var(--color-surface-container-low);border-right:1px solid var(--color-border);font-family:var(--font-body);font-size:var(--text-sm)}.ds-nav-item{display:flex;align-items:center;min-height:32px;padding:0 10px;border-radius:var(--radius-lg);color:var(--color-text);text-decoration:none;transition:background-color .15s}.ds-nav-item:hover{background:var(--color-surface-container)}.ds-nav-item.is-active{background:var(--color-surface-container-high);color:var(--color-accent);font-weight:600}.ds-nav-item:focus-visible{outline:2px solid var(--color-accent);outline-offset:2px}"
     },
     {
       "name": "Stop Button",
@@ -485,7 +489,8 @@
     "keyCharacteristics": [
       "Warm paper ground, white reading surfaces, hairline borders.",
       "One accent hue (green, hue 152) for actions, links, and citations; never decoration.",
-      "DM Sans for names and headings, Inter for reading, IBM Plex Mono for labels, dates, and citation numbers.",
+      "DM Sans for names and headings, Inter for the interface and questions, Source Serif 4 for answers and reports, IBM Plex Mono for labels, dates, and citation numbers.",
+      "Claude's screen metrics (measured on claude.ai, owner's request 2026-11-16): 288px sidebar with 32px rows, a ~42px top bar, 15px / 21px message text, a 736px reading column.",
       "Flat at rest; shadow only on things that float above the page.",
       "Sources quiet at rest, ledger-like when opened.",
       "Full light and dark themes from the same token names."
@@ -508,7 +513,7 @@
       },
       {
         "name": "The Reading Measure Rule",
-        "body": "Answer and report text never runs wider than 70ch, whatever the window width. In the report viewer the whole column (header, text, Sources) shares one 70ch measure set at body size, so smaller-type blocks never shrink or drift.",
+        "body": "Answer and report text runs in Claude's 736px reading column, whatever the window width. In the report viewer the whole column (header, text, Sources) shares that 736px measure, so smaller-type blocks never shrink or drift.",
         "section": "layout"
       },
       {
@@ -521,7 +526,7 @@
       "**Do** take every color from the `--color-*` tokens so light and dark themes stay in step.",
       "**Do** keep sources quiet at rest and one click from the report: a count line, then the ledger.",
       "**Do** set citation numbers, dates, and counts in IBM Plex Mono with tabular figures.",
-      "**Do** keep answer and report text at or under 70ch.",
+      "**Do** keep answer and report text in the 736px reading column.",
       "**Do** keep surfaces flat; use shadow only for popovers and drawers.",
       "**Do** honor `prefers-reduced-motion` (the global rule in `style.css` already stills animation).",
       "**Do** theme the browser surfaces from the palette: text selection in Citation Mist, a quiet Margin Gray scrollbar, the caret in Field Green.",

@@ -38,6 +38,11 @@ typography:
     fontSize: "0.75rem"
     fontWeight: 600
     letterSpacing: "0.05em"
+  reading:
+    fontFamily: "'Source Serif 4 Variable', Georgia, 'Times New Roman', serif"
+    fontSize: "15px"
+    fontWeight: 400
+    lineHeight: "21px"
   body:
     fontFamily: "'Inter', system-ui, -apple-system, sans-serif"
     fontSize: "1rem"
@@ -57,7 +62,8 @@ rounded:
   md: "6px"
   lg: "8px"
   xl: "12px"
-  bubble: "16px"
+  bubble: "12px"
+  composer: "14px"
   full: "9999px"
 spacing:
   "1": "4px"
@@ -101,7 +107,7 @@ components:
   input-composer:
     backgroundColor: "{colors.clean-sheet}"
     textColor: "{colors.archive-ink}"
-    rounded: "{rounded.bubble}"
+    rounded: "{rounded.composer}"
     padding: "6px 6px 6px 16px"
   citation-chip:
     backgroundColor: "transparent"
@@ -120,6 +126,7 @@ components:
   message-assistant:
     backgroundColor: "{colors.clean-sheet}"
     textColor: "{colors.archive-ink}"
+    typography: "{typography.reading}"
     rounded: "{rounded.bubble}"
     padding: "12px 16px"
   nav-item:
@@ -146,7 +153,8 @@ The system explicitly rejects four looks: a generic AI chat clone, donation-camp
 **Key Characteristics:**
 - Warm paper ground, white reading surfaces, hairline borders.
 - One accent hue (green, hue 152) for actions, links, and citations; never decoration.
-- DM Sans for names and headings, Inter for reading, IBM Plex Mono for labels, dates, and citation numbers.
+- DM Sans for names and headings, Inter for the interface and questions, Source Serif 4 for answers and reports, IBM Plex Mono for labels, dates, and citation numbers.
+- Claude's screen metrics (measured on claude.ai, owner's request 2026-11-16): 288px sidebar with 32px rows, a ~42px top bar, 15px / 21px message text, a 736px reading column.
 - Flat at rest; shadow only on things that float above the page.
 - Sources quiet at rest, ledger-like when opened.
 - Full light and dark themes from the same token names.
@@ -187,16 +195,18 @@ Dark theme redefines every color token under `:root[data-theme='dark']` in `fron
 
 **Display Font:** DM Sans Variable (with system-ui, -apple-system, sans-serif)
 **Body Font:** Inter (with system-ui, -apple-system, sans-serif)
+**Reading Font:** Source Serif 4 Variable (with Georgia, serif): answers and report text, the free counterpart of Claude's reading serif (Anthropic's own fonts are licensed to Anthropic only).
 **Label/Mono Font:** IBM Plex Mono (with ui-monospace, Cascadia Code, Menlo, monospace)
 
 **Character:** DM Sans gives names and headings a compact, slightly geometric confidence; Inter carries long reading without fatigue; Plex Mono turns dates, counts, and citation numbers into catalog marks. All three are self-hosted through `@fontsource`.
 
 ### Hierarchy
 - **Display** (700, clamp(38px, 4.4vw, 56px), 1.04): landing-page hero only.
-- **Headline** (700, 1.125rem, 1.15, −0.02em): app brand title and page titles.
+- **Headline** (700, 1.125rem, 1.15, −0.02em): page titles; the app brand title is 1rem in the compact top bar.
 - **Document title** (700, 1.5rem, 1.15, −0.02em): a report's title (its country), one step above the report's own 1.25rem section heads, with type · sector · period beneath in mono 12px.
 - **Title** (600, 0.75rem, uppercase, 0.05em): small section headers such as the sources header.
-- **Body** (400, 1rem, 1.6): messages and reports. Assistant answers cap at 70ch.
+- **Reading** (Source Serif 4, 400, 15px / 21px): chat answers and report text, Claude's message size.
+- **Body** (Inter, 400, 1rem, 1.6): interface text; questions and the composer at 15px / 21px; sidebar rows at 14px.
 - **Label** (mono 400, 10–11px, uppercase, 0.14–0.18em): the brand subtitle, eyebrows, the composer hint.
 - **Citation** (mono 600, 10.5px): `[n]` chips and source numbers.
 
@@ -209,13 +219,13 @@ The type scale tokens are `--text-xs` 0.75rem, `--text-sm` 0.875rem, `--text-bas
 
 The app is a fixed-viewport shell: shared top bar above, sidebar (new chat, search, conversations) on the left, the conversation in the center, the composer pinned to the bottom. The chat view locks to the viewport; the marketing page scrolls the document. Content max width is 1280px in the app and 1160px on the landing page.
 
-Spacing follows an 8px base grid (`--space-1` 4px through `--space-12` 80px). Messages are separated by 12px; message rows take at most 80% width (92% under 640px).
+Spacing follows an 8px base grid (`--space-1` 4px through `--space-12` 80px). Messages are separated by 12px; questions take at most 80% width (92% under 640px) and answers the whole column. The sidebar and the reports rail are 288px with 8px side padding; the top bar is about 42px (6px padding around 28px controls).
 
 Breakpoints are written as needed, not as a fixed scale: 640px is the main one (sidebar becomes a drawer, bubbles widen, radii tighten), with 480px, 560px, 760px, and 900px used on the landing page.
 
 The reports screen is a library rail beside the open report on wide screens; under 760px it shows one pane at a time (the library, or the report with an "All reports" link back). The open report lives in the URL as `/reports?report=<id>` (not `/reports/<id>`, which is the JSON API) and names the tab ("Afghanistan · Situation Report · Humanitaria"); every other screen names itself in the tab too.
 
-**The Reading Measure Rule.** Answer and report text never runs wider than 70ch, whatever the window width. In the report viewer the whole column (header, text, Sources) shares one 70ch measure set at body size, so smaller-type blocks never shrink or drift.
+**The Reading Measure Rule.** Answer and report text runs in Claude's 736px reading column, whatever the window width. In the report viewer the whole column (header, text, Sources) shares that 736px measure, so smaller-type blocks never shrink or drift.
 
 ## Elevation & Depth
 
@@ -226,7 +236,7 @@ Flat by default. Depth comes from surface tone (paper, white, reading room) and 
 
 ## Shapes
 
-Softly curved, never pill-shaped except for avatars and toggles. Small controls use 6px (`md`), buttons and search fields 8px (`lg`), larger panels and the landing page's large buttons 12px (`xl`). Message bubbles are 16px with one tight 4px corner pointing at the speaker (top-right for the user, top-left for the assistant). Borders are 1px. The source item uses a 2px left rule as its only accent edge.
+Softly curved, never pill-shaped except for avatars and toggles. Small controls use 6px (`md`), buttons and search fields 8px (`lg`), larger panels and the landing page's large buttons 12px (`xl`). Message bubbles have 12px corners and the composer 14px, as on Claude. Borders are 1px. The source item uses a 2px left rule as its only accent edge.
 
 ## Components
 
@@ -242,11 +252,11 @@ Refined and restrained: a solid green primary, quiet secondaries, no shadow.
 ### Inputs / Fields
 - **Style:** white ground, 1px Margin Gray outline, 6px radius, 8px 10px padding.
 - **Focus:** border turns Field Green plus a 3px green ring at 30% (`--focus-ring`).
-- **Composer:** the chat input is a 16px-radius white bar with the send button inside; on focus the whole bar takes the green border and a 16% ring. Placeholder is italic Margin Gray.
+- **Composer:** the chat input is a 14px-radius white bar (Inter 15px / 21px) with the send button inside; on focus the whole bar takes the green border and a 16% ring. Placeholder is italic Margin Gray.
 
 ### Messages
-- **User:** quiet Shelf Gray bubble with Archive Ink text, right-aligned, so the question never outweighs the answer.
-- **Assistant:** white bubble with a Paper Edge border, left-aligned, answer text capped at 70ch.
+- **User:** quiet Shelf Gray bubble with Archive Ink text (Inter 15px / 21px), right-aligned, so the question never outweighs the answer.
+- **Assistant:** white bubble with a Paper Edge border spanning the column (about 736px of text), answer text in Source Serif 4 at 15px / 21px.
 - **Waiting:** before the first token arrives, two shimmering skeleton lines (the shared `.skeleton` utility) stand in for the answer; no bouncing dots.
 - **Quotes:** quoted report text sits on a Reading Room fill with a 6px radius and Graphite text.
 - **Error:** Alert Blush ground, a 1px border tinted from Alert Red, 6px radius, and the alert icon. The message says what happened (a connection failure names the free-tier wake-up, about 30 s), and on the last turn an outlined "Try again" resends the question in place.
@@ -298,9 +308,9 @@ Operate surfaces in the same archive voice, never stacked cards.
 
 ### Navigation
 - **Sidebar:** Reading Room ground, 1px right border. Primary "New chat" button at the top, a search field, then the conversation list.
-- **Conversation rows:** 6px radius; hover Shelf Gray, active Shelf Gray Deep with Field Green text.
+- **Conversation rows:** 32px tall, 8px radius, 14px text; hover Shelf Gray, active Shelf Gray Deep with Field Green text. Section headings ("Today") are Inter 12px medium in sentence case. New chat and search are 32px tall.
 - **Mobile:** under 640px the sidebar becomes a drawer with `--shadow-lg`.
-- **Top bar:** one shared bar on every signed-in screen (`AppTopbar.vue`): brand title in Headline style over a mono uppercase subtitle naming the screen, linking back to chat; a Chat · Reports switch whose current item takes the active-row treatment (Shelf Gray Deep, Field Green, `aria-current="page"`); the account menu always top-right. Settings and Admin are reached from the account menu, not the switch.
+- **Top bar:** one shared bar on every signed-in screen (`AppTopbar.vue`), about 42px tall with a 28px logo and avatar: brand title (DM Sans 1rem, 700) over a mono uppercase subtitle naming the screen, linking back to chat; a Chat · Reports switch whose current item takes the active-row treatment (Shelf Gray Deep, Field Green, `aria-current="page"`); the account menu always top-right. Settings and Admin are reached from the account menu, not the switch.
 
 ## Do's and Don'ts
 
@@ -308,7 +318,7 @@ Operate surfaces in the same archive voice, never stacked cards.
 - **Do** take every color from the `--color-*` tokens so light and dark themes stay in step.
 - **Do** keep sources quiet at rest and one click from the report: a count line, then the ledger.
 - **Do** set citation numbers, dates, and counts in IBM Plex Mono with tabular figures.
-- **Do** keep answer and report text at or under 70ch.
+- **Do** keep answer and report text in the 736px reading column.
 - **Do** keep surfaces flat; use shadow only for popovers and drawers.
 - **Do** honor `prefers-reduced-motion` (the global rule in `style.css` already stills animation).
 - **Do** theme the browser surfaces from the palette: text selection in Citation Mist, a quiet Margin Gray scrollbar, the caret in Field Green.
