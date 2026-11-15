@@ -1,8 +1,10 @@
 # CLAUDE.md — ReliefWeb RAG Sistemi
 
 ## Proje Amacı
-İnsani yardım izleme-değerlendirme (M&E) ekibi için ReliefWeb içerikleri üzerinden
-Türkçe/İngilizce çok dilli sohbet yapılabilen RAG sistemi. Şu an yerel geliştirme aşamasında;
+ReliefWeb içerikleri üzerinden Türkçe/İngilizce çok dilli sohbet yapılabilen RAG sistemi.
+**Birincil kullanıcı:** insani yardım sektöründeki izleme-değerlendirme (M&E) çalışanları;
+**ikincil:** analistler, araştırmacılar ve gazeteciler. Çatışmada M&E ihtiyacı önceliklidir
+(ürün bağlamı: `PRODUCT.md`). Şu an yerel geliştirme aşamasında;
 deployment kararı proje olgunlaştıktan sonra verilecek.
 
 ---
@@ -171,6 +173,10 @@ Selamlaşma → retrieval atlanır. Mesaj doğrulama: boş/4000+ karakter redded
 3. **Rate limiting**: ReliefWeb 429/5xx → backoff; 4xx → retry yok; Gemini → retry x3.
 4. **Loglama**: her modülde `logger = logging.getLogger(__name__)`.
 5. **Testler**: `tests/` altında pytest; değişiklikten sonra `python -m pytest tests/ -q`.
+6. **Tasarım değişiklikleri geri alınabilir olmalı**: her UI/tasarım işi kendi branch'inde,
+   her mantıksal adım ayrı commit (alakasız işle birleştirme yok); değişiklikten önce ve sonra
+   ekran görüntüsü alınır. Kullanıcı sonradan beğenmezse adım tek başına `git revert` edilebilmeli.
+   Onaylanan comp'lar `.impeccable/mocks/` altında saklanır.
 
 ---
 
