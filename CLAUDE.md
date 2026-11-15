@@ -17,11 +17,13 @@ ReliefWeb API → Ingestion Pipeline → Postgres + pgvector (Supabase; chunks +
 Kullanıcı → Vue 3 Frontend → FastAPI (localhost:8001) → RAG Engine (LangChain LCEL)
                                           ↓                        ↓
                   Gemini embedding (gemini-embedding-001, 768 boyut)     Gemini (chat yanıtı)
-                  + query processor (gemini-2.5-flash)
+                  + query processor (gemini-3.5-flash-lite)
 ```
 
-- **Chat yanıtı:** Google Gemini `gemini-2.5-flash` (OpenAI-uyumlu endpoint).
-- **Query processor + embedding:** Google Gemini (`gemini-2.5-flash` + `gemini-embedding-001`).
+- **Chat yanıtı:** Google Gemini `gemini-3.5-flash-lite` (OpenAI-uyumlu endpoint).
+- **M&E raporları + "What changed" kontrolü:** Google Gemini `gemini-3.8-flash` (`REPORT_LLM_MODEL`).
+  (`gemini-2.5-flash` 2026-12-01'de kapanıyor; seçim 2026-11-16 karşılaştırmasıyla yapıldı.)
+- **Query processor + embedding:** Google Gemini (`gemini-3.5-flash-lite` + `gemini-embedding-001`).
 - **Vector DB:** Postgres + pgvector (prod: Supabase, `chunks` tablosu, `halfvec(768)` + HNSW).
 - **Reranker:** Pinecone Inference (`bge-reranker-v2-m3`) — Pinecone'da VERİ TUTULMAZ, yalnız rerank API'si.
 
@@ -31,8 +33,9 @@ Kullanıcı → Vue 3 Frontend → FastAPI (localhost:8001) → RAG Engine (Lang
 
 | Katman | Teknoloji | Notlar |
 |--------|-----------|--------|
-| Chat LLM | Google Gemini `gemini-2.5-flash` | OpenAI-uyumlu endpoint |
-| Query processor LLM | Google Gemini `gemini-2.5-flash` | Filtre çıkarma (json_mode) + rule-based fallback |
+| Chat LLM | Google Gemini `gemini-3.5-flash-lite` | OpenAI-uyumlu endpoint |
+| Rapor LLM | Google Gemini `gemini-3.8-flash` | Raporlar + "What changed" kontrolü (`REPORT_LLM_MODEL`) |
+| Query processor LLM | Google Gemini `gemini-3.5-flash-lite` | Filtre çıkarma (json_mode) + rule-based fallback |
 | Embedding | Google Gemini `gemini-embedding-001` | 768 boyut (API'de kırpılır) |
 | Vector DB | Postgres + pgvector | Supabase; `chunks` (halfvec + HNSW) + `documents` |
 | Backend | Python 3.12 / FastAPI | REST + SSE; Vue statik sunumu; port **8001** |
@@ -64,13 +67,14 @@ Kullanıcı → Vue 3 Frontend → FastAPI (localhost:8001) → RAG Engine (Lang
 # Google Gemini (chat + sorgu işleme + embedding — OpenAI-uyumlu endpoint)
 GEMINI_API_KEY=xxx
 GEMINI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
-GEMINI_LLM_MODEL=gemini-2.5-flash      # chat yanıtı
-GEMINI_QUERY_MODEL=gemini-2.5-flash    # filtre çıkarma
+GEMINI_LLM_MODEL=gemini-3.5-flash-lite  # chat yanıtı
+GEMINI_QUERY_MODEL=gemini-3.5-flash-lite # filtre çıkarma
+REPORT_LLM_MODEL=gemini-3.8-flash      # M&E raporları + "What changed" kontrolü
 GEMINI_EMBED_MODEL=gemini-embedding-001
 GEMINI_REASONING_EFFORT=medium         # sohbet (2026-11-16'dan beri; önceden low)
 CHAT_LLM_TIMEOUT=90                    # sohbet çağrısı; medium'da ilk token düşünme bitince gelir
-REPORT_REASONING_EFFORT=medium         # M&E raporları; 2.5'te medium = 8.192 düşünme token'ı
-REPORT_LLM_TIMEOUT=150                 # rapor çağrısı; ilk token düşünme bitince gelir
+REPORT_REASONING_EFFORT=medium         # M&E raporları; medium = 8.192 düşünme token'ı
+REPORT_LLM_TIMEOUT=240                 # 3.8 Flash medium'da ~110 sn ölçüldü
 
 # Veritabanı: app tabloları + vektör index'i (pgvector). Boş = yerel SQLite (vektör araması YOK)
 DATABASE_URL=

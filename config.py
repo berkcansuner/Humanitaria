@@ -17,7 +17,11 @@ class Settings(BaseSettings):
     # Google Gemini (chat üretim LLM'i — OpenAI uyumlu endpoint)
     GEMINI_API_KEY: str = ""
     GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
-    GEMINI_LLM_MODEL: str = "gemini-2.5-flash"   # chat yanıtı (GA; multilingual/RAG). gemini-3.5-flash kronik 503 ("high demand") verdiği için geçildi.
+    # Chat answers. gemini-2.5-flash shuts down 2026-12-01 (Google routes it to
+    # 3.5 Flash-Lite); chosen from a side-by-side run on 2026-11-16: same price as
+    # 2.5 Flash, faster, fluent in Turkish (3.8 Flash was more precise but ~3x the
+    # cost from 2027-01-01, and chat is the high-volume call).
+    GEMINI_LLM_MODEL: str = "gemini-3.5-flash-lite"
     # Thinking-budget for the chat model. none/low/medium/high; "" = don't send
     # (model default). "medium" since 2026-11-16 (owner's decision: answer quality
     # over time-to-first-token; was "low"). Thinking is billed as output.
@@ -36,10 +40,16 @@ class Settings(BaseSettings):
     # The first token arrives only after the thinking, hence the longer timeout.
     # Reports and the "What changed" check run on their own model: few calls,
     # quality-critical, so they can use a stronger model than chat.
-    REPORT_LLM_MODEL: str = "gemini-2.5-flash"
+    # gemini-3.8-flash: in the 2026-11-16 run it compared like with like, dated
+    # new items and kept a full "no longer reported" paragraph; 3.5 Flash-Lite's
+    # "What changed" came out thin and its check dropped a dated 2026 change.
+    REPORT_LLM_MODEL: str = "gemini-3.8-flash"
     REPORT_REASONING_EFFORT: str = "medium"
-    REPORT_LLM_TIMEOUT: int = 150
-    GEMINI_QUERY_MODEL: str = "gemini-2.5-flash"  # filtre çıkarma için hızlı/ucuz model
+    REPORT_LLM_TIMEOUT: int = 240  # 3.8 Flash at medium: 108 s measured
+    # Filter extraction (json_mode). 3.5 Flash-Lite matched 2.5 Flash's filters on
+    # an 8-query set (dates, countries, themes) at 0.6-1.5 s instead of 2-5 s;
+    # 2.5 Flash-Lite and 3.1 Flash-Lite dropped dates and countries.
+    GEMINI_QUERY_MODEL: str = "gemini-3.5-flash-lite"
 
     # ReliefWeb
     RELIEFWEB_API_KEY: str = ""

@@ -29,7 +29,13 @@ def test_provider_and_ingest_defaults():
     assert s.EMBED_DIM == 768   # pgvector halfvec index sized for the Supabase free tier
     assert s.INGEST_LOOKBACK_YEARS == 1   # rolling 1-year strategy (was 5)
     assert s.INGEST_ENDPOINTS == "reports,disasters"
-    assert s.GEMINI_LLM_MODEL == "gemini-2.5-flash"
+    # gemini-2.5-flash shuts down on 2026-12-01 (Google routes it to 3.5 Flash-Lite).
+    # Chosen from a side-by-side run on 2026-11-16 (same sources, same prompts).
+    assert s.GEMINI_LLM_MODEL == "gemini-3.5-flash-lite"
+    assert s.GEMINI_QUERY_MODEL == "gemini-3.5-flash-lite"
+    assert s.REPORT_LLM_MODEL == "gemini-3.8-flash"
+    # 3.8 Flash at medium wrote the comparison report in 108 s (+27 s check).
+    assert s.REPORT_LLM_TIMEOUT >= 240
     assert s.ADMIN_EMAILS == ""
     # Rolling-window retention is OFF by default (enabled in prod env at cutover).
     assert s.RETENTION_DAYS == 0

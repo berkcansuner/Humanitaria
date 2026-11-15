@@ -13,7 +13,8 @@ Kullanıcı → Vue 3 Frontend → FastAPI → RAG Engine (LangChain LCEL) → G
                        Gemini embedding (gemini-embedding-001, 768 boyut) + query processor
 ```
 
-- **Chat & sorgu-işleme LLM'i:** Google Gemini (`gemini-2.5-flash`, OpenAI-uyumlu endpoint).
+- **Chat & sorgu-işleme LLM'i:** Google Gemini (`gemini-3.5-flash-lite`, OpenAI-uyumlu endpoint).
+- **Rapor LLM'i:** Google Gemini (`gemini-3.8-flash`).
 - **Embedding:** Google Gemini (`gemini-embedding-001`, 768 boyut).
 - **Vektör DB:** Postgres + pgvector (Supabase; `chunks` tablosu, `halfvec` + HNSW). Sıralama için
   Pinecone Inference reranker'ı (veri tutulmaz).
