@@ -176,6 +176,7 @@
         </div>
       </main>
     </div>
+    <CitePreview :root="viewer" />
     <UndoToast
       :message="toastMessage"
       :kind="pendingDelete ? 'undo' : 'error'"
@@ -194,10 +195,11 @@ import { FileText, Trash2, Loader2, AlertCircle, FileDown, Copy, Check } from 'l
 import AppTopbar from '../components/AppTopbar.vue'
 import SourceList from '../components/SourceList.vue'
 import UndoToast from '../components/UndoToast.vue'
+import CitePreview from '../components/CitePreview.vue'
 import { useUndoableDelete } from '../utils/undoableDelete.js'
 import { renderMarkdown } from '../utils/renderMarkdown.js'
 import { injectSectionImages } from '../utils/reportImages.js'
-import { revealSource } from '../utils/sources.js'
+import { revealSource, returnToCite } from '../utils/sources.js'
 import { parseSSE } from '../utils/parseSSE.js'
 import { getReportOptions, listReports, getReport, deleteReport } from '../utils/reportsApi.js'
 import { REPORT_TYPES, reportTypeBadge } from '../utils/reportTypes.js'
@@ -554,10 +556,14 @@ async function generate() {
 
 // Citation chips ([n]) scroll to their source within the viewer (mirrors Chat.vue).
 function onCiteClick(e) {
+  if (e.target.closest && e.target.closest('.back-to-text')) {
+    returnToCite(viewer.value)
+    return
+  }
   const cite = e.target.closest && e.target.closest('.cite')
   if (!cite) return
   e.preventDefault()
-  revealSource(viewer.value, cite.getAttribute('data-cite'))
+  revealSource(viewer.value, cite.getAttribute('data-cite'), cite)
 }
 </script>
 

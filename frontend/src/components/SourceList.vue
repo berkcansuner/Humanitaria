@@ -43,6 +43,12 @@
                 <ExternalLink :size="12" class="source-external-icon" aria-hidden="true" />
               </a>
               <span v-if="metaLine(src)" class="source-meta">{{ metaLine(src) }}</span>
+              <!-- Shown on the row a citation opened; the container's click handler
+                   returns the reader to that citation (returnToCite). -->
+              <button type="button" class="back-to-text">
+                <CornerUpLeft :size="12" aria-hidden="true" />
+                Back to text
+              </button>
             </td>
             <td class="col-date">
               <time v-if="ledgerDate(src.date)" :datetime="ledgerDate(src.date)">{{
@@ -58,7 +64,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { ExternalLink } from 'lucide-vue-next'
+import { ExternalLink, CornerUpLeft } from 'lucide-vue-next'
 import { safeUrl } from '../utils/parseSSE.js'
 import { isValidSource, summarizePublishers, ledgerDate } from '../utils/sources.js'
 
@@ -248,5 +254,28 @@ function metaLine(src) {
 .source-meta {
   display: block;
   color: var(--color-text-secondary);
+}
+
+.back-to-text {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 2px 6px 2px 4px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-accent);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.source-item.active .back-to-text {
+  display: inline-flex;
+}
+
+.back-to-text:hover {
+  background-color: var(--color-accent-soft);
 }
 </style>

@@ -1,6 +1,6 @@
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
-import { isValidSource } from './sources.js'
+import { isValidSource, citeLabel } from './sources.js'
 
 /**
  * Expand a comma-separated citation group into adjacent single citations so the
@@ -32,8 +32,9 @@ export function renderMarkdown(text, sources = null) {
   if (!text) return ''
   const html = marked.parse(text, { gfm: true, breaks: true })
   const fragment = DOMPurify.sanitize(html, { RETURN_DOM_FRAGMENT: true })
-  const validIndexes =
-    sources && sources.length ? new Set(sources.filter(isValidSource).map((s) => s.index)) : null
+  const shown = sources && sources.length ? sources.filter(isValidSource) : null
+  const validIndexes = shown ? new Set(shown.map((s) => s.index)) : null
+  const byIndex = new Map((shown || []).map((s) => [s.index, s]))
   // Turn each [n] into a chip by editing TEXT NODES only. Rewriting the sanitized
   // HTML string also matched [n] inside attribute values and broke out of them.
   // The click handler in Chat.vue scrolls to the matching source within the message.
@@ -57,6 +58,8 @@ export function renderMarkdown(text, sources = null) {
       a.dataset.cite = m[2]
       a.href = `#src-${m[2]}`
       a.textContent = m[2]
+      // Name the source, not just the number ("link, 1" told a screen reader nothing).
+      a.setAttribute('aria-label', citeLabel(m[2], byIndex.get(Number(m[2]))))
       parts.append(m[1], a)
     }
     parts.append(text.slice(last))

@@ -1,5 +1,12 @@
 import { describe, it, expect, vi } from 'vitest'
-import { isValidSource, summarizePublishers, ledgerDate, revealSource } from './sources.js'
+import {
+  isValidSource,
+  summarizePublishers,
+  ledgerDate,
+  revealSource,
+  returnToCite,
+  citeLabel,
+} from './sources.js'
 
 describe('isValidSource', () => {
   it('rejects a source with no url', () => {
@@ -97,5 +104,51 @@ describe('revealSource', () => {
 
   it('returns false for a missing container', () => {
     expect(revealSource(null, '1')).toBe(false)
+  })
+})
+
+describe('returnToCite', () => {
+  function setup() {
+    document.body.innerHTML = `
+      <div class="message">
+        <p>Text <a class="cite" data-cite="2" href="#src-2">2</a></p>
+        <details class="sources"><summary>1 source</summary><table><tbody>
+          <tr class="source-item" data-srcid="2"><td><a class="source-link" href="https://x">T</a></td></tr>
+        </tbody></table></details>
+      </div>`
+    const container = document.querySelector('.message')
+    const cite = container.querySelector('.cite')
+    const row = container.querySelector('.source-item')
+    row.scrollIntoView = vi.fn()
+    cite.scrollIntoView = vi.fn()
+    return { container, cite, row }
+  }
+
+  it('moves focus to the revealed source link, then back to the chip', () => {
+    const { container, cite } = setup()
+    expect(revealSource(container, '2', cite)).toBe(true)
+    expect(document.activeElement).toBe(container.querySelector('.source-link'))
+    expect(returnToCite(container)).toBe(true)
+    expect(cite.scrollIntoView).toHaveBeenCalled()
+    expect(document.activeElement).toBe(cite)
+  })
+
+  it('returns false when no chip opened a source here', () => {
+    const { container } = setup()
+    expect(returnToCite(container)).toBe(false)
+    expect(returnToCite(null)).toBe(false)
+  })
+})
+
+describe('citeLabel', () => {
+  it('names the source with title, publisher and ISO date', () => {
+    expect(citeLabel('3', { title: 'Bulletin', source: 'WHO', date: '2026-10-09T00:00:00Z' })).toBe(
+      'Source 3: Bulletin, WHO, 2026-10-09',
+    )
+  })
+
+  it('falls back to the number', () => {
+    expect(citeLabel('4', null)).toBe('Source 4')
+    expect(citeLabel('5', {})).toBe('Source 5')
   })
 })

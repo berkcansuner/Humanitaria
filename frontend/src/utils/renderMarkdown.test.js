@@ -44,6 +44,19 @@ describe('renderMarkdown citations', () => {
   })
 })
 
+describe('renderMarkdown citation names', () => {
+  it('names each chip after its source for screen readers', () => {
+    const html = renderMarkdown('Needs [1].', [
+      { index: 1, url: 'https://x/1', title: 'Access Update', source: 'OCHA', date: '2026-10-21' },
+    ])
+    expect(html).toContain('aria-label="Source 1: Access Update, OCHA, 2026-10-21"')
+  })
+
+  it('falls back to the number while sources are still streaming', () => {
+    expect(renderMarkdown('See [2].')).toContain('aria-label="Source 2"')
+  })
+})
+
 describe('renderMarkdown citation chips stay out of attributes (security audit run-1)', () => {
   it('does not rewrite [n] inside a sanitized attribute value', () => {
     const md = '<span title="[1] <img src=x onerror=alert(1)>">t</span> and [1]'

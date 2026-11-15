@@ -248,13 +248,15 @@ Every claim's `[n]` reference, quiet at rest so the answer reads first.
 - **Rest:** 18px mono chip with tabular figures, transparent ground, Graphite number, 1px Paper Edge outline, 5px radius. Graphite rather than Margin Gray keeps the number quieter than body text yet well above 4.5:1.
 - **Hover / focus:** Field Green fill and border with the number in On Green, so the link to the source is always one gesture away.
 - **Activate:** reveals and marks its source (see Sources).
+- **Name:** each chip's accessible name is the source itself ("Source 2: Title, Publisher, 2026-10-21"), not the bare number.
+- **Preview:** on hover or keyboard focus a small Clean Sheet card (`--shadow-md`, 6px radius, 300px) shows the title in 13px 600 and "publisher · date" in mono, above the chip (below near the window top). The pointer can move onto it; it follows the chip on scroll; Escape closes it (`CitePreview.vue`).
 - **Landing sample:** the landing page's sample answer (`SampleAnswer.vue`) uses the same chip and the same Sources ledger, so the page shows the product as it is.
 
 ### Sources (signature)
 Quiet at rest, a ledger when opened (`SourceList.vue`, a native `<details>`).
 - **At rest:** one line under the answer above a hairline divider: "N sources · publishers · Show" in Graphite at 0.75rem, with up to three publishers and "+N" for the rest. Show is Field Green, 600 weight.
 - **Opened:** a ledger table on a white surface with a hairline border and 6px radius: columns # · Source · Date. Row numbers use the quiet citation chip; the title is a Field Green link with an external-link icon; publisher and country sit under it in Graphite; dates are ISO (YYYY-MM-DD) in mono with tabular figures. Header labels are mono uppercase, rows divided by hairlines. The toggle reads Hide.
-- **From a citation:** activating `[n]` opens the ledger, scrolls to the row, flashes it in Citation Mist, and turns that row's number green until another citation is activated.
+- **From a citation:** activating `[n]` opens the ledger, scrolls to the row, flashes it in Citation Mist, moves focus to the row's link, and turns that row's number green until another citation is activated. That row shows a Field Green "Back to text" that returns to (and focuses) the chip the reader came from.
 - **Focus:** the summary line takes the standard 2px Field Green focus outline.
 - **Leaving the app:** copying an answer ("Copy answer with sources") or a report ("Copy with sources", beside Download PDF) appends a numbered Sources list: `[n] Title. Publisher, YYYY-MM-DD. URL` as text, and a linked `<ol>` as HTML, so pasted `[n]` markers still resolve (`utils/citationCopy.js`).
 

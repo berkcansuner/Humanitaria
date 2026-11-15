@@ -1,6 +1,7 @@
 <template>
   <div class="chat">
     <p class="sr-only" role="status" aria-live="polite">{{ announcement }}</p>
+    <CitePreview :root="messagesContainer" />
     <div
       ref="messagesContainer"
       class="messages"
@@ -143,6 +144,7 @@ import { Send, AlertCircle, Square, RotateCcw } from 'lucide-vue-next'
 import SourceList from './SourceList.vue'
 import EmptyState from './EmptyState.vue'
 import MessageActions from './MessageActions.vue'
+import CitePreview from './CitePreview.vue'
 // The one intentional React island in this otherwise-Vue app: the clarification
 // card (React + react-dom + lucide-react). Lazy-loaded so its runtime stays out
 // of the initial bundle (only needed when a clarification is shown). Its CSS
@@ -152,7 +154,7 @@ const SuggestionCardIsland = defineAsyncComponent(() => import('./SuggestionCard
 import { renderMarkdown } from '../utils/renderMarkdown.js'
 import { parseSSE } from '../utils/parseSSE.js'
 import { renumberCitations } from '../utils/renumberCitations.js'
-import { revealSource, isValidSource } from '../utils/sources.js'
+import { revealSource, returnToCite, isValidSource } from '../utils/sources.js'
 import { decorateCodeBlocks } from '../utils/codeCopy.js'
 import { findLastUserIndex, lastServerIdBefore, planResend } from '../utils/conversationOps.js'
 import { getMessages, truncateConversation } from '../utils/api.js'
@@ -400,10 +402,15 @@ function stopGenerating() {
 // sources ledger, mark the row and scroll to it. The chips are <a> elements
 // injected by renderMarkdown().
 function scrollToCitedSource(cite) {
-  revealSource(cite.closest('.message'), cite.getAttribute('data-cite'))
+  revealSource(cite.closest('.message'), cite.getAttribute('data-cite'), cite)
 }
 
 function onCiteClick(e) {
+  const back = e.target.closest('.back-to-text')
+  if (back) {
+    returnToCite(back.closest('.message'))
+    return
+  }
   const cite = e.target.closest('.cite')
   if (!cite) return
   e.preventDefault()

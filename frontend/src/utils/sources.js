@@ -34,21 +34,45 @@ export function ledgerDate(iso) {
   return m ? m[1] : ''
 }
 
+// The chip that last opened a source, per container, so "Back to text" can
+// return the reader to the exact place they left.
+const lastCite = new WeakMap()
+
 /**
  * Reveal the source a citation chip points to, inside `container` (one chat
  * message or the report viewer): open the collapsed sources ledger, mark that
  * row as the single active one, scroll it into view and pulse it briefly.
+ * Focus moves to the row's link so keyboard users land on the source; `cite`
+ * (the activated chip) is remembered for returnToCite().
  * Returns false (and changes nothing) when that source is not shown.
  */
-export function revealSource(container, id) {
+export function revealSource(container, id, cite = null) {
   const item = container?.querySelector(`.source-item[data-srcid="${id}"]`)
   if (!item) return false
   const ledger = item.closest('details')
   if (ledger) ledger.open = true
   container.querySelectorAll('.source-item.active').forEach((el) => el.classList.remove('active'))
   item.classList.add('active')
+  if (cite) lastCite.set(container, cite)
   item.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  item.querySelector('.source-link')?.focus({ preventScroll: true })
   item.classList.add('flash')
   setTimeout(() => item.classList.remove('flash'), 1500)
   return true
+}
+
+/** Scroll back to (and focus) the chip that last revealed a source in `container`. */
+export function returnToCite(container) {
+  const cite = container ? lastCite.get(container) : null
+  if (!cite || !cite.isConnected) return false
+  cite.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  cite.focus({ preventScroll: true })
+  return true
+}
+
+/** Accessible name for a citation chip: "Source 2: Title, Publisher, 2026-10-21". */
+export function citeLabel(id, src) {
+  if (!src) return `Source ${id}`
+  const parts = [src.title, src.source, ledgerDate(src.date)].filter(Boolean)
+  return parts.length ? `Source ${id}: ${parts.join(', ')}` : `Source ${id}`
 }
