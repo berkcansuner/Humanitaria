@@ -46,13 +46,19 @@
                 <dt>Last ingest</dt>
                 <dd>{{ status?.last_ingest || '—' }}</dd>
               </div>
-              <div>
+              <!-- Production runs from the Cloudflare cron Worker (cloudflare-cron/), so
+                   the in-app scheduler is off there by design; say how runs happen
+                   instead of showing "Inactive" as if something were broken. -->
+              <div v-if="status?.scheduler_active">
                 <dt>Next scheduled run</dt>
                 <dd>{{ formatDateTime(status?.next_scheduled_run) }}</dd>
               </div>
-              <div>
-                <dt>Scheduler</dt>
-                <dd>{{ status?.scheduler_active ? 'Active' : 'Inactive' }}</dd>
+              <div v-else>
+                <dt>Schedule</dt>
+                <dd>
+                  Nightly, 03:00 UTC
+                  <span class="dd-note">via the Cloudflare cron</span>
+                </dd>
               </div>
               <div>
                 <dt>Indexed chunks</dt>
@@ -74,8 +80,8 @@
           <section class="card">
             <div class="card-head"><h2>Run ingest</h2></div>
             <p class="muted">
-              Fetches new ReliefWeb documents since the last run (incremental) and upserts them into
-              Pinecone. A scheduled run uses the same path, so only one runs at a time.
+              Fetches ReliefWeb documents published since the last run and adds them to the search
+              index. The nightly run uses the same path, so only one runs at a time.
             </p>
             <button class="primary-btn" :disabled="running || triggering" @click="onTrigger">
               <RefreshCw :size="16" :class="{ spin: running }" />

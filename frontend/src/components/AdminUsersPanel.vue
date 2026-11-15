@@ -12,7 +12,9 @@
         aria-label="Search users"
         @input="onSearchInput"
       />
-      <span v-if="!loading" class="users-meta">{{ formatNumber(total) }} users</span>
+      <span v-if="!loading" class="users-meta"
+        >{{ formatNumber(total) }} {{ total === 1 ? 'user' : 'users' }}</span
+      >
     </div>
 
     <div v-if="error" class="error-box" role="alert">
