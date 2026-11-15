@@ -115,6 +115,14 @@ defineProps({
 .app-topbar-spacer {
   flex: 1;
 }
+/* The Chat · Reports switch stays put between screens: the brand takes the
+   width of its longest subtitle ("Humanitarian Information Assistant"), so a
+   shorter one ("M&E Reports", "Settings") no longer pulls the switch left. */
+@media (min-width: 641px) {
+  .brand {
+    min-width: 296px;
+  }
+}
 
 @media (max-width: 640px) {
   .app-topbar {
