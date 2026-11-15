@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-15T04:40:15+00:00",
+  "generatedAt": "2026-11-15T04:50:03+00:00",
   "title": "Design System: Humanitaria",
   "extensions": {
     "colorMeta": {
@@ -500,7 +500,9 @@
       "**Don't** turn screens into a dense enterprise dashboard: no wall of cards, colored KPI tiles, or badge clutter.",
       "**Don't** add news-site clutter: no headline walls, multi-column dense grids, or distracting imagery.",
       "**Don't** introduce a second accent hue or use green for decoration.",
-      "**Don't** hide a source behind more than one interaction."
+      "**Don't** hide a source behind more than one interaction.",
+      "**Don't** mark quotes, alerts, cards or list items with a thick colored side rule (over 1px); use a fill, a full hairline border, or an icon.",
+      "**Don't** use bouncing or elastic motion, including bouncing typing dots."
     ]
   }
 }

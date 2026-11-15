@@ -237,6 +237,9 @@ Refined and restrained: a solid green primary, quiet secondaries, no shadow.
 ### Messages
 - **User:** quiet Shelf Gray bubble with Archive Ink text, right-aligned, so the question never outweighs the answer.
 - **Assistant:** white bubble with a Paper Edge border, left-aligned, answer text capped at 70ch.
+- **Waiting:** before the first token arrives, two shimmering skeleton lines (the shared `.skeleton` utility) stand in for the answer; no bouncing dots.
+- **Quotes:** quoted report text sits on a Reading Room fill with a 6px radius and Graphite text.
+- **Error:** Alert Blush ground, a 1px border tinted from Alert Red, 6px radius, and the alert icon.
 
 ### Citation Chip (signature)
 Every claim's `[n]` reference, quiet at rest so the answer reads first.
@@ -275,3 +278,5 @@ Quiet at rest, a ledger when opened (`SourceList.vue`, a native `<details>`).
 - **Don't** add news-site clutter: no headline walls, multi-column dense grids, or distracting imagery.
 - **Don't** introduce a second accent hue or use green for decoration.
 - **Don't** hide a source behind more than one interaction.
+- **Don't** mark quotes, alerts, cards or list items with a thick colored side rule (over 1px); use a fill, a full hairline border, or an icon.
+- **Don't** use bouncing or elastic motion, including bouncing typing dots.

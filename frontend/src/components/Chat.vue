@@ -37,9 +37,8 @@
               v-if="msg.role === 'assistant' && !msg.content && !msg.error && !msg.clarification"
             >
               <div class="typing-indicator" role="status">
-                <span></span>
-                <span></span>
-                <span></span>
+                <span class="skeleton skel-line" aria-hidden="true"></span>
+                <span class="skeleton skel-line short" aria-hidden="true"></span>
                 <span class="sr-only">Generating response…</span>
               </div>
             </template>
@@ -667,12 +666,14 @@ watch(
   padding: 0;
 }
 
+/* Quoted report text: set apart by a quiet reading-room fill and Graphite
+   text rather than a thick colored side rule. */
 .message-content :deep(blockquote) {
-  border-left: 3px solid var(--color-accent);
-  padding-left: var(--space-4);
   margin: 0.75em 0;
+  padding: var(--space-2) var(--space-3);
+  background-color: var(--color-surface-container-low);
+  border-radius: var(--radius-md);
   color: var(--color-text-secondary);
-  font-style: italic;
 }
 
 .message-content :deep(table) {
@@ -751,12 +752,14 @@ watch(
   background-color: var(--color-accent);
 }
 
+/* Error: a full hairline border tinted from the error color plus the alert
+   icon, instead of a thick colored side rule. */
 .error-banner {
   margin-top: var(--space-3);
   padding: var(--space-3) var(--space-4);
-  border-left: 3px solid var(--color-error);
+  border: 1px solid color-mix(in oklch, var(--color-error) 35%, transparent);
   background-color: var(--color-error-bg);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   font-size: var(--text-sm);
   color: var(--color-error);
   display: flex;
@@ -768,39 +771,14 @@ watch(
   flex-shrink: 0;
 }
 
+/* Waiting for the first token: two shimmering placeholder lines (the shared
+   .skeleton utility, stilled under reduced motion) instead of bouncing dots,
+   so the wait reads as an answer forming rather than a generic chat bot. */
 .typing-indicator {
   display: flex;
-  gap: 0.4rem;
-  padding: var(--space-2) 0;
-}
-
-.typing-indicator span {
-  width: 8px;
-  height: 8px;
-  background-color: var(--color-accent-container);
-  border-radius: 50%;
-  opacity: 0.4;
-  animation: bounce 1.4s infinite ease-in-out both;
-}
-
-.typing-indicator span:nth-child(1) {
-  animation-delay: -0.32s;
-}
-.typing-indicator span:nth-child(2) {
-  animation-delay: -0.16s;
-}
-
-@keyframes bounce {
-  0%,
-  80%,
-  100% {
-    transform: scale(0.6);
-    opacity: 0.3;
-  }
-  40% {
-    transform: scale(1);
-    opacity: 1;
-  }
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
 }
 
 .input-area {
