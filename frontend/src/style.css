@@ -5,17 +5,14 @@
   --color-surface-container: #efeeeb;
   --color-surface-container-low: #f4f3f1;
   --color-surface-container-high: #e9e8e5;
-  --color-surface-variant: #e3e2e0;
   --color-text: #1a1c1a;
   --color-text-secondary: #5f5e5e;
-  --color-text-variant: #5a403c;
   --color-accent: oklch(0.46 0.12 152); /* başlık · bağlantı · atıf · odak */
   --color-accent-container: oklch(0.52 0.11 152); /* birincil butonlar (gönder, yeni sohbet) */
   --color-accent-soft: oklch(0.93 0.03 152); /* atıf rozetleri · flash zemini */
   --color-on-accent: #ffffff;
   --color-muted: #6b7470; /* Margin Gray: nötr yeşil-gri, metinde AA (4.58:1 kâğıt zeminde) */
   --color-border: #e3e2e0;
-  --color-border-subtle: #e5e4e1;
   --color-outline: #6b7470;
   --color-tertiary: #2b2d2d;
   --color-on-tertiary: #ffffff;
@@ -24,7 +21,6 @@
   --color-error-accent: #ba1a1a;
   --color-success: #2e7d32;
   --color-code-bg: #f4f4f5;
-  --color-primary-fixed: #ffdad4;
 
   /* Spacing — 8px base grid */
   --space-base: 8px;
@@ -78,17 +74,14 @@
   --color-surface-container: oklch(0.25 0.013 167);
   --color-surface-container-low: oklch(0.207 0.011 167);
   --color-surface-container-high: oklch(0.278 0.014 168);
-  --color-surface-variant: oklch(0.3 0.014 167);
   --color-text: oklch(0.94 0.008 165);
   --color-text-secondary: oklch(0.755 0.012 165);
-  --color-text-variant: oklch(0.8 0.04 156);
   --color-accent: oklch(0.8 0.13 158); /* aydınlık yeşil — metin/bağlantı/atıf */
   --color-accent-container: oklch(0.73 0.15 154); /* canlı yeşil — butonlar */
   --color-accent-soft: oklch(0.3 0.05 152);
   --color-on-accent: oklch(0.22 0.04 156); /* aksan üstündeki koyu metin */
   --color-muted: oklch(0.63 0.013 165);
   --color-border: oklch(0.3 0.013 167);
-  --color-border-subtle: oklch(0.27 0.012 167);
   --color-outline: oklch(0.5 0.014 165);
   --color-tertiary: oklch(0.865 0.01 165); /* kullanıcı balonu zemini */
   --color-on-tertiary: oklch(0.205 0.012 165);
@@ -97,7 +90,6 @@
   --color-error-accent: #ffb4ab;
   --color-success: #81c784;
   --color-code-bg: oklch(0.228 0.012 167);
-  --color-primary-fixed: oklch(0.3 0.05 152);
 }
 
 * {
