@@ -9,6 +9,17 @@ import re
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from langchain_core.documents import Document
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def verify():
+    """The comparison check (rag.report_compare) is stubbed: no network in tests.
+    It marks the content so a test can see the stored report went through it."""
+    async def mark(content, **kw):
+        return content + "\n<!-- checked -->"
+    with patch("api.routes.reports.verify_comparison", new=AsyncMock(side_effect=mark)) as m:
+        yield m
 
 
 def _parse_sse_events(raw_text: str) -> list[dict]:
@@ -147,3 +158,46 @@ def test_technical_report_compares_and_stores_link():
     assert resp.status_code == 200
     assert "What changed since the last report" in seen[0]["question"]
     assert _client().get(f"/reports/{_saved_id(resp)}").json()["previous_report_id"] == "r-prev"
+
+
+def test_comparative_report_is_checked_before_saving(verify):
+    _save_previous()
+    seen = []
+    resp = _stream({**_NEXT, "previous_report_id": "r-prev"}, seen)
+    assert resp.status_code == 200
+    verify.assert_awaited_once()
+    kwargs = verify.await_args.kwargs
+    assert kwargs == {"heading": "What changed since the last report", "date_from": "2026-07-01",
+                      "date_to": "2026-09-30", "language": "en"}
+    stored = _client().get(f"/reports/{_saved_id(resp)}").json()["content"]
+    assert stored.endswith("<!-- checked -->")
+
+
+def test_turkish_comparative_report_checks_the_turkish_heading(verify):
+    _save_previous(language="tr")
+    seen = []
+    resp = _stream({**_NEXT, "language": "tr", "previous_report_id": "r-prev"}, seen)
+    assert resp.status_code == 200
+    assert verify.await_args.kwargs["heading"] == "Son rapordan bu yana neler değişti"
+
+
+def test_one_off_report_is_not_checked(verify):
+    seen = []
+    _stream(_NEXT, seen)
+    verify.assert_not_awaited()
+
+
+def test_technical_comparative_report_is_checked(verify):
+    from analytics.technical_report import Findings, ReportSection
+    findings = Findings(sections=[ReportSection(
+        heading="Needs — Trend", stat_result={"kind": "trend"}, chart=None,
+        findings_text="Needs: up, p=0.010, n=6.")], gaps=[], indicators_covered=["needs"])
+    _save_previous(country="Afghanistan", theme=None, report_type="technical_monitoring")
+    seen = []
+    with patch("api.routes.reports.technical_report.compute_findings", return_value=findings),          patch("api.routes.reports.build_report_chain", return_value=_capturing_chain(seen)):
+        resp = _client().post("/reports/stream", json={
+            "country": "Afghanistan", "report_type": "technical_monitoring", "language": "en",
+            "date_from": "2026-07-01", "date_to": "2026-09-30", "previous_report_id": "r-prev"})
+    verify.assert_awaited_once()
+    stored = _client().get(f"/reports/{_saved_id(resp)}").json()["content"]
+    assert stored.endswith("<!-- checked -->")

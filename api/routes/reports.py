@@ -27,8 +27,10 @@ from rag.chain import build_report_chain
 from rag.rag_context import _build_context_and_sources
 from rag.citations import normalize_citations, normalize_table_delimiters
 from rag.report_pdf import render_report_pdf
+from rag.report_compare import verify_comparison
 from rag.report_service import (
-    build_comparison_block, build_report_directive, report_title, retrieve_for_report,
+    COMPARISON_HEADINGS, build_comparison_block, build_report_directive, report_title,
+    retrieve_for_report,
 )
 from api.routes.auth import get_current_user
 from api.routes.chat import (
@@ -193,6 +195,16 @@ def _previous_in_series(user_id: str, req: ReportRequest) -> dict:
     return previous
 
 
+async def _checked(full: str, req: ReportRequest) -> str:
+    """A next-period report's "What changed" section after the narrow check
+    (rag.report_compare): sentences that present older or undated material as new
+    are dropped. Never fails: any problem keeps the text as generated."""
+    return await verify_comparison(
+        full, heading=COMPARISON_HEADINGS.get(req.language, COMPARISON_HEADINGS["en"]),
+        date_from=req.date_from, date_to=req.date_to, language=req.language,
+    )
+
+
 @router.get("/reports/options")
 async def report_options(user: dict = Depends(get_current_user)):
     countries = await anyio.to_thread.run_sync(_countries)
@@ -263,6 +275,8 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                             data=json.dumps({"content": chunk}, ensure_ascii=False),
                         )
 
+                if previous:
+                    full = await _checked(full, req)
                 section_images = technical_report.assemble_section_images(findings)
                 report_id = str(uuid4())
                 title = report_title(req.country, req.theme, req.date_from, req.date_to,
@@ -319,6 +333,11 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                         event="token",
                         data=json.dumps({"content": chunk}, ensure_ascii=False),
                     )
+
+            # Next-period reports: drop "What changed" sentences that present older or
+            # undated material as new, before citations are renumbered below.
+            if previous:
+                full = await _checked(full, req)
 
             # Expand grouped citations, drop uncited/invalid sources, and renumber the
             # [n] markers + sources to a contiguous 1..N so the stored content, the PDF

@@ -88,3 +88,5 @@ def _reset():
     _chain_mod._report_chains = {}
     _qp._llm_extractor = None
     _qp._llm_planner = None
+    import rag.report_compare as _rc
+    _rc._checker_llm = None
