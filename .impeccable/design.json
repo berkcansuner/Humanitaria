@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-15T17:03:58+00:00",
+  "generatedAt": "2026-11-15T21:35:42+00:00",
   "title": "Design System: Humanitaria",
   "extensions": {
     "colorMeta": {
@@ -292,6 +292,21 @@
           "oklch(84% 0.075 144)",
           "oklch(95% 0.051 144)"
         ]
+      },
+      "code-ground": {
+        "role": "neutral",
+        "displayName": "Code Ground",
+        "canonical": "#f4f4f5",
+        "tonalRamp": [
+          "oklch(0.15 0.004 286)",
+          "oklch(0.27 0.004 286)",
+          "oklch(0.39 0.004 286)",
+          "oklch(0.51 0.004 286)",
+          "oklch(0.63 0.004 286)",
+          "oklch(0.75 0.004 286)",
+          "oklch(0.87 0.004 286)",
+          "oklch(0.967 0.004 286)"
+        ]
       }
     },
     "typographyMeta": {
@@ -373,7 +388,7 @@
         "value": "640px"
       },
       {
-        "name": "landing-md",
+        "name": "one-pane",
         "value": "760px"
       },
       {
@@ -446,6 +461,22 @@
       "description": "Sidebar conversation rows on the Reading Room ground.",
       "html": "<nav class=\"ds-nav\"><a href=\"#\" class=\"ds-nav-item is-active\">Sudan food security</a><a href=\"#\" class=\"ds-nav-item\">Cholera response, Yemen</a><a href=\"#\" class=\"ds-nav-item\">Flood funding gaps</a></nav>",
       "css": ".ds-nav{display:flex;flex-direction:column;gap:2px;padding:12px;background:var(--color-surface-container-low);border-right:1px solid var(--color-border);font-family:var(--font-body);font-size:var(--text-sm)}.ds-nav-item{padding:8px 12px;border-radius:var(--radius-md);color:var(--color-text);text-decoration:none;transition:background-color .15s}.ds-nav-item:hover{background:var(--color-surface-container)}.ds-nav-item.is-active{background:var(--color-surface-container-high);color:var(--color-accent);font-weight:600}.ds-nav-item:focus-visible{outline:2px solid var(--color-accent);outline-offset:2px}"
+    },
+    {
+      "name": "Stop Button",
+      "kind": "button",
+      "refersTo": "button-stop",
+      "description": "Charcoal Stop while a reply or a report streams; replaces the primary action and takes focus.",
+      "html": "<button class=\"ds-btn-stop\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\"/></svg>Stop generating</button>",
+      "css": ".ds-btn-stop{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:10px;font-family:var(--font-body);font-size:var(--text-sm);font-weight:600;color:var(--color-on-tertiary);background:var(--color-tertiary);border:none;border-radius:var(--radius-lg);cursor:pointer;transition:background-color .2s}.ds-btn-stop:hover{background:var(--color-text-secondary)}.ds-btn-stop:focus-visible{outline:2px solid var(--color-accent);outline-offset:2px}"
+    },
+    {
+      "name": "Report Series Row",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "A saved-report series folded into one row: name, mono meta with the count and latest end date, chevron that turns 90° when open.",
+      "html": "<button class=\"ds-series-row\" aria-expanded=\"false\"><span class=\"ds-series-text\"><span class=\"ds-series-name\">Afghanistan · Health</span><span class=\"ds-series-meta\">Situation · 3 reports · to 2026-09-30</span></span><span class=\"ds-series-chev\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m9 18 6-6-6-6\"/></svg></span></button>",
+      "css": ".ds-series-row{display:flex;align-items:center;gap:8px;width:100%;padding:8px 12px;text-align:left;background:transparent;border:none;border-radius:var(--radius-md);cursor:pointer;transition:background-color .15s}.ds-series-row:hover{background:var(--color-surface-container)}.ds-series-row:focus-visible{outline:2px solid var(--color-accent);outline-offset:-2px}.ds-series-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.ds-series-name{font-size:var(--text-sm);color:var(--color-text)}.ds-series-meta{font-family:var(--font-mono);font-size:11px;font-variant-numeric:tabular-nums;color:var(--color-text-secondary)}.ds-series-chev{display:inline-flex;color:var(--color-muted);transition:transform .15s}.ds-series-row[aria-expanded=true] .ds-series-chev{transform:rotate(90deg)}"
     }
   ],
   "narrative": {

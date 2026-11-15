@@ -19,6 +19,7 @@ colors:
   alert-red: "#ba1a1a"
   alert-blush: "#ffdad6"
   confirm-green: "#2e7d32"
+  code-ground: "#f4f4f5"
 typography:
   display:
     fontFamily: "'DM Sans Variable', system-ui, -apple-system, sans-serif"
@@ -82,6 +83,11 @@ components:
     textColor: "{colors.archive-ink}"
     rounded: "{rounded.lg}"
     padding: "8px 14px"
+  button-stop:
+    backgroundColor: "{colors.charcoal}"
+    textColor: "{colors.on-green}"
+    rounded: "{rounded.lg}"
+    padding: "10px"
   button-send:
     backgroundColor: "{colors.action-green}"
     textColor: "{colors.on-green}"
@@ -163,7 +169,8 @@ A warm-neutral paper palette with a single green voice.
 - **Graphite** (`graphite`): secondary text.
 - **Margin Gray** (`margin-gray`): muted text, placeholders, metadata, and input outlines in light theme. A green-leaning neutral like the rest of the family (dark theme uses its own neutral green-gray), at 4.58:1 on Archive Paper so metadata stays readable. It replaced a red-brown Clay Gray (`#8e706b`) that fell below 4.5:1.
 - **Paper Edge** (`paper-edge`): borders and dividers.
-- **Charcoal** (`charcoal`): the Stop button while a reply streams.
+- **Charcoal** (`charcoal`): the Stop button while a reply or a report streams.
+- **Code Ground** (`code-ground`): the cool near-white behind inline code and code blocks in answers; the one ground outside the warm paper family, kept for code alone.
 
 ### Semantic
 - **Alert Red / Alert Blush** (`alert-red`, `alert-blush`): error text and error banner ground.
@@ -230,7 +237,7 @@ Refined and restrained: a solid green primary, quiet secondaries, no shadow.
 - **Secondary / ghost:** white or transparent ground, Paper Edge border; hover turns border and text Field Green.
 - **Press:** icon and small buttons scale to 0.94 while pressed.
 - **Focus:** 2px Field Green outline, 2px offset, on `:focus-visible` only.
-- **Stop:** Charcoal fill while a reply streams.
+- **Stop:** Charcoal fill while a reply or a report streams (the send button's square in Chat, a full-width "Stop generating" in the reports rail).
 
 ### Inputs / Fields
 - **Style:** white ground, 1px Margin Gray outline, 6px radius, 8px 10px padding.
