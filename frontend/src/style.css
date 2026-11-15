@@ -121,6 +121,15 @@ body {
   min-height: 100%;
 }
 
+/* Form controls do not inherit the page font by default (they fall back to the
+   UA font, e.g. Arial); size stays per-component. */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
 /* min-height (not fixed height) so tall marketing pages scroll the document.
    The chat view self-locks to the viewport via ChatView's .app
    (height:100vh; overflow:hidden), so removing the global lock keeps the chat
