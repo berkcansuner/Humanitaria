@@ -280,3 +280,7 @@ Quiet at rest, a ledger when opened (`SourceList.vue`, a native `<details>`).
 - **Don't** hide a source behind more than one interaction.
 - **Don't** mark quotes, alerts, cards or list items with a thick colored side rule (over 1px); use a fill, a full hairline border, or an icon.
 - **Don't** use bouncing or elastic motion, including bouncing typing dots.
+- **Don't** put eyebrow or kicker labels above headings; the heading carries its own weight.
+- **Don't** build a section from same-size cards of icon tile, heading and text; use headed rows or paragraphs separated by hairlines.
+- **Don't** add decorative green glows, ring patterns, glass blur, or gradient fade lines.
+- **Don't** hide content behind scroll-triggered fade-ins; everything is visible at rest, and the landing hero's underline on "cite." is the page's one authored motion.
