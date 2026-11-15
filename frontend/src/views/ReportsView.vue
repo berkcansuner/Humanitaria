@@ -311,6 +311,12 @@
               )
             "
           ></article>
+          <!-- Next-period reports: the streamed "What changed" is checked before it is
+               saved, and sentences may drop out when the saved text replaces it. -->
+          <p v-if="current.checking" class="check-status" role="status">
+            <Loader2 :size="14" class="spin" aria-hidden="true" />
+            Checking what changed against the previous report…
+          </p>
           <div v-if="genError" class="error-banner"><AlertCircle :size="16" /> {{ genError }}</div>
           <SourceList v-if="current.sources" :sources="current.sources" />
         </div>
@@ -839,9 +845,17 @@ async function generate() {
             current.value.section_images = d.sections
             current.value.imagesStatus = null
           } catch (e) {}
+        } else if (sse.event === 'status') {
+          try {
+            if (JSON.parse(sse.data).stage === 'checking_comparison') {
+              current.value.checking = true
+              scrollViewerBottom()
+            }
+          } catch (e) {}
         } else if (sse.event === 'saved') {
           continuation.value = null
           current.value.imagesStatus = null
+          current.value.checking = false
           let rid = null
           try {
             const d = JSON.parse(sse.data)
@@ -875,6 +889,7 @@ async function generate() {
         "Couldn't reach the server. It may be waking up (about 30 seconds); generate again."
     }
   } finally {
+    if (current.value) current.value.checking = false
     generating.value = false
     controller.value = null
   }
@@ -1284,6 +1299,14 @@ function onCiteClick(e) {
   width: 100%;
   margin: 0 0 var(--space-4);
   border-radius: var(--radius-lg);
+}
+.check-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
 }
 .images-status {
   margin: 0 0 var(--space-2);
