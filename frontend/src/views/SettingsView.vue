@@ -77,13 +77,18 @@
         <p v-if="pwError" class="error-box" role="alert">{{ pwError }}</p>
       </section>
 
-      <section class="card danger-card">
-        <div class="card-head"><h2>Danger zone</h2></div>
+      <section class="card">
+        <div class="card-head"><h2>Delete account</h2></div>
         <p class="muted">
           Deleting your account permanently removes your conversations, reports and profile. This
           cannot be undone.
         </p>
-        <button ref="deleteTriggerBtn" class="danger-btn" type="button" @click="openDeleteModal">
+        <button
+          ref="deleteTriggerBtn"
+          class="danger-quiet-btn"
+          type="button"
+          @click="openDeleteModal"
+        >
           Delete my account
         </button>
       </section>
@@ -285,26 +290,43 @@ async function confirmDelete() {
 
 .content {
   width: 100%;
-  max-width: 720px;
+  max-width: 760px;
   margin: 0 auto;
-  padding: var(--space-5);
+  padding: var(--space-5) var(--space-5) var(--space-8);
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
 }
 
+/* Quiet Archive: settings are rows on the page, not stacked cards. Each
+   section is a heading column and a content column, split by a hairline. */
 .card {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  padding: var(--space-5);
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  column-gap: var(--space-6);
+  padding: var(--space-6) 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.card:first-child {
+  border-top: none;
+  padding-top: var(--space-2);
+}
+
+.card-head {
+  grid-column: 1;
+  grid-row: 1 / span 8;
+}
+
+.card > :not(.card-head) {
+  grid-column: 2;
 }
 
 .card-head h2 {
   font-family: var(--font-display);
   font-size: var(--text-base);
+  font-weight: 700;
   color: var(--color-text);
-  margin: 0 0 var(--space-3);
+  margin: 0;
 }
 
 .grid {
@@ -315,10 +337,9 @@ async function confirmDelete() {
 }
 
 .grid dt {
-  font-size: 11.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
 }
 
 .grid dd {
@@ -358,8 +379,8 @@ async function confirmDelete() {
   font-family: var(--font-body);
   font-size: var(--text-sm);
   color: var(--color-text);
-  background-color: var(--color-bg);
-  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-outline);
   border-radius: var(--radius-md);
 }
 
@@ -394,6 +415,7 @@ async function confirmDelete() {
 }
 
 .theme-seg {
+  justify-self: start;
   display: inline-flex;
   gap: var(--space-1);
   padding: var(--space-1);
@@ -438,12 +460,29 @@ async function confirmDelete() {
 }
 
 .muted {
-  color: var(--color-muted);
+  margin: 0;
+  max-width: 60ch;
+  color: var(--color-text-secondary);
   font-size: var(--text-sm);
 }
 
-.danger-card {
-  border-color: color-mix(in oklab, var(--color-error) 45%, var(--color-border));
+/* Starting a deletion is quiet; the solid red is kept for the confirm step. */
+.danger-quiet-btn {
+  justify-self: start;
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-error);
+  background: transparent;
+  border: 1px solid color-mix(in oklch, var(--color-error) 45%, transparent);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.danger-quiet-btn:hover {
+  background-color: var(--color-error-bg);
 }
 
 .danger-btn {
@@ -503,5 +542,24 @@ async function confirmDelete() {
   justify-content: flex-end;
   gap: var(--space-2);
   margin-top: var(--space-2);
+}
+
+@media (max-width: 640px) {
+  .content {
+    padding: var(--space-4) var(--space-4) var(--space-6);
+  }
+  .card {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--space-3);
+    padding: var(--space-5) 0;
+  }
+  .card-head,
+  .card > :not(.card-head) {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .form-row {
+    flex-wrap: wrap;
+  }
 }
 </style>
