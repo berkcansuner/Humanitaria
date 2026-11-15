@@ -100,3 +100,26 @@ def test_sqlite_legacy_reports_gain_image_columns(tmp_path):
         with engine.connect() as conn:
             cols = {r[1] for r in conn.exec_driver_sql("PRAGMA table_info(reports)")}
     assert "cover_image" in cols and "section_images" in cols
+
+
+def test_sqlite_legacy_reports_gain_previous_report_id_column(tmp_path):
+    """A pre-series SQLite file without reports.previous_report_id is migrated on
+    first engine creation (existing reports keep NULL: first in their series)."""
+    import sqlite3
+
+    path = tmp_path / "legacy_series.db"
+    con = sqlite3.connect(path)
+    con.execute(
+        "CREATE TABLE reports (id TEXT PRIMARY KEY, user_id TEXT, report_type TEXT, "
+        "country TEXT, theme TEXT, date_from TEXT, date_to TEXT, language TEXT, "
+        "title TEXT NOT NULL, content TEXT NOT NULL, sources_json TEXT, doc_count INTEGER, "
+        "cover_image TEXT, section_images TEXT, created_at TEXT NOT NULL)"
+    )
+    con.commit()
+    con.close()
+
+    with patch("rag.db.get_settings", return_value=_settings(db_path=str(path))):
+        engine = db.get_engine()
+        with engine.connect() as conn:
+            cols = {r[1] for r in conn.exec_driver_sql("PRAGMA table_info(reports)")}
+    assert "previous_report_id" in cols

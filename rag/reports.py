@@ -25,8 +25,10 @@ def create_report(report_id: str, user_id: str, *, country: str, theme: str | No
                   title: str, content: str, sources: list | None, doc_count: int,
                   report_type: str = "situation",
                   cover_image: str | None = None,
-                  section_images: list | None = None) -> None:
-    """Insert a generated report owned by user_id."""
+                  section_images: list | None = None,
+                  previous_report_id: str | None = None) -> None:
+    """Insert a generated report owned by user_id. ``previous_report_id`` links a
+    next-period report to the one it continues (None = first in its series)."""
     sources_json = json.dumps(sources, ensure_ascii=False) if sources else None
     section_images_json = json.dumps(section_images, ensure_ascii=False) if section_images else None
     with _connect() as conn:
@@ -34,15 +36,17 @@ def create_report(report_id: str, user_id: str, *, country: str, theme: str | No
             text(
                 "INSERT INTO reports(id, user_id, report_type, country, theme, date_from, date_to, "
                 "language, title, content, sources_json, doc_count, cover_image, section_images, "
-                "created_at) "
+                "previous_report_id, created_at) "
                 "VALUES (:id, :uid, :report_type, :country, :theme, :date_from, :date_to, :language, "
-                ":title, :content, :sources, :doc_count, :cover_image, :section_images, :now)"
+                ":title, :content, :sources, :doc_count, :cover_image, :section_images, "
+                ":previous_report_id, :now)"
             ),
             {"id": report_id, "uid": user_id, "report_type": report_type, "country": country,
              "theme": theme, "date_from": date_from, "date_to": date_to, "language": language,
              "title": title, "content": content, "sources": sources_json,
              "doc_count": doc_count, "cover_image": cover_image,
-             "section_images": section_images_json, "now": _now()},
+             "section_images": section_images_json,
+             "previous_report_id": previous_report_id, "now": _now()},
         )
 
 
@@ -59,7 +63,8 @@ def list_reports(user_id: str) -> list[dict]:
         rows = conn.execute(
             text(
                 "SELECT id, report_type, country, theme, date_from, date_to, language, title, "
-                "doc_count, created_at FROM reports WHERE user_id = :uid ORDER BY created_at DESC"
+                "doc_count, previous_report_id, created_at FROM reports "
+                "WHERE user_id = :uid ORDER BY created_at DESC"
             ),
             {"uid": user_id},
         ).mappings().fetchall()

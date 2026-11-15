@@ -152,6 +152,27 @@ class TestReportStore:
         assert rep["cover_image"] is None
         assert rep["section_images"] is None
 
+    def test_create_report_stores_previous_report_id(self):
+        """A next-period report links to the one it continues; both the detail and
+        the lean list carry the link so the frontend can draw the series."""
+        from rag import reports as store
+        self._create("r-prev")
+        store.create_report(
+            "r-next", "test-user", country="Sudan", theme=None, date_from="2026-07-01",
+            date_to="2026-09-30", language="en", title="t", content="c", sources=None,
+            doc_count=1, previous_report_id="r-prev",
+        )
+        assert store.get_report("r-next")["previous_report_id"] == "r-prev"
+        row = next(r for r in store.list_reports("test-user") if r["id"] == "r-next")
+        assert row["previous_report_id"] == "r-prev"
+
+    def test_previous_report_id_defaults_none(self):
+        from rag import reports as store
+        self._create("r-first")
+        assert store.get_report("r-first")["previous_report_id"] is None
+        row = next(r for r in store.list_reports("test-user") if r["id"] == "r-first")
+        assert row["previous_report_id"] is None
+
 
 # --- retriever date range ($lte) --------------------------------------------
 
@@ -565,6 +586,33 @@ class TestReportEndpoints:
         assert row["report_type"] == "situation"
         full = client.get("/reports/r-legacy").json()
         assert full["report_type"] == "situation"
+
+    def test_list_and_detail_return_series_fields(self):
+        """The series key (type + country + sector + language), the period and the
+        link to the previous report reach the frontend through both endpoints."""
+        from rag import reports as store
+
+        store.create_report(
+            "r-s1", "test-user", country="Afghanistan", theme="Health",
+            date_from="2026-04-01", date_to="2026-06-30", language="en", title="t",
+            content="c", sources=None, doc_count=1, report_type="situation",
+        )
+        store.create_report(
+            "r-s2", "test-user", country="Afghanistan", theme="Health",
+            date_from="2026-07-01", date_to="2026-09-30", language="en", title="t",
+            content="c", sources=None, doc_count=1, report_type="situation",
+            previous_report_id="r-s1",
+        )
+        client = _client()
+        series = ("report_type", "country", "theme", "language", "date_from", "date_to",
+                  "previous_report_id")
+        row = next(r for r in client.get("/reports/list").json()["reports"] if r["id"] == "r-s2")
+        full = client.get("/reports/r-s2").json()
+        expected = {"report_type": "situation", "country": "Afghanistan", "theme": "Health",
+                    "language": "en", "date_from": "2026-07-01", "date_to": "2026-09-30",
+                    "previous_report_id": "r-s1"}
+        assert {k: row[k] for k in series} == expected
+        assert {k: full[k] for k in series} == expected
 
     def test_report_types_constant_matches_api_literal(self):
         from rag.report_service import REPORT_TYPES
