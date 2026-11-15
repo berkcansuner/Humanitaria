@@ -2,7 +2,7 @@
   <div class="reports-app">
     <AppTopbar context="M&amp;E Reports" />
 
-    <div class="reports-body">
+    <div :class="['reports-body', { 'has-report': !!(current || openingId) }]">
       <aside class="reports-aside">
         <form class="report-form" @submit.prevent="generate">
           <h2 class="form-title">New report</h2>
@@ -115,6 +115,16 @@
       </aside>
 
       <main ref="viewer" class="report-main" @click="onCiteClick">
+        <!-- Phones show the library or one report, never both stacked. -->
+        <button
+          v-if="(current || openingId) && !generating"
+          type="button"
+          class="back-to-list"
+          @click="closeReport"
+        >
+          <ArrowLeft :size="15" aria-hidden="true" />
+          All reports
+        </button>
         <!-- One reading column: every block shares its 70ch measure (set at body size),
              so the Sources line and the header align with the text. -->
         <!-- Opening a saved report: a skeleton instead of a silent wait. -->
@@ -190,8 +200,18 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { FileText, Trash2, Loader2, AlertCircle, FileDown, Copy, Check } from 'lucide-vue-next'
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import {
+  FileText,
+  Trash2,
+  Loader2,
+  AlertCircle,
+  FileDown,
+  Copy,
+  Check,
+  ArrowLeft,
+} from 'lucide-vue-next'
 import AppTopbar from '../components/AppTopbar.vue'
 import SourceList from '../components/SourceList.vue'
 import UndoToast from '../components/UndoToast.vue'
@@ -220,6 +240,8 @@ const optionsError = ref(false)
 const reports = ref([])
 const loadingList = ref(false)
 const openingId = ref(null) // saved report being fetched for the viewer
+const route = useRoute()
+const router = useRouter()
 
 const form = ref({
   report_type: 'situation',
@@ -304,6 +326,31 @@ onMounted(async () => {
   await loadList()
 })
 
+// Back/Forward or an edited URL: open the named report, or return to the library.
+watch(
+  () => route.query.report,
+  (id) => {
+    if (!id) {
+      if (current.value && !generating.value) current.value = null
+      return
+    }
+    if (id === openingId.value || (current.value && current.value.id === id)) return
+    openReport(id, { fromRoute: true })
+  },
+  { immediate: true },
+)
+
+// Tab title names the open report ("Afghanistan · Situation Report · Humanitaria").
+watch(
+  () => [titleParts.value.heading, current.value && current.value.report_type],
+  ([heading, type]) => {
+    document.title = heading
+      ? `${heading} · ${typeLabel(type)} · Humanitaria`
+      : 'M&E reports · Humanitaria'
+  },
+  { immediate: true },
+)
+
 async function loadList() {
   loadingList.value = true
   try {
@@ -316,9 +363,27 @@ async function loadList() {
   }
 }
 
-async function openReport(id) {
+// The open report lives in the URL (/reports?report=<id>) so Back/Forward,
+// bookmarks, new tabs and shared links work. A query, not /reports/:id: that
+// path is the JSON API (api/routes/reports.py) and would shadow the page on reload.
+
+function syncUrl(id, { push = false } = {}) {
+  const want = id || undefined
+  if ((route.query.report || undefined) === want) return
+  const query = { ...route.query }
+  if (want) query.report = want
+  else delete query.report
+  ;(push ? router.push : router.replace)({ query })
+}
+
+function closeReport() {
+  syncUrl(null, { push: true })
+}
+
+async function openReport(id, { fromRoute = false } = {}) {
   if (generating.value) return
   openingId.value = id
+  if (!fromRoute) syncUrl(id, { push: true })
   try {
     const rep = await getReport(id)
     current.value = {
@@ -337,6 +402,7 @@ async function openReport(id) {
   } catch (e) {
     console.error('Failed to open report:', e)
     showNotice('Could not open the report. Try again.')
+    if (!current.value || current.value.id !== id) syncUrl(null)
   } finally {
     if (openingId.value === id) openingId.value = null
   }
@@ -369,7 +435,10 @@ const {
   },
   // Put the report back in the viewer if it was open.
   onUndo: (id, meta) => {
-    if (meta && meta.open && !current.value) current.value = meta.open
+    if (meta && meta.open && !current.value) {
+      current.value = meta.open
+      syncUrl(id)
+    }
   },
 })
 
@@ -378,7 +447,10 @@ const toastMessage = computed(() => (pendingDelete.value ? 'Report deleted.' : n
 
 function onDelete(id) {
   const open = current.value && current.value.id === id ? current.value : null
-  if (open) current.value = null
+  if (open) {
+    current.value = null
+    syncUrl(null)
+  }
   removeReport(id, { open })
 }
 
@@ -434,6 +506,7 @@ async function generate() {
   if (!form.value.country || generating.value) return
   generating.value = true
   genError.value = ''
+  syncUrl(null)
   current.value = {
     id: null,
     title: '',
@@ -514,6 +587,7 @@ async function generate() {
             const d = JSON.parse(sse.data)
             rid = d.report_id
             current.value.id = d.report_id
+            syncUrl(d.report_id)
             current.value.title = d.title
           } catch (e) {}
           await loadList()
@@ -579,6 +653,24 @@ function onCiteClick(e) {
   flex: 1;
   display: flex;
   min-height: 0;
+}
+
+.back-to-list {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--space-4);
+  padding: 4px 8px 4px 4px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-accent);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.back-to-list:hover {
+  background-color: var(--color-accent-soft);
 }
 
 .reports-aside {
@@ -795,14 +887,18 @@ function onCiteClick(e) {
 }
 .report-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
-  gap: var(--space-4);
+  gap: var(--space-3) var(--space-4);
   margin-bottom: var(--space-5);
   padding-bottom: var(--space-4);
   border-bottom: 1px solid var(--color-border);
 }
+/* Title takes the room it needs; on a narrow column the actions wrap below it
+   instead of squeezing it to a few letters. */
 .report-head-text {
+  flex: 1 1 16rem;
   min-width: 0;
 }
 /* Document title: one clear step above the report's own section heads (xl). */
@@ -1001,14 +1097,24 @@ function onCiteClick(e) {
   .reports-body {
     flex-direction: column;
   }
+  /* One pane at a time: the library, or the open report with a way back. The
+     old 45% library strip above the report gave two nested scroll areas. */
   .reports-aside {
+    flex: 1;
     width: 100%;
     border-right: none;
-    border-bottom: 1px solid var(--color-border);
-    max-height: 45%;
+  }
+  .reports-body.has-report .reports-aside {
+    display: none;
+  }
+  .reports-body:not(.has-report) .report-main {
+    display: none;
   }
   .report-main {
     padding: var(--space-4);
+  }
+  .back-to-list {
+    display: inline-flex;
   }
 }
 </style>

@@ -10,12 +10,14 @@ const routes = [
     name: 'login',
     component: () => import('../views/AuthView.vue'),
     props: { mode: 'login' },
+    meta: { title: 'Log in' },
   },
   {
     path: '/signup',
     name: 'signup',
     component: () => import('../views/AuthView.vue'),
     props: { mode: 'signup' },
+    meta: { title: 'Sign up' },
   },
   // The chat app is the heaviest chunk and most visitors land on the marketing
   // page first, so it is lazy-loaded. It requires an authenticated session.
@@ -23,28 +25,28 @@ const routes = [
     path: '/app',
     name: 'app',
     component: () => import('../views/ChatView.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, title: 'Chat' },
   },
   // M&E situation-report generator (form → streamed brief → saved reports).
   {
     path: '/reports',
     name: 'reports',
     component: () => import('../views/ReportsView.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, title: 'M&E reports' },
   },
   // Account settings: profile, appearance, password, account deletion.
   {
     path: '/settings',
     name: 'settings',
     component: () => import('../views/SettingsView.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, title: 'Settings' },
   },
   // Admin-only ingestion status & management panel.
   {
     path: '/admin/ingestion',
     name: 'admin-ingestion',
     component: () => import('../views/AdminIngestionView.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true },
+    meta: { requiresAuth: true, requiresAdmin: true, title: 'Ingestion admin' },
   },
   // Unknown paths fall back to the landing page.
   { path: '/:pathMatch(.*)*', redirect: '/' },
@@ -63,6 +65,13 @@ export const router = createRouter({
     if (savedPosition) return savedPosition
     return { top: 0 }
   },
+})
+
+// Each screen names itself in the tab ("Settings · Humanitaria"); people keep
+// several open. Views may refine it (the reports view names the open report).
+const BASE_TITLE = document.title || 'Humanitaria'
+router.afterEach((to) => {
+  document.title = to.meta.title ? `${to.meta.title} · Humanitaria` : BASE_TITLE
 })
 
 router.beforeEach(async (to) => {

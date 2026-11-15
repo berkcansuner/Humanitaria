@@ -206,6 +206,8 @@ Spacing follows an 8px base grid (`--space-1` 4px through `--space-12` 80px). Me
 
 Breakpoints are written as needed, not as a fixed scale: 640px is the main one (sidebar becomes a drawer, bubbles widen, radii tighten), with 480px, 560px, 760px, and 900px used on the landing page.
 
+The reports screen is a library rail beside the open report on wide screens; under 760px it shows one pane at a time (the library, or the report with an "All reports" link back). The open report lives in the URL as `/reports?report=<id>` (not `/reports/<id>`, which is the JSON API) and names the tab ("Afghanistan · Situation Report · Humanitaria"); every other screen names itself in the tab too.
+
 **The Reading Measure Rule.** Answer and report text never runs wider than 70ch, whatever the window width. In the report viewer the whole column (header, text, Sources) shares one 70ch measure set at body size, so smaller-type blocks never shrink or drift.
 
 ## Elevation & Depth
