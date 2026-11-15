@@ -71,6 +71,9 @@
 
           <p v-if="optionsError" class="form-hint">Could not load options. Try refreshing.</p>
           <p v-else-if="!countries.length" class="form-hint">Preparing the country list…</p>
+          <p v-else-if="!form.country && !generating" class="form-hint">
+            Choose a country to generate a report.
+          </p>
         </form>
 
         <div class="saved">
@@ -82,7 +85,11 @@
             <li
               v-for="r in visibleReports"
               :key="r.id"
-              :class="['saved-item', { active: current && current.id === r.id }]"
+              :class="[
+                'saved-item',
+                { active: current && current.id === r.id, opening: openingId === r.id },
+              ]"
+              :aria-busy="openingId === r.id ? 'true' : undefined"
             >
               <button type="button" class="saved-open" :title="r.title" @click="openReport(r.id)">
                 <span class="saved-name">{{ savedName(r) }}</span>
@@ -110,7 +117,16 @@
       <main ref="viewer" class="report-main" @click="onCiteClick">
         <!-- One reading column: every block shares its 70ch measure (set at body size),
              so the Sources line and the header align with the text. -->
-        <div v-if="current" class="report-column">
+        <!-- Opening a saved report: a skeleton instead of a silent wait. -->
+        <div v-if="openingId" class="report-column" aria-busy="true">
+          <div class="report-loading">
+            <span class="skeleton skel-line title"></span>
+            <span class="skeleton skel-line"></span>
+            <span class="skeleton skel-line"></span>
+            <span class="skeleton skel-line short"></span>
+          </div>
+        </div>
+        <div v-else-if="current" class="report-column">
           <img v-if="current.cover_image" class="cover-img" :src="current.cover_image" alt="" />
           <p v-if="current.imagesStatus" class="images-status">{{ current.imagesStatus }}</p>
           <header v-if="titleParts.heading || current.id" class="report-head">
@@ -195,6 +211,7 @@ const optionsError = ref(false)
 
 const reports = ref([])
 const loadingList = ref(false)
+const openingId = ref(null) // saved report being fetched for the viewer
 
 const form = ref({
   report_type: 'situation',
@@ -276,6 +293,7 @@ async function loadList() {
 
 async function openReport(id) {
   if (generating.value) return
+  openingId.value = id
   try {
     const rep = await getReport(id)
     current.value = {
@@ -294,6 +312,8 @@ async function openReport(id) {
   } catch (e) {
     console.error('Failed to open report:', e)
     showNotice('Could not open the report. Try again.')
+  } finally {
+    if (openingId.value === id) openingId.value = null
   }
 }
 
@@ -890,6 +910,14 @@ function onCiteClick(e) {
 }
 .skel-line.short {
   width: 55%;
+}
+.skel-line.title {
+  width: 40%;
+  height: 22px;
+  margin-bottom: var(--space-3);
+}
+.saved-item.opening .saved-name {
+  color: var(--color-text-secondary);
 }
 
 .report-empty {
