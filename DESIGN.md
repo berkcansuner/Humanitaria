@@ -269,6 +269,14 @@ Deleting a conversation or saved report is never instant (`UndoToast.vue`, `useU
 - **Errors:** list actions that fail (open, load, delete) use the same toast in Alert Blush with an alert icon and a dismiss button, instead of failing silently.
 - **Row actions:** rename and delete are revealed on hover, on keyboard focus (`:focus-within`) and always on touch screens.
 
+### Report series
+The same report run period after period, inside the archive voice (`utils/reportSeries.js`, `utils/nextPeriod.js`, `rag/report_compare.py`).
+- **Series:** implicit. Saved reports with the same type, country, sector and language fold into one list row: the name ("Afghanistan · Health") over a mono meta line ("Situation · 3 reports") and a 14px Margin Gray chevron that turns 90° when open (`aria-expanded`). Open, the periods sit under a 1px Paper Edge rule, newest first, as mono 12px dates; the open period takes the active-row treatment. The series holding the open report opens with it; folded, its name takes the active Field Green. A lone report stays a plain row.
+- **Run next period:** a secondary button beside Copy with sources and Download PDF. The three actions sit on their own row under the meta line and wrap on a phone. It continues the series' latest period (whichever period is open) and fills the form; when the next period has not started, it is disabled and says when it starts ("Next period from 2026-11-16").
+- **Continues note:** above Generate, a Reading Room panel with a full 1px Paper Edge border and 6px radius (never a colored side stripe): what the report continues, its period in mono, notes when the period ends today or starts at the data window, and a Field Green underlined "Make it a one-off report". When the form leaves the series, it says the report will be a one-off.
+- **Compared with:** under a continued report's meta line, mono 12px Graphite: "Compared with" and the previous period as a Field Green underlined link to it, or "Compared with an earlier report that has since been deleted."
+- **What changed:** a report section of its own, right after the opening section. While it is checked after streaming, a quiet line with a spinner reads "Checking what changed against the previous report…" (`role="status"`); the saved, checked text then replaces the stream.
+
 ### Settings & Admin
 Operate surfaces in the same archive voice, never stacked cards.
 - **Sections:** hairline-separated bands. Settings puts the heading in a 180px left column and the controls right (one column under 640px); Admin stacks heading, note and table over a 1120px width.
