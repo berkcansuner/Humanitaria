@@ -121,6 +121,22 @@ body {
   min-height: 100%;
 }
 
+/* Browser surfaces carry the palette too: selection in Citation Mist, a quiet
+   Margin Gray scrollbar (scrollbar-color is inherited), the caret in Field Green. */
+::selection {
+  background-color: var(--color-accent-soft);
+  color: var(--color-text);
+}
+
+:root {
+  scrollbar-color: color-mix(in oklch, var(--color-outline) 45%, transparent) transparent;
+}
+
+input,
+textarea {
+  caret-color: var(--color-accent);
+}
+
 /* Form controls do not inherit the page font by default (they fall back to the
    UA font, e.g. Arial); size stays per-component. */
 button,

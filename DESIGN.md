@@ -287,6 +287,8 @@ Operate surfaces in the same archive voice, never stacked cards.
 - **Do** keep answer and report text at or under 70ch.
 - **Do** keep surfaces flat; use shadow only for popovers and drawers.
 - **Do** honor `prefers-reduced-motion` (the global rule in `style.css` already stills animation).
+- **Do** theme the browser surfaces from the palette: text selection in Citation Mist, a quiet Margin Gray scrollbar, the caret in Field Green.
+- **Do** let streamed text scroll instantly; smooth scrolling is for user-triggered jumps such as a citation click.
 
 ### Don't:
 - **Don't** make it look like a generic AI chat clone: no purple-blue AI gradients, glows, or anonymous gray-white chat chrome.
