@@ -287,21 +287,32 @@
                   </button>
                 </template>
               </p>
+              <!-- An older period links forward instead of offering "Run next period",
+                   which would continue a different (newer) report. -->
+              <p v-if="continuedBy" class="report-compared">
+                Continued by
+                <button
+                  type="button"
+                  class="report-compared-link"
+                  @click="openReport(continuedBy.id)"
+                >
+                  {{ savedPeriod(continuedBy) || 'a later report' }}
+                </button>
+              </p>
+              <p v-else-if="nextSuggestion && nextSuggestion.notStarted" class="report-compared">
+                Next period starts {{ nextSuggestion.startsOn }}
+              </p>
             </div>
             <div v-if="current.id" class="report-actions">
               <button
-                v-if="nextSuggestion"
+                v-if="nextSuggestion && !nextSuggestion.notStarted"
                 type="button"
                 class="pdf-btn"
-                :disabled="!!nextSuggestion.notStarted || generating"
+                :disabled="generating"
                 @click="runNextPeriod"
               >
                 <CalendarPlus :size="15" />
-                {{
-                  nextSuggestion.notStarted
-                    ? `Next period from ${nextSuggestion.startsOn}`
-                    : 'Run next period'
-                }}
+                Run next period
               </button>
               <button type="button" class="pdf-btn" @click="copyReport">
                 <Check v-if="reportCopied" :size="15" />
@@ -392,7 +403,7 @@ import { parseSSE } from '../utils/parseSSE.js'
 import { getReportOptions, listReports, getReport, deleteReport } from '../utils/reportsApi.js'
 import { REPORT_TYPES, reportTypeBadge } from '../utils/reportTypes.js'
 import { splitReportTitle } from '../utils/reportTitle.js'
-import { groupSeries, seriesKey } from '../utils/reportSeries.js'
+import { groupSeries, newerInSeries, seriesKey } from '../utils/reportSeries.js'
 import { nextPeriod } from '../utils/nextPeriod.js'
 import { copyWithSources } from '../utils/citationCopy.js'
 import { localIsoDay, minReportDate, maxReportDate } from '../utils/reportDateBounds.js'
@@ -676,9 +687,14 @@ const seriesLatest = computed(() => {
   }
   return current.value
 })
-// The series' next period (nextPeriod.js); null when there is no period to carry.
+// The open report's next newer period in its series, when it is not the latest.
+const continuedBy = computed(() =>
+  current.value && current.value.id ? newerInSeries(visibleReports.value, current.value.id) : null,
+)
+// The series' next period (nextPeriod.js), offered only on its latest report;
+// null when there is no period to carry or the open report is an older period.
 const nextSuggestion = computed(() =>
-  seriesLatest.value ? nextPeriod(seriesLatest.value, new Date()) : null,
+  seriesLatest.value && !continuedBy.value ? nextPeriod(seriesLatest.value, new Date()) : null,
 )
 // Set by "Run next period": the saved report the form's next report continues.
 const continuation = ref(null)

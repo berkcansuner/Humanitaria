@@ -49,3 +49,17 @@ export function groupSeries(reports) {
   }
   return out
 }
+
+/**
+ * The report that comes right after `id` in its series (the next newer period),
+ * or null when `id` is the series' latest, a lone report, or unknown. The header
+ * of an older period links forward to it ("Continued by …").
+ */
+export function newerInSeries(reports, id) {
+  for (const entry of groupSeries(reports)) {
+    if (entry.kind !== 'series') continue
+    const i = entry.reports.findIndex((r) => r.id === id)
+    if (i >= 0) return i > 0 ? entry.reports[i - 1] : null
+  }
+  return null
+}
