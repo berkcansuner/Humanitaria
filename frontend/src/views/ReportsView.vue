@@ -136,8 +136,12 @@
                   <span class="saved-name">{{ savedName(e.report) }}</span>
                   <span class="saved-meta"
                     >{{ savedType(e.report)
-                    }}<template v-if="savedPeriod(e.report)">
-                      · <span class="saved-period">{{ savedPeriod(e.report) }}</span></template
+                    }}<template v-if="savedPeriod(e.report)"
+                      >{{ ' ' }}<!-- The separator travels with the period, so a wrapped line
+                           starts with "·" instead of leaving one at a line end. --><span
+                        class="saved-period"
+                        >· {{ savedPeriod(e.report) }}</span
+                      ></template
                     ></span
                   >
                 </button>
