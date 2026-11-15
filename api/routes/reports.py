@@ -28,7 +28,7 @@ from rag.rag_context import _build_context_and_sources
 from rag.citations import normalize_citations, normalize_table_delimiters
 from rag.report_pdf import render_report_pdf
 from rag.report_service import (
-    build_report_directive, report_title, retrieve_for_report,
+    build_comparison_block, build_report_directive, report_title, retrieve_for_report,
 )
 from api.routes.auth import get_current_user
 from api.routes.chat import (
@@ -115,6 +115,9 @@ class ReportRequest(BaseModel):
     report_type: Literal[
         "situation", "indicator_monitoring", "needs_assessment", "technical_monitoring"
     ] = "situation"
+    # Set by "Run next period": the saved report this one continues. The new
+    # report compares against it ("What changed since the last report").
+    previous_report_id: Optional[str] = Field(default=None, min_length=1, max_length=64)
 
     @field_validator("theme")
     @classmethod
@@ -167,6 +170,29 @@ def _countries() -> list[str]:
         return COUNTRIES
 
 
+def _series_key(row: dict) -> tuple:
+    """A series is implicit: same type + country + sector + language."""
+    return (row.get("report_type") or "situation", row.get("country"),
+            row.get("theme"), row.get("language"))
+
+
+def _previous_in_series(user_id: str, req: ReportRequest) -> dict:
+    """The report ``req`` continues. 404 when it is missing or not the user's
+    (same answer, so ids of other users' reports are not probeable); 422 when it
+    belongs to a different series."""
+    if not report_store.is_owner(user_id, req.previous_report_id):
+        raise HTTPException(status_code=404, detail="Previous report not found")
+    previous = report_store.get_report(req.previous_report_id)
+    if previous is None:
+        raise HTTPException(status_code=404, detail="Previous report not found")
+    if _series_key(previous) != _series_key(req.model_dump()):
+        raise HTTPException(
+            status_code=422,
+            detail="The previous report has a different type, country, sector or language.",
+        )
+    return previous
+
+
 @router.get("/reports/options")
 async def report_options(user: dict = Depends(get_current_user)):
     countries = await anyio.to_thread.run_sync(_countries)
@@ -179,6 +205,11 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
     if await anyio.to_thread.run_sync(report_store.count_reports, user["id"]) >= get_settings().MAX_REPORTS_PER_USER:
         raise HTTPException(status_code=409,
                             detail="Report limit reached; delete old reports to generate a new one.")
+    previous = None
+    if req.previous_report_id:
+        previous = await anyio.to_thread.run_sync(_previous_in_series, user["id"], req)
+    previous_id = previous["id"] if previous else None
+
     async def event_generator():
         try:
             # technical_monitoring: HAPI+istatistik pipeline'ı — belge-retrieval yoluna
@@ -214,6 +245,8 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                     len(findings.indicators_covered), req.language,
                     report_type=req.report_type,
                 )
+                if previous:
+                    directive += build_comparison_block(previous, req.language, req.report_type)
                 chain = build_report_chain(req.report_type)
 
                 full = ""
@@ -241,6 +274,7 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                         report_type=req.report_type,
                         cover_image=None,
                         section_images=section_images or None,
+                        previous_report_id=previous_id,
                     )
                 )
                 yield ServerSentEvent(
@@ -266,6 +300,8 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                 req.country, req.theme, req.date_from, req.date_to, len(docs), req.language,
                 report_type=req.report_type,
             )
+            if previous:
+                directive += build_comparison_block(previous, req.language, req.report_type)
             chain = build_report_chain(req.report_type)
 
             full = ""
@@ -333,6 +369,7 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                     report_type=req.report_type,
                     cover_image=cover_image,
                     section_images=section_images or None,
+                    previous_report_id=previous_id,
                 )
             )
 

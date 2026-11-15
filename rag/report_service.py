@@ -263,3 +263,72 @@ def build_report_directive(country: str, theme: Optional[str], date_from: Option
         f"Source documents available: {doc_count}. "
         f"Write the entire report (including all headings) in {lang_name}."
     )
+
+
+# --- report series: comparison with the previous period ----------------------
+
+# The section a next-period report adds right after its opening section. The
+# Turkish form is used when the report itself is written in Turkish.
+COMPARISON_HEADINGS = {
+    "en": "What changed since the last report",
+    "tr": "Son rapordan bu yana neler değişti",
+}
+
+# Each type's opening section (as named in its system prompt in rag.chain).
+_OPENING_SECTION = {
+    "situation": "Executive Summary",
+    "indicator_monitoring": "Overview",
+    "needs_assessment": "Context",
+    "technical_monitoring": "Executive Summary",
+}
+
+# Upper bound on the previous report's text sent to the model (chars). A typical
+# report is 5-8K chars; the cap keeps comparative runs' extra tokens bounded.
+PREVIOUS_REPORT_MAX_CHARS = 8000
+
+_CITE_MARKER = re.compile(r"\s*\[\d+\]")
+
+
+def build_comparison_block(previous: dict, language: str,
+                           report_type: str = "situation") -> str:
+    """Directive addendum for a next-period report: write a "What changed" section
+    against ``previous`` (a stored report row).
+
+    The previous report is comparison material, NOT a source. Its [n] markers are
+    stripped: they index the old report's source list, and a copied marker would be
+    renumbered onto an unrelated current source by normalize_citations.
+    """
+    heading = COMPARISON_HEADINGS.get((language or "en").lower(), COMPARISON_HEADINGS["en"])
+    opening = _OPENING_SECTION.get(report_type, _OPENING_SECTION["situation"])
+    period = (f"{previous.get('date_from') or 'unspecified'} to "
+              f"{previous.get('date_to') or 'unspecified'}")
+    text = _CITE_MARKER.sub("", previous.get("content") or "").strip()
+    if len(text) > PREVIOUS_REPORT_MAX_CHARS:
+        text = text[:PREVIOUS_REPORT_MAX_CHARS] + "\n[… previous report truncated]"
+
+    if report_type == "technical_monitoring":
+        new_values = ("Every current value must come verbatim from the Context findings; "
+                      "a previous value may be quoted only from the previous report below, "
+                      "named by its period.")
+        not_a_source = "never present it as a current finding"
+    else:
+        new_values = ("Every current value must cite its Context document with [n] as usual; "
+                      "a previous value is attributed to the previous report's period (e.g. "
+                      f"'up from 2 million in {period}') and carries no [n] marker.")
+        not_a_source = "never cite it with [n]"
+
+    return (
+        "\n\nCOMPARISON WITH THE PREVIOUS REPORT. This report continues an earlier report "
+        f"in the same series, covering {period}. In addition to the sections your "
+        f"instructions require (this is the one exception to that list), add a level-2 "
+        f"heading ('## ') '{heading}' immediately after the opening '{opening}' section "
+        "(as it is titled in the report's language), using exactly that heading text. "
+        "In 1-3 paragraphs of prose, state what "
+        "rose or fell, which risks or needs are new, and which are no longer reported, "
+        f"comparing the current Context with the previous report. {new_values} Compare "
+        "only what both periods report; if the previous report did not cover something, "
+        "say it is new rather than inferring a change. If nothing material changed, say so.\n"
+        f"The previous report below is NOT a source: {not_a_source}, never treat "
+        "its claims as current, and do not copy its wording into other sections.\n"
+        f"--- PREVIOUS REPORT ({period}) ---\n{text}\n--- END OF PREVIOUS REPORT ---"
+    )
