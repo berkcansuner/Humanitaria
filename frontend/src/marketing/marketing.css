@@ -17,7 +17,9 @@
   --color-surface-container-low: #f4f3f1;
   --color-surface-container-high: #ece9e4;
   --color-text-secondary: #56544f;
-  --color-muted: #8a857e;
+  /* Warm muted text at 4.9:1 on paper, 5.2:1 on white, 4.7:1 on the low surface
+     (was #8a857e at 3.3–3.7:1, below AA for the auth divider and footer lines). */
+  --color-muted: #716c65;
   --color-border: #e7e4df;
   --color-border-strong: #d9d5ce;
   --color-accent: oklch(0.47 0.12 152);
