@@ -1,17 +1,6 @@
 <template>
   <div class="settings">
-    <header class="topbar">
-      <router-link class="brand" to="/app" title="Back to chat">
-        <HelpingHandLogo :size="34" :radius="11" />
-        <div class="brand-text">
-          <h1 class="brand-title">Humanitaria</h1>
-          <span class="brand-sub">Settings</span>
-        </div>
-      </router-link>
-      <div class="topbar-spacer"></div>
-      <router-link class="back-link" to="/app"><ArrowLeft :size="16" /> Back to chat</router-link>
-      <UserMenu />
-    </header>
+    <AppTopbar context="Settings" />
 
     <main class="content">
       <section class="card">
@@ -153,9 +142,8 @@
 <script setup>
 import { ref, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowLeft, Sun, Moon } from 'lucide-vue-next'
-import HelpingHandLogo from '../components/HelpingHandLogo.vue'
-import UserMenu from '../components/UserMenu.vue'
+import { Sun, Moon } from 'lucide-vue-next'
+import AppTopbar from '../components/AppTopbar.vue'
 import { auth } from '../utils/authStore.js'
 import { updateProfile, changePassword, deleteAccount } from '../utils/authApi.js'
 import { getInitialTheme, setTheme } from '../utils/theme.js'
@@ -293,51 +281,6 @@ async function confirmDelete() {
   display: flex;
   flex-direction: column;
   background-color: var(--color-bg);
-}
-
-.topbar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-5);
-  border-bottom: 1px solid var(--color-border);
-  background-color: var(--color-surface);
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  text-decoration: none;
-}
-
-.brand-title {
-  font-family: var(--font-display);
-  font-size: var(--text-lg);
-  color: var(--color-text);
-  margin: 0;
-}
-
-.brand-sub {
-  font-size: 11.5px;
-  color: var(--color-muted);
-}
-
-.topbar-spacer {
-  flex: 1;
-}
-
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  text-decoration: none;
-}
-
-.back-link:hover {
-  color: var(--color-accent);
 }
 
 .content {

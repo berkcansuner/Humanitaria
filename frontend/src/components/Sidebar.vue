@@ -1,10 +1,5 @@
 <template>
   <div :class="['sidebar', { open }]">
-    <router-link to="/reports" class="reports-nav-link" title="M&amp;E Reports">
-      <FileText :size="16" />
-      M&amp;E Reports
-    </router-link>
-
     <div class="sidebar-header">
       <button type="button" class="new-chat-btn" @click="$emit('new-chat')">
         <Plus :size="16" />
@@ -26,18 +21,13 @@
       @rename="(id, title) => $emit('rename', id, title)"
       @delete="$emit('delete', $event)"
     />
-
-    <div class="sidebar-foot">
-      <UserMenu variant="sidebar" />
-    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
-import { Plus, Search, FileText } from 'lucide-vue-next'
+import { Plus, Search } from 'lucide-vue-next'
 import ConversationList from './ConversationList.vue'
-import UserMenu from './UserMenu.vue'
 import { filterConversations, groupConversationsByDate } from '../utils/conversationOps.js'
 
 const props = defineProps({
@@ -96,36 +86,6 @@ const groups = computed(() =>
 }
 
 /* Prominent nav entry to the M&E Reports page, just under New chat. */
-.reports-nav-link {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  font-family: var(--font-body);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  text-decoration: none;
-  transition:
-    background-color 0.15s,
-    color 0.15s,
-    border-color 0.15s;
-}
-
-.reports-nav-link:hover {
-  background-color: var(--color-surface-container);
-  color: var(--color-text);
-}
-
-.reports-nav-link.router-link-active {
-  color: var(--color-accent);
-  border-color: var(--color-accent);
-}
-
 .conv-search {
   flex-shrink: 0;
   display: flex;
@@ -151,14 +111,6 @@ const groups = computed(() =>
 
 .conv-search input::placeholder {
   color: var(--color-muted);
-}
-
-.sidebar-foot {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  padding-top: var(--space-2);
-  border-top: 1px solid var(--color-border);
 }
 
 /* ConversationList grows to fill the middle; the list itself scrolls. */

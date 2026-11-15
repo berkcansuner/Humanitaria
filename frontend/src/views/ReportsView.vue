@@ -1,19 +1,6 @@
 <template>
   <div class="reports-app">
-    <header class="topbar">
-      <router-link class="brand" to="/" title="Back to home">
-        <HelpingHandLogo :size="32" :radius="10" />
-        <div class="brand-text">
-          <h1 class="brand-title">Humanitaria</h1>
-          <span class="brand-sub">M&amp;E Reports</span>
-        </div>
-      </router-link>
-      <div class="topbar-spacer"></div>
-      <router-link to="/app" class="ghost-link" title="Back to chat">
-        <MessageSquare :size="16" /> Chat
-      </router-link>
-      <UserMenu />
-    </header>
+    <AppTopbar context="M&amp;E Reports" />
 
     <div class="reports-body">
       <aside class="reports-aside">
@@ -182,9 +169,8 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { MessageSquare, FileText, Trash2, Loader2, AlertCircle, FileDown } from 'lucide-vue-next'
-import UserMenu from '../components/UserMenu.vue'
-import HelpingHandLogo from '../components/HelpingHandLogo.vue'
+import { FileText, Trash2, Loader2, AlertCircle, FileDown } from 'lucide-vue-next'
+import AppTopbar from '../components/AppTopbar.vue'
 import SourceList from '../components/SourceList.vue'
 import UndoToast from '../components/UndoToast.vue'
 import { useUndoableDelete } from '../utils/undoableDelete.js'
@@ -537,68 +523,6 @@ function onCiteClick(e) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-}
-
-.topbar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-5);
-  background-color: var(--color-bg);
-  flex-shrink: 0;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  text-decoration: none;
-}
-
-.brand-text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.15;
-  min-width: 0;
-}
-.brand-title {
-  font-family: var(--font-display);
-  font-size: var(--text-lg);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--color-text);
-  white-space: nowrap;
-}
-.brand-sub {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--color-muted);
-  white-space: nowrap;
-}
-.topbar-spacer {
-  flex: 1;
-}
-
-.ghost-link {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-2) var(--space-3);
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  text-decoration: none;
-  transition:
-    background-color 0.15s,
-    color 0.15s;
-}
-.ghost-link:hover {
-  background-color: var(--color-surface-container);
-  color: var(--color-text);
 }
 
 .reports-body {

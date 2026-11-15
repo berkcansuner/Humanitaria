@@ -200,7 +200,7 @@ The type scale tokens are `--text-xs` 0.75rem, `--text-sm` 0.875rem, `--text-bas
 
 ## Layout
 
-The app is a fixed-viewport shell: sidebar (conversations, Reports link, search) on the left, the conversation in the center, the composer pinned to the bottom. The chat view locks to the viewport; the marketing page scrolls the document. Content max width is 1280px in the app and 1160px on the landing page.
+The app is a fixed-viewport shell: shared top bar above, sidebar (new chat, search, conversations) on the left, the conversation in the center, the composer pinned to the bottom. The chat view locks to the viewport; the marketing page scrolls the document. Content max width is 1280px in the app and 1160px on the landing page.
 
 Spacing follows an 8px base grid (`--space-1` 4px through `--space-12` 80px). Messages are separated by 12px; message rows take at most 80% width (92% under 640px).
 
@@ -267,7 +267,7 @@ Deleting a conversation or saved report is never instant (`UndoToast.vue`, `useU
 - **Sidebar:** Reading Room ground, 1px right border. Primary "New chat" button at the top, a search field, then the conversation list.
 - **Conversation rows:** 6px radius; hover Shelf Gray, active Shelf Gray Deep with Field Green text.
 - **Mobile:** under 640px the sidebar becomes a drawer with `--shadow-lg`.
-- **Top bar:** brand title in Headline style over a mono uppercase subtitle ("Humanitarian Information Assistant").
+- **Top bar:** one shared bar on every signed-in screen (`AppTopbar.vue`): brand title in Headline style over a mono uppercase subtitle naming the screen, linking back to chat; a Chat · Reports switch whose current item takes the active-row treatment (Shelf Gray Deep, Field Green, `aria-current="page"`); the account menu always top-right. Settings and Admin are reached from the account menu, not the switch.
 
 ## Do's and Don'ts
 

@@ -13,19 +13,13 @@
     <div v-if="sidebarOpen" class="sidebar-backdrop" @click="sidebarOpen = false"></div>
 
     <div class="main">
-      <header class="topbar">
-        <button class="hamburger" aria-label="Toggle menu" @click="sidebarOpen = !sidebarOpen">
-          <Menu :size="20" />
-        </button>
-        <router-link class="brand" to="/" title="Back to home">
-          <HelpingHandLogo :size="34" :radius="11" />
-          <div class="brand-text">
-            <h1 class="brand-title">Humanitaria</h1>
-            <span class="brand-sub">Humanitarian Information Assistant</span>
-          </div>
-        </router-link>
-        <div class="topbar-spacer"></div>
-      </header>
+      <AppTopbar context="Humanitarian Information Assistant">
+        <template #start>
+          <button class="hamburger" aria-label="Toggle menu" @click="sidebarOpen = !sidebarOpen">
+            <Menu :size="20" />
+          </button>
+        </template>
+      </AppTopbar>
       <div v-if="actionError" class="action-error" role="alert">
         <span>{{ actionError }}</span>
         <button class="action-error-dismiss" aria-label="Dismiss" @click="actionError = null">
@@ -51,7 +45,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { Menu, X } from 'lucide-vue-next'
 import Chat from '../components/Chat.vue'
 import Sidebar from '../components/Sidebar.vue'
-import HelpingHandLogo from '../components/HelpingHandLogo.vue'
+import AppTopbar from '../components/AppTopbar.vue'
 import UndoToast from '../components/UndoToast.vue'
 import { listConversations, renameConversation, deleteConversation } from '../utils/api.js'
 import { useUndoableDelete } from '../utils/undoableDelete.js'
@@ -188,52 +182,6 @@ onBeforeUnmount(flushDelete)
   border-radius: var(--radius-sm);
 }
 
-.topbar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-5);
-  background-color: var(--color-bg);
-  flex-shrink: 0;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  text-decoration: none;
-}
-
-.brand-text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.15;
-  min-width: 0;
-}
-
-.brand-title {
-  font-family: var(--font-display);
-  font-size: var(--text-lg);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--color-text);
-  white-space: nowrap;
-}
-
-.brand-sub {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--color-muted);
-  white-space: nowrap;
-}
-
-.topbar-spacer {
-  flex: 1;
-}
-
 .hamburger {
   display: none;
   align-items: center;
@@ -265,9 +213,6 @@ onBeforeUnmount(flushDelete)
 @media (max-width: 640px) {
   .hamburger {
     display: inline-flex;
-  }
-  .brand-sub {
-    display: none;
   }
   .sidebar-backdrop {
     display: block;

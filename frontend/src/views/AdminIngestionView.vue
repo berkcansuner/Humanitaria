@@ -1,17 +1,6 @@
 <template>
   <div class="admin">
-    <header class="topbar">
-      <router-link class="brand" to="/app" title="Back to chat">
-        <HelpingHandLogo :size="34" :radius="11" />
-        <div class="brand-text">
-          <h1 class="brand-title">Humanitaria</h1>
-          <span class="brand-sub">Ingestion Admin</span>
-        </div>
-      </router-link>
-      <div class="topbar-spacer"></div>
-      <router-link class="back-link" to="/app"><ArrowLeft :size="16" /> Back to chat</router-link>
-      <UserMenu />
-    </header>
+    <AppTopbar context="Ingestion Admin" />
 
     <main class="content">
       <div v-if="forbidden" class="card error-card" role="alert">
@@ -27,6 +16,7 @@
           <button
             type="button"
             :class="['tab-btn', { active: tab === 'ingestion' }]"
+            :aria-current="tab === 'ingestion' ? 'true' : undefined"
             @click="tab = 'ingestion'"
           >
             Ingestion
@@ -34,6 +24,7 @@
           <button
             type="button"
             :class="['tab-btn', { active: tab === 'users' }]"
+            :aria-current="tab === 'users' ? 'true' : undefined"
             @click="tab = 'users'"
           >
             Users
@@ -209,9 +200,8 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { ArrowLeft, RefreshCw } from 'lucide-vue-next'
-import HelpingHandLogo from '../components/HelpingHandLogo.vue'
-import UserMenu from '../components/UserMenu.vue'
+import { RefreshCw } from 'lucide-vue-next'
+import AppTopbar from '../components/AppTopbar.vue'
 import AdminUsersPanel from '../components/AdminUsersPanel.vue'
 import { getIngestStatus, triggerIngest, getIngestDocuments } from '../utils/adminApi.js'
 
@@ -377,66 +367,6 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   background-color: var(--color-bg);
-}
-
-.topbar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-5);
-  border-bottom: 1px solid var(--color-border);
-  background-color: var(--color-bg);
-  flex-shrink: 0;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  text-decoration: none;
-}
-
-.brand-text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.15;
-}
-
-.brand-title {
-  font-family: var(--font-display);
-  font-size: var(--text-lg);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--color-text);
-}
-
-.brand-sub {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--color-muted);
-}
-
-.topbar-spacer {
-  flex: 1;
-}
-
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  text-decoration: none;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-}
-
-.back-link:hover {
-  background-color: var(--color-surface-container-high);
-  color: var(--color-text);
 }
 
 .content {
@@ -777,9 +707,6 @@ onUnmounted(() => {
 @media (max-width: 640px) {
   .grid {
     grid-template-columns: 1fr;
-  }
-  .brand-sub {
-    display: none;
   }
 }
 </style>
