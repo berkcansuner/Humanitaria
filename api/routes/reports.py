@@ -195,6 +195,12 @@ def _previous_in_series(user_id: str, req: ReportRequest) -> dict:
     return previous
 
 
+def _checking_event() -> ServerSentEvent:
+    """Sent before the check, so the viewer can say the streamed "What changed"
+    text is being checked (sentences may drop out when the saved text replaces it)."""
+    return ServerSentEvent(event="status", data=json.dumps({"stage": "checking_comparison"}))
+
+
 async def _checked(full: str, req: ReportRequest) -> str:
     """A next-period report's "What changed" section after the narrow check
     (rag.report_compare): sentences that present older or undated material as new
@@ -276,6 +282,7 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                         )
 
                 if previous:
+                    yield _checking_event()
                     full = await _checked(full, req)
                 section_images = technical_report.assemble_section_images(findings)
                 report_id = str(uuid4())
@@ -337,6 +344,7 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
             # Next-period reports: drop "What changed" sentences that present older or
             # undated material as new, before citations are renumbered below.
             if previous:
+                yield _checking_event()
                 full = await _checked(full, req)
 
             # Expand grouped citations, drop uncited/invalid sources, and renumber the

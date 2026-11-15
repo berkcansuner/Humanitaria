@@ -201,3 +201,23 @@ def test_technical_comparative_report_is_checked(verify):
     verify.assert_awaited_once()
     stored = _client().get(f"/reports/{_saved_id(resp)}").json()["content"]
     assert stored.endswith("<!-- checked -->")
+
+
+def test_comparative_stream_says_it_is_checking_before_saving():
+    """The streamed text is replaced by the checked text on save; the stream says so
+    first, so sentences do not vanish without a word."""
+    _save_previous()
+    seen = []
+    resp = _stream({**_NEXT, "previous_report_id": "r-prev"}, seen)
+    events = _parse_sse_events(resp.text)
+    kinds = [e["event"] for e in events]
+    status = [e for e in events if e["event"] == "status"]
+    assert status and status[0]["data"] == {"stage": "checking_comparison"}
+    assert kinds.index("status") < kinds.index("saved")
+    assert kinds.index("status") > max(i for i, k in enumerate(kinds) if k == "token")
+
+
+def test_one_off_stream_has_no_checking_status():
+    seen = []
+    resp = _stream(_NEXT, seen)
+    assert "status" not in [e["event"] for e in _parse_sse_events(resp.text)]
