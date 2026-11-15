@@ -63,3 +63,18 @@ export function newerInSeries(reports, id) {
   }
   return null
 }
+
+/**
+ * The report right before `id` in its series (the previous period), or null when
+ * `id` is the series' first, a lone report, or unknown. A series is implicit, so
+ * a report can have an earlier period it was never compared with (it was made as
+ * a one-off); the header says so instead of leaving the gap unexplained.
+ */
+export function olderInSeries(reports, id) {
+  for (const entry of groupSeries(reports)) {
+    if (entry.kind !== 'series') continue
+    const i = entry.reports.findIndex((r) => r.id === id)
+    if (i >= 0) return i < entry.reports.length - 1 ? entry.reports[i + 1] : null
+  }
+  return null
+}

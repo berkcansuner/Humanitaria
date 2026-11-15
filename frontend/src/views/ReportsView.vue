@@ -302,6 +302,18 @@
                   </button>
                 </template>
               </p>
+              <!-- A series is implicit: a report made as a one-off can sit after an
+                   earlier period it was never compared with. Say so. -->
+              <p v-if="notComparedWith" class="report-compared">
+                Made as a one-off: not compared with
+                <button
+                  type="button"
+                  class="report-compared-link"
+                  @click="openReport(notComparedWith.id)"
+                >
+                  {{ savedPeriod(notComparedWith) || 'the earlier report' }}
+                </button>
+              </p>
               <!-- An older period links forward instead of offering "Run next period",
                    which would continue a different (newer) report. -->
               <p v-if="continuedBy" class="report-compared">
@@ -434,7 +446,7 @@ import { parseSSE } from '../utils/parseSSE.js'
 import { getReportOptions, listReports, getReport, deleteReport } from '../utils/reportsApi.js'
 import { REPORT_TYPES, reportTypeBadge } from '../utils/reportTypes.js'
 import { splitReportTitle } from '../utils/reportTitle.js'
-import { groupSeries, newerInSeries, seriesKey } from '../utils/reportSeries.js'
+import { groupSeries, newerInSeries, olderInSeries, seriesKey } from '../utils/reportSeries.js'
 import { nextPeriod } from '../utils/nextPeriod.js'
 import { copyWithSources } from '../utils/citationCopy.js'
 import { localIsoDay, minReportDate, maxReportDate } from '../utils/reportDateBounds.js'
@@ -725,6 +737,13 @@ const seriesLatest = computed(() => {
     if (e.kind === 'series' && e.reports.some((r) => r.id === id)) return e.latest
   }
   return current.value
+})
+// The earlier period of the open report's series that it was not compared with
+// (made as a one-off, so no previous_report_id).
+const notComparedWith = computed(() => {
+  const c = current.value
+  if (!c || !c.id || c.previous_report_id) return null
+  return olderInSeries(visibleReports.value, c.id)
 })
 // The open report's next newer period in its series, when it is not the latest.
 const continuedBy = computed(() =>

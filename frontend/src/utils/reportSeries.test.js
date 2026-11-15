@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { groupSeries, newerInSeries, seriesKey } from './reportSeries.js'
+import { groupSeries, newerInSeries, olderInSeries, seriesKey } from './reportSeries.js'
 
 // Rows as /reports/list returns them: newest created first.
 function row(id, over = {}) {
@@ -100,5 +100,22 @@ describe('newerInSeries', () => {
     expect(newerInSeries([q3, other], 'o')).toBeNull()
     expect(newerInSeries([q3], 'missing')).toBeNull()
     expect(newerInSeries(undefined, 'q1')).toBeNull()
+  })
+})
+
+describe('olderInSeries', () => {
+  const q1 = row('q1', { date_from: '2026-01-01', date_to: '2026-03-31' })
+  const q2 = row('q2', { date_from: '2026-04-01', date_to: '2026-06-30' })
+  const q3 = row('q3', { date_from: '2026-07-01', date_to: '2026-09-30' })
+
+  it('is the period before the given report in its series', () => {
+    expect(olderInSeries([q3, q1, q2], 'q3').id).toBe('q2')
+    expect(olderInSeries([q3, q1, q2], 'q2').id).toBe('q1')
+  })
+
+  it('is null for the first period, a lone report or an unknown id', () => {
+    expect(olderInSeries([q3, q1, q2], 'q1')).toBeNull()
+    expect(olderInSeries([q3], 'q3')).toBeNull()
+    expect(olderInSeries([q3, q1], 'missing')).toBeNull()
   })
 })
