@@ -1157,15 +1157,16 @@ function onCiteClick(e) {
   background-color: var(--color-accent-soft);
 }
 
+/* The same rail as Chat's sidebar (Claude's 288px, 8px side padding). */
 .reports-aside {
-  width: 320px;
+  width: 288px;
   flex-shrink: 0;
   border-right: 1px solid var(--color-border);
   background-color: var(--color-surface-container-low);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  padding: var(--space-4);
+  padding: var(--space-3) var(--space-2);
   gap: var(--space-5);
 }
 

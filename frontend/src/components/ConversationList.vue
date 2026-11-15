@@ -112,13 +112,14 @@ function cancelRename() {
   overflow-y: auto;
 }
 
+/* Section headings as in Claude's sidebar ("Recents"): 12px, medium, sentence case. */
 .conv-section-label {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  line-height: 18px;
   color: var(--color-text-secondary);
-  padding: var(--space-2) var(--space-2) var(--space-1);
+  padding: var(--space-3) 10px var(--space-1);
 }
 
 .conv-empty {
@@ -157,7 +158,8 @@ function cancelRename() {
 .conv-item {
   display: flex;
   align-items: center;
-  border-radius: var(--radius-md);
+  min-height: 32px;
+  border-radius: var(--radius-lg);
   transition: background-color 0.15s;
 }
 
@@ -173,12 +175,13 @@ function cancelRename() {
   flex: 1;
   min-width: 0;
   text-align: left;
-  padding: var(--space-2) var(--space-3);
+  padding: 0 10px;
   background: transparent;
   border: none;
   color: var(--color-text);
   font-family: var(--font-body);
   font-size: var(--text-sm);
+  line-height: 32px;
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;

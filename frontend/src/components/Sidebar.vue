@@ -50,13 +50,14 @@ const groups = computed(() =>
 .sidebar {
   display: flex;
   flex-direction: column;
-  width: 260px;
+  /* Claude's sidebar metrics: 288px wide, 8px side padding, 32px rows. */
+  width: 288px;
   flex-shrink: 0;
   height: 100%;
   background-color: var(--color-surface-container-low);
   border-right: 1px solid var(--color-border);
-  padding: var(--space-3);
-  gap: var(--space-3);
+  padding: var(--space-2);
+  gap: var(--space-2);
 }
 
 .sidebar-header {
@@ -69,9 +70,11 @@ const groups = computed(() =>
   justify-content: center;
   gap: var(--space-2);
   width: 100%;
-  padding: var(--space-3);
+  min-height: 32px;
+  padding: 0 var(--space-3);
   font-family: var(--font-body);
   font-size: var(--text-sm);
+  line-height: 21px;
   font-weight: 600;
   color: var(--color-on-accent);
   background-color: var(--color-accent-container);
@@ -91,7 +94,8 @@ const groups = computed(() =>
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
+  min-height: 32px;
+  padding: 0 10px;
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
