@@ -85,7 +85,7 @@
                 >. The new report opens with what changed since then.
               </p>
               <p v-if="continuationNotes.endClamped" class="form-hint">
-                This period is not over yet, so it ends today.
+                The period ends today, because it isn't over yet.
               </p>
               <p v-if="continuationNotes.startClamped" class="form-hint">
                 The start moved to {{ minDate }}: older documents are no longer indexed.
@@ -93,10 +93,10 @@
             </template>
             <p v-else>
               These settings differ from <strong>{{ continuation.name }}</strong
-              >, so this will be a one-off report.
+              >, so this report won't be compared with it.
             </p>
             <button type="button" class="continues-clear" @click="continuation = null">
-              {{ continuesSeries ? 'Make it a one-off report' : 'Dismiss' }}
+              {{ continuesSeries ? "Don't compare with the previous report" : 'Dismiss' }}
             </button>
           </div>
 
@@ -305,13 +305,13 @@
               <!-- A series is implicit: a report made as a one-off can sit after an
                    earlier period it was never compared with. Say so. -->
               <p v-if="notComparedWith" class="report-compared">
-                Made as a one-off: not compared with
+                Not compared with the report for
                 <button
                   type="button"
                   class="report-compared-link"
                   @click="openReport(notComparedWith.id)"
                 >
-                  {{ savedPeriod(notComparedWith) || 'the earlier report' }}
+                  {{ savedPeriod(notComparedWith) || 'the earlier period' }}
                 </button>
               </p>
               <!-- An older period links forward instead of offering "Run next period",
@@ -1008,8 +1008,8 @@ async function generate() {
         continuation.value = null
         genError.value =
           res.status === 404
-            ? 'The report this one continues was deleted, so there is nothing to compare against. Generate again for a one-off report.'
-            : 'The settings no longer match the report this one continues. Generate again for a one-off report.'
+            ? 'The report this one continues was deleted, so there is nothing to compare against. Generate again without the comparison.'
+            : 'The settings no longer match the report this one continues. Generate again without the comparison.'
         return
       }
       // 409 = per-user report limit; show the server's reason.
