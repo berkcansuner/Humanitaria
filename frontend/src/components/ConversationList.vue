@@ -188,9 +188,18 @@ function cancelRename() {
   transition: opacity 0.15s;
 }
 
+/* Hover reveals the actions; keyboard focus and touch screens (no hover) must
+   see them too, or a focused/tapped button is invisible. */
 .conv-item:hover .conv-actions,
+.conv-item:focus-within .conv-actions,
 .conv-item.active .conv-actions {
   opacity: 1;
+}
+
+@media (hover: none) {
+  .conv-actions {
+    opacity: 1;
+  }
 }
 
 .conv-action {
@@ -209,6 +218,11 @@ function cancelRename() {
 .conv-action:hover {
   color: var(--color-accent);
   background-color: var(--color-surface);
+}
+
+.conv-action:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
 }
 
 .conv-edit-input {

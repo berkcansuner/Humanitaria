@@ -1,7 +1,7 @@
 <template>
   <div class="app">
     <Sidebar
-      :conversations="conversations"
+      :conversations="visibleConversations"
       :active-id="activeId"
       :open="sidebarOpen"
       :loading="isLoadingConversations"
@@ -29,23 +29,32 @@
       <div v-if="actionError" class="action-error" role="alert">
         <span>{{ actionError }}</span>
         <button class="action-error-dismiss" aria-label="Dismiss" @click="actionError = null">
-          ×
+          <X :size="16" aria-hidden="true" />
         </button>
       </div>
       <main class="content">
         <Chat :conversation-id="activeId" @session="onSession" />
       </main>
     </div>
+    <UndoToast
+      :message="pendingDelete ? 'Conversation deleted.' : ''"
+      action-label="Undo"
+      focus-action
+      :focus-key="pendingDelete ? pendingDelete.id : null"
+      @action="undoDelete"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { Menu } from 'lucide-vue-next'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { Menu, X } from 'lucide-vue-next'
 import Chat from '../components/Chat.vue'
 import Sidebar from '../components/Sidebar.vue'
 import HelpingHandLogo from '../components/HelpingHandLogo.vue'
+import UndoToast from '../components/UndoToast.vue'
 import { listConversations, renameConversation, deleteConversation } from '../utils/api.js'
+import { useUndoableDelete } from '../utils/undoableDelete.js'
 
 const conversations = ref([])
 const activeId = ref(null)
@@ -103,18 +112,39 @@ async function onRename(id, title) {
   }
 }
 
-async function onDelete(id) {
-  try {
-    await deleteConversation(id)
-    if (activeId.value === id) activeId.value = null
-    await loadConversations()
-  } catch (e) {
+// Delete hides the conversation at once and offers Undo for 8 s before the
+// DELETE is sent (see useUndoableDelete).
+const {
+  hiddenIds,
+  pending: pendingDelete,
+  remove: removeConversation,
+  undo: undoDelete,
+  flush: flushDelete,
+} = useUndoableDelete({
+  commit: deleteConversation,
+  onCommitted: loadConversations,
+  onError: (e) => {
     console.error('Delete failed:', e)
-    showActionError('Could not delete the conversation.')
-  }
+    showActionError('Could not delete the conversation. It is back in the list.')
+  },
+  // Reopen it if it was the open conversation.
+  onUndo: (id, meta) => {
+    if (meta && meta.wasActive) activeId.value = id
+  },
+})
+
+const visibleConversations = computed(() =>
+  conversations.value.filter((c) => !hiddenIds.value.has(c.id)),
+)
+
+function onDelete(id) {
+  const wasActive = activeId.value === id
+  if (wasActive) activeId.value = null
+  removeConversation(id, { wasActive })
 }
 
 onMounted(loadConversations)
+onBeforeUnmount(flushDelete)
 </script>
 
 <style scoped>
@@ -149,13 +179,13 @@ onMounted(loadConversations)
 
 .action-error-dismiss {
   flex-shrink: 0;
+  display: inline-flex;
   border: none;
   background: none;
   color: inherit;
-  font-size: var(--text-lg);
-  line-height: 1;
   cursor: pointer;
-  padding: 0 var(--space-1);
+  padding: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .topbar {

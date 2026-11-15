@@ -91,9 +91,9 @@
           <template v-if="loadingList && !reports.length">
             <span v-for="n in 4" :key="'sk-' + n" class="skeleton saved-skel"></span>
           </template>
-          <ul v-else-if="reports.length" class="saved-list">
+          <ul v-else-if="visibleReports.length" class="saved-list">
             <li
-              v-for="r in reports"
+              v-for="r in visibleReports"
               :key="r.id"
               :class="['saved-item', { active: current && current.id === r.id }]"
             >
@@ -162,15 +162,26 @@
         </div>
       </main>
     </div>
+    <UndoToast
+      :message="toastMessage"
+      :kind="pendingDelete ? 'undo' : 'error'"
+      :action-label="pendingDelete ? 'Undo' : ''"
+      :focus-action="!!pendingDelete"
+      :focus-key="pendingDelete ? pendingDelete.id : null"
+      @action="undoDelete"
+      @dismiss="notice = ''"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { MessageSquare, FileText, Trash2, Loader2, AlertCircle, FileDown } from 'lucide-vue-next'
 import UserMenu from '../components/UserMenu.vue'
 import HelpingHandLogo from '../components/HelpingHandLogo.vue'
 import SourceList from '../components/SourceList.vue'
+import UndoToast from '../components/UndoToast.vue'
+import { useUndoableDelete } from '../utils/undoableDelete.js'
 import { renderMarkdown } from '../utils/renderMarkdown.js'
 import { injectSectionImages } from '../utils/reportImages.js'
 import { revealSource } from '../utils/sources.js'
@@ -243,6 +254,7 @@ async function loadList() {
     reports.value = (await listReports()).reports || []
   } catch (e) {
     console.error('Failed to load reports:', e)
+    showNotice('Could not load your saved reports. Try refreshing the page.')
   } finally {
     loadingList.value = false
   }
@@ -267,18 +279,54 @@ async function openReport(id) {
     })
   } catch (e) {
     console.error('Failed to open report:', e)
+    showNotice('Could not open the report. Try again.')
   }
 }
 
-async function onDelete(id) {
-  try {
-    await deleteReport(id)
-    if (current.value && current.value.id === id) current.value = null
-    await loadList()
-  } catch (e) {
-    console.error('Failed to delete report:', e)
-  }
+// Errors for list actions, shown in the same toast as Undo (they used to reach
+// only the console). Cleared after a few seconds or by the dismiss button.
+const notice = ref('')
+let noticeTimer = null
+function showNotice(message) {
+  notice.value = message
+  clearTimeout(noticeTimer)
+  noticeTimer = setTimeout(() => (notice.value = ''), 6000)
 }
+
+// A saved report is the user's deliverable: delete hides it at once and offers
+// Undo for 8 s before the DELETE is sent (see useUndoableDelete).
+const {
+  hiddenIds,
+  pending: pendingDelete,
+  remove: removeReport,
+  undo: undoDelete,
+  flush: flushDelete,
+} = useUndoableDelete({
+  commit: deleteReport,
+  onCommitted: loadList,
+  onError: (e) => {
+    console.error('Failed to delete report:', e)
+    showNotice('Could not delete the report. It is back in the list.')
+  },
+  // Put the report back in the viewer if it was open.
+  onUndo: (id, meta) => {
+    if (meta && meta.open && !current.value) current.value = meta.open
+  },
+})
+
+const visibleReports = computed(() => reports.value.filter((r) => !hiddenIds.value.has(r.id)))
+const toastMessage = computed(() => (pendingDelete.value ? 'Report deleted.' : notice.value))
+
+function onDelete(id) {
+  const open = current.value && current.value.id === id ? current.value : null
+  if (open) current.value = null
+  removeReport(id, { open })
+}
+
+onBeforeUnmount(() => {
+  flushDelete()
+  clearTimeout(noticeTimer)
+})
 
 // Fetch the PDF as a blob (not a bare <a download>): shows a loading state while
 // the server renders / a cold free-tier instance wakes, and surfaces a clear error
@@ -703,8 +751,19 @@ function onCiteClick(e) {
     opacity 0.15s,
     color 0.15s;
 }
-.saved-item:hover .saved-del {
+/* Visible on hover, on keyboard focus and always on touch screens (no hover). */
+.saved-item:hover .saved-del,
+.saved-item:focus-within .saved-del {
   opacity: 1;
+}
+@media (hover: none) {
+  .saved-del {
+    opacity: 1;
+  }
+}
+.saved-del:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
 }
 .saved-del:hover {
   color: var(--color-error);

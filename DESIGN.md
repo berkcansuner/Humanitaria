@@ -209,7 +209,7 @@ Breakpoints are written as needed, not as a fixed scale: 640px is the main one (
 
 ## Elevation & Depth
 
-Flat by default. Depth comes from surface tone (paper, white, reading room) and 1px hairline borders. Shadows are low-opacity and wide (`--shadow-sm` 0 1px 3px / 4%, `--shadow-md` 0 4px 12px / 4%, `--shadow-lg` 0 8px 24px / 6%) and are used only for things that sit above the page: the user menu popover and the mobile sidebar drawer (`lg`), and a few settings and admin panels (`sm`). The auth card carries one deeper, softer shadow of its own.
+Flat by default. Depth comes from surface tone (paper, white, reading room) and 1px hairline borders. Shadows are low-opacity and wide (`--shadow-sm` 0 1px 3px / 4%, `--shadow-md` 0 4px 12px / 4%, `--shadow-lg` 0 8px 24px / 6%) and are used only for things that sit above the page: the user menu popover, the mobile sidebar drawer and the undo toast (`lg`), and a few settings and admin panels (`sm`). The auth card carries one deeper, softer shadow of its own.
 
 ### Named Rules
 **The Flat-By-Default Rule.** A surface at rest has no shadow. Shadow means "this floats above the page", not "this is important".
@@ -254,6 +254,13 @@ Quiet at rest, a ledger when opened (`SourceList.vue`, a native `<details>`).
 - **Opened:** a ledger table on a white surface with a hairline border and 6px radius: columns # · Source · Date. Row numbers use the quiet citation chip; the title is a Field Green link with an external-link icon; publisher and country sit under it in Graphite; dates are ISO (YYYY-MM-DD) in mono with tabular figures. Header labels are mono uppercase, rows divided by hairlines. The toggle reads Hide.
 - **From a citation:** activating `[n]` opens the ledger, scrolls to the row, flashes it in Citation Mist, and turns that row's number green until another citation is activated.
 - **Focus:** the summary line takes the standard 2px Field Green focus outline.
+
+### Undo Toast
+Deleting a conversation or saved report is never instant (`UndoToast.vue`, `useUndoableDelete`).
+- **Behavior:** the item leaves the list at once; the DELETE is sent only after an 8 s window. "Undo" brings it back with no server call. A second delete commits the first.
+- **Style:** Clean Sheet card bottom-left, 1px Paper Edge border, 6px radius, `--shadow-lg`; Field Green "Undo" text button. Keyboard focus moves to "Undo" because the deleted row has left the page.
+- **Errors:** list actions that fail (open, load, delete) use the same toast in Alert Blush with an alert icon and a dismiss button, instead of failing silently.
+- **Row actions:** rename and delete are revealed on hover, on keyboard focus (`:focus-within`) and always on touch screens.
 
 ### Navigation
 - **Sidebar:** Reading Room ground, 1px right border. Primary "New chat" button at the top, a search field, then the conversation list.
