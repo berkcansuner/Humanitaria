@@ -309,18 +309,19 @@
             v-else
             class="report-content"
             v-html="
-              injectSectionImages(
-                renderMarkdown(current.content, current.sources),
-                current.section_images,
+              injectComparisonNote(
+                injectSectionImages(
+                  renderMarkdown(current.content, current.sources),
+                  current.section_images,
+                ),
+                comparisonNote({
+                  checking: current.checking,
+                  period: current.comparedPeriod,
+                  removed: current.checkRemoved,
+                }),
               )
             "
           ></article>
-          <!-- Next-period reports: the streamed "What changed" is checked before it is
-               saved, and sentences may drop out when the saved text replaces it. -->
-          <p v-if="current.checking" class="check-status" role="status">
-            <Loader2 :size="14" class="spin" aria-hidden="true" />
-            Checking what changed against the previous report…
-          </p>
           <div v-if="genError" class="error-banner"><AlertCircle :size="16" /> {{ genError }}</div>
           <SourceList v-if="current.sources" :sources="current.sources" />
         </div>
@@ -365,6 +366,7 @@ import CitePreview from '../components/CitePreview.vue'
 import { useUndoableDelete } from '../utils/undoableDelete.js'
 import { renderMarkdown } from '../utils/renderMarkdown.js'
 import { injectSectionImages } from '../utils/reportImages.js'
+import { comparisonNote, injectComparisonNote } from '../utils/comparisonNote.js'
 import { revealSource, returnToCite } from '../utils/sources.js'
 import { parseSSE } from '../utils/parseSSE.js'
 import { getReportOptions, listReports, getReport, deleteReport } from '../utils/reportsApi.js'
@@ -781,6 +783,8 @@ async function generate() {
     cover_image: null,
     section_images: null,
     imagesStatus: null,
+    // The period this report is compared with, for the note under "What changed".
+    comparedPeriod: continuesSeries.value ? continuation.value.period : null,
   }
   controller.value = new AbortController()
   try {
@@ -857,9 +861,14 @@ async function generate() {
           } catch (e) {}
         } else if (sse.event === 'status') {
           try {
-            if (JSON.parse(sse.data).stage === 'checking_comparison') {
+            // Next-period reports: the streamed "What changed" is checked before it
+            // is saved; the note under its heading says so, then what the check did.
+            const d = JSON.parse(sse.data)
+            if (d.stage === 'checking_comparison') {
               current.value.checking = true
-              scrollViewerBottom()
+            } else if (d.stage === 'comparison_checked') {
+              current.value.checking = false
+              current.value.checkRemoved = d.removed
             }
           } catch (e) {}
         } else if (sse.event === 'saved') {
@@ -880,7 +889,8 @@ async function generate() {
           if (rid) {
             try {
               const rep = await getReport(rid)
-              current.value = toCurrent(rep)
+              const { checkRemoved, comparedPeriod } = current.value
+              current.value = { ...toCurrent(rep), checkRemoved, comparedPeriod }
             } catch (e) {}
           }
         } else if (sse.event === 'error') {
@@ -1310,13 +1320,25 @@ function onCiteClick(e) {
   margin: 0 0 var(--space-4);
   border-radius: var(--radius-lg);
 }
-.check-status {
+/* Under the "What changed" heading of a just-generated next-period report:
+   checking, then what the check removed (utils/comparisonNote.js). */
+.report-content :deep(.compare-note) {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin: var(--space-3) 0 0;
+  margin: calc(-1 * var(--space-1)) 0 var(--space-3);
   font-size: var(--text-sm);
+  line-height: 1.45;
   color: var(--color-text-secondary);
+}
+.report-content :deep(.compare-note-spin) {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
 }
 .images-status {
   margin: 0 0 var(--space-2);
