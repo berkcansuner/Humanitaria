@@ -12,6 +12,7 @@ def _settings():
     s.GEMINI_API_KEY = "dummy"
     s.GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
     s.GEMINI_LLM_MODEL = "gemini-2.5-flash"
+    s.REPORT_LLM_MODEL = "report-model-x"
     s.GEMINI_QUERY_MODEL = "gemini-2.5-flash"
     s.GEMINI_REASONING_EFFORT = "low"
     s.CHAT_LLM_TIMEOUT = 45

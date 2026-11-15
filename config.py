@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     # "What changed" comparison rules (live checks 2026-11-15). Gemini 2.5 budgets:
     # low 1,024 / medium 8,192 / high 24,576 thinking tokens (billed as output).
     # The first token arrives only after the thinking, hence the longer timeout.
+    # Reports and the "What changed" check run on their own model: few calls,
+    # quality-critical, so they can use a stronger model than chat.
+    REPORT_LLM_MODEL: str = "gemini-2.5-flash"
     REPORT_REASONING_EFFORT: str = "medium"
     REPORT_LLM_TIMEOUT: int = 150
     GEMINI_QUERY_MODEL: str = "gemini-2.5-flash"  # filtre çıkarma için hızlı/ucuz model

@@ -359,7 +359,7 @@ def build_report_chain(report_type: str = "situation") -> Runnable:
 
     settings = get_settings()
     llm_kwargs = dict(
-        model=settings.GEMINI_LLM_MODEL,
+        model=settings.REPORT_LLM_MODEL,
         base_url=settings.GEMINI_BASE_URL,
         api_key=settings.GEMINI_API_KEY,
         use_responses_api=False,  # Gemini's OpenAI-compatible API is Chat Completions only

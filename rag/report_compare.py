@@ -121,7 +121,7 @@ def _get_checker_llm():
         from config import get_settings
         s = get_settings()
         kwargs = dict(
-            model=s.GEMINI_LLM_MODEL,
+            model=s.REPORT_LLM_MODEL,
             base_url=s.GEMINI_BASE_URL,
             api_key=s.GEMINI_API_KEY,
             temperature=0.0,

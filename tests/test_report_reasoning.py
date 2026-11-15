@@ -14,6 +14,7 @@ def _settings(report_effort="medium"):
     s.GEMINI_API_KEY = "dummy"
     s.GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
     s.GEMINI_LLM_MODEL = "gemini-2.5-flash"
+    s.REPORT_LLM_MODEL = "report-model-x"
     s.GEMINI_REASONING_EFFORT = "low"
     s.CHAT_LLM_TIMEOUT = 45
     s.REPORT_REASONING_EFFORT = report_effort
@@ -78,3 +79,25 @@ def test_render_blueprint_sets_chat_to_medium():
     text = Path(__file__).resolve().parent.parent.joinpath("render.yaml").read_text(encoding="utf-8")
     m = re.search(r"key: GEMINI_REASONING_EFFORT\s*\n\s*value:\s*(\S+)", text)
     assert m and m.group(1).strip('"') == "medium"
+
+
+def test_report_chain_uses_its_own_model():
+    """Reports (few, quality-critical) and chat (many) may run on different models."""
+    chat, report = _build(_settings())
+    assert report.model_name == "report-model-x"
+    assert chat.model_name == "gemini-2.5-flash"
+
+
+def test_comparison_checker_uses_the_report_model():
+    from langchain_openai import ChatOpenAI
+    from rag import report_compare as rc
+    with patch("config.get_settings", return_value=_settings()):
+        rc._checker_llm = None
+        try:
+            runnable = rc._get_checker_llm()
+            llm = next(s for s in (getattr(runnable, "first", None), runnable)
+                       if isinstance(getattr(s, "bound", s), ChatOpenAI))
+            llm = getattr(llm, "bound", llm)
+            assert llm.model_name == "report-model-x"
+        finally:
+            rc._checker_llm = None
