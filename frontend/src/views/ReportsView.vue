@@ -1028,9 +1028,9 @@ function onCiteClick(e) {
   align-items: flex-start;
   gap: var(--space-1);
   padding: var(--space-2) var(--space-3);
-  border-left: 2px solid var(--color-accent);
+  border: 1px solid var(--color-border);
   background-color: var(--color-surface-container-low);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  border-radius: var(--radius-md);
   font-size: var(--text-sm);
   line-height: 1.45;
   color: var(--color-text);
