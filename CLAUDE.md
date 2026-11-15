@@ -67,7 +67,9 @@ GEMINI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
 GEMINI_LLM_MODEL=gemini-2.5-flash      # chat yanıtı
 GEMINI_QUERY_MODEL=gemini-2.5-flash    # filtre çıkarma
 GEMINI_EMBED_MODEL=gemini-embedding-001
-REPORT_REASONING_EFFORT=medium         # M&E raporları (chat "low"); 2.5'te medium = 8.192 düşünme token'ı
+GEMINI_REASONING_EFFORT=medium         # sohbet (2026-11-16'dan beri; önceden low)
+CHAT_LLM_TIMEOUT=90                    # sohbet çağrısı; medium'da ilk token düşünme bitince gelir
+REPORT_REASONING_EFFORT=medium         # M&E raporları; 2.5'te medium = 8.192 düşünme token'ı
 REPORT_LLM_TIMEOUT=150                 # rapor çağrısı; ilk token düşünme bitince gelir
 
 # Veritabanı: app tabloları + vektör index'i (pgvector). Boş = yerel SQLite (vektör araması YOK)

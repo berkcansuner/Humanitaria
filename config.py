@@ -18,14 +18,17 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
     GEMINI_LLM_MODEL: str = "gemini-2.5-flash"   # chat yanıtı (GA; multilingual/RAG). gemini-3.5-flash kronik 503 ("high demand") verdiği için geçildi.
-    # Thinking-budget for the chat model: "low" cuts time-to-first-token on the
-    # gemini-2.5-flash thinking model. none/low/medium/high; "" = don't send (model default).
-    GEMINI_REASONING_EFFORT: str = "low"
+    # Thinking-budget for the chat model. none/low/medium/high; "" = don't send
+    # (model default). "medium" since 2026-11-16 (owner's decision: answer quality
+    # over time-to-first-token; was "low"). Thinking is billed as output.
+    GEMINI_REASONING_EFFORT: str = "medium"
     # Chat LLM resilience: bounded retry (in the chat route) on transient upstream
     # 503 'high demand' BEFORE the first token. The OpenAI client's own retries are
     # disabled (max_retries=0 in chain.py) so a 503 fails fast instead of hanging
-    # ~60s on its internal backoff; CHAT_LLM_TIMEOUT caps a stuck request.
-    CHAT_LLM_TIMEOUT: int = 45
+    # ~60s on its internal backoff; CHAT_LLM_TIMEOUT caps a stuck request. At
+    # medium the first token waits for up to 8,192 thinking tokens, so 45 s could
+    # time out and retry (paying twice).
+    CHAT_LLM_TIMEOUT: int = 90
     CHAT_LLM_MAX_RETRIES: int = 2
     # Reports think harder than chat: at "low" the report model did not apply the
     # "What changed" comparison rules (live checks 2026-11-15). Gemini 2.5 budgets:

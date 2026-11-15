@@ -18,7 +18,7 @@ services:
       - key: INGEST_SCHEDULE_HOURS   # no in-process scheduler; the Cloudflare Worker cron triggers ingest
         value: "0"
       - key: GEMINI_REASONING_EFFORT
-        value: low
+        value: medium
       # All-country × last-1-year corpus + daily rolling-window retention
       # (ingest via Cloudflare Worker cron → POST /admin/ingest/cron).
       # Vector index = Supabase pgvector (DATABASE_URL); EMBED_DIM must match the

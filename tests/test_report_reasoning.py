@@ -60,3 +60,21 @@ def test_config_defaults():
     s = Settings(_env_file=None)
     assert s.REPORT_REASONING_EFFORT == "medium"
     assert s.REPORT_LLM_TIMEOUT >= 120
+
+
+def test_chat_thinks_at_medium_with_room_for_it():
+    """Chat moved to medium (2026-11-16, owner's decision). The first token comes
+    only after the thinking (up to 8,192 tokens), so 45 s could time out and retry."""
+    from config import Settings
+    s = Settings(_env_file=None)
+    assert s.GEMINI_REASONING_EFFORT == "medium"
+    assert s.CHAT_LLM_TIMEOUT >= 90
+
+
+def test_render_blueprint_sets_chat_to_medium():
+    """render.yaml pins the production value; it must not undo the default."""
+    import re
+    from pathlib import Path
+    text = Path(__file__).resolve().parent.parent.joinpath("render.yaml").read_text(encoding="utf-8")
+    m = re.search(r"key: GEMINI_REASONING_EFFORT\s*\n\s*value:\s*(\S+)", text)
+    assert m and m.group(1).strip('"') == "medium"
