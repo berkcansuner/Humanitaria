@@ -257,6 +257,7 @@ Refined and restrained: a solid green primary, quiet secondaries, no shadow.
 ### Messages
 - **User:** quiet Shelf Gray bubble with Archive Ink text (Inter 15px / 21px), right-aligned, so the question never outweighs the answer.
 - **Assistant:** white bubble with a Paper Edge border spanning the column (about 736px of text), answer text in Source Serif 4 at 15px / 21px.
+- **Actions:** copy, regenerate and edit sit in a row under the bubble (right under questions, left under answers) and appear on hover or keyboard focus; the bubble itself hugs its text.
 - **Waiting:** before the first token arrives, two shimmering skeleton lines (the shared `.skeleton` utility) stand in for the answer; no bouncing dots.
 - **Quotes:** quoted report text sits on a Reading Room fill with a 6px radius and Graphite text.
 - **Error:** Alert Blush ground, a 1px border tinted from Alert Red, 6px radius, and the alert icon. The message says what happened (a connection failure names the free-tier wake-up, about 30 s), and on the last turn an outlined "Try again" resends the question in place.

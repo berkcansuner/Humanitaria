@@ -88,18 +88,25 @@
                   @dismiss="onSuggestionDismiss(msg)"
                 />
                 <SourceList v-if="msg.sources" :sources="msg.sources" />
-                <MessageActions
-                  v-if="msg.content && !msg.error && !(loading && idx === messages.length - 1)"
-                  :role="msg.role"
-                  :content="msg.content"
-                  :sources="msg.role === 'assistant' ? msg.sources : null"
-                  :can-regenerate="idx === messages.length - 1"
-                  @regenerate="regenerate"
-                  @edit="startEdit(idx)"
-                />
               </template>
             </template>
           </div>
+          <!-- Under the bubble, as on Claude: the bubble hugs its text instead of
+               holding an invisible row for the hover actions. -->
+          <MessageActions
+            v-if="
+              msg.content &&
+              !msg.error &&
+              editingIndex !== idx &&
+              !(loading && idx === messages.length - 1)
+            "
+            :role="msg.role"
+            :content="msg.content"
+            :sources="msg.role === 'assistant' ? msg.sources : null"
+            :can-regenerate="idx === messages.length - 1"
+            @regenerate="regenerate"
+            @edit="startEdit(idx)"
+          />
         </div>
       </div>
     </div>
@@ -579,10 +586,12 @@ watch(
   justify-content: flex-start;
 }
 
+/* The bubble with its hover actions underneath. */
 .message-row {
   display: flex;
+  flex-direction: column;
   align-items: flex-start;
-  gap: var(--space-3);
+  gap: 2px;
   max-width: 80%;
 }
 
@@ -600,7 +609,11 @@ watch(
 }
 
 .message.user .message-row {
-  flex-direction: row-reverse;
+  align-items: flex-end;
+}
+
+.message.assistant .message-row {
+  align-items: stretch;
 }
 
 .message-bubble {

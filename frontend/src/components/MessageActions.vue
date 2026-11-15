@@ -69,12 +69,12 @@ async function onCopy() {
 .message-actions {
   display: flex;
   gap: var(--space-1);
-  margin-top: var(--space-2);
   opacity: 0;
   transition: opacity 0.15s;
 }
 
-.message-bubble:hover .message-actions,
+/* Shown on hover of the whole message (bubble and the row under it). */
+.message-row:hover .message-actions,
 .message-actions:focus-within {
   opacity: 1;
 }
