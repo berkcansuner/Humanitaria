@@ -1517,8 +1517,9 @@ function onCiteClick(e) {
   padding: var(--space-6) var(--space-8);
 }
 
+/* Claude's reading column: 736px, whatever the window width. */
 .report-column {
-  max-width: 70ch;
+  max-width: 736px;
   margin: 0 auto;
   font-size: var(--text-base);
 }
@@ -1655,10 +1656,11 @@ function onCiteClick(e) {
   color: var(--color-error);
 }
 
+/* Report text reads like Claude's answers: the reading serif at 15px / 21px. */
 .report-content {
-  font-family: var(--font-body);
-  font-size: var(--text-base);
-  line-height: 1.65;
+  font-family: var(--font-serif);
+  font-size: 15px;
+  line-height: 21px;
   color: var(--color-text);
 }
 .report-content :deep(h1) {
