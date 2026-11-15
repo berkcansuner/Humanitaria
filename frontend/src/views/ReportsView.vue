@@ -88,15 +88,26 @@
             </button>
           </div>
 
+          <!-- While a report streams, Generate becomes Stop (Chat's Charcoal Stop). -->
           <button
+            v-if="generating"
+            ref="stopBtn"
+            type="button"
+            class="generate-btn stop-gen"
+            @click="stopGeneration"
+          >
+            <Square :size="14" aria-hidden="true" />
+            Stop generating
+          </button>
+          <button
+            v-else
             ref="generateBtn"
             type="submit"
             class="generate-btn"
-            :disabled="!form.country || generating"
+            :disabled="!form.country"
           >
-            <Loader2 v-if="generating" :size="16" class="spin" />
-            <FileText v-else :size="16" />
-            {{ generating ? 'Generating…' : 'Generate report' }}
+            <FileText :size="16" />
+            Generate report
           </button>
 
           <p v-if="optionsError" class="form-hint">Could not load options. Try refreshing.</p>
@@ -108,6 +119,9 @@
 
         <div class="saved">
           <h3 class="saved-title-h">Saved reports</h3>
+          <p v-if="generating" class="form-hint">
+            Saved reports open when this report finishes, or after you stop it.
+          </p>
           <template v-if="loadingList && !reports.length">
             <span v-for="n in 4" :key="'sk-' + n" class="skeleton saved-skel"></span>
           </template>
@@ -131,6 +145,7 @@
                   type="button"
                   class="saved-open"
                   :title="e.report.title"
+                  :aria-disabled="generating ? 'true' : undefined"
                   @click="openReport(e.report.id)"
                 >
                   <span class="saved-name">{{ savedName(e.report) }}</span>
@@ -200,6 +215,7 @@
                       type="button"
                       class="saved-open"
                       :title="r.title"
+                      :aria-disabled="generating ? 'true' : undefined"
                       @click="openReport(r.id)"
                     >
                       <span class="saved-name saved-period-name">{{
@@ -226,13 +242,13 @@
       <main ref="viewer" class="report-main" @click="onCiteClick">
         <!-- Phones show the library or one report, never both stacked. -->
         <button
-          v-if="(current || openingId) && !generating"
+          v-if="current || openingId"
           type="button"
           class="back-to-list"
-          @click="closeReport"
+          @click="generating ? stopAndShowList() : closeReport()"
         >
           <ArrowLeft :size="15" aria-hidden="true" />
-          All reports
+          {{ generating ? 'Stop and show all reports' : 'All reports' }}
         </button>
         <!-- One reading column: every block shares its 70ch measure (set at body size),
              so the Sources line and the header align with the text. -->
@@ -322,6 +338,9 @@
               )
             "
           ></article>
+          <p v-if="current.stopped" class="stopped-note" role="status">
+            Stopped. This report was not saved.
+          </p>
           <div v-if="genError" class="error-banner"><AlertCircle :size="16" /> {{ genError }}</div>
           <SourceList v-if="current.sources" :sources="current.sources" />
         </div>
@@ -358,6 +377,7 @@ import {
   ArrowLeft,
   ChevronRight,
   CalendarPlus,
+  Square,
 } from 'lucide-vue-next'
 import AppTopbar from '../components/AppTopbar.vue'
 import SourceList from '../components/SourceList.vue'
@@ -552,6 +572,19 @@ function closeReport() {
   syncUrl(null, { push: true })
 }
 
+// Stop a streaming report: the request is aborted, the server stops generating
+// and nothing is saved (reports are saved only after a complete stream).
+function stopGeneration() {
+  if (controller.value) controller.value.abort()
+}
+
+// Phones show one pane; leaving the streaming report stops it first.
+function stopAndShowList() {
+  stopGeneration()
+  current.value = null
+  closeReport()
+}
+
 async function openReport(id, { fromRoute = false } = {}) {
   if (generating.value) return
   openingId.value = id
@@ -651,6 +684,7 @@ const nextSuggestion = computed(() =>
 // Set by "Run next period": the saved report the form's next report continues.
 const continuation = ref(null)
 const generateBtn = ref(null)
+const stopBtn = ref(null)
 // The link holds only while the form keeps the series' type, country, sector and
 // language (the API refuses a mismatch); dates may change.
 const continuesSeries = computed(
@@ -768,6 +802,8 @@ function scrollViewerBottom() {
 async function generate() {
   if (!form.value.country || generating.value) return
   generating.value = true
+  // Generate is replaced by Stop; keep keyboard focus on the control that is there.
+  nextTick(() => stopBtn.value && stopBtn.value.focus())
   genError.value = ''
   // Clear the open report from the URL BEFORE the request: the route watcher
   // closes the viewer when ?report= disappears and nothing is generating, so a
@@ -903,7 +939,9 @@ async function generate() {
       }
     }
   } catch (e) {
-    if (e?.name !== 'AbortError') {
+    if (e?.name === 'AbortError') {
+      if (current.value) current.value.stopped = true
+    } else {
       console.error('Report stream error:', e)
       genError.value =
         "Couldn't reach the server. It may be waking up (about 30 seconds); generate again."
@@ -1049,6 +1087,22 @@ function onCiteClick(e) {
 .generate-btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+/* Stop while a report streams: Chat's Charcoal Stop (DESIGN, Buttons). */
+.generate-btn.stop-gen {
+  color: var(--color-on-tertiary);
+  background-color: var(--color-tertiary);
+}
+.generate-btn.stop-gen:hover {
+  background-color: var(--color-text-secondary);
+}
+.saved-open[aria-disabled='true'] {
+  cursor: not-allowed;
+}
+.stopped-note {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
 }
 
 .form-hint {
