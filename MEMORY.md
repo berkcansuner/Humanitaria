@@ -5,13 +5,13 @@
 > Ayrıntı commit mesajlarında ve `git log`'da. 2026-06 → 2026-11-16 arası uzun tarihçe:
 > `git show 2daf528:MEMORY.md`.
 
-**Son güncelleme:** 2026-11-16 — MEMORY.md sadeleştirildi (420 → ~100 satır); 17 birleşmiş yerel branch silindi;
-**Dalga 2 CANLIDA** (`c57395e`…`5ddf0de`, 776 test yeşil, CI yeşil):
-akış hatalarında traceback (`logger.exception`), ölü `rag/query_rewriter.py` silindi (`_format_history` →
-`query_processor`), context her belgede `Source: <kurum>` satırı taşıyor, sohbet prompt'u uygulanan filtreleri
-görüyor (`rag/chain.py` `describe_filters`, kural 5). Canlı test (Sudan, Ocak 2026'dan beri gıda güvenliği, TR): cevap "Uygulanan filtreler: Ülke: Sudan; Konu: Gıda ve
-Beslenme; Tarih: 2026-01-01 …" satırıyla başlıyor, rakamlar kurumla anılıyor (FSL Kümesi); test sohbeti silindi.
-Küçük: filtre satırı biraz mekanik; tek tük İngilizce kelime kaldı ("cereal", "Famine"). Rapor tarafı canlıda denenmedi.
+**Son güncelleme:** 2026-11-16 — **Dalga 3 branch'te (`dalga3-retrieval`, push EDİLMEDİ, canlıda değil):**
+LLM filtre çıkarma fiilen ölüydü (json_mode şemasız, prompt alan adı vermiyordu → model `countries`/`themes` uydurdu,
+QueryFilters hepsini yok saydı; yalnız ~10 ülkelik kural yedeği çalışıyordu) → prompt alanları sayıyor; "South Sudan"
+artık "Sudan" değil; korpusta olmayan ülke filtresi düşürülüyor (`_drop_unknown_country`). Sohbet MMR λ 0,5 → 0,7
+(`CHAT_MMR_LAMBDA`; raporlar `MMR_LAMBDA` 0,5'te). Eval (30 sorgu): nDCG@5 0,658 → 0,761, P@5 0,620 → 0,713, MRR
+0,818 → 0,894. Master'da da push edilmemiş `e739253`: sohbet prompt'u filtreyi açılış cümlesine örüyor, belge
+terimlerini çeviriyor (canlıda denenmedi). Dalga 2 canlıda (`c57395e`…`5ddf0de`).
 
 ---
 
@@ -76,12 +76,18 @@ Küçük: filtre satırı biraz mekanik; tek tük İngilizce kelime kaldı ("cer
 - `tests/test_pgvector_store.py` tabloları DROP eder → yalnız yerel/CI Postgres (Supabase URL'si reddedilir).
 - `router.onError` dinleyicisi varken vue-router hataları kendiliğinden loglamaz → işlenmeyen hatayı handler'da logla.
 - Cron kontrolü: Actions API `workflows/nightly-ingest.yml/runs` (event=schedule) + `ingest_state.updated_at`.
+- **Retrieval eval:** korpus 1 yıllık kayan pencere → etiketler eskir; her eval oturumunda önce
+  `python scripts/build_eval_labels.py` (~2-6 TL), sonra `scripts/eval_rag.py --metrics --judge-holes` (filtreler sette
+  kayıtlı; `--live-filters` sorgu işlemci değişikliği için; env ile varyant: `CHAT_MMR_LAMBDA=1.0 ...`). Ana metrik
+  nDCG@5 + P@5 (genel sorgularda 40+ ilgili belge → recall@5 tavanı düşük). Rerank'ler `eval_data/rerank_cache.json`'da
+  önbellekli (Pinecone aylık rerank kotası; 2026-11-16 oturumu ~270 istek harcadı).
 
 ## Açık işler (öncelik sırasıyla)
 1. **17 Kasım 03:00 UTC** zamanlanmış gece çalışmasını doğrula (ilk zamanlanmış koşu; elle koşu başarılıydı).
-2. **Dalga 3 — eval kapılı retrieval:** rerank skor eşiği, MMR'ın cross-encoder'dan önce aday elemesi, geçmiş/trend
-   sorularında recency'yi kapatma, çoklu ülke yakalama. Önce baseline'ı yeniden ölç (son: recall@5 0,253 / MRR 0,528 /
-   nDCG@5 0,327, 2026-07-10; pgvector ve model değişiminden ÖNCE).
+2. **Dalga 3 kalanı:** branch'i master'a al + push + canlı sohbet kontrolü (ülke filtresi artık çoğu soruda devrede).
+   Çoklu ülke yakalama (`country` tek alan; "Sudan ve Çad" → yalnız Sudan) yapılmadı. Ölçülüp REDDEDİLDİ: rerank skor
+   eşiği (düşük skorda ilgili/ilgisiz ayrışmıyor), trend sorularında recency'yi kapatma (etkisiz: yalnız top-5 içi sıra),
+   `RECENCY_BOOST_FACTOR` 0,6 → 0,3 (MRR +0,045 ama medyan yaş 38 → 46 gün; kullanıcı 0,6'da tuttu).
 3. **Rapor kalitesi kalanları:** "What changed" kontrolü fazla temkinli (gerçek yeni riski silebiliyor); silme sonrası
    bağlayıcı cümle boşta kalabiliyor; 3.5 FL sohbette iki kaynağın rakamını tek rakamda birleştirdi (Sudan IPC).
 4. **Büyük özellikler** (her biri kendi brainstorm → plan turu): arayüz TR/EN dil seçici (i18n yok); sohbet
