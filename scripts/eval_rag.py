@@ -230,11 +230,28 @@ def _judge_case(case: dict, docs: list):
 _LABELS_PATH = Path(__file__).resolve().parent / "eval_data" / "labeled_queries.json"
 
 
-def _run_metrics():
-    """Recall@k / MRR / nDCG@k for the CURRENT namespace against the labeled set.
+def _warn_stale_labels(dataset):
+    """Warn when labeled documents have left the rolling one-year corpus — their
+    absence would read as a retrieval miss (rebuild: scripts/build_eval_labels.py)."""
+    from sqlalchemy import text
+    from rag.db import connect
 
-    The labels are keyed by canonical doc_id, so they stay valid across re-ingests."""
-    from rag.eval_metrics import recall_at_k, reciprocal_rank, ndcg_at_k
+    ids = sorted({i for d in dataset for i in d["relevant_doc_ids"]})
+    with connect() as conn:
+        present = conn.execute(text("SELECT count(DISTINCT doc_id) FROM chunks WHERE doc_id = ANY(:ids)"),
+                               {"ids": ids}).scalar()
+    if present < len(ids):
+        print(f"⚠ {len(ids) - present}/{len(ids)} etiketli belge artık korpusta yok — "
+              f"seti yeniden kur: python scripts/build_eval_labels.py\n")
+
+
+def _run_metrics(live_filters: bool = False):
+    """Recall@k / MRR / nDCG@k of the chat retrieval pipeline against the labeled set.
+
+    Uses each entry's stored filters (so runs differ only by the retrieval change
+    under test) unless live_filters re-extracts them — needed when evaluating a
+    query-processor change."""
+    from rag.eval_metrics import recall_at_k, reciprocal_rank, ndcg_at_k, precision_at_k
     from config import get_settings
 
     settings = get_settings()
@@ -242,28 +259,33 @@ def _run_metrics():
     if not _LABELS_PATH.exists():
         print(f"Etiketli set yok: {_LABELS_PATH}")
         sys.exit(1)
-    dataset = [d for d in json.loads(_LABELS_PATH.read_text(encoding="utf-8"))
-               if d.get("relevant_doc_ids")]
-    print(f"\nRetrieval metrikleri — {len(dataset)} etiketli sorgu, k={k}\n"
-          + "=" * 70)
-    recalls, rrs, ndcgs = [], [], []
+    raw = json.loads(_LABELS_PATH.read_text(encoding="utf-8"))
+    entries = raw["queries"] if isinstance(raw, dict) else raw
+    dataset = [d for d in entries if d.get("relevant_doc_ids")]
+    built = raw.get("built", "?") if isinstance(raw, dict) else "?"
+    print(f"\nRetrieval metrikleri — {len(dataset)} etiketli sorgu, k={k}, set {built}, "
+          f"filtreler {'canlı' if live_filters else 'sette kayıtlı'}\n" + "=" * 70)
+    _warn_stale_labels(dataset)
+    rows = []   # (recall, RR, nDCG, precision) per query
     for d in dataset:
         relevant = set(d["relevant_doc_ids"])
-        filters = extract_filters(d["query"])
+        filters = extract_filters(d["query"]) if live_filters or "filters" not in d else d["filters"]
         try:
             docs = anyio.run(_retrieve_docs, d["query"], filters)
         except Exception as e:
             print(f"  [err] {d['query']}: {e}")
             continue
         ranked = [doc.metadata.get("doc_id") for doc in docs]
-        r, rr, n = recall_at_k(ranked, relevant, k), reciprocal_rank(ranked, relevant), ndcg_at_k(ranked, relevant, k)
-        recalls.append(r); rrs.append(rr); ndcgs.append(n)
-        print(f"  recall@{k}={r:.2f}  RR={rr:.2f}  nDCG@{k}={n:.2f}  | {d['query']}")
-    if recalls:
+        row = (recall_at_k(ranked, relevant, k), reciprocal_rank(ranked, relevant),
+               ndcg_at_k(ranked, relevant, k), precision_at_k(ranked, relevant, k))
+        rows.append(row)
+        print(f"  recall@{k}={row[0]:.2f}  RR={row[1]:.2f}  nDCG@{k}={row[2]:.2f}  "
+              f"P@{k}={row[3]:.2f}  n={len(ranked)}  | {d['query']}")
+    if rows:
+        r, rr, n, p = (sum(col) / len(rows) for col in zip(*rows))
         print("=" * 70)
-        print(f"ORTALAMA ({len(recalls)} sorgu) — "
-              f"recall@{k}={sum(recalls)/len(recalls):.3f}  "
-              f"MRR={sum(rrs)/len(rrs):.3f}  nDCG@{k}={sum(ndcgs)/len(ndcgs):.3f}")
+        print(f"ORTALAMA ({len(rows)} sorgu) — recall@{k}={r:.3f}  MRR={rr:.3f}  "
+              f"nDCG@{k}={n:.3f}  P@{k}={p:.3f}")
 
 
 def main():
@@ -275,11 +297,13 @@ def main():
     parser.add_argument("--judge-threshold", type=float, default=3.5,
                         help="--judge ile ortalama puan eşiği; altı çıkış kodunu 1 yapar (varsayılan 3.5)")
     parser.add_argument("--metrics", action="store_true",
-                        help="Etiketli set üzerinde recall@k/MRR/nDCG@k hesapla (current namespace)")
+                        help="Etiketli set üzerinde recall@k/MRR/nDCG@k hesapla (sohbet retrieval hattı)")
+    parser.add_argument("--live-filters", action="store_true",
+                        help="--metrics ile: sette kayıtlı filtreler yerine filtreleri yeniden çıkar")
     args = parser.parse_args()
 
     if args.metrics:
-        _run_metrics()
+        _run_metrics(live_filters=args.live_filters)
         return
 
     print(f"\nRAG Eval — {len(EVAL_CASES)} vaka\n" + "=" * 70)

@@ -51,3 +51,15 @@ def test_ndcg_at_k_matches_manual_dcg():
     dcg = 1 / math.log2(3) + 1 / math.log2(5)
     idcg = 1 / math.log2(2) + 1 / math.log2(3)  # 2 relevant, ideal at ranks 1,2
     assert ndcg_at_k(RANKED, RELEVANT, 5) == pytest.approx(dcg / idcg)
+
+
+def test_precision_at_k_counts_relevant_share_of_returned():
+    from rag.eval_metrics import precision_at_k
+    assert precision_at_k(RANKED, RELEVANT, 4) == pytest.approx(0.5)  # b, d of a-d
+
+
+def test_precision_at_k_uses_what_was_returned_when_short():
+    # A score threshold may return fewer than k docs; precision is over those.
+    from rag.eval_metrics import precision_at_k
+    assert precision_at_k(["b"], RELEVANT, 5) == pytest.approx(1.0)
+    assert precision_at_k([], RELEVANT, 5) == 0.0

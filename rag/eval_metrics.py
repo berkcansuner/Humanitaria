@@ -36,3 +36,12 @@ def ndcg_at_k(ranked_ids: list[str], relevant_ids: set[str], k: int) -> float:
     ideal_hits = min(len(relevant_ids), k)
     idcg = sum(1.0 / math.log2(rank + 1) for rank in range(1, ideal_hits + 1))
     return dcg / idcg if idcg else 0.0
+
+
+def precision_at_k(ranked_ids: list[str], relevant_ids: set[str], k: int) -> float:
+    """Share of the returned top-k that is relevant (over what was returned, so a
+    score threshold that returns fewer docs is not penalised for the gap)."""
+    top_k = ranked_ids[:k]
+    if not top_k:
+        return 0.0
+    return sum(1 for doc_id in top_k if doc_id in relevant_ids) / len(top_k)
