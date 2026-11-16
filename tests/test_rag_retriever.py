@@ -94,7 +94,8 @@ class TestRetriever:
     @pytest.mark.parametrize("override, expected", [(None, "settings"), (0.9, 0.9)])
     def test_search_uses_the_lambda_override_else_the_setting(self, override, expected):
         from rag import retriever
-        rows = [MagicMock(dist=0.1, emb="[1, 0]", content="c", metadata={"doc_id": "a"})]
+        rows = [MagicMock(dist=0.1 * i, emb="[1, 0]", content="c", metadata={"doc_id": str(i)})
+                for i in range(2)]   # k < rows, so MMR runs
         conn = MagicMock()
         conn.execute.return_value.fetchall.return_value = rows
         conn.__enter__.return_value = conn
@@ -234,3 +235,21 @@ class TestRerankByRelevance:
         assert [d.metadata["doc_id"] for d in out] == ["b", "a"]
         assert out[0].metadata["_relevance_score"] == 0.91
         assert out[1].metadata["_relevance_score"] == 0.42
+
+
+def test_search_skips_mmr_when_every_candidate_is_kept():
+    # Report retrieval keeps the whole dense pool (k == fetch_k): MMR would select every
+    # row anyway, at O(k^2) vector work; the dense order is returned instead.
+    from rag import retriever
+    rows = [MagicMock(dist=0.1 * i, emb="[1, 0]", content=f"c{i}", metadata={"doc_id": str(i)})
+            for i in range(3)]
+    conn = MagicMock()
+    conn.execute.return_value.fetchall.return_value = rows
+    conn.__enter__.return_value = conn
+    with patch.object(retriever, "get_embeddings") as emb, \
+         patch.object(retriever, "connect", return_value=conn), \
+         patch.object(retriever, "maximal_marginal_relevance") as mmr:
+        emb.return_value.embed_query.return_value = [1.0, 0.0]
+        docs = retriever.search("q", None, 3, 3)
+    mmr.assert_not_called()
+    assert [d.metadata["doc_id"] for d in docs] == ["0", "1", "2"]

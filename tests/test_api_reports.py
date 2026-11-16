@@ -226,8 +226,7 @@ class TestReportService:
             return r
 
         with patch("rag.report_service.build_retriever", side_effect=fake_build_retriever), \
-             patch("rag.report_service.rerank_by_relevance", side_effect=lambda q, d, n: d[:n]), \
-             patch("rag.report_service.rerank_by_recency", side_effect=lambda d: d):
+             patch("rag.report_service.rerank_by_relevance", side_effect=lambda q, d, n: d[:n]):
             docs = anyio.run(
                 report_service.retrieve_for_report, "Sudan", "Health", "2026-01-01", "2026-06-30", 12
             )
@@ -235,7 +234,7 @@ class TestReportService:
         assert captured["filter"]["theme"] == "Health"
         assert captured["filter"]["date"] == {"$gte": "2026-01-01", "$lte": "2026-06-30"}
         assert captured["filter"]["doctype"] == "report"
-        assert captured["k"] == 12 * 4  # top_k * RERANK_CANDIDATE_MULTIPLIER
+        assert captured["k"] == 256  # the whole dense pool; every document is reranked
         assert len(docs) == 1
 
     def test_prefer_english_filters_when_english_dominant(self):
@@ -319,18 +318,18 @@ class TestReportService:
         def fake_build_retriever(filter=None, k=None):
             captured["k"] = k
             r = MagicMock()
-            r.ainvoke = AsyncMock(return_value=[])
+            r.ainvoke = AsyncMock(return_value=[_doc(i) for i in range(1, 21)])
             return r
 
         with patch("rag.report_service.get_settings", return_value=self._report_settings()), \
              patch("rag.report_service.build_retriever", side_effect=fake_build_retriever), \
-             patch("rag.report_service.rerank_by_relevance", side_effect=lambda q, d, n: d[:n]), \
-             patch("rag.report_service.rerank_by_recency", side_effect=lambda d: d):
-            anyio.run(
+             patch("rag.report_service._collapse_near_duplicates", side_effect=lambda d: d), \
+             patch("rag.report_service.rerank_by_relevance", side_effect=lambda q, d, n: d[:n]):
+            docs = anyio.run(
                 report_service.retrieve_for_report, "Mali", None, None, None, None,
                 "indicator_monitoring",
             )
-        assert captured["k"] == 16 * 4  # top_k widened to 16 (> REPORT_TOP_K=12) for indicator_monitoring
+        assert len(docs) == 16  # top_k widened to 16 (> REPORT_TOP_K=12) for indicator_monitoring
 
     def test_retrieve_situation_keeps_configured_top_k(self):
         from rag import report_service
@@ -339,15 +338,15 @@ class TestReportService:
         def fake_build_retriever(filter=None, k=None):
             captured["k"] = k
             r = MagicMock()
-            r.ainvoke = AsyncMock(return_value=[])
+            r.ainvoke = AsyncMock(return_value=[_doc(i) for i in range(1, 21)])
             return r
 
         with patch("rag.report_service.get_settings", return_value=self._report_settings()), \
              patch("rag.report_service.build_retriever", side_effect=fake_build_retriever), \
-             patch("rag.report_service.rerank_by_relevance", side_effect=lambda q, d, n: d[:n]), \
-             patch("rag.report_service.rerank_by_recency", side_effect=lambda d: d):
-            anyio.run(report_service.retrieve_for_report, "Sudan", None, None, None)
-        assert captured["k"] == 12 * 4  # unchanged for the default (situation) type
+             patch("rag.report_service._collapse_near_duplicates", side_effect=lambda d: d), \
+             patch("rag.report_service.rerank_by_relevance", side_effect=lambda q, d, n: d[:n]):
+            docs = anyio.run(report_service.retrieve_for_report, "Sudan", None, None, None)
+        assert len(docs) == 12  # unchanged for the default (situation) type
 
     def test_report_title_type_prefix(self):
         from rag.report_service import report_title

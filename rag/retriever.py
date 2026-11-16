@@ -135,6 +135,10 @@ def search(query: str, filters: Optional[Dict[str, Any]], k: int, fetch_k: int,
     if not rows:
         return []
     rows = sorted(rows, key=lambda r: r.dist)   # relaxed_order may be slightly out of order
+    if k >= len(rows):
+        # Every candidate is kept (report retrieval): MMR would only reorder them, at
+        # O(k^2) vector work; keep the dense order.
+        return [Document(page_content=r.content, metadata=dict(r.metadata)) for r in rows]
     picked = maximal_marginal_relevance(
         np.array(query_vec, dtype=np.float32),
         [json.loads(r.emb) for r in rows],

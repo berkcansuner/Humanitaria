@@ -11,6 +11,7 @@ import logging
 import anyio
 import re
 from collections import defaultdict
+from datetime import date
 from typing import List, Optional
 
 from langchain_core.documents import Document
@@ -19,7 +20,7 @@ from langdetect import DetectorFactory, detect
 from config import get_settings
 from rag.retriever import (
     build_retriever, apply_date_filter, dedupe_by_document,
-    rerank_by_relevance, rerank_by_recency,
+    rerank_by_relevance,
 )
 
 logger = logging.getLogger(__name__)
@@ -206,17 +207,75 @@ def _build_filters(country: str, theme: Optional[str],
     return filters
 
 
+# Report retrieval (eval 2026-11-16, 6 countries × situation/indicator, May–Nov 2026):
+# MMR (λ 0.5) cut the dense pool to ~56 documents before the reranker, and the final
+# ranking ignored who published a document, so the latest document of each originator
+# organisation reached the context 9% of the time (Yemen's indicator table missed IOM's
+# 340,000 update). Now every document of the dense pool is reranked and the ranking
+# weighs relevance 0.6, recency in the window 0.2 and an originator source 0.2, with at
+# most two documents per organisation: 27%, originator share 54% -> 79%, mean relevance
+# 0.833 -> 0.844 (weights 0.5/0.25/0.25 reached 30% at 0.813, 0.4/0.3/0.3 35% at 0.743).
+_REPORT_POOL_CHUNKS = 256      # dense chunks under the filters; all their documents are reranked
+_RERANK_MAX_DOCS = 100         # documents per rerank request
+_W_RELEVANCE, _W_RECENCY, _W_ORIGINATOR = 0.6, 0.2, 0.2
+_PER_SOURCE_CAP = 2
+# Organisations that produce the figures humanitarian reports rely on.
+ORIGINATORS = frozenset({
+    "UN Office for the Coordination of Humanitarian Affairs", "International Organization for Migration",
+    "UN High Commissioner for Refugees", "World Food Programme", "World Health Organization",
+    "UN Children's Fund", "Food and Agriculture Organization of the United Nations",
+    "Famine Early Warning System Network", "Integrated Food Security Phase Classification",
+    "Health Cluster", "Nutrition Cluster", "Protection Cluster", "CCCM Cluster", "REACH Initiative",
+})
+
+
+def _doc_date(doc: Document) -> Optional[date]:
+    try:
+        return date.fromisoformat(str(doc.metadata.get("date"))[:10])
+    except ValueError:
+        return None
+
+
+def _rank_for_report(docs: List[Document], date_from: Optional[str], date_to: Optional[str],
+                     top_k: int) -> List[Document]:
+    """Order reranked documents by relevance, recency within the report window and
+    originator source; at most _PER_SOURCE_CAP per organisation while others remain."""
+    dates = [_doc_date(d) for d in docs]
+    known = [d for d in dates if d]
+    start = date.fromisoformat(date_from) if date_from else (min(known) if known else date.today())
+    end = date.fromisoformat(date_to) if date_to else date.today()
+    span = max((end - start).days, 1)
+
+    def score(i: int) -> float:
+        d = docs[i]
+        recency = min(1.0, max(0.0, (dates[i] - start).days / span)) if dates[i] else 0.0
+        return (_W_RELEVANCE * d.metadata.get("_relevance_score", 0.0) + _W_RECENCY * recency
+                + _W_ORIGINATOR * (d.metadata.get("source") in ORIGINATORS))
+
+    order = sorted(range(len(docs)), key=score, reverse=True)
+    picked, skipped, per_source = [], [], defaultdict(int)
+    for i in order:
+        source = docs[i].metadata.get("source")
+        if per_source[source] < _PER_SOURCE_CAP:
+            per_source[source] += 1
+            picked.append(i)
+        else:
+            skipped.append(i)
+    return [docs[i] for i in (picked + skipped)[:top_k]]
+
+
 async def retrieve_for_report(country: str, theme: Optional[str],
                               date_from: Optional[str], date_to: Optional[str],
                               top_k: Optional[int] = None,
                               report_type: str = "situation") -> List[Document]:
     """Fetch the document set to synthesize into one M&E report.
 
-    Wider than chat retrieval (REPORT_TOP_K): candidates → date filter → dedupe by
-    document → relevance rerank → mild recency blend → top-k. Filtered by
-    country (+ optional theme) and the from–to date window. indicator_monitoring
-    reports draw from a wider pool (a table of indicators needs broader source
-    coverage than a narrative summary) unless the caller pins an explicit top_k.
+    Wider than chat retrieval (REPORT_TOP_K): the dense pool under the country (+
+    optional theme) and date filters → English preference → date filter → one chunk
+    per document, near-duplicates collapsed → relevance rerank of every document →
+    ranking by relevance, recency and originator source (_rank_for_report) → top-k.
+    indicator_monitoring reports draw a wider set (a table of indicators needs broader
+    source coverage than a narrative summary) unless the caller pins an explicit top_k.
     """
     settings = get_settings()
     if top_k is None:
@@ -226,16 +285,13 @@ async def retrieve_for_report(country: str, theme: Optional[str],
     query = _retrieval_query(country, theme)
     filters = _build_filters(country, theme, date_from, date_to)
 
-    candidate_k = top_k * settings.RERANK_CANDIDATE_MULTIPLIER
-    retriever = build_retriever(filter=filters, k=candidate_k)
+    retriever = build_retriever(filter=filters, k=_REPORT_POOL_CHUNKS)
     docs = await retriever.ainvoke(query)
     docs = _prefer_english(docs)
     docs = apply_date_filter(docs, filters.get("date"))
-    docs = dedupe_by_document(docs)
-    docs = _collapse_near_duplicates(docs)
-    docs = await anyio.to_thread.run_sync(rerank_by_relevance, query, docs, top_k)  # blocking Pinecone call
-    docs = rerank_by_recency(docs)
-    return docs[:top_k]
+    docs = _collapse_near_duplicates(dedupe_by_document(docs))[:_RERANK_MAX_DOCS]
+    docs = await anyio.to_thread.run_sync(rerank_by_relevance, query, docs, len(docs))  # blocking Pinecone call
+    return _rank_for_report(docs, date_from, date_to, top_k)
 
 
 def report_title(country: str, theme: Optional[str], date_from: Optional[str],
