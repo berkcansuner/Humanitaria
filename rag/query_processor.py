@@ -41,6 +41,7 @@ _COUNTRY_MAP = {
     "iran": "Iran", "ırak": "Iraq", "irak": "Iraq", "suriye": "Syria", "turkey": "Turkey",
     "türkiye": "Turkey", "yemen": "Yemen", "afganistan": "Afghanistan",
     "somali": "Somalia", "sudan": "Sudan", "gazze": "State of Palestine",
+    "south sudan": "South Sudan", "güney sudan": "South Sudan", "guney sudan": "South Sudan",
     "ukraine": "Ukraine", "ukrayna": "Ukraine",
 }
 
@@ -63,6 +64,8 @@ _DOCTYPE_MAP = {
 
 # Reverse maps for normalization
 _CANONICAL_COUNTRIES = set(_COUNTRY_MAP.values())
+# Longest key first, so "south sudan" matches before its substring "sudan".
+_COUNTRY_KEYS_LONGEST_FIRST = sorted(_COUNTRY_MAP.items(), key=lambda kv: len(kv[0]), reverse=True)
 _CANONICAL_THEMES = set(_THEME_MAP.values())
 
 
@@ -88,7 +91,8 @@ _FILTER_RULES = """Rules:
   Mappings: gazze/Gaza/Gazze -> State of Palestine, suriye/Syria/Suriye/Suriyede -> Syria,
   irak/Iraq/Irak/Irakta -> Iraq, turkiye/Türkiye/Turkey -> Turkey, somali/Somalia/Somali -> Somalia,
   afganistan/Afghanistan -> Afghanistan, ukraine/Ukrayna/Ukraine -> Ukraine,
-  yemen/Yemen -> Yemen, sudan/Sudan -> Sudan, iran/Iran/Iranda/Irandaki -> Iran.
+  yemen/Yemen -> Yemen, sudan/Sudan -> Sudan, iran/Iran/Iranda/Irandaki -> Iran,
+  güney sudan/South Sudan -> South Sudan (a different country from Sudan).
 - Map SPECIFIC sector keywords to themes. "insani yardım / insani yardim" means "humanitarian aid"
   in general — do NOT assign it to any theme. "gelişmeler/gelismeler", "durum", "kriz", "rapor"
   are also general words — do NOT map them to themes either.
@@ -119,6 +123,8 @@ _FILTER_EXTRACTION_PROMPT = (
     "You are a filter extraction system for a ReliefWeb humanitarian documents database.\n\n"
     "Given a user query in Turkish or English, extract structured search filters.\n\n"
     + _FILTER_RULES
+    + "\n- The JSON object has the fields: country, theme, doctype, date_from, source, format "
+    "(null for anything not set)."
     + "\n\nQuery: {query}"
 )
 
@@ -268,7 +274,7 @@ def _extract_filters_rule_based(query: str) -> Dict[str, Any]:
     query_lower = _turkish_lower(query)
     filters: Dict[str, Any] = {}
 
-    for key, val in _COUNTRY_MAP.items():
+    for key, val in _COUNTRY_KEYS_LONGEST_FIRST:
         if _match_word(key, query_lower):
             filters["country"] = val
             break

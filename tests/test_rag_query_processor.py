@@ -477,3 +477,29 @@ class TestShouldBoostRecency:
     def test_boost_off_historical_turkish_tarihce(self):
         from rag.query_processor import should_boost_recency
         assert should_boost_recency("Yemen krizinin tarihçesi", {"country": "Yemen"}) is False
+
+class TestExtractionPromptSchema:
+    """json_mode carries no schema: when the prompt did not name the fields, the model
+    invented keys ('countries', 'themes') that QueryFilters silently ignored, so the
+    LLM extracted nothing and only the rule-based fallback ran."""
+
+    def test_prompt_names_every_filter_field(self):
+        from rag.query_processor import QueryFilters, _FILTER_EXTRACTION_PROMPT
+        assert "fields: " + ", ".join(QueryFilters.model_fields) in _FILTER_EXTRACTION_PROMPT
+
+
+class TestSouthSudan:
+    def test_rule_based_south_sudan_is_not_sudan(self):
+        assert _extract_filters_rule_based("cholera outbreak in South Sudan")["country"] == "South Sudan"
+        assert _extract_filters_rule_based("Güney Sudan'da kolera")["country"] == "South Sudan"
+
+    def test_rule_based_sudan_still_sudan(self):
+        assert _extract_filters_rule_based("Sudan'da kolera")["country"] == "Sudan"
+
+    def test_llm_south_sudan_is_kept(self):
+        from rag.query_processor import QueryFilters, _normalize_llm_filters
+        assert _normalize_llm_filters(QueryFilters(country="South Sudan"))["country"] == "South Sudan"
+
+    def test_prompt_tells_south_sudan_apart(self):
+        from rag.query_processor import _FILTER_RULES
+        assert "South Sudan" in _FILTER_RULES
