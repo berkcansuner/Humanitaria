@@ -29,6 +29,16 @@ def _is_displayable_source(doc) -> bool:
     return True
 
 
+def _source_label(doc) -> str:
+    """'Source: <organisation>' line for a context entry; empty when unknown.
+
+    The report prompts pick the most authoritative of several sources for a
+    fact (e.g. IPC for IPC figures), which needs the publishing organisation.
+    """
+    source = doc.metadata.get("source")
+    return f"Source: {source}\n" if source else ""
+
+
 def _build_context_and_sources(docs):
     """Number displayable docs [1..M] for the prompt and build matching source dicts.
 
@@ -40,7 +50,7 @@ def _build_context_and_sources(docs):
     displayable = [d for d in docs if _is_displayable_source(d)]
     docs = displayable or docs
     context = "\n\n---\n\n".join(
-        f"[{i}] ({doc.metadata.get('date') or 'tarih yok'}) {doc.page_content}"
+        f"[{i}] ({doc.metadata.get('date') or 'tarih yok'}) {_source_label(doc)}{doc.page_content}"
         for i, doc in enumerate(docs, 1)
     )
     sources = [

@@ -38,6 +38,18 @@ class TestBuildContextAndSources:
         assert [s["index"] for s in sources] == [1, 2]
         assert sources[0]["url"] == "http://a"
 
+    def test_each_entry_names_its_source_organisation(self):
+        # The report prompts tell the model each Context document starts with its
+        # number, date and source organisation, and use it to pick the most
+        # authoritative citation — so the organisation must actually be there.
+        docs = [
+            _doc(body="alpha", url="http://a", title="A", date="2024-01-01", source="WFP"),
+            _doc(body="beta", url="http://b", title="B", date="2024-02-02"),
+        ]
+        context, _ = _build_context_and_sources(docs)
+        assert "[1] (2024-01-01) Source: WFP\nalpha" in context
+        assert "[2] (2024-02-02) beta" in context  # no organisation → no empty label
+
     def test_only_displayable_docs_are_numbered(self):
         docs = [
             _doc(body="artefact", url="http://c", title="Sudan", doctype="country", country="Sudan"),
