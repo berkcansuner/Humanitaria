@@ -124,3 +124,18 @@ def test_placeholder_only_where_this_sections_sentences_were_removed():
     assert out.removed == 1
     region_part = out.content.split(f"## {TREND_H}")[0]
     assert "could not be verified" not in region_part
+
+
+def test_turkish_formatted_and_rounded_figures_pass():
+    # The prompt now asks for numbers in the report language's format, with large
+    # figures rounded: 1234.50 -> "1.234,5", "yaklaşık 1,2 bin"; 2345678 -> "2,35 milyon".
+    text = (f"## {TREND_H}\n\nIDP sayısı yılda 1.234,5 kişi, yani yaklaşık 1,2 bin kişi arttı; "
+            "artış istatistiksel olarak anlamlıdır (p=0,012).\n\n"
+            f"## {REGION_H}\n\nKuzey yaklaşık 2,35 milyon kişiyle başı çekiyor.")
+    assert _check(text, language="tr").removed == 0
+
+
+def test_rounding_that_changes_the_value_is_still_caught():
+    # "1,3 bin" is 1,300, not 1,234.5 rounded to one decimal of a thousand (1,2).
+    text = f"## {TREND_H}\n\nIDP sayısı yılda yaklaşık 1,3 bin kişi arttı."
+    assert _check(text, language="tr").removed == 1
