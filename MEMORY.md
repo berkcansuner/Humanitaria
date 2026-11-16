@@ -90,7 +90,8 @@ South Sudan kaynakları getiriyor. Test sohbetleri silindi.
 2. **Dalga 3 kalanı:** çoklu ülke yakalama (`country` tek alan; "Sudan ve Çad" → yalnız Sudan) yapılmadı. Ölçülüp REDDEDİLDİ: rerank skor
    eşiği (düşük skorda ilgili/ilgisiz ayrışmıyor), trend sorularında recency'yi kapatma (etkisiz: yalnız top-5 içi sıra),
    `RECENCY_BOOST_FACTOR` 0,6 → 0,3 (MRR +0,045 ama medyan yaş 38 → 46 gün; kullanıcı 0,6'da tuttu).
-3. **Rapor kalitesi kalanları:** "What changed" kontrolü fazla temkinli (gerçek yeni riski silebiliyor); silme sonrası
+3. **Rapor kalitesi — Yemen canlı testi (2026-11-16, 4 rapor):** durum (TR) ve ihtiyaç (EN) raporlarında atıflı 62 rakamın hepsi atıf yapılan belgede var. Açık: (a) gösterge tablosu atıfsız → tabloya veri veren belgeler kaynak listesinden düşüyor (QRCS, HALO, Amnesty), okuyucu izini süremiyor; (b) tablo değeri otoriteden değil ikincil kaynaktan (18,3 milyon gıda güvensizliği ← HALO Trust), As-of = yazı tarihi; (c) rapor retrieval'ı en güncel/yetkili belgeleri getirmiyor (IOM 13 Kasım 340.000 ve Health Cluster Kasım sitrep'leri bağlamda yok, tablo 7 Ekim 201.217 diyor); (d) ihtiyaç raporunda tek bilgiye çift atıf ([10][8]) — prompt'unda durum raporundaki YANLIŞ/DOĞRU örnekleri yok. Teknik raporda doğrulamanın ölçek hatası düzeltildi (`1427ae8`, branch `report-quality`).
+   Eski kalanlar: "What changed" kontrolü fazla temkinli (gerçek yeni riski silebiliyor); silme sonrası
    bağlayıcı cümle boşta kalabiliyor; 3.5 FL sohbette iki kaynağın rakamını tek rakamda birleştirdi (Sudan IPC).
 4. **Büyük özellikler** (her biri kendi brainstorm → plan turu): arayüz TR/EN dil seçici (i18n yok); sohbet
    export/paylaş; scrollytelling rapor; donör şablonu; HAPI conflict_events'i geri getirme; refugees için asylum tarafı.
