@@ -139,3 +139,16 @@ def test_rounding_that_changes_the_value_is_still_caught():
     # "1,3 bin" is 1,300, not 1,234.5 rounded to one decimal of a thousand (1,2).
     text = f"## {TREND_H}\n\nIDP sayısı yılda yaklaşık 1,3 bin kişi arttı."
     assert _check(text, language="tr").removed == 1
+
+
+def test_scale_words_on_a_range_in_the_context_are_honoured():
+    # Live check (Yemen, 2026-11-16): the context said "analysed population 9.5 to 35.0
+    # million"; the Turkish note "9,5 milyon ile 35,0 milyon" was removed as unverified.
+    findings = Findings(sections=[], gaps=[], indicators_covered=[])
+    context = "DATA NOTES:\n- IPC analyses covered (analysed population 9.5 to 35.0 million).\n"
+    text = "## Veri Kapsamı\n\nAnaliz edilen nüfus 9,5 milyon ile 35,0 milyon arasında değişti."
+    out = verify_narrative(text, findings, context, "tr")
+    assert out.removed == 0, out.content
+    # A figure written out in full against a scaled context value also passes.
+    out = verify_narrative("## X\n\nNüfus 35.000.000 kişiydi.", findings, context, "tr")
+    assert out.removed == 0, out.content

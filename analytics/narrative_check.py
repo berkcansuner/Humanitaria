@@ -73,7 +73,14 @@ def _readings(token: str) -> list[tuple[float, int]]:
 
 
 def _allowed_values(text: str) -> list[float]:
-    return [value for m in _NUMBER.finditer(text) for value, _ in _readings(m.group(1))]
+    """Every value the text states, plain and, after a scale word, scaled too
+    ('2.3 million' allows 2.3 and 2,300,000)."""
+    out = []
+    for m in _NUMBER.finditer(text):
+        scale = _SCALE.get((m.group(2) or "").lower(), 1.0)
+        for value, _ in _readings(m.group(1)):
+            out += [value, value * scale] if scale != 1.0 else [value]
+    return out
 
 
 def _numbers_ok(sentence: str, allowed: list[float]) -> bool:
@@ -82,8 +89,10 @@ def _numbers_ok(sentence: str, allowed: list[float]) -> bool:
         readings = _readings(m.group(1))
         if any(d == 0 and scale == 1.0 and v <= _SMALL_COUNT for v, d in readings):
             continue
-        if not any(abs(v * scale - a) <= 0.5 * 10 ** -d * scale + 1e-9 * max(1.0, a)
-                   for v, d in readings for a in allowed):
+        # With a scale word the number is tried scaled and as written: a range such as
+        # "9.5 to 35.0 million" carries the word only after its last number.
+        tries = [(v * s, 0.5 * 10 ** -d * s) for v, d in readings for s in {scale, 1.0}]
+        if not any(abs(v - a) <= tol + 1e-9 * max(1.0, a) for v, tol in tries for a in allowed):
             return False
     return True
 
