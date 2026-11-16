@@ -14,7 +14,7 @@ prompt'u filtreyi açılış cümlesine örüyor, terimleri çeviriyor. Canlı k
 Sudan'da…" ile açılıyor, "Acil Durum (Emergency - IPC Aşama 4)", "kıtlık (Famine)"; Güney Sudan kolera sorusu yalnız
 South Sudan kaynakları getiriyor. Test sohbetleri silindi.
 
-**Teknik rapor istatistikleri (branch `technical-stats`, push EDİLMEDİ):** Sen eğimi yıl başına (gerçek tarihler) + Gilbert GA + Kendall τ; yarıya bölme t-testi silindi; korelasyon ≥8 ortak dönem; Holm tüm testlere, anlamlılık kodda (SIGNIFICANT/NOT SIGNIFICANT); `analytics/narrative_check.py` bulgularda olmayan sayı veya hükme aykırı anlamlılık iddiası taşıyan cümleyi siler, sona not ekler. Canlı rapor denemesi yapılmadı (yanlış-pozitif silme oranı ölçülmeli). Yerelde HAPI 403: `HDX_APP_IDENTIFIER` yalnız Render'da.
+**Teknik rapor istatistikleri CANLIDA** (`a400434`…`a5f4b70`): Sen eğimi yıl başına + Gilbert GA + τ; yarıya bölme t-testi silindi; korelasyon ≥8 ortak dönem; Holm tüm testlere, anlamlılık kodda; `analytics/narrative_check.py` doğrulanamayan cümleyi siler. Canlı deneme (Sudan, TR, 9 test): 0 cümle silindi, metin bulgulara sadık (doğru); Holm etkisi görüldü (mülteci↔fonlama p 0,014 → Holm 0,071, anlamlı değil). Rapor hesapta duruyor (`c2d0086c…`). **Veri sorunları (açık):** fonlama serisi 2029'a uzanıyor (gelecek yıl planları, %-95,3 sahte düşüş); IDP ulusal serisi admin-1 toplamı, farklı DTM turu tarihleri → n=165, %83.144 (kapsama sorunu); ilk→son % değişim çok kırılgan (dönüş yapan %12.481); tarih verilmezse 2000'den beri; model Türkçe metne `direction=increasing`, `DATA GAPS` gibi ham etiketler kopyalıyor. Yerelde HAPI 403: `HDX_APP_IDENTIFIER` yalnız Render'da.
 
 ---
 
