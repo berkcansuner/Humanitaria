@@ -255,3 +255,21 @@ def test_technical_prompt_formats_numbers_for_the_language():
     p = _REPORT_PROMPTS["technical_monitoring"]
     assert "requested language's format" in p and "'%21,4'" in p and "'-%24,1'" in p
     assert "never '%' together with 'yüzde'" in p
+
+
+def test_indicator_table_values_come_from_the_originator_with_their_own_date():
+    # Yemen 2026-11-16: "Acutely food insecure 18.3 million" came from a HALO Trust news
+    # item and "As of" was that article's publication date.
+    from rag.chain import _REPORT_PROMPTS
+    p = _REPORT_PROMPTS["indicator_monitoring"]
+    assert "the organisation that produced it" in p
+    assert "not the publication date" in p and "(published)" in p
+
+
+def test_needs_assessment_citation_rule_has_the_examples():
+    # Yemen 2026-11-16: the needs brief cited single facts twice ("[10][8]"); the
+    # situation prompt, which has the WRONG/RIGHT examples, almost never did.
+    from rag.chain import _REPORT_PROMPTS
+    p = _REPORT_PROMPTS["needs_assessment"]
+    assert "WRONG:" in p and "RIGHT:" in p
+    assert "right after the fact it supports" in p
