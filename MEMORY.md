@@ -6,10 +6,12 @@
 > `git show 2daf528:MEMORY.md`.
 
 **Son güncelleme:** 2026-11-16 — MEMORY.md sadeleştirildi (420 → ~100 satır); 17 birleşmiş yerel branch silindi;
-**Dalga 2 bitti** (branch `fix/dalga2-quick-wins`, 4 commit, 776 test yeşil; push/deploy kullanıcı onayı bekliyor):
+**Dalga 2 CANLIDA** (`c57395e`…`5ddf0de`, 776 test yeşil, CI yeşil):
 akış hatalarında traceback (`logger.exception`), ölü `rag/query_rewriter.py` silindi (`_format_history` →
 `query_processor`), context her belgede `Source: <kurum>` satırı taşıyor, sohbet prompt'u uygulanan filtreleri
-görüyor (`rag/chain.py` `describe_filters`, kural 5). Canlıda sohbet ve rapor cevaplarına etkisi henüz gözlenmedi.
+görüyor (`rag/chain.py` `describe_filters`, kural 5). Canlı test (Sudan, Ocak 2026'dan beri gıda güvenliği, TR): cevap "Uygulanan filtreler: Ülke: Sudan; Konu: Gıda ve
+Beslenme; Tarih: 2026-01-01 …" satırıyla başlıyor, rakamlar kurumla anılıyor (FSL Kümesi); test sohbeti silindi.
+Küçük: filtre satırı biraz mekanik; tek tük İngilizce kelime kaldı ("cereal", "Famine"). Rapor tarafı canlıda denenmedi.
 
 ---
 
