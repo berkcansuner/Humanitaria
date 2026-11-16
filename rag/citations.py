@@ -113,9 +113,13 @@ def normalize_table_delimiters(text: str) -> str:
     return "\n".join(lines)
 
 
-def normalize_citations(content: str, sources):
+def normalize_citations(content: str, sources, keep_uncited: bool = False):
     """Expand grouped citations, keep only cited + valid sources, and renumber the [n]
     markers and the source list to a contiguous 1..N by first appearance.
+
+    keep_uncited: also list the valid sources nobody cited, after the cited ones (an
+    indicator report's table has no [n] markers, so the documents its values come
+    from would otherwise vanish from the list).
 
     Returns ``(content, sources)``. A marker with no valid/cited source is dropped
     (with its leading space) so the reader never sees a dead [n]. Safe on already-clean
@@ -146,4 +150,7 @@ def normalize_citations(content: str, sources):
         content,
     )
     new_sources = [{**valid[old], "index": remap[old]} for old in order]
+    if keep_uncited:
+        rest = [s for idx, s in valid.items() if idx not in remap]
+        new_sources += [{**s, "index": len(order) + i + 1} for i, s in enumerate(rest)]
     return new_content, new_sources

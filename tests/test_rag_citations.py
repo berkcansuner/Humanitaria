@@ -65,6 +65,14 @@ class TestNormalizeCitations:
         assert [s["index"] for s in sources] == [1, 2]
         assert [s["title"] for s in sources] == ["C", "A"]
 
+    def test_keep_uncited_appends_the_rest_after_the_cited(self):
+        # Indicator reports: the table carries no [n], so the documents it draws on are
+        # never cited; they stay in the list, after the cited ones (Yemen 2026-11-16).
+        content, sources = normalize_citations("Only [3].", self._sources(), keep_uncited=True)
+        assert content == "Only [1]."
+        assert [s["title"] for s in sources] == ["C", "A", "B"]
+        assert [s["index"] for s in sources] == [1, 2, 3]
+
     def test_expands_group_then_renumbers(self):
         content, sources = normalize_citations("Both [1, 3] matter.", self._sources())
         assert content == "Both [1][2] matter."

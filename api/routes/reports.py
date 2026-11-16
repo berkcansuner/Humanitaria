@@ -365,7 +365,8 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
             # Expand grouped citations, drop uncited/invalid sources, and renumber the
             # [n] markers + sources to a contiguous 1..N so the stored content, the PDF
             # and the on-screen Sources list all stay in sync.
-            clean_content, sources = normalize_citations(full, source_dicts)
+            clean_content, sources = normalize_citations(
+                full, source_dicts, keep_uncited=req.report_type == "indicator_monitoring")
             # Repair over-padded Markdown table delimiter rows (indicator reports) so the
             # web renderer parses the table instead of showing a <br>-joined paragraph.
             clean_content = normalize_table_delimiters(clean_content)

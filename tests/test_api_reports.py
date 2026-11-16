@@ -872,3 +872,25 @@ class TestCitationNormalization:
             rep = client.get(f"/reports/{rid}").json()
             assert len(rep["sources"]) == 3            # grouped citation no longer drops sources
             assert "[1][2]" in rep["content"]          # group expanded, capped to 2, normalised
+
+
+@pytest.mark.parametrize("report_type, kept", [("indicator_monitoring", 2), ("situation", 1)])
+def test_indicator_report_lists_the_sources_its_table_draws_on(report_type, kept):
+    # The indicator table carries no [n]; its documents stay in the saved source list
+    # (Yemen 2026-11-16: QRCS, HALO, Amnesty figures had no visible source). Other
+    # report types keep only the cited sources.
+    async def mock_astream(*a, **k):
+        yield "## Overview\n\nConflict worsened [1].\n\n| Indicator | Latest value | As of |\n"
+        yield "| --- | --- | --- |\n| IDPs | 5.2 million | 2026 |\n"
+
+    mock_chain = MagicMock()
+    mock_chain.astream = mock_astream
+    with patch("api.routes.reports.retrieve_for_report", new=AsyncMock(return_value=[_doc(1), _doc(2)])), \
+         patch("api.routes.reports.build_report_chain", return_value=mock_chain):
+        client = _client()
+        resp = client.post("/reports/stream", json={
+            "country": "Sudan", "date_from": "2026-01-01", "date_to": "2026-06-30",
+            "language": "en", "report_type": report_type,
+        })
+        rid = next(e for e in _parse_sse_events(resp.text) if e["event"] == "saved")["data"]["report_id"]
+        assert len(client.get(f"/reports/{rid}").json()["sources"]) == kept
