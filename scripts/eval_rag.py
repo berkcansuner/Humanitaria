@@ -245,12 +245,30 @@ def _warn_stale_labels(dataset):
               f"seti yeniden kur: python scripts/build_eval_labels.py\n")
 
 
-def _run_metrics(live_filters: bool = False):
-    """Recall@k / MRR / nDCG@k of the chat retrieval pipeline against the labeled set.
+def _judge_holes(entry: dict, docs: list, judge) -> int:
+    """Judge top-k docs the labels have never seen and record the verdicts in *entry*.
+
+    Labels come from a pool; a change that surfaces a document outside it would
+    otherwise score it as irrelevant just because nobody judged it. Returns the
+    number of documents judged."""
+    from scripts.build_eval_labels import judge_relevant, pool_candidates
+
+    judged = set(entry.get("judged_doc_ids", []))
+    holes = [c for c in pool_candidates([docs]) if c["doc_id"] not in judged]
+    if not holes:
+        return 0
+    entry["relevant_doc_ids"] += [holes[i]["doc_id"] for i in judge_relevant(judge, entry["query"], holes)]
+    entry["judged_doc_ids"] = [*judged, *(c["doc_id"] for c in holes)]
+    return len(holes)
+
+
+def _run_metrics(live_filters: bool = False, judge_holes: bool = False):
+    """Recall@k / MRR / nDCG@k / P@k of the chat retrieval pipeline against the labeled set.
 
     Uses each entry's stored filters (so runs differ only by the retrieval change
     under test) unless live_filters re-extracts them — needed when evaluating a
-    query-processor change."""
+    query-processor change. judge_holes judges unseen top-k documents first and
+    saves them to the set, so later runs compare on the same, wider judgments."""
     from rag.eval_metrics import recall_at_k, reciprocal_rank, ndcg_at_k, precision_at_k
     from config import get_settings
 
@@ -266,16 +284,25 @@ def _run_metrics(live_filters: bool = False):
     print(f"\nRetrieval metrikleri — {len(dataset)} etiketli sorgu, k={k}, set {built}, "
           f"filtreler {'canlı' if live_filters else 'sette kayıtlı'}\n" + "=" * 70)
     _warn_stale_labels(dataset)
+    judge = None
+    if judge_holes:
+        from scripts.build_eval_labels import get_judge
+        judge = get_judge()
     rows = []   # (recall, RR, nDCG, precision) per query
+    unjudged_total = 0
     for d in dataset:
-        relevant = set(d["relevant_doc_ids"])
         filters = extract_filters(d["query"]) if live_filters or "filters" not in d else d["filters"]
         try:
             docs = anyio.run(_retrieve_docs, d["query"], filters)
         except Exception as e:
             print(f"  [err] {d['query']}: {e}")
             continue
+        if judge is not None:
+            _judge_holes(d, docs[:k], judge)
+        relevant = set(d["relevant_doc_ids"])
         ranked = [doc.metadata.get("doc_id") for doc in docs]
+        judged = set(d.get("judged_doc_ids", ranked))
+        unjudged_total += sum(1 for doc_id in ranked[:k] if doc_id not in judged)
         row = (recall_at_k(ranked, relevant, k), reciprocal_rank(ranked, relevant),
                ndcg_at_k(ranked, relevant, k), precision_at_k(ranked, relevant, k))
         rows.append(row)
@@ -285,7 +312,9 @@ def _run_metrics(live_filters: bool = False):
         r, rr, n, p = (sum(col) / len(rows) for col in zip(*rows))
         print("=" * 70)
         print(f"ORTALAMA ({len(rows)} sorgu) — recall@{k}={r:.3f}  MRR={rr:.3f}  "
-              f"nDCG@{k}={n:.3f}  P@{k}={p:.3f}")
+              f"nDCG@{k}={n:.3f}  P@{k}={p:.3f}  | top-{k}'ta hakeme gitmemiş belge: {unjudged_total}")
+    if judge is not None:
+        _LABELS_PATH.write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def main():
@@ -300,10 +329,12 @@ def main():
                         help="Etiketli set üzerinde recall@k/MRR/nDCG@k hesapla (sohbet retrieval hattı)")
     parser.add_argument("--live-filters", action="store_true",
                         help="--metrics ile: sette kayıtlı filtreler yerine filtreleri yeniden çıkar")
+    parser.add_argument("--judge-holes", action="store_true",
+                        help="--metrics ile: top-k'daki hiç değerlendirilmemiş belgeleri hakeme sor, sete kaydet")
     args = parser.parse_args()
 
     if args.metrics:
-        _run_metrics(live_filters=args.live_filters)
+        _run_metrics(live_filters=args.live_filters, judge_holes=args.judge_holes)
         return
 
     print(f"\nRAG Eval — {len(EVAL_CASES)} vaka\n" + "=" * 70)

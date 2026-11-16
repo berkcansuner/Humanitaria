@@ -29,3 +29,28 @@ def test_pool_dedupes_by_doc_id_across_lists_in_order():
 def test_pool_skips_chunks_without_doc_id():
     pool = pool_candidates([[Document(page_content="x", metadata={}), _doc("a")]])
     assert [c["doc_id"] for c in pool] == ["a"]
+
+
+def test_judge_holes_judges_only_unseen_docs_and_records_them():
+    from unittest.mock import patch
+    from scripts.eval_rag import _judge_holes
+
+    entry = {"query": "q", "relevant_doc_ids": ["a"], "judged_doc_ids": ["a", "b"]}
+    seen_batches = []
+
+    def fake_judge(judge, query, batch):
+        seen_batches.append([c["doc_id"] for c in batch])
+        return [1]   # second hole ("d") is relevant
+
+    with patch("scripts.build_eval_labels.judge_relevant", fake_judge):
+        n = _judge_holes(entry, [_doc("a"), _doc("c"), _doc("b"), _doc("d")], judge=None)
+    assert n == 2
+    assert seen_batches == [["c", "d"]]
+    assert entry["relevant_doc_ids"] == ["a", "d"]
+    assert set(entry["judged_doc_ids"]) == {"a", "b", "c", "d"}
+
+
+def test_judge_holes_skips_the_judge_when_nothing_is_new():
+    from scripts.eval_rag import _judge_holes
+    entry = {"query": "q", "relevant_doc_ids": [], "judged_doc_ids": ["a"]}
+    assert _judge_holes(entry, [_doc("a")], judge=None) == 0

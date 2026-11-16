@@ -117,7 +117,7 @@ def pool_candidates(doc_lists) -> list[dict]:
     return pool
 
 
-def _get_judge():
+def get_judge():
     from langchain_openai import ChatOpenAI
     s = get_settings()
     return ChatOpenAI(model=s.GEMINI_QUERY_MODEL, base_url=s.GEMINI_BASE_URL,
@@ -125,7 +125,7 @@ def _get_judge():
                       temperature=0.0, timeout=60, max_retries=0)
 
 
-def _judge_relevant(judge, query: str, batch: list[dict], retries: int = 4) -> list[int]:
+def judge_relevant(judge, query: str, batch: list[dict], retries: int = 4) -> list[int]:
     """Indices (into *batch*) the judge marks relevant; retries transient errors."""
     listing = "\n".join(f"[{i}] {c['title']} ({c['date']}) — {c['snippet']}" for i, c in enumerate(batch))
     prompt = _JUDGE_PROMPT.format(query=query, candidates=listing)
@@ -150,7 +150,7 @@ def main():
     ap.add_argument("--open-k", type=int, default=30, help="Dense chunks fetched without filters")
     args = ap.parse_args()
 
-    judge = _get_judge()
+    judge = get_judge()
     print(f"Building labels from pgvector (pool-k={args.pool_k}, open-k={args.open_k})\n" + "=" * 70)
 
     dataset = []
@@ -167,7 +167,7 @@ def main():
         try:
             for start in range(0, len(pool), _JUDGE_BATCH):
                 batch = pool[start:start + _JUDGE_BATCH]
-                relevant += [batch[i]["doc_id"] for i in _judge_relevant(judge, query, batch)]
+                relevant += [batch[i]["doc_id"] for i in judge_relevant(judge, query, batch)]
         except Exception as e:
             print(f"[warn] judge failed for {query!r}: {e}")
             relevant = []
@@ -175,6 +175,7 @@ def main():
             "query": query,
             "filters": filters,
             "relevant_doc_ids": relevant,
+            "judged_doc_ids": [c["doc_id"] for c in pool],
             "n_candidates": len(pool),
             "n_relevant": len(relevant),
         })
