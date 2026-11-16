@@ -143,3 +143,25 @@ class TestTechnicalMonitoringRoute:
             assert "HDX HAPI" in content
             assert "belge bulunamadı" not in content
             assert "Sudan" in content
+
+
+def test_technical_report_is_saved_after_the_narrative_check():
+    """A sentence whose number is not in the findings never reaches the saved report."""
+    async def mock_astream(*a, **k):
+        yield "## İnsani ihtiyaç — Trend Analizi\n\n"
+        yield "The trend has p=0.010 across 6 periods. Needs grew by 4,812 people per year."
+
+    mock_chain = MagicMock()
+    mock_chain.astream = mock_astream
+    with patch("api.routes.reports.technical_report.compute_findings",
+               return_value=_findings_with_sections()), \
+         patch("api.routes.reports.build_report_chain", return_value=mock_chain):
+        resp = _client().post("/reports/stream", json={
+            "country": "Afghanistan", "report_type": "technical_monitoring", "language": "en",
+        })
+    events = _parse_sse_events(resp.text)
+    rid = next(e for e in events if e["event"] == "saved")["data"]["report_id"]
+    content = _client().get(f"/reports/{rid}").json()["content"]
+    assert "p=0.010" in content
+    assert "4,812" not in content
+    assert "1 sentence(s) that could not be verified" in content

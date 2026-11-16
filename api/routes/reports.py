@@ -19,6 +19,7 @@ from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 
 from analytics import technical_report
 from analytics.countries import iso3_for
+from analytics.narrative_check import verify_narrative
 from config import get_settings
 from ingestion import analytics
 from rag import report_images
@@ -287,6 +288,10 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                             data=json.dumps({"content": chunk}, ensure_ascii=False),
                         )
 
+                # Numbers and significance claims are checked against what the model
+                # was given; unverifiable sentences never reach the saved report.
+                full = verify_narrative(full, findings, f"{context}\n{directive}",
+                                        req.language).content
                 if previous:
                     yield _checking_event()
                     checked = await _checked(full, req)
