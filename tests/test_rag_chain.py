@@ -238,3 +238,12 @@ def test_technical_report_type_wired_in_service():
     d = build_report_directive("Afghanistan", None, None, None, 0, "en",
                                report_type="technical_monitoring")
     assert "technical monitoring" in d.lower()
+
+
+def test_technical_prompt_keeps_context_labels_out_of_the_prose():
+    # Live check 2026-11-16: the Turkish report copied "(direction=increasing)" and
+    # "DATA GAPS" from the context into its sentences.
+    from rag.chain import _REPORT_PROMPTS
+    p = _REPORT_PROMPTS["technical_monitoring"]
+    assert "never copy the Context's field labels" in p
+    assert "direction=increasing" in p and "DATA GAPS" in p
