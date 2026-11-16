@@ -4,9 +4,10 @@ compatibility_date = "2026-01-01"
 # Cron-only Worker — no HTTP route needed, so skip the workers.dev subdomain.
 workers_dev = false
 
-# Daily at 03:00 UTC — trigger the app's ingest + rolling-retention pass.
+# Cron REMOVED 2026-11-16: the nightly run moved to .github/workflows/nightly-ingest.yml
+# (Render's edge answered this Worker with 429). To restore: crons = ["0 3 * * *"].
 [triggers]
-crons = ["0 3 * * *"]
+crons = []
 
 [vars]
 # Update to the custom domain when it goes live.
