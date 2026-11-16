@@ -54,3 +54,31 @@ def test_judge_holes_skips_the_judge_when_nothing_is_new():
     from scripts.eval_rag import _judge_holes
     entry = {"query": "q", "relevant_doc_ids": [], "judged_doc_ids": ["a"]}
     assert _judge_holes(entry, [_doc("a")], judge=None) == 0
+
+
+def test_rerank_cache_calls_the_reranker_once_per_candidate_set(tmp_path, monkeypatch):
+    import api.routes.chat as chat_route
+    import rag.retriever
+    import scripts.eval_rag as eval_rag
+
+    calls = []
+
+    def fake_rerank(query, docs, top_n):
+        calls.append(query)
+        out = list(reversed(docs))[:top_n]
+        for i, d in enumerate(out):
+            d.metadata["_relevance_score"] = 0.9 - i / 10
+        return out
+
+    monkeypatch.setattr(eval_rag, "_RERANK_CACHE_PATH", tmp_path / "cache.json")
+    monkeypatch.setattr(rag.retriever, "rerank_by_relevance", fake_rerank)
+    monkeypatch.setattr(chat_route, "rerank_by_relevance", chat_route.rerank_by_relevance)
+    eval_rag._install_rerank_cache()
+
+    first = chat_route.rerank_by_relevance("q", [_doc("a"), _doc("b"), _doc("c")], 2)
+    fresh = [_doc("a"), _doc("b"), _doc("c")]          # same texts, new objects
+    second = chat_route.rerank_by_relevance("q", fresh, 2)
+    assert calls == ["q"]
+    assert [d.metadata["doc_id"] for d in second] == [d.metadata["doc_id"] for d in first] == ["c", "b"]
+    assert [d.metadata["_relevance_score"] for d in second] == [0.9, 0.8]
+    assert second[0] is fresh[2]

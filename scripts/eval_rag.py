@@ -16,6 +16,7 @@ Retrieval bir bilgi metriğidir; sonucu çıkış kodunu etkilemez (LLM/veri de�
 import sys
 import argparse
 import json
+from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -245,6 +246,39 @@ def _warn_stale_labels(dataset):
               f"seti yeniden kur: python scripts/build_eval_labels.py\n")
 
 
+_RERANK_CACHE_PATH = _LABELS_PATH.parent / "rerank_cache.json"
+
+
+def _install_rerank_cache() -> dict:
+    """Memoise reranker calls on disk across eval runs (Pinecone's monthly rerank
+    quota is small): a variant that only changes what happens after the rerank
+    reuses the earlier scores. Keyed by query, top_n and the exact candidate
+    texts, so a different candidate set always calls the reranker. A failed
+    rerank (no scores) is not cached."""
+    import hashlib
+    import api.routes.chat as chat_route
+    from rag.retriever import rerank_by_relevance
+
+    cache = json.loads(_RERANK_CACHE_PATH.read_text(encoding="utf-8")) if _RERANK_CACHE_PATH.exists() else {}
+
+    def cached(query, docs, top_n):
+        key = hashlib.sha256(json.dumps([query, top_n, [d.page_content for d in docs]]).encode()).hexdigest()
+        if key not in cache:
+            position = {id(d): i for i, d in enumerate(docs)}
+            out = rerank_by_relevance(query, docs, top_n)
+            if out and all("_relevance_score" in d.metadata for d in out):
+                cache[key] = [[position[id(d)], d.metadata["_relevance_score"]] for d in out]
+            return out
+        out = []
+        for i, score in cache[key]:
+            docs[i].metadata["_relevance_score"] = score
+            out.append(docs[i])
+        return out
+
+    chat_route.rerank_by_relevance = cached
+    return cache
+
+
 def _judge_holes(entry: dict, docs: list, judge) -> int:
     """Judge top-k docs the labels have never seen and record the verdicts in *entry*.
 
@@ -284,12 +318,15 @@ def _run_metrics(live_filters: bool = False, judge_holes: bool = False):
     print(f"\nRetrieval metrikleri — {len(dataset)} etiketli sorgu, k={k}, set {built}, "
           f"filtreler {'canlı' if live_filters else 'sette kayıtlı'}\n" + "=" * 70)
     _warn_stale_labels(dataset)
+    rerank_cache = _install_rerank_cache()
     judge = None
     if judge_holes:
         from scripts.build_eval_labels import get_judge
         judge = get_judge()
     rows = []   # (recall, RR, nDCG, precision) per query
     unjudged_total = 0
+    ages = []   # days since publication of each top-k doc — what a recency change trades for relevance
+    today = date.today()
     for d in dataset:
         filters = extract_filters(d["query"]) if live_filters or "filters" not in d else d["filters"]
         try:
@@ -303,6 +340,8 @@ def _run_metrics(live_filters: bool = False, judge_holes: bool = False):
         ranked = [doc.metadata.get("doc_id") for doc in docs]
         judged = set(d.get("judged_doc_ids", ranked))
         unjudged_total += sum(1 for doc_id in ranked[:k] if doc_id not in judged)
+        ages += [(today - date.fromisoformat(doc.metadata["date"][:10])).days
+                 for doc in docs[:k] if doc.metadata.get("date")]
         row = (recall_at_k(ranked, relevant, k), reciprocal_rank(ranked, relevant),
                ndcg_at_k(ranked, relevant, k), precision_at_k(ranked, relevant, k))
         rows.append(row)
@@ -312,7 +351,9 @@ def _run_metrics(live_filters: bool = False, judge_holes: bool = False):
         r, rr, n, p = (sum(col) / len(rows) for col in zip(*rows))
         print("=" * 70)
         print(f"ORTALAMA ({len(rows)} sorgu) — recall@{k}={r:.3f}  MRR={rr:.3f}  "
-              f"nDCG@{k}={n:.3f}  P@{k}={p:.3f}  | top-{k}'ta hakeme gitmemiş belge: {unjudged_total}")
+              f"nDCG@{k}={n:.3f}  P@{k}={p:.3f}  yaş(ort/medyan)={sum(ages) / max(len(ages), 1):.0f}/"
+              f"{sorted(ages)[len(ages) // 2] if ages else 0} gün  | top-{k}'ta hakeme gitmemiş belge: {unjudged_total}")
+    _RERANK_CACHE_PATH.write_text(json.dumps(rerank_cache), encoding="utf-8")
     if judge is not None:
         _LABELS_PATH.write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
 

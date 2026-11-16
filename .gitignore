@@ -59,3 +59,4 @@ docs/superpowers/
 .DS_Store
 Thumbs.db
 .wrangler/
+scripts/eval_data/rerank_cache.json
