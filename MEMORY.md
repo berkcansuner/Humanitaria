@@ -5,13 +5,14 @@
 > Ayrıntı commit mesajlarında ve `git log`'da. 2026-06 → 2026-11-16 arası uzun tarihçe:
 > `git show 2daf528:MEMORY.md`.
 
-**Son güncelleme:** 2026-11-16 — **Dalga 3 branch'te (`dalga3-retrieval`, push EDİLMEDİ, canlıda değil):**
-LLM filtre çıkarma fiilen ölüydü (json_mode şemasız, prompt alan adı vermiyordu → model `countries`/`themes` uydurdu,
-QueryFilters hepsini yok saydı; yalnız ~10 ülkelik kural yedeği çalışıyordu) → prompt alanları sayıyor; "South Sudan"
-artık "Sudan" değil; korpusta olmayan ülke filtresi düşürülüyor (`_drop_unknown_country`). Sohbet MMR λ 0,5 → 0,7
-(`CHAT_MMR_LAMBDA`; raporlar `MMR_LAMBDA` 0,5'te). Eval (30 sorgu): nDCG@5 0,658 → 0,761, P@5 0,620 → 0,713, MRR
-0,818 → 0,894. Master'da da push edilmemiş `e739253`: sohbet prompt'u filtreyi açılış cümlesine örüyor, belge
-terimlerini çeviriyor (canlıda denenmedi). Dalga 2 canlıda (`c57395e`…`5ddf0de`).
+**Son güncelleme:** 2026-11-16 — **Dalga 3 CANLIDA** (`e739253`…`7a3ce69`, CI yeşil): LLM filtre çıkarma fiilen
+ölüydü (json_mode şemasız, prompt alan adı vermiyordu → model `countries`/`themes` uydurdu, QueryFilters hepsini yok
+saydı; yalnız ~10 ülkelik kural yedeği çalışıyordu) → prompt alanları sayıyor; "South Sudan" artık "Sudan" değil;
+korpusta olmayan ülke filtresi düşürülüyor (`_drop_unknown_country`). Sohbet MMR λ 0,5 → 0,7 (`CHAT_MMR_LAMBDA`;
+raporlar `MMR_LAMBDA` 0,5). Eval (30 sorgu): nDCG@5 0,658 → 0,761, P@5 0,620 → 0,713, MRR 0,818 → 0,894. Sohbet
+prompt'u filtreyi açılış cümlesine örüyor, terimleri çeviriyor. Canlı kontrol (TR): Sudan sorusu "Ocak 2026'dan bu yana
+Sudan'da…" ile açılıyor, "Acil Durum (Emergency - IPC Aşama 4)", "kıtlık (Famine)"; Güney Sudan kolera sorusu yalnız
+South Sudan kaynakları getiriyor. Test sohbetleri silindi.
 
 ---
 
@@ -84,8 +85,7 @@ terimlerini çeviriyor (canlıda denenmedi). Dalga 2 canlıda (`c57395e`…`5ddf
 
 ## Açık işler (öncelik sırasıyla)
 1. **17 Kasım 03:00 UTC** zamanlanmış gece çalışmasını doğrula (ilk zamanlanmış koşu; elle koşu başarılıydı).
-2. **Dalga 3 kalanı:** branch'i master'a al + push + canlı sohbet kontrolü (ülke filtresi artık çoğu soruda devrede).
-   Çoklu ülke yakalama (`country` tek alan; "Sudan ve Çad" → yalnız Sudan) yapılmadı. Ölçülüp REDDEDİLDİ: rerank skor
+2. **Dalga 3 kalanı:** çoklu ülke yakalama (`country` tek alan; "Sudan ve Çad" → yalnız Sudan) yapılmadı. Ölçülüp REDDEDİLDİ: rerank skor
    eşiği (düşük skorda ilgili/ilgisiz ayrışmıyor), trend sorularında recency'yi kapatma (etkisiz: yalnız top-5 içi sıra),
    `RECENCY_BOOST_FACTOR` 0,6 → 0,3 (MRR +0,045 ama medyan yaş 38 → 46 gün; kullanıcı 0,6'da tuttu).
 3. **Rapor kalitesi kalanları:** "What changed" kontrolü fazla temkinli (gerçek yeni riski silebiliyor); silme sonrası
