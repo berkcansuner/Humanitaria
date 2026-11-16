@@ -1,0 +1,69 @@
+name: Nightly ingest
+
+# Triggers the app's daily ingest + rolling-retention pass (POST /admin/ingest/cron).
+#
+# Replaces the Cloudflare Worker cron: since 2026-11-12 Render's edge answers the
+# Worker's request with a plain-text 429 before it reaches the app (most likely
+# because Workers share egress IPs), so the run never starts.
+#
+# Security: only `schedule` and manual `workflow_dispatch` (write access) can start
+# this workflow, never a pull request, so the token is not exposed to fork code.
+# The token comes from the repo secret INGEST_TRIGGER_TOKEN (same value as on Render)
+# and GitHub masks it in logs.
+
+on:
+  schedule:
+    - cron: "0 3 * * *" # 03:00 UTC; GitHub may start scheduled runs some minutes late
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: nightly-ingest
+  cancel-in-progress: false
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      APP_URL: ${{ vars.APP_URL || 'https://humanitaria.onrender.com' }}
+      INGEST_TRIGGER_TOKEN: ${{ secrets.INGEST_TRIGGER_TOKEN }}
+    steps:
+      - name: Check the token is set
+        run: |
+          if [ -z "$INGEST_TRIGGER_TOKEN" ]; then
+            echo "::error::Repo secret INGEST_TRIGGER_TOKEN is not set (Settings → Secrets and variables → Actions)."
+            exit 1
+          fi
+
+      - name: Wake the app
+        # The free instance sleeps after 15 min idle; a cold start takes ~30-60 s.
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 120 "$APP_URL/health" || true)
+            echo "health attempt $attempt -> $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 30
+          done
+          echo "::error::App did not become healthy."
+          exit 1
+
+      - name: Trigger the ingest
+        # 202 = started, 409 = a run is already going (both fine).
+        # 403 = token mismatch (no retry). 429 / 5xx / network error = wait and retry.
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            code=$(curl -s -o body.txt -w '%{http_code}' --max-time 60 -X POST \
+              -H "X-Cron-Token: $INGEST_TRIGGER_TOKEN" \
+              "$APP_URL/admin/ingest/cron" || true)
+            echo "trigger attempt $attempt -> $code $(head -c 300 body.txt 2>/dev/null)"
+            case "$code" in
+              202|409) exit 0 ;;
+              403) echo "::error::Token rejected: the repo secret and Render's INGEST_TRIGGER_TOKEN differ."; exit 1 ;;
+              429|5*|000) sleep 60 ;;
+              *) echo "::error::Unexpected status $code."; exit 1 ;;
+            esac
+          done
+          echo "::error::Gave up after 6 attempts."
+          exit 1

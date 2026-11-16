@@ -1,5 +1,11 @@
 # Daily cron Worker (Cloudflare)
 
+> **Superseded (2026-11-16) by `.github/workflows/nightly-ingest.yml`.** Since
+> 2026-11-12 Render's edge answers this Worker's request with a plain-text
+> `429 Too Many Requests` before it reaches the app (most likely because Workers
+> share egress IPs), so the nightly run never starts. Once the GitHub Actions run
+> is confirmed, remove this Worker's cron trigger (or delete the Worker).
+
 Fires once a day and POSTs the app's token-gated `POST /admin/ingest/cron`, which
 runs one **ingest + rolling-retention** pass (add new reports, drop docs older than
 `RETENTION_DAYS`, trim each country to `RETENTION_PER_COUNTRY_CAP`). Used because the
