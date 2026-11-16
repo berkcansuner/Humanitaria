@@ -16,7 +16,7 @@ from config import get_settings
 from rag.query_processor import extract_filters, analyze_query, plan_retrieval, should_boost_recency
 from rag.retriever import (
     build_retriever, rerank_by_recency, apply_date_filter,
-    dedupe_by_document, rerank_by_relevance,
+    corpus_countries, dedupe_by_document, rerank_by_relevance,
 )
 from rag.chain import answer_language, build_chain, describe_filters
 from rag.history import get_session_history, has_session, populate_history_from_messages
@@ -97,7 +97,27 @@ def _verify_session_owner(user_id: str, session_id: str) -> bool:
     return convo_store.is_owner(user_id, session_id)
 
 
+def _drop_unknown_country(filters: dict) -> dict:
+    """Drop a country filter the corpus does not know: the SQL search would return
+    nothing and the user would get "no documents found", while an unfiltered
+    search still finds the country by text. Kept as-is when the corpus countries
+    cannot be read."""
+    country = filters.get("country")
+    if not country:
+        return filters
+    known = corpus_countries()
+    if known is None or country.lower() in known:
+        return filters
+    logger.warning("Country filter %r is not in the corpus; searching without it", country)
+    return {key: value for key, value in filters.items() if key != "country"}
+
+
 def _plan_retrieval(session_id: str, message: str) -> tuple:
+    query, filters = _plan_retrieval_raw(session_id, message)
+    return query, _drop_unknown_country(filters)
+
+
+def _plan_retrieval_raw(session_id: str, message: str) -> tuple:
     """Resolve the retrieval query + filters. First turns (or rewrite disabled):
     the message is already standalone → filters only. Follow-ups: ONE combined
     LLM call rewrites the follow-up and extracts filters together (one

@@ -36,6 +36,28 @@ _COUNTRY_RELIEFWEB_ALIASES: Dict[str, str] = {
     "North Korea":        "Democratic People's Republic of Korea",
 }
 
+_corpus_countries: Optional[frozenset] = None
+
+
+def corpus_countries() -> Optional[frozenset]:
+    """Lower-cased country names present in the chunk table, plus the short names of
+    the aliased full forms (so 'syria' is known when the corpus says 'Syrian Arab
+    Republic'). Cached per process once read; None when the table cannot be read
+    (e.g. local SQLite), and that failure is not cached."""
+    global _corpus_countries
+    if _corpus_countries is None:
+        try:
+            with connect() as conn:
+                names = {row[0] for row in conn.execute(
+                    text("SELECT DISTINCT country FROM chunks WHERE country IS NOT NULL"))}
+        except Exception as e:
+            logger.warning("Corpus countries unavailable: %s", e)
+            return None
+        names |= {short for short, full in _COUNTRY_RELIEFWEB_ALIASES.items() if full in names}
+        _corpus_countries = frozenset(n.lower() for n in names)
+    return _corpus_countries
+
+
 # Filter keys that map 1:1 onto a chunks column (equality match).
 _EQ_COLUMNS = ("doctype", "source", "format")
 
