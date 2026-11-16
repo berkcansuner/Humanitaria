@@ -677,3 +677,16 @@ class TestQuotaExhausted:
         assert _is_quota_exhausted(Exception(self._QUOTA_ERR))
         assert not _is_quota_exhausted(Exception("Error code: 503 - high demand UNAVAILABLE"))
         assert not _is_quota_exhausted(RuntimeError("retriever offline"))
+
+
+def test_chat_retrieval_uses_the_chat_mmr_lambda():
+    # Dalga 3 eval: lambda 0.7 for chat (nDCG@5 0.691 -> 0.761); reports keep MMR_LAMBDA.
+    import anyio
+    from unittest.mock import AsyncMock, MagicMock, patch
+    from api.routes.chat import _retrieve_docs
+    from config import get_settings
+
+    retriever = MagicMock(ainvoke=AsyncMock(return_value=[]))
+    with patch("api.routes.chat.build_retriever", return_value=retriever) as build:
+        anyio.run(_retrieve_docs, "q", {})
+    assert build.call_args.kwargs["lambda_mult"] == get_settings().CHAT_MMR_LAMBDA == 0.7

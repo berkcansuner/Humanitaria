@@ -80,7 +80,29 @@ class TestRetriever:
         with patch("rag.retriever.search", return_value=[doc]) as mock_search:
             r = build_retriever(filter={"country": "Yemen"}, k=7)
             assert asyncio.run(r.ainvoke("food")) == [doc]
-        mock_search.assert_called_once_with("food", {"country": "Yemen"}, 7, r.fetch_k)
+        mock_search.assert_called_once_with("food", {"country": "Yemen"}, 7, r.fetch_k, None)
+
+    def test_build_retriever_lambda_override_reaches_the_search(self):
+        # The chat pipeline uses its own MMR lambda (CHAT_MMR_LAMBDA); reports keep MMR_LAMBDA.
+        import asyncio
+        assert build_retriever().lambda_mult is None
+        with patch("rag.retriever.search", return_value=[]) as mock_search:
+            r = build_retriever(k=7, lambda_mult=0.7)
+            asyncio.run(r.ainvoke("food"))
+        mock_search.assert_called_once_with("food", None, 7, r.fetch_k, 0.7)
+
+    @pytest.mark.parametrize("override, expected", [(None, "settings"), (0.9, 0.9)])
+    def test_search_uses_the_lambda_override_else_the_setting(self, override, expected):
+        from rag import retriever
+        rows = [MagicMock(dist=0.1, emb="[1, 0]", content="c", metadata={"doc_id": "a"})]
+        conn = MagicMock()
+        conn.execute.return_value.fetchall.return_value = rows
+        conn.__enter__.return_value = conn
+        with patch.object(retriever, "get_embeddings") as emb,              patch.object(retriever, "connect", return_value=conn),              patch.object(retriever, "maximal_marginal_relevance", return_value=[0]) as mmr:
+            emb.return_value.embed_query.return_value = [1.0, 0.0]
+            retriever.search("q", None, 1, 1, override)
+        want = get_settings().MMR_LAMBDA if expected == "settings" else expected
+        assert mmr.call_args.kwargs["lambda_mult"] == want
 
 
 class TestSqlFilter:

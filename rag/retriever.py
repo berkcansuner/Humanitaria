@@ -87,8 +87,10 @@ def build_sql_filter(filters: Optional[Dict[str, Any]]) -> Tuple[List[str], Dict
     return clauses, params
 
 
-def search(query: str, filters: Optional[Dict[str, Any]], k: int, fetch_k: int) -> List[Document]:
-    """Nearest *fetch_k* chunks (cosine) under *filters*, then MMR down to *k*.
+def search(query: str, filters: Optional[Dict[str, Any]], k: int, fetch_k: int,
+           lambda_mult: Optional[float] = None) -> List[Document]:
+    """Nearest *fetch_k* chunks (cosine) under *filters*, then MMR down to *k*
+    (lambda_mult, default MMR_LAMBDA).
 
     HNSW with iterative scan keeps filtered searches from coming back short (a
     plain HNSW scan stops after ef_search candidates, before the WHERE clause)."""
@@ -114,7 +116,7 @@ def search(query: str, filters: Optional[Dict[str, Any]], k: int, fetch_k: int) 
     picked = maximal_marginal_relevance(
         np.array(query_vec, dtype=np.float32),
         [json.loads(r.emb) for r in rows],
-        lambda_mult=settings.MMR_LAMBDA,
+        lambda_mult=settings.MMR_LAMBDA if lambda_mult is None else lambda_mult,
         k=min(k, len(rows)),
     )
     return [Document(page_content=rows[i].content, metadata=dict(rows[i].metadata)) for i in picked]
@@ -127,14 +129,16 @@ class PgVectorRetriever(BaseRetriever):
     filters: Optional[Dict[str, Any]] = None
     k: int
     fetch_k: int
+    lambda_mult: Optional[float] = None   # None → MMR_LAMBDA
 
     def _get_relevant_documents(
         self, query: str, *, run_manager: CallbackManagerForRetrieverRun
     ) -> List[Document]:
-        return search(query, self.filters, self.k, self.fetch_k)
+        return search(query, self.filters, self.k, self.fetch_k, self.lambda_mult)
 
 
-def build_retriever(filter: Optional[Dict[str, Any]] = None, k: Optional[int] = None):
+def build_retriever(filter: Optional[Dict[str, Any]] = None, k: Optional[int] = None,
+                    lambda_mult: Optional[float] = None):
     settings = get_settings()
     # k may be raised by the caller to fetch a larger candidate pool for
     # dedup + reranking; defaults to the final top-k.
@@ -149,7 +153,7 @@ def build_retriever(filter: Optional[Dict[str, Any]] = None, k: Optional[int] = 
     # Cap the candidate pool: MMR is O(fetch_k * k) vector math on a constrained CPU,
     # and the date filter already runs in SQL, so a wider pool adds little recall.
     fetch_k = min(max(settings.MMR_FETCH_K, k * fetch_multiplier), settings.MMR_FETCH_K_CAP)
-    return PgVectorRetriever(filters=filter or None, k=k, fetch_k=fetch_k)
+    return PgVectorRetriever(filters=filter or None, k=k, fetch_k=fetch_k, lambda_mult=lambda_mult)
 
 
 @lru_cache(maxsize=1)

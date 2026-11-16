@@ -99,7 +99,8 @@ class Settings(BaseSettings):
     QUERY_REWRITE_ENABLED: bool = True
     MMR_FETCH_K: int = 20          # candidate pool for MMR diversity
     MMR_FETCH_K_CAP: int = 256     # upper bound on the MMR candidate pool — keeps MMR tractable on constrained CPU (a wide report top_k × the date over-fetch could otherwise reach ~768)
-    MMR_LAMBDA: float = 0.5        # 0=max diversity, 1=max relevance
+    MMR_LAMBDA: float = 0.5        # 0=max diversity, 1=max relevance (reports)
+    CHAT_MMR_LAMBDA: float = 0.7   # chat: Dalga 3 eval 2026-11-16, nDCG@5 0.691 -> 0.761 vs 0.5
     # Two-stage retrieval: hosted reranker (Pinecone Inference) over a larger candidate pool.
     RERANK_ENABLED: bool = True
     RERANK_MODEL: str = "bge-reranker-v2-m3"

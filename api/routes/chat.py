@@ -204,7 +204,8 @@ async def _retrieve_docs(query: str, filters: dict):
     """
     settings = get_settings()
     candidate_k = settings.TOP_K_RETRIEVAL * settings.RERANK_CANDIDATE_MULTIPLIER
-    retriever = build_retriever(filter=filters if filters else None, k=candidate_k)
+    retriever = build_retriever(filter=filters if filters else None, k=candidate_k,
+                                lambda_mult=settings.CHAT_MMR_LAMBDA)
     docs = await retriever.ainvoke(query)
     docs = apply_date_filter(docs, filters.get("date"))
     docs = dedupe_by_document(docs)
