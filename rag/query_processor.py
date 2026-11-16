@@ -376,6 +376,16 @@ def extract_filters(query: str) -> Dict[str, Any]:
 
 _llm_planner = None
 
+_HISTORY_TURNS = 6  # last N messages fed to the planner as context
+
+
+def _format_history(messages) -> str:
+    lines = []
+    for m in messages[-_HISTORY_TURNS:]:
+        role = "User" if getattr(m, "type", "") == "human" else "Assistant"
+        lines.append(f"{role}: {m.content}")
+    return "\n".join(lines)
+
 
 def _get_llm_planner():
     global _llm_planner
@@ -405,7 +415,6 @@ def plan_retrieval(message: str, chat_history: list, planner=None) -> tuple[str,
     more LLM calls to an already-struggling endpoint."""
     if not chat_history:
         return message, extract_filters(message)
-    from rag.query_rewriter import _format_history
     try:
         planner = planner or _get_llm_planner()
         prompt = _QUERY_PLAN_PROMPT.format(

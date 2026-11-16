@@ -52,18 +52,13 @@ def test_chat_and_report_chains_use_chat_completions():
 
 def test_query_llms_use_chat_completions():
     from rag import query_processor as qp
-    from rag import query_rewriter as qr
-    with patch("config.get_settings", return_value=_settings()), \
-         patch.object(qr, "get_settings", return_value=_settings()):
+    with patch("config.get_settings", return_value=_settings()):
         qp._llm_extractor = None
         qp._llm_planner = None
-        qr._rewriter = None
         _assert_chat_completions(_llm_of(qp._get_llm_extractor()))
         _assert_chat_completions(_llm_of(qp._get_llm_planner()))
-        _assert_chat_completions(_llm_of(qr._get_rewriter()))
         qp._llm_extractor = None
         qp._llm_planner = None
-        qr._rewriter = None
 
 
 def test_report_comparison_checker_uses_chat_completions():

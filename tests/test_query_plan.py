@@ -37,6 +37,17 @@ def test_combined_call_returns_rewrite_and_normalized_filters():
     assert filters["country"] == "Sudan"   # _COUNTRY_MAP normalization applied
 
 
+def test_prompt_carries_the_last_six_turns_with_roles():
+    history = [HumanMessage(content=f"q{i}") if i % 2 == 0 else AIMessage(content=f"a{i}")
+               for i in range(8)]
+    planner = _planner(QueryPlan(standalone_query="x"))
+    plan_retrieval("ya kuzeyde?", history, planner=planner)
+    prompt = planner.invoke.call_args.args[0]
+    assert "User: q2\nAssistant: a3" in prompt
+    assert "Assistant: a7" in prompt
+    assert "q0" not in prompt and "a1" not in prompt
+
+
 def test_rule_based_backstop_fills_llm_gaps():
     """The LLM left country empty but the rewritten query names one → the
     rule-based extractor (running on the REWRITTEN query) backstops it."""
