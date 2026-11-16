@@ -8,7 +8,7 @@ originator 0.2, at most 2 documents per organisation: 27%, originator share
 54% -> 79%, mean relevance 0.833 -> 0.844."""
 from langchain_core.documents import Document
 
-from rag.report_service import _rank_for_report
+from rag.report_service import _cap_keeping_newest_originators, _rank_for_report
 
 OCHA = "UN Office for the Coordination of Humanitarian Affairs"
 
@@ -48,3 +48,20 @@ def test_no_window_and_no_scores_still_rank():
     docs = [Document(page_content="a", metadata={"doc_id": "1", "source": "Some NGO", "date": "2026-01-01"}),
             Document(page_content="b", metadata={"doc_id": "2", "source": OCHA, "date": "2026-11-01"})]
     assert _ids(_rank_for_report(docs, None, None, 2)) == ["2", "1"]
+
+
+IOM = "International Organization for Migration"
+
+
+def test_cap_keeps_an_originators_newest_document_below_the_cut():
+    # Yemen 2026-11-17: IOM's 340,000 update sat at dense rank 101 of a 100-document cap.
+    docs = [_d(1, "Some NGO", "2026-11-01", 0), _d(2, IOM, "2026-10-01", 0),
+            _d(3, "Other NGO", "2026-11-02", 0), _d(4, IOM, "2026-11-13", 0)]
+    assert _ids(_cap_keeping_newest_originators(docs, 3)) == ["1", "2", "4"]
+
+
+def test_cap_reserves_nothing_for_non_originators_or_when_the_pool_fits():
+    docs = [_d(1, OCHA, "2026-11-01", 0), _d(2, "Some NGO", "2026-11-15", 0),
+            _d(3, "Other NGO", "2026-11-16", 0)]
+    assert _ids(_cap_keeping_newest_originators(docs, 2)) == ["1", "2"]
+    assert _ids(_cap_keeping_newest_originators(docs, 5)) == ["1", "2", "3"]

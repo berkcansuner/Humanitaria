@@ -215,6 +215,11 @@ def _build_filters(country: str, theme: Optional[str],
 # weighs relevance 0.6, recency in the window 0.2 and an originator source 0.2, with at
 # most two documents per organisation: 27%, originator share 54% -> 79%, mean relevance
 # 0.833 -> 0.844 (weights 0.5/0.25/0.25 reached 30% at 0.813, 0.4/0.3/0.3 35% at 0.743).
+# Re-run 2026-11-17: 25%. IOM's 340,000 update sat at dense rank 101, just past the
+# rerank cap, so the newest document of each originator in the pool is now kept through
+# the cap: 28%, Yemen 2/8 -> 4/8, relevance 0.869 -> 0.866. Most remaining misses score
+# below 0.15 on relevance (weather forecasts, market bulletins, maps, meeting minutes) or
+# are translations of an English document, so they are rightly left out.
 _REPORT_POOL_CHUNKS = 256      # dense chunks under the filters; all their documents are reranked
 _RERANK_MAX_DOCS = 100         # documents per rerank request
 _W_RELEVANCE, _W_RECENCY, _W_ORIGINATOR = 0.6, 0.2, 0.2
@@ -234,6 +239,22 @@ def _doc_date(doc: Document) -> Optional[date]:
         return date.fromisoformat(str(doc.metadata.get("date"))[:10])
     except ValueError:
         return None
+
+
+def _cap_keeping_newest_originators(docs: List[Document], limit: int) -> List[Document]:
+    """The first *limit* documents in dense order, except that the newest document of
+    each originator organisation in the pool is kept even when it ranks below the cut."""
+    if len(docs) <= limit:
+        return docs
+    newest: dict = {}
+    for i, d in enumerate(docs):
+        source, when = d.metadata.get("source"), _doc_date(d)
+        if source in ORIGINATORS and when and (source not in newest or when > newest[source][0]):
+            newest[source] = (when, i)
+    reserved = {i for _, i in newest.values()}
+    rest = [i for i in range(len(docs)) if i not in reserved]
+    keep = reserved | set(rest[:max(limit - len(reserved), 0)])
+    return [d for i, d in enumerate(docs) if i in keep]
 
 
 def _rank_for_report(docs: List[Document], date_from: Optional[str], date_to: Optional[str],
@@ -289,7 +310,8 @@ async def retrieve_for_report(country: str, theme: Optional[str],
     docs = await retriever.ainvoke(query)
     docs = _prefer_english(docs)
     docs = apply_date_filter(docs, filters.get("date"))
-    docs = _collapse_near_duplicates(dedupe_by_document(docs))[:_RERANK_MAX_DOCS]
+    docs = _cap_keeping_newest_originators(_collapse_near_duplicates(dedupe_by_document(docs)),
+                                           _RERANK_MAX_DOCS)
     docs = await anyio.to_thread.run_sync(rerank_by_relevance, query, docs, len(docs))  # blocking Pinecone call
     return _rank_for_report(docs, date_from, date_to, top_k)
 
