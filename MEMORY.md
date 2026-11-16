@@ -14,6 +14,8 @@ prompt'u filtreyi açılış cümlesine örüyor, terimleri çeviriyor. Canlı k
 Sudan'da…" ile açılıyor, "Acil Durum (Emergency - IPC Aşama 4)", "kıtlık (Famine)"; Güney Sudan kolera sorusu yalnız
 South Sudan kaynakları getiriyor. Test sohbetleri silindi.
 
+**Teknik rapor istatistikleri (branch `technical-stats`, push EDİLMEDİ):** Sen eğimi yıl başına (gerçek tarihler) + Gilbert GA + Kendall τ; yarıya bölme t-testi silindi; korelasyon ≥8 ortak dönem; Holm tüm testlere, anlamlılık kodda (SIGNIFICANT/NOT SIGNIFICANT); `analytics/narrative_check.py` bulgularda olmayan sayı veya hükme aykırı anlamlılık iddiası taşıyan cümleyi siler, sona not ekler. Canlı rapor denemesi yapılmadı (yanlış-pozitif silme oranı ölçülmeli). Yerelde HAPI 403: `HDX_APP_IDENTIFIER` yalnız Render'da.
+
 ---
 
 ## Kalıcı kullanıcı talimatları
