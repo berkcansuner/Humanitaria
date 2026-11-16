@@ -5,8 +5,11 @@
 > Ayrıntı commit mesajlarında ve `git log`'da. 2026-06 → 2026-11-16 arası uzun tarihçe:
 > `git show 2daf528:MEMORY.md`.
 
-**Son güncelleme:** 2026-11-16 — MEMORY.md sadeleştirildi (420 → ~100 satır); 17 birleşmiş yerel branch silindi.
-Sıradaki iş: Dalga 2 (aşağıda, Açık işler #2).
+**Son güncelleme:** 2026-11-16 — MEMORY.md sadeleştirildi (420 → ~100 satır); 17 birleşmiş yerel branch silindi;
+**Dalga 2 bitti** (branch `fix/dalga2-quick-wins`, 4 commit, 776 test yeşil; push/deploy kullanıcı onayı bekliyor):
+akış hatalarında traceback (`logger.exception`), ölü `rag/query_rewriter.py` silindi (`_format_history` →
+`query_processor`), context her belgede `Source: <kurum>` satırı taşıyor, sohbet prompt'u uygulanan filtreleri
+görüyor (`rag/chain.py` `describe_filters`, kural 5). Canlıda sohbet ve rapor cevaplarına etkisi henüz gözlenmedi.
 
 ---
 
@@ -61,7 +64,7 @@ Sıradaki iş: Dalga 2 (aşağıda, Açık işler #2).
   geri alınabilir silme (8 sn undo).
 
 ## Yerel geliştirme ve doğrulama
-- Python 3.12 `.venv` → `.\.venv\Scripts\python.exe -m pytest tests/ -q` (+ `ruff check .`); frontend (Node 24)
+- Python 3.12 `.venv` → `.\.venv\Scripts\python.exe -m pytest tests/ -q` (+ CI kapsamı `ruff check api rag ingestion config.py`; `tests/` eski uyarılar taşır); frontend (Node 24)
   `cd frontend; npm test; npm run lint; npm run build`.
 - **Yerel UI (canlı DB'ye dokunmadan):** `DATABASE_URL= CONVERSATION_DB_PATH=<scratch>.db INGEST_SCHEDULE_HOURS=0`
   ile uvicorn :8010; demo kullanıcı + raporları `rag.users`/`rag.reports` ile tohumla; `rw_session` çerezini JS ile ayarla.
@@ -74,20 +77,16 @@ Sıradaki iş: Dalga 2 (aşağıda, Açık işler #2).
 
 ## Açık işler (öncelik sırasıyla)
 1. **17 Kasım 03:00 UTC** zamanlanmış gece çalışmasını doğrula (ilk zamanlanmış koşu; elle koşu başarılıydı).
-2. **Dalga 2 — güvenli hızlı kazançlar:** (a) akış hatalarında `logger.error` → `logger.exception`
-   (`api/routes/chat.py:437`, `api/routes/reports.py:429`); (b) ölü `rag/query_rewriter.py` (sohbet 2026-07'den beri
-   `plan_retrieval` kullanıyor); (c) context metnine kaynak kurumu ekle (`rag/rag_context.py`; rapor atıf kuralı
-   bekliyor); (d) uygulanan filtreleri sohbet prompt'una ver.
-3. **Dalga 3 — eval kapılı retrieval:** rerank skor eşiği, MMR'ın cross-encoder'dan önce aday elemesi, geçmiş/trend
+2. **Dalga 3 — eval kapılı retrieval:** rerank skor eşiği, MMR'ın cross-encoder'dan önce aday elemesi, geçmiş/trend
    sorularında recency'yi kapatma, çoklu ülke yakalama. Önce baseline'ı yeniden ölç (son: recall@5 0,253 / MRR 0,528 /
    nDCG@5 0,327, 2026-07-10; pgvector ve model değişiminden ÖNCE).
-4. **Rapor kalitesi kalanları:** "What changed" kontrolü fazla temkinli (gerçek yeni riski silebiliyor); silme sonrası
+3. **Rapor kalitesi kalanları:** "What changed" kontrolü fazla temkinli (gerçek yeni riski silebiliyor); silme sonrası
    bağlayıcı cümle boşta kalabiliyor; 3.5 FL sohbette iki kaynağın rakamını tek rakamda birleştirdi (Sudan IPC).
-5. **Büyük özellikler** (her biri kendi brainstorm → plan turu): arayüz TR/EN dil seçici (i18n yok); sohbet
+4. **Büyük özellikler** (her biri kendi brainstorm → plan turu): arayüz TR/EN dil seçici (i18n yok); sohbet
    export/paylaş; scrollytelling rapor; donör şablonu; HAPI conflict_events'i geri getirme; refugees için asylum tarafı.
-6. **Zamanlı:** 3.8 Flash fiyatı 2027-01-01'de ikiye katlanıyor → öncesinde rapor model kararını gözden geçir.
+5. **Zamanlı:** 3.8 Flash fiyatı 2027-01-01'de ikiye katlanıyor → öncesinde rapor model kararını gözden geçir.
    Google OAuth uygulamasını yayınla (son bilinen: Testing modu; güncel durum doğrulanmadı).
-7. **Küçükler:** `generate()` başta `syncUrl(null)` → çok hızlı sunucu hatasında hata kutusu görünmeyebilir;
+6. **Küçükler:** `generate()` başta `syncUrl(null)` → çok hızlı sunucu hatasında hata kutusu görünmeyebilir;
    embedding `task_type` (native `:embedContent` + korpus re-embed); React 19 / vue-router 5; her deploy eski
    `/assets`'i siler (açık sekme bir kez tam yenilemeyle kurtulur).
 
