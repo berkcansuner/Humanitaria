@@ -236,7 +236,7 @@ def _trend_text(r: dict) -> str:
           else f"95% CI {r['ci_low']:.2f} to {r['ci_high']:.2f}")
     return (f"{r['indicator']}: direction={r['direction']}, Sen slope={r['slope']:.2f} per year "
             f"({ci}), Kendall tau={r['tau']:.2f}, Mann-Kendall {_verdict(r)}, "
-            f"change {str(r['first_period'])[:10]} → {str(r['last_period'])[:10]}={pct}, "
+            f"change along the trend line {str(r['first_period'])[:10]} → {str(r['last_period'])[:10]}={pct}, "
             f"n={r['n_points']}.")
 
 

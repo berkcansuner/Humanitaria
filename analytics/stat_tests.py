@@ -28,7 +28,7 @@ class TrendResult:
     slope: float | None       # Sen eğimi, zaman birimi başına (times yıl ise yıl başına)
     p_value: float | None     # Mann-Kendall
     direction: str            # increasing | decreasing | no trend | insufficient_data
-    pct_change: float | None  # ilk → son gözlem
+    pct_change: float | None  # Sen doğrusu boyunca ilk → son dönem (işareti eğimle aynı)
     ci_low: float | None      # Sen eğiminin %95 güven aralığı; az noktada tanımsız → None
     ci_high: float | None
     intercept: float | None   # Sen doğrusunun t=0'daki değeri — grafikte trend çizgisi
@@ -115,7 +115,10 @@ def trend(values, indicator: str, min_points: int = 4, times=None) -> TrendResul
         direction = "decreasing"
     else:
         direction = "no trend"
-    pct = ((v[-1] - v[0]) / v[0] * 100.0) if v[0] != 0 else None
+    # Değişim, uç noktalar yerine trend doğrusu üzerinden: zirveden önce başlayıp düşen
+    # bir seri 'azalış' trendinin yanında '+%21' yazıyordu (Sudan IDP, canlı kontrol).
+    line_start, line_end = intercept + slope * t[0], intercept + slope * t[-1]
+    pct = (line_end - line_start) / line_start * 100.0 if line_start > 0 else None
     return TrendResult(
         indicator=indicator, n_points=n, slope=float(slope),
         p_value=float(mk_res.p), direction=direction, pct_change=pct,

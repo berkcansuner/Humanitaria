@@ -116,3 +116,18 @@ def test_holm_adjusts_in_original_order_and_keeps_none():
 
 def test_holm_caps_at_one():
     assert holm([0.6, 0.7]) == pytest.approx([1.0, 1.0])
+
+
+def test_change_follows_the_trend_line_not_the_endpoints():
+    # Live check (Sudan IDPs): a series that starts before its peak and then declines
+    # read "decreasing trend" next to "+21% change" (first vs last point). The change
+    # is now measured along the Sen line, so its sign always matches the slope.
+    values = [7, 12, 11, 10, 9, 8.5, 8]
+    r = trend(values, indicator="IDPs")
+    assert values[-1] > values[0]                 # the endpoints alone say "up"
+    assert r.slope < 0 and r.pct_change < 0
+
+
+def test_change_is_none_when_the_trend_line_starts_at_or_below_zero():
+    r = trend([0, 0, 1, 5, 9], indicator="Returnees")
+    assert r.pct_change is None
