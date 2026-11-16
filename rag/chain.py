@@ -41,6 +41,27 @@ def answer_language(message: str, history: list) -> str:
     return _LANGUAGE_NAMES[lang] if lang else DEFAULT_ANSWER_LANGUAGE
 
 
+_FILTER_LABELS = (
+    ("country", "country"), ("theme", "topic"), ("doctype", "document type"),
+    ("source", "source organisation"), ("format", "format"),
+)
+
+
+def describe_filters(filters: dict | None) -> str:
+    """The retrieval filters in plain words for the chat prompt (rule 5 asks the
+    model to state an applied date or country filter; it cannot see them)."""
+    filters = filters or {}
+    parts = [f"{label}: {filters[key]}" for key, label in _FILTER_LABELS if filters.get(key)]
+    date = filters.get("date") or {}
+    if date.get("$gte") and date.get("$lte"):
+        parts.append(f"documents dated from {date['$gte']} to {date['$lte']}")
+    elif date.get("$gte"):
+        parts.append(f"documents dated from {date['$gte']}")
+    elif date.get("$lte"):
+        parts.append(f"documents dated up to {date['$lte']}")
+    return "; ".join(parts) or "none"
+
+
 _SYSTEM_PROMPT = (
     "You are an assistant that analyzes humanitarian aid documents from the ReliefWeb database.\n"
     "Rules:\n"
@@ -50,7 +71,8 @@ _SYSTEM_PROMPT = (
     "3. Respond briefly and politely to general greetings or questions unrelated to the documents, without citing sources.\n"
     "4. For document-based questions, take the information from the documents. Do NOT write source titles or a source "
     "list in the body — sources are shown in a separate SOURCES section below; you only add [n] citations.\n"
-    "5. If a date or country filter was applied, state it at the beginning of your answer.\n"
+    "5. Filters applied to the document search: {applied_filters}. If a date or country filter was applied, state it "
+    "at the beginning of your answer.\n"
     "6. Do NOT add a 'Sources:' section — the source list is shown separately in the interface.\n"
     "7. Each document in the Context starts with an [n] number. At the end of a sentence/statement where you use "
     "information from a document, append that document's number as [n] (e.g. 'Clashes intensified [2].'). Cite ONLY "
@@ -108,7 +130,7 @@ def build_chain() -> Runnable:
         ("system", _SYSTEM_PROMPT + "\n\nContext:\n{context}"),
         MessagesPlaceholder("chat_history"),
         ("human", "{question}"),
-    ]).partial(answer_language=DEFAULT_ANSWER_LANGUAGE)
+    ]).partial(answer_language=DEFAULT_ANSWER_LANGUAGE, applied_filters="none")
 
     _chain = prompt | llm | StrOutputParser()
     return _chain

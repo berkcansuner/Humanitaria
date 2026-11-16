@@ -18,7 +18,7 @@ from rag.retriever import (
     build_retriever, rerank_by_recency, apply_date_filter,
     dedupe_by_document, rerank_by_relevance,
 )
-from rag.chain import answer_language, build_chain
+from rag.chain import answer_language, build_chain, describe_filters
 from rag.history import get_session_history, has_session, populate_history_from_messages
 from rag import conversations as convo_store
 from api.routes.conversations import can_open_conversation, _LIMIT_DETAIL as _CONVO_LIMIT_DETAIL
@@ -292,6 +292,7 @@ async def chat(request: Request, req: ChatRequest, user: dict = Depends(get_curr
             "context": context,
             "chat_history": chat_history,
             "answer_language": answer_language(req.message, chat_history),
+            "applied_filters": describe_filters(filters),
         }, get_settings().CHAT_LLM_MAX_RETRIES)
 
         history.add_message(HumanMessage(content=req.message))
@@ -375,6 +376,7 @@ async def chat_stream(request: Request, req: ChatRequest, user: dict = Depends(g
                 "context": context,
                 "chat_history": chat_history,
                 "answer_language": answer_language(req.message, chat_history),
+                "applied_filters": describe_filters(filters),
             }, get_settings().CHAT_LLM_MAX_RETRIES):
                 if chunk:
                     if _ttft_ms is None:
