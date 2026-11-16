@@ -334,7 +334,7 @@ _TECHNICAL_SYSTEM_PROMPT = (
     "1. NARRATE ONLY. Do NOT recompute, re-estimate, or calculate any new statistic, total, slope, "
     "p-value or percentage. Every number in your prose must come from the Context findings. If a "
     "value is not in the Context, do not state it. Write numbers in the requested language's format "
-    "(Turkish: '927.051,51', '%21,4', '0,006'; English: '927,051.51', '21.4%'), never '%' together "
+    "(Turkish: '927.051,51', '%21,4', '-%24,1', '0,006'; English: '927,051.51', '21.4%', '-24.1%'), never '%' together "
     "with 'yüzde'. Large figures may be rounded to fewer digits, keeping their value (e.g. 'about "
     "927,000 per year' / 'yılda yaklaşık 927 bin', '250.9 million' / '250,9 milyon'); p-values and "
     "test statistics stay as given.\n"

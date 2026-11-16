@@ -231,7 +231,7 @@ def _verdict(r: dict) -> str:
 
 
 def _trend_text(r: dict) -> str:
-    pct = "n/a" if r["pct_change"] is None else f"%{r['pct_change']:.1f}"
+    pct = "n/a" if r["pct_change"] is None else f"{r['pct_change']:+.1f}%"
     ci = ("95% CI: too few points" if r["ci_low"] is None
           else f"95% CI {r['ci_low']:.2f} to {r['ci_high']:.2f}")
     return (f"{r['indicator']}: direction={r['direction']}, Sen slope={r['slope']:.2f} per year "

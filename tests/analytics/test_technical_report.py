@@ -327,3 +327,11 @@ def test_idp_series_uses_one_operation_and_says_so(_mock):
     assert tr.stat_result["pct_change"] > 0
     ctx = findings_to_context(f)
     assert "DATA NOTES:" in ctx and "only the DTM operation 'Overview' is used" in ctx
+
+
+@patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _sudan_like_idp_rows(ep))
+def test_change_is_written_with_the_sign_before_the_number(_mock):
+    # The context said "%-24.1" and the Turkish report copied "%-24,1" (should be -%24,1).
+    tr = next(s for s in compute_findings("SDN", None, None).sections if s.stat_result["kind"] == "trend")
+    assert "=+" in tr.findings_text and "%, n=" in tr.findings_text
+    assert "%-" not in tr.findings_text and "=%" not in tr.findings_text

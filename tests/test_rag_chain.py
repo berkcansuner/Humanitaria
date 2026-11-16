@@ -253,5 +253,5 @@ def test_technical_prompt_formats_numbers_for_the_language():
     # Live check 2026-11-16: "-927051.51 kişi", "yüzde %21.4" in a Turkish report.
     from rag.chain import _REPORT_PROMPTS
     p = _REPORT_PROMPTS["technical_monitoring"]
-    assert "requested language's format" in p and "'%21,4'" in p
+    assert "requested language's format" in p and "'%21,4'" in p and "'-%24,1'" in p
     assert "never '%' together with 'yüzde'" in p
