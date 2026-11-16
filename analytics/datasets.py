@@ -72,3 +72,46 @@ def regional_series(rows: list[dict], indicator: Indicator) -> dict[str, list[fl
         ).sort_index()
         out[str(region)] = [float(v) for v in per_period.tolist()]
     return out
+
+
+_COMPLETE_SHARE = 0.8   # a snapshot must cover at least this share of the operation's regions
+
+
+def consistent_snapshots(rows: list[dict]) -> tuple[list[dict], str | None]:
+    """One DTM operation, complete rounds only (IDPs).
+
+    HAPI returns several displacement-tracking operations for a country, each
+    counting differently (a countrywide overview, an event's new displacement, an
+    old caseload in a few regions), and a round may cover only part of the regions.
+    Summing all of it per date mixed definitions and coverage. Kept: the operation
+    covering the most regions in one snapshot, then the most recent, then the one
+    with the most snapshots; within it, snapshots covering at least 80% of its
+    regions. Rows without an operation are returned unchanged. The note (None when
+    nothing was left out) tells the report what was used."""
+    if not any(r.get("operation") for r in rows):
+        return rows, None
+    snapshots: dict[str, dict[str, set]] = {}          # operation -> date -> regions
+    for r in rows:
+        op = r.get("operation") or ""
+        date = str(r.get("reference_period_start"))[:10]
+        snapshots.setdefault(op, {}).setdefault(date, set()).add(r.get("admin1_name"))
+
+    def rank(op):
+        dates = snapshots[op]
+        return (max(len(regions) for regions in dates.values()), max(dates), len(dates))
+
+    chosen = max(snapshots, key=rank)
+    widest = rank(chosen)[0]
+    complete = {d for d, regions in snapshots[chosen].items() if len(regions) >= _COMPLETE_SHARE * widest}
+    kept = [r for r in rows if (r.get("operation") or "") == chosen
+            and str(r.get("reference_period_start"))[:10] in complete]
+    dropped_ops = len(snapshots) - 1
+    dropped_rounds = len(snapshots[chosen]) - len(complete)
+    if not dropped_ops and not dropped_rounds:
+        return rows, None
+    parts = [f"only the DTM operation '{chosen}' is used"]
+    if dropped_ops:
+        parts.append(f"{dropped_ops} other operation(s) count displacement differently and are not mixed in")
+    if dropped_rounds:
+        parts.append(f"{dropped_rounds} incomplete round(s) covering under 80% of its regions are left out")
+    return kept, "; ".join(parts)

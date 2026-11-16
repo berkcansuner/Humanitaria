@@ -79,3 +79,53 @@ def test_humanitarian_needs_dedup_survives_null_first_row():
     periods, values = national_series(rows, by_key("humanitarian_needs"))
     assert periods == ["2024-01-01"]
     assert values == [23666389]
+
+
+# --- IDPs (live check, Sudan 2026-11-16): HAPI mixes several DTM operations that
+# count displacement differently ('Overview' totals vs event-based 'Armed Clashes'
+# vs the old 'Darfur conflict' caseload), and rounds cover different regions; summing
+# everything per date gave n=165 and a +83,144% change. ---
+
+from analytics.datasets import consistent_snapshots   # noqa: E402
+
+
+def _snap(op, date, regions, value=10):
+    return [{"operation": op, "reference_period_start": date, "admin1_name": r, "population": value}
+            for r in regions]
+
+
+R18 = [f"R{i}" for i in range(18)]
+
+
+def test_the_broadest_operation_is_kept_and_ties_go_to_the_latest():
+    rows = (_snap("Event", "2024-04-17", R18) + _snap("Event", "2024-03-01", R18)
+            + _snap("Overview", "2026-08-31", R18) + _snap("Darfur", "2025-01-01", R18[:7]))
+    kept, note = consistent_snapshots(rows)
+    assert {r["operation"] for r in kept} == {"Overview"}
+    assert "Overview" in note
+
+
+def test_breadth_beats_recency():
+    # Yemen: the narrow, recent 'West Coast' event must not replace the countrywide series.
+    rows = _snap("Yemen conflict", "2026-06-30", R18) + _snap("West Coast", "2026-10-03", R18[:10])
+    kept, _ = consistent_snapshots(rows)
+    assert {r["operation"] for r in kept} == {"Yemen conflict"}
+
+
+def test_incomplete_rounds_are_left_out():
+    rows = (_snap("Op", "2025-01-31", R18) + _snap("Op", "2025-02-28", R18[:14])
+            + _snap("Op", "2025-03-31", R18[:15]))
+    kept, note = consistent_snapshots(rows)
+    assert sorted({r["reference_period_start"] for r in kept}) == ["2025-01-31", "2025-03-31"]
+    assert "1 incomplete" in note
+
+
+def test_rows_without_operations_are_untouched():
+    rows = [{"reference_period_start": "2025-01-01", "population": 5, "asylum_location_code": "PAK"}]
+    assert consistent_snapshots(rows) == (rows, None)
+
+
+def test_a_single_complete_operation_needs_no_note():
+    rows = _snap("Op", "2025-01-31", R18) + _snap("Op", "2025-02-28", R18)
+    kept, note = consistent_snapshots(rows)
+    assert kept == rows and note is None

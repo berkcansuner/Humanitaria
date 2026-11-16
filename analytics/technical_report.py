@@ -6,13 +6,13 @@ findings_to_context, hesaplanmış sayıları LLM'e 'context' olarak verilecek m
 çevirir; LLM bunları yalnızca yorumlar, asla yeniden hesaplamaz.
 """
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 
 import requests
 
 from analytics.charts import comparison_chart, correlation_chart, trend_chart
-from analytics.datasets import national_series, regional_series
+from analytics.datasets import consistent_snapshots, national_series, regional_series
 from analytics.hapi_client import HapiError, fetch_rows
 from analytics.indicators import INDICATORS
 from analytics.stat_tests import ALPHA, CORRELATION_MIN_POINTS, by_region, correlate, holm, trend
@@ -37,6 +37,7 @@ class Findings:
     date_from: str | None = None      # the period actually analysed
     date_to: str | None = None
     default_years: int | None = None  # set when no period was chosen (the last N years)
+    notes: list = field(default_factory=list)   # what was left out of a series, and why
 
 
 def compute_findings(iso3: str, date_from: str | None, date_to: str | None) -> Findings:
@@ -45,6 +46,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None) -> F
     sections: list[ReportSection] = []
     gaps: list[str] = []
     covered: list[str] = []
+    notes: list[str] = []
     national_by_label: dict[str, tuple[list, list]] = {}   # korelasyon için (periods, values)
     # Dönem: seçilmediyse son N yıl; bitiş en geç bugün (HAPI gelecek yılların plan
     # kayıtlarını da döndürür — son nokta olarak sahte bir düşüş üretiyordu).
@@ -76,6 +78,9 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None) -> F
             rows = _filter_period(rows, date_from, date_to)
             if ind.complete_periods_only:
                 rows = _completed(rows, today)
+            rows, note = consistent_snapshots(rows)
+            if note:
+                notes.append(f"{ind.label}: {note}")
             periods, values = national_series(rows, ind)
             if not values:
                 gaps.append(f"{ind.label}: dönem içinde veri yok")
@@ -151,7 +156,8 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None) -> F
 
     _adjust_and_describe(sections)
     return Findings(sections=sections, gaps=gaps, indicators_covered=covered,
-                    date_from=date_from, date_to=date_to, default_years=default_years)
+                    date_from=date_from, date_to=date_to, default_years=default_years,
+                    notes=notes)
 
 
 def _years_before(day: date, years: int) -> date:
@@ -213,13 +219,14 @@ def _filter_period(rows: list[dict], date_from: str | None, date_to: str | None)
 
 
 def _fmt_p(p: float | None) -> str:
+    """'p=0.012', 'p<0.001' or 'p=n/a' (the 'p' included, so '<' never follows '=')."""
     if p is None:
-        return "n/a"
-    return "<0.001" if p < 0.001 else f"{p:.3f}"
+        return "p=n/a"
+    return "p<0.001" if p < 0.001 else f"p={p:.3f}"
 
 
 def _verdict(r: dict) -> str:
-    return (f"p={_fmt_p(r['p_value'])}, Holm-adjusted p={_fmt_p(r['p_adjusted'])} → "
+    return (f"{_fmt_p(r['p_value'])}, Holm-adjusted {_fmt_p(r['p_adjusted'])} → "
             f"{'SIGNIFICANT' if r['significant'] else 'NOT SIGNIFICANT'} (α=0.05)")
 
 
@@ -268,6 +275,10 @@ def findings_to_context(findings: Findings) -> str:
         lines.append("DATA GAPS:")
         for g in findings.gaps:
             lines.append(f"- {g}")
+        lines.append("")
+    if findings.notes:
+        lines.append("DATA NOTES:")
+        lines += [f"- {n}" for n in findings.notes]
         lines.append("")
     tested = sum(1 for s in findings.sections if s.stat_result.get("p_value") is not None)
     lines += [

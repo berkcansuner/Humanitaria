@@ -211,7 +211,7 @@ def test_holm_adjusts_all_tests_together_and_code_decides_significance(_mock):
         assert r["significant"] == (r["p_adjusted"] < 0.05)
         verdict = "NOT SIGNIFICANT" if not r["significant"] else "SIGNIFICANT"
         assert f"→ {verdict} (α=0.05)" in s.findings_text
-        assert "Holm-adjusted p=" in s.findings_text
+        assert "Holm-adjusted p" in s.findings_text
 
 
 def _uneven_rows(ep):
@@ -299,3 +299,31 @@ def test_a_chosen_period_is_kept_but_capped_at_today(_mock):
     assert f"PERIOD ANALYSED: {y - 10}-01-01 to {date.today().isoformat()}" in ctx
     tr = next(s for s in f.sections if s.stat_result["kind"] == "trend")
     assert tr.stat_result["n_points"] == 5                  # the 999 year joins; future/partial do not
+
+
+def _sudan_like_idp_rows(ep):
+    # Two DTM operations over the same months: an 'Overview' stock (~8M) and an
+    # event-based count (~6M). Mixed per date they would zig-zag between definitions.
+    if not ep.endswith("idps"):
+        return []
+    from datetime import date
+    y = date.today().year
+    regions = [f"R{i}" for i in range(10)]
+    rows = []
+    for m, (overview, event) in enumerate([(800, 600), (810, 610), (820, 620), (830, 630)], start=1):
+        for r in regions:
+            rows.append({"operation": "Overview", "admin1_name": r, "population": overview,
+                         "reference_period_start": f"{y - 1}-{m:02d}-28"})
+            rows.append({"operation": "Armed Clashes", "admin1_name": r, "population": event,
+                         "reference_period_start": f"{y - 1}-{m:02d}-15"})
+    return rows
+
+
+@patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _sudan_like_idp_rows(ep))
+def test_idp_series_uses_one_operation_and_says_so(_mock):
+    f = compute_findings("SDN", None, None)
+    tr = next(s for s in f.sections if s.stat_result["kind"] == "trend")
+    assert tr.stat_result["n_points"] == 4                  # not 8 interleaved points
+    assert tr.stat_result["pct_change"] > 0
+    ctx = findings_to_context(f)
+    assert "DATA NOTES:" in ctx and "only the DTM operation 'Overview' is used" in ctx
