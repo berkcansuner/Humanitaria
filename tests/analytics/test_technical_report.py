@@ -226,7 +226,7 @@ def _uneven_rows(ep):
 
 @patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _uneven_rows(ep))
 def test_trend_slope_is_per_year_on_real_dates(_mock):
-    f = compute_findings("AFG", None, None)
+    f = compute_findings("AFG", "2020-01-01", None)
     tr = next(s for s in f.sections if s.stat_result["kind"] == "trend")
     # Pairwise slopes per year: 100, 66.7, 100, 50, 100, 200 (missing 2023 kept as a gap)
     # -> median 100 per year; an index axis would have said 125 per "period".
@@ -242,3 +242,60 @@ def test_context_carries_method_notes_and_no_half_split_test(_mock):
     ctx = findings_to_context(f)
     assert "METHOD NOTES:" in ctx and "Holm correction" in ctx
     assert "serial correlation" in ctx
+
+
+# --- Live check 2026-11-16 (Sudan): funding ran to 2029 (future appeal years) and
+# the current year's partial total, so the last point faked a -95% drop; with no
+# period chosen the report spanned 2000 onwards. ---
+
+def _funding_rows(ep):
+    if not ep.endswith("funding"):
+        return []
+    from datetime import date
+    y = date.today().year
+    rows = [{"funding_usd": 100 + 10 * i, "reference_period_start": f"{y - 4 + i}-01-01",
+             "reference_period_end": f"{y - 4 + i}-12-31"} for i in range(4)]   # 4 complete years
+    rows.append({"funding_usd": 5, "reference_period_start": f"{y}-01-01",
+                 "reference_period_end": f"{y}-12-31"})                          # this year, partial
+    rows.append({"funding_usd": 1, "reference_period_start": f"{y + 3}-01-01",
+                 "reference_period_end": f"{y + 3}-12-31"})                      # future plan
+    rows.append({"funding_usd": 999, "reference_period_start": f"{y - 9}-01-01",
+                 "reference_period_end": f"{y - 9}-12-31"})                      # outside 5 years
+    return rows
+
+
+@patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _funding_rows(ep))
+def test_future_unfinished_and_old_periods_are_left_out_by_default(_mock):
+    f = compute_findings("SDN", None, None)
+    tr = next(s for s in f.sections if s.stat_result["kind"] == "trend")
+    assert tr.stat_result["n_points"] == 4                  # only the complete years in range
+    assert tr.stat_result["pct_change"] > 0                 # no fake drop at the end
+
+
+def test_stock_indicators_keep_the_current_period():
+    # A stock (IDPs, refugees) reported this year is a real current figure; only
+    # flows that accumulate over the period (funding) wait for the period to end.
+    from analytics.indicators import by_key
+    assert by_key("funding").complete_periods_only is True
+    assert by_key("idps").complete_periods_only is False
+
+
+@patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _funding_rows(ep))
+def test_context_states_the_period_analysed(_mock):
+    from datetime import date, timedelta
+    f = compute_findings("SDN", None, None)
+    ctx = findings_to_context(f)
+    today = date.today()
+    assert f"PERIOD ANALYSED: {today.replace(year=today.year - 5).isoformat()} to {today.isoformat()}" in ctx
+    assert "last 5 years" in ctx
+
+
+@patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _funding_rows(ep))
+def test_a_chosen_period_is_kept_but_capped_at_today(_mock):
+    from datetime import date
+    y = date.today().year
+    f = compute_findings("SDN", f"{y - 10}-01-01", f"{y + 5}-12-31")
+    ctx = findings_to_context(f)
+    assert f"PERIOD ANALYSED: {y - 10}-01-01 to {date.today().isoformat()}" in ctx
+    tr = next(s for s in f.sections if s.stat_result["kind"] == "trend")
+    assert tr.stat_result["n_points"] == 5                  # the 999 year joins; future/partial do not

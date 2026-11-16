@@ -34,6 +34,9 @@ class Findings:
     sections: list
     gaps: list
     indicators_covered: list
+    date_from: str | None = None      # the period actually analysed
+    date_to: str | None = None
+    default_years: int | None = None  # set when no period was chosen (the last N years)
 
 
 def compute_findings(iso3: str, date_from: str | None, date_to: str | None) -> Findings:
@@ -43,6 +46,13 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None) -> F
     gaps: list[str] = []
     covered: list[str] = []
     national_by_label: dict[str, tuple[list, list]] = {}   # korelasyon için (periods, values)
+    # Dönem: seçilmediyse son N yıl; bitiş en geç bugün (HAPI gelecek yılların plan
+    # kayıtlarını da döndürür — son nokta olarak sahte bir düşüş üretiyordu).
+    today = date.today()
+    default_years = None if date_from else settings.TECHNICAL_REPORT_DEFAULT_YEARS
+    if default_years:
+        date_from = _years_before(today, default_years).isoformat()
+    date_to = min(date_to, today.isoformat()) if date_to else today.isoformat()
 
     for ind in INDICATORS:
         try:
@@ -64,6 +74,8 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None) -> F
         # indikatör gap'e düşer — diğer indikatörler işlenmeye devam eder.
         try:
             rows = _filter_period(rows, date_from, date_to)
+            if ind.complete_periods_only:
+                rows = _completed(rows, today)
             periods, values = national_series(rows, ind)
             if not values:
                 gaps.append(f"{ind.label}: dönem içinde veri yok")
@@ -138,7 +150,22 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None) -> F
             ))
 
     _adjust_and_describe(sections)
-    return Findings(sections=sections, gaps=gaps, indicators_covered=covered)
+    return Findings(sections=sections, gaps=gaps, indicators_covered=covered,
+                    date_from=date_from, date_to=date_to, default_years=default_years)
+
+
+def _years_before(day: date, years: int) -> date:
+    try:
+        return day.replace(year=day.year - years)
+    except ValueError:              # 29 February → 28 February
+        return day.replace(year=day.year - years, day=28)
+
+
+def _completed(rows: list[dict], today: date) -> list[dict]:
+    """Rows whose reference period has ended (a row without an end date is kept)."""
+    return [r for r in rows
+            if not r.get("reference_period_end")
+            or str(r["reference_period_end"])[:10] <= today.isoformat()]
 
 
 def _adjust_and_describe(sections: list) -> None:
@@ -229,6 +256,10 @@ def findings_to_context(findings: Findings) -> str:
     # grafik hiçbir zaman eşleşmez (bkz. FIX I1). Bu yüzden başlık LLM'e aynen verilir; prompt
     # bunu değiştirmeden kopyalamasını zorunlu kılar.
     lines = ["COMPUTED STATISTICAL FINDINGS (do not recompute — narrate only):", ""]
+    if findings.date_from:
+        chosen = (f" (no period was chosen: the last {findings.default_years} years)"
+                  if findings.default_years else "")
+        lines += [f"PERIOD ANALYSED: {findings.date_from} to {findings.date_to}{chosen}", ""]
     for s in findings.sections:
         lines.append(f"## {s.heading}")
         lines.append(s.findings_text)

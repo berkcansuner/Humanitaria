@@ -85,6 +85,7 @@ class Settings(BaseSettings):
     # Teknik izleme raporu: trend testi için asgari dönem (gözlem) sayısı.
     # Altındaki serilerde inferential test çalıştırılmaz ("insufficient_data").
     TECHNICAL_REPORT_MIN_POINTS: int = 4
+    TECHNICAL_REPORT_DEFAULT_YEARS: int = 5   # dönem seçilmezse: son N yıl
 
     # Pinecone — used ONLY for the hosted reranker (Pinecone Inference); the vector
     # index itself lives in Postgres (pgvector).

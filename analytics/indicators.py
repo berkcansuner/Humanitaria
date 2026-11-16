@@ -25,6 +25,9 @@ class Indicator:
     admin_level: int         # 0 = ulusal agregat, 1/2 = alt-ulusal
     query_params: dict = field(default_factory=dict)
     location_param: str = "location_code"
+    # A flow that accumulates over its period (funding): an unfinished period's
+    # partial total would read as a fall, so only completed periods are used.
+    complete_periods_only: bool = False
 
 
 INDICATORS: list[Indicator] = [
@@ -46,7 +49,8 @@ INDICATORS: list[Indicator] = [
               "affected-people/idps", "population", "sum", 1,
               {"gender": "all", "age_range": "all"}),
     Indicator("funding", "İnsani fonlama (USD)",
-              "coordination-context/funding", "funding_usd", "sum", 0, {}),
+              "coordination-context/funding", "funding_usd", "sum", 0, {},
+              complete_periods_only=True),
 ]
 
 _BY_KEY = {i.key: i for i in INDICATORS}
