@@ -26,13 +26,15 @@ def _to_datauri(fig) -> str:
     return f"data:image/png;base64,{encoded}"
 
 
-def trend_chart(periods, values, slope, intercept, title: str, ylabel: str) -> str:
+def trend_chart(periods, values, slope, intercept, title: str, ylabel: str, times=None) -> str:
+    """*times*: each period's position (years since the first); evenly spaced when
+    omitted. slope/intercept use the same unit (Sen's slope per year)."""
     fig, ax = plt.subplots(figsize=_FIGSIZE)
-    x = list(range(len(values)))
+    x = list(times) if times is not None else list(range(len(values)))
     ax.plot(x, values, marker="o", color="#1f77b4", label="Gözlem")
     if slope is not None and intercept is not None:
         line = [intercept + slope * i for i in x]
-        ax.plot(x, line, color="#d62728", linestyle="--", label="Trend (OLS)")
+        ax.plot(x, line, color="#d62728", linestyle="--", label="Trend (Sen)")
         ax.legend()
     ax.set_xticks(x)
     ax.set_xticklabels(periods, rotation=45, ha="right", fontsize=8)

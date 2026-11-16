@@ -7,6 +7,7 @@ findings_to_context, hesaplanmış sayıları LLM'e 'context' olarak verilecek m
 """
 import logging
 from dataclasses import dataclass
+from datetime import date
 
 import requests
 
@@ -14,7 +15,7 @@ from analytics.charts import comparison_chart, correlation_chart, trend_chart
 from analytics.datasets import national_series, regional_series
 from analytics.hapi_client import HapiError, fetch_rows
 from analytics.indicators import INDICATORS
-from analytics.stat_tests import by_region, compare, correlate, trend
+from analytics.stat_tests import ALPHA, CORRELATION_MIN_POINTS, by_region, correlate, holm, trend
 from config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ReportSection:
     heading: str
-    stat_result: dict          # {"kind": "trend"|"compare"|"region", ...}
+    stat_result: dict          # {"kind": "trend"|"region"|"correlation", ..., "p_adjusted", "significant"}
     chart: str | None          # base64 data-URI veya None
     findings_text: str         # LLM context'ine giren kod-hesaplı özet
 
@@ -70,42 +71,25 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None) -> F
             covered.append(ind.key)
             national_by_label[ind.label] = (periods, values)
 
-            # Trend
-            tr = trend(values, indicator=ind.label, min_points=min_pts)
+            # Trend (gerçek zaman ekseni: ilk dönemden beri yıl → eğim yıl başına)
+            times = _years_since_first(periods)
+            tr = trend(values, indicator=ind.label, min_points=min_pts, times=times)
             if tr.direction == "insufficient_data":
                 gaps.append(f"{ind.label}: trend için yetersiz veri (n={tr.n_points})")
             else:
                 chart = trend_chart(periods, values, tr.slope, tr.intercept,
-                                    title=f"{ind.label} — Trend", ylabel=ind.label)
+                                    title=f"{ind.label} — Trend", ylabel=ind.label, times=times)
                 sections.append(ReportSection(
                     heading=f"{ind.label} — Trend Analizi",
                     stat_result={"kind": "trend", "indicator": ind.label,
                                  "direction": tr.direction, "slope": tr.slope,
                                  "p_value": tr.p_value, "pct_change": tr.pct_change,
                                  "n_points": tr.n_points, "ci_low": tr.ci_low,
-                                 "ci_high": tr.ci_high},
+                                 "ci_high": tr.ci_high, "tau": tr.tau,
+                                 "first_period": periods[0], "last_period": periods[-1]},
                     chart=chart,
-                    findings_text=_trend_text(tr),
+                    findings_text="",
                 ))
-
-            # Dönem karşılaştırması (ilk yarı vs ikinci yarı)
-            # min_pts trend adımıyla tutarlı; min_pts >= 4 KALMALI, çünkü yarı-bölme
-            # her iki gruba >= 2 nokta garantisi verir (t-testinin grup-başı >= 2 tabanı).
-            if len(values) >= min_pts:
-                mid = len(values) // 2
-                cmp = compare(values[:mid], values[mid:], indicator=ind.label,
-                              period_a=f"{periods[0]}–{periods[mid-1]}",
-                              period_b=f"{periods[mid]}–{periods[-1]}")
-                if cmp.note != "insufficient_data":
-                    sections.append(ReportSection(
-                        heading=f"{ind.label} — Dönem Karşılaştırması",
-                        stat_result={"kind": "compare", "indicator": ind.label,
-                                     "pct_change": cmp.pct_change, "p_value": cmp.p_value,
-                                     "significant": cmp.significant,
-                                     "period_a": cmp.period_a, "period_b": cmp.period_b},
-                        chart=None,
-                        findings_text=_compare_text(cmp),
-                    ))
 
             # Bölgeler-arası (admin-1)
             reg = regional_series(rows, ind)
@@ -120,9 +104,9 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None) -> F
                     heading=f"{ind.label} — Bölgesel Analiz",
                     stat_result={"kind": "region", "indicator": ind.label,
                                  "ranking": rr.ranking, "p_value": rr.p_value,
-                                 "significant": rr.significant},
+                                 "kruskal_h": rr.kruskal_h},
                     chart=chart,
-                    findings_text=_region_text(rr),
+                    findings_text="",
                 ))
         except Exception as exc:
             logger.warning("%s indikatörü analiz hatası (%s): %s", ind.key, iso3, exc)
@@ -136,7 +120,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None) -> F
             pa, va = national_by_label[labels[i]]
             pb, vb = national_by_label[labels[j]]
             xa, yb = _align_on_period(pa, va, pb, vb)
-            if len(xa) < 3:
+            if len(xa) < CORRELATION_MIN_POINTS:
                 continue
             cor = correlate(xa, yb, indicator_x=labels[i], indicator_y=labels[j])
             if cor.note == "insufficient_data":
@@ -147,13 +131,32 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None) -> F
                 heading=f"Korelasyon — {labels[i]} ↔ {labels[j]}",
                 stat_result={"kind": "correlation", "indicator_x": labels[i],
                              "indicator_y": labels[j], "coefficient": cor.coefficient,
-                             "p_value": cor.p_value, "significant": cor.significant,
+                             "p_value": cor.p_value,
                              "method": cor.method, "n_points": cor.n_points},
                 chart=chart,
-                findings_text=_correlation_text(cor),
+                findings_text="",
             ))
 
+    _adjust_and_describe(sections)
     return Findings(sections=sections, gaps=gaps, indicators_covered=covered)
+
+
+def _adjust_and_describe(sections: list) -> None:
+    """Holm-adjust every test of the report together (one family), decide
+    significance in code from the adjusted p, and write each section's findings
+    text — the model narrates the verdict, it never decides it."""
+    adjusted = holm([s.stat_result.get("p_value") for s in sections])
+    for s, p_adj in zip(sections, adjusted):
+        s.stat_result["p_adjusted"] = p_adj
+        s.stat_result["significant"] = p_adj is not None and p_adj < ALPHA
+        s.findings_text = _TEXT[s.stat_result["kind"]](s.stat_result)
+
+
+def _years_since_first(periods: list[str]) -> list[float]:
+    """Each period's start as years since the first one (real spacing: a missing
+    year leaves a gap instead of being squeezed out)."""
+    days = [date.fromisoformat(str(p)[:10]) for p in periods]
+    return [(d - days[0]).days / 365.25 for d in days]
 
 
 def _align_on_period(periods_a, values_a, periods_b, values_b):
@@ -183,34 +186,40 @@ def _filter_period(rows: list[dict], date_from: str | None, date_to: str | None)
 
 
 def _fmt_p(p: float | None) -> str:
-    return "n/a" if p is None else f"{p:.3f}"
+    if p is None:
+        return "n/a"
+    return "<0.001" if p < 0.001 else f"{p:.3f}"
 
 
-def _trend_text(tr) -> str:
-    pct = "n/a" if tr.pct_change is None else f"%{tr.pct_change:.1f}"
-    return (f"{tr.indicator}: yön={tr.direction}, eğim={tr.slope:.2f}/dönem, "
-            f"p={_fmt_p(tr.p_value)} (α=0.05), toplam değişim={pct}, n={tr.n_points}.")
+def _verdict(r: dict) -> str:
+    return (f"p={_fmt_p(r['p_value'])}, Holm-adjusted p={_fmt_p(r['p_adjusted'])} → "
+            f"{'SIGNIFICANT' if r['significant'] else 'NOT SIGNIFICANT'} (α=0.05)")
 
 
-def _compare_text(cmp) -> str:
-    pct = "n/a" if cmp.pct_change is None else f"%{cmp.pct_change:.1f}"
-    sig = "anlamlı" if cmp.significant else "anlamlı değil"
-    return (f"{cmp.indicator}: {cmp.period_a} → {cmp.period_b}, değişim={pct}, "
-            f"p={_fmt_p(cmp.p_value)} ({sig}, α=0.05).")
+def _trend_text(r: dict) -> str:
+    pct = "n/a" if r["pct_change"] is None else f"%{r['pct_change']:.1f}"
+    ci = ("95% CI: too few points" if r["ci_low"] is None
+          else f"95% CI {r['ci_low']:.2f} to {r['ci_high']:.2f}")
+    return (f"{r['indicator']}: direction={r['direction']}, Sen slope={r['slope']:.2f} per year "
+            f"({ci}), Kendall tau={r['tau']:.2f}, Mann-Kendall {_verdict(r)}, "
+            f"change {str(r['first_period'])[:10]} → {str(r['last_period'])[:10]}={pct}, "
+            f"n={r['n_points']}.")
 
 
-def _region_text(rr) -> str:
-    top = ", ".join(f"{name} ({val:.0f})" for name, val in rr.ranking[:3])
-    sig = "anlamlı" if rr.significant else "anlamlı değil"
-    return (f"{rr.indicator}: en yüksek bölgeler — {top}; bölgeler-arası fark "
-            f"p={_fmt_p(rr.p_value)} ({sig}, α=0.05).")
+def _region_text(r: dict) -> str:
+    top = ", ".join(f"{name} ({val:.0f})" for name, val in r["ranking"][:3])
+    h = "n/a" if r["kruskal_h"] is None else f"{r['kruskal_h']:.2f}"
+    return (f"{r['indicator']}: highest regions — {top}; difference between regions "
+            f"Kruskal-Wallis H={h}, {_verdict(r)}.")
 
 
-def _correlation_text(cor) -> str:
-    sig = "anlamlı" if cor.significant else "anlamlı değil"
-    coef = "n/a" if cor.coefficient is None else f"{cor.coefficient:.2f}"
-    return (f"{cor.indicator_x} ↔ {cor.indicator_y}: {cor.method} r={coef}, "
-            f"p={_fmt_p(cor.p_value)} ({sig}, α=0.05, n={cor.n_points}).")
+def _correlation_text(r: dict) -> str:
+    coef = "n/a" if r["coefficient"] is None else f"{r['coefficient']:.2f}"
+    return (f"{r['indicator_x']} ↔ {r['indicator_y']}: {r['method']} r={coef}, "
+            f"{_verdict(r)}, n={r['n_points']}.")
+
+
+_TEXT = {"trend": _trend_text, "region": _region_text, "correlation": _correlation_text}
 
 
 def findings_to_context(findings: Findings) -> str:
@@ -228,6 +237,21 @@ def findings_to_context(findings: Findings) -> str:
         lines.append("DATA GAPS:")
         for g in findings.gaps:
             lines.append(f"- {g}")
+        lines.append("")
+    tested = sum(1 for s in findings.sections if s.stat_result.get("p_value") is not None)
+    lines += [
+        "METHOD NOTES:",
+        "- Trend: Mann-Kendall test; the slope is Sen's slope per year on the real dates of "
+        "the periods; Kendall tau is the effect size.",
+        "- Regions: Kruskal-Wallis test across admin-1 regions.",
+        f"- Correlation: Pearson, only for indicator pairs with at least "
+        f"{CORRELATION_MIN_POINTS} common periods.",
+        f"- Multiple comparisons: Holm correction across all {tested} tests in this report; "
+        "significance is decided on the Holm-adjusted p-value at α=0.05.",
+        "- Limitation: the series are short; the tests assume independent observations and "
+        "serial correlation between consecutive periods is not corrected for, so the results "
+        "are indicative.",
+    ]
     return "\n".join(lines)
 
 

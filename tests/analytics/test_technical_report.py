@@ -84,13 +84,16 @@ def test_by_region_section_for_multi_region_indicator(_mock):
     assert region_sections[0].stat_result["ranking"], "ranking dolu olmalı"
 
 
-def _two_indicator_rows(ep):
-    # idps ve food_security için ortak dönemli, ilişkili iki seri → korelasyon.
+_EIGHT_QUARTERS = ["2024-01-01", "2024-04-01", "2024-07-01", "2024-10-01",
+                   "2025-01-01", "2025-04-01", "2025-07-01", "2025-10-01"]
+
+
+def _two_indicator_rows(ep, periods=_EIGHT_QUARTERS):
+    # idps ve food_security için ortak dönemli, ilişkili iki seri → korelasyon
+    # (en az CORRELATION_MIN_POINTS = 8 ortak dönem gerekir).
     base = {
-        "idps": [(100, "2025-01-01"), (200, "2025-04-01"), (300, "2025-07-01"),
-                 (400, "2025-10-01")],
-        "food_security": [(120, "2025-01-01"), (240, "2025-04-01"), (360, "2025-07-01"),
-                          (480, "2025-10-01")],
+        "idps": [(100 * (i + 1), p) for i, p in enumerate(periods)],
+        "food_security": [(120 * (i + 1) + (7 if i % 2 else 0), p) for i, p in enumerate(periods)],
     }
     key = "idps" if ep.endswith("idps") else ("food_security" if "food-security" in ep else None)
     if key is None:
@@ -103,7 +106,7 @@ def _two_indicator_rows(ep):
 @patch("analytics.technical_report.fetch_rows",
        side_effect=lambda ep, iso3, **k: _two_indicator_rows(ep))
 def test_correlation_section_for_two_indicators(_mock):
-    f = compute_findings("AFG", "2025-01-01", "2025-12-31")
+    f = compute_findings("AFG", "2024-01-01", "2025-12-31")
     corr = [s for s in f.sections if s.stat_result.get("kind") == "correlation"]
     assert corr, "iki ilişkili indikatör korelasyon bölümü üretmeli"
     assert corr[0].stat_result["coefficient"] is not None
@@ -187,3 +190,55 @@ def test_orchestrator_passes_query_params_and_admin_level(monkeypatch):
     assert by_ep["food/food-security"][2] == 0
     assert by_ep["affected-people/refugees"][3] == "origin_location_code"
     assert "coordination-context/conflict-event" not in by_ep
+
+
+@patch("analytics.technical_report.fetch_rows",
+       side_effect=lambda ep, iso3, **k: _two_indicator_rows(ep, _EIGHT_QUARTERS[:7]))
+def test_no_correlation_section_below_eight_common_periods(_mock):
+    f = compute_findings("AFG", None, None)
+    assert not [s for s in f.sections if s.stat_result.get("kind") == "correlation"]
+
+
+@patch("analytics.technical_report.fetch_rows",
+       side_effect=lambda ep, iso3, **k: _two_indicator_rows(ep))
+def test_holm_adjusts_all_tests_together_and_code_decides_significance(_mock):
+    f = compute_findings("AFG", None, None)
+    tested = [s for s in f.sections if s.stat_result.get("p_value") is not None]
+    assert len(tested) >= 3                       # two trends + one correlation
+    for s in tested:
+        r = s.stat_result
+        assert r["p_adjusted"] >= r["p_value"]
+        assert r["significant"] == (r["p_adjusted"] < 0.05)
+        verdict = "NOT SIGNIFICANT" if not r["significant"] else "SIGNIFICANT"
+        assert f"→ {verdict} (α=0.05)" in s.findings_text
+        assert "Holm-adjusted p=" in s.findings_text
+
+
+def _uneven_rows(ep):
+    # 2023 is missing: four yearly values 100, 200, 300, 500 at 2021, 2022, 2024, 2025.
+    if not ep.endswith("idps"):
+        return []
+    return [{"population": v, "reference_period_start": p, "admin1_name": "North",
+             "admin1_code": "AF01"}
+            for v, p in [(100, "2021-01-01"), (200, "2022-01-01"),
+                         (300, "2024-01-01"), (500, "2025-01-01")]]
+
+
+@patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _uneven_rows(ep))
+def test_trend_slope_is_per_year_on_real_dates(_mock):
+    f = compute_findings("AFG", None, None)
+    tr = next(s for s in f.sections if s.stat_result["kind"] == "trend")
+    # Pairwise slopes per year: 100, 66.7, 100, 50, 100, 200 (missing 2023 kept as a gap)
+    # -> median 100 per year; an index axis would have said 125 per "period".
+    assert abs(tr.stat_result["slope"] - 100.0) < 0.1     # days / 365.25, not whole years
+    assert "per year" in tr.findings_text
+
+
+@patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _rows_for(
+    "idps" if ep.endswith("idps") else "other"))
+def test_context_carries_method_notes_and_no_half_split_test(_mock):
+    f = compute_findings("AFG", None, None)
+    assert not [s for s in f.sections if "Dönem Karşılaştırması" in s.heading]
+    ctx = findings_to_context(f)
+    assert "METHOD NOTES:" in ctx and "Holm correction" in ctx
+    assert "serial correlation" in ctx
