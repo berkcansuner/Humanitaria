@@ -12,7 +12,7 @@ from datetime import date
 import requests
 
 from analytics.charts import comparison_chart, correlation_chart, trend_chart
-from analytics.datasets import consistent_snapshots, national_series, regional_series
+from analytics.datasets import consistent_snapshots, ipc_coverage_note, national_series, regional_series
 from analytics.hapi_client import HapiError, fetch_rows
 from analytics.indicators import INDICATORS
 from analytics.stat_tests import ALPHA, CORRELATION_MIN_POINTS, by_region, correlate, holm, trend
@@ -79,8 +79,8 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None) -> F
             if ind.complete_periods_only:
                 rows = _completed(rows, today)
             rows, note = consistent_snapshots(rows)
-            if note:
-                notes.append(f"{ind.label}: {note}")
+            coverage = ipc_coverage_note(rows)
+            notes += [f"{ind.label}: {n}" for n in (note, coverage) if n]
             periods, values = national_series(rows, ind)
             if not values:
                 gaps.append(f"{ind.label}: dönem içinde veri yok")
@@ -103,7 +103,8 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None) -> F
                                  "p_value": tr.p_value, "pct_change": tr.pct_change,
                                  "n_points": tr.n_points, "ci_low": tr.ci_low,
                                  "ci_high": tr.ci_high, "tau": tr.tau,
-                                 "first_period": periods[0], "last_period": periods[-1]},
+                                 "first_period": periods[0], "last_period": periods[-1],
+                                 "unit": ind.unit},
                     chart=chart,
                     findings_text="",
                 ))
@@ -234,9 +235,10 @@ def _trend_text(r: dict) -> str:
     pct = "n/a" if r["pct_change"] is None else f"{r['pct_change']:+.1f}%"
     ci = ("95% CI: too few points" if r["ci_low"] is None
           else f"95% CI {r['ci_low']:.2f} to {r['ci_high']:.2f}")
-    return (f"{r['indicator']}: direction={r['direction']}, Sen slope={r['slope']:.2f} per year "
+    unit = f" {r['unit']}" if r.get("unit") else ""
+    return (f"{r['indicator']}: direction={r['direction']}, Sen slope={r['slope']:.2f}{unit} per year "
             f"({ci}), Kendall tau={r['tau']:.2f}, Mann-Kendall {_verdict(r)}, "
-            f"change along the trend line {str(r['first_period'])[:10]} → {str(r['last_period'])[:10]}={pct}, "
+            f"relative change along the trend line {str(r['first_period'])[:10]} → {str(r['last_period'])[:10]}={pct}, "
             f"n={r['n_points']}.")
 
 

@@ -98,7 +98,7 @@ def _two_indicator_rows(ep, periods=_EIGHT_QUARTERS):
     key = "idps" if ep.endswith("idps") else ("food_security" if "food-security" in ep else None)
     if key is None:
         return []
-    value_field = "population" if key == "idps" else "population_in_phase"
+    value_field = "population" if key == "idps" else "population_fraction_in_phase"
     return [{value_field: v, "reference_period_start": p, "admin1_name": "North",
              "admin1_code": "AF01"} for v, p in base[key]]
 
@@ -335,3 +335,24 @@ def test_change_is_written_with_the_sign_before_the_number(_mock):
     tr = next(s for s in compute_findings("SDN", None, None).sections if s.stat_result["kind"] == "trend")
     assert "=+" in tr.findings_text and "%, n=" in tr.findings_text
     assert "%-" not in tr.findings_text and "=%" not in tr.findings_text
+
+
+def _yemen_ipc_rows(ep):
+    if "food-security" not in ep:
+        return []
+    from datetime import date
+    y = date.today().year
+    data = [(y - 4, 17365500, 0.55), (y - 3, 3234000, 0.34), (y - 2, 4647925, 0.46),
+            (y - 1, 17145484, 0.49), (y, 4980505, 0.47)]
+    return [{"reference_period_start": f"{yr}-01-01", "reference_period_end": f"{yr}-03-31",
+             "population_in_phase": n, "population_fraction_in_phase": f} for yr, n, f in data]
+
+
+@patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _yemen_ipc_rows(ep))
+def test_food_security_trend_is_on_the_share_with_a_coverage_note(_mock):
+    f = compute_findings("YEM", None, None)
+    tr = next(s for s in f.sections if s.stat_result["kind"] == "trend")
+    assert "percentage points per year" in tr.findings_text
+    assert tr.stat_result["n_points"] == 5
+    ctx = findings_to_context(f)
+    assert "DATA NOTES:" in ctx and "analysed population" in ctx

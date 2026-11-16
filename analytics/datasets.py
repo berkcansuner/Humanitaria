@@ -32,7 +32,7 @@ def _frame(rows: list[dict], indicator: Indicator) -> pd.DataFrame:
     if indicator.value_field not in df.columns or "reference_period_start" not in df.columns:
         return pd.DataFrame()
     df = df.copy()
-    df["_value"] = pd.to_numeric(df[indicator.value_field], errors="coerce")
+    df["_value"] = pd.to_numeric(df[indicator.value_field], errors="coerce") * indicator.scale
     df = df.dropna(subset=["_value", "reference_period_start"])
     df = _dedup_aggregate_rows(df, indicator)
     return df
@@ -115,3 +115,19 @@ def consistent_snapshots(rows: list[dict]) -> tuple[list[dict], str | None]:
     if dropped_rounds:
         parts.append(f"{dropped_rounds} incomplete round(s) covering under 80% of its regions are left out")
     return kept, "; ".join(parts)
+
+
+_COVERAGE_CHANGE = 1.2   # analysed population varying more than this factor is noted
+
+
+def ipc_coverage_note(rows: list[dict]) -> str | None:
+    """A note when IPC analyses covered very different populations across periods
+    (people in phase / share in phase = population analysed) — why the series uses
+    the share. None when coverage is stable or the rows are not IPC rows."""
+    analysed = [r["population_in_phase"] / r["population_fraction_in_phase"] for r in rows
+                if r.get("population_in_phase") and r.get("population_fraction_in_phase")]
+    if not analysed or max(analysed) <= _COVERAGE_CHANGE * min(analysed):
+        return None
+    return (f"IPC analyses covered different parts of the country in different periods "
+            f"(analysed population {min(analysed) / 1e6:.1f} to {max(analysed) / 1e6:.1f} million), "
+            f"so the share of the analysed population is used, not the number of people")

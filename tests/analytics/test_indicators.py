@@ -4,7 +4,10 @@ from analytics.indicators import INDICATORS, by_key
 def test_food_security_config():
     i = by_key("food_security")
     assert i.endpoint == "food/food-security"
-    assert i.value_field == "population_in_phase"
+    # Share of the analysed population, not people: IPC analyses cover different parts
+    # of a country in different periods (Yemen: 9.5 vs 35 million analysed).
+    assert i.value_field == "population_fraction_in_phase"
+    assert i.aggregation == "mean" and i.scale == 100 and i.unit == "percentage points"
     assert i.admin_level == 0
     assert i.query_params == {"ipc_type": "current", "ipc_phase": "3+"}
 

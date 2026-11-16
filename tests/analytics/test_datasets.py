@@ -1,3 +1,4 @@
+import pytest
 import pandas as pd
 from analytics.datasets import national_series, regional_series
 from analytics.indicators import Indicator, by_key
@@ -129,3 +130,37 @@ def test_a_single_complete_operation_needs_no_note():
     rows = _snap("Op", "2025-01-31", R18) + _snap("Op", "2025-02-28", R18)
     kept, note = consistent_snapshots(rows)
     assert kept == rows and note is None
+
+
+# --- Food security (Yemen, 2026-11-16): the analysed population alternates between
+# the whole country (~35M) and government-held areas (~10M), so people in IPC 3+ read
+# 17.4M -> 3.2M -> 4.6M -> 17.1M -> 5.0M while the share stayed 34-55%. ---
+
+from analytics.datasets import ipc_coverage_note   # noqa: E402
+
+_YEMEN_IPC = [  # (start, people in phase 3+, share)
+    ("2022-01-01", 17365500, 0.55), ("2023-01-01", 3234000, 0.34), ("2024-07-01", 4647925, 0.46),
+    ("2025-05-01", 17145484, 0.49), ("2026-03-01", 4980505, 0.47),
+]
+
+
+def _ipc_rows(data=_YEMEN_IPC):
+    return [{"reference_period_start": s, "population_in_phase": n, "population_fraction_in_phase": f}
+            for s, n, f in data]
+
+
+def test_food_security_series_is_the_share_in_percent():
+    periods, values = national_series(_ipc_rows(), by_key("food_security"))
+    assert values == pytest.approx([55.0, 34.0, 46.0, 49.0, 47.0])
+
+
+def test_coverage_note_when_the_analysed_population_changes():
+    note = ipc_coverage_note(_ipc_rows())
+    assert note is not None
+    assert "9.5" in note and "35.0" in note and "share" in note
+
+
+def test_no_coverage_note_when_the_analysed_population_is_stable():
+    stable = [("2024-01-01", 10_000_000, 0.20), ("2025-01-01", 11_000_000, 0.21)]
+    assert ipc_coverage_note(_ipc_rows(stable)) is None
+    assert ipc_coverage_note([{"reference_period_start": "2024-01-01", "population": 5}]) is None

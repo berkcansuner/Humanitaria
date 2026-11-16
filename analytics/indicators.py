@@ -28,15 +28,20 @@ class Indicator:
     # A flow that accumulates over its period (funding): an unfinished period's
     # partial total would read as a fall, so only completed periods are used.
     complete_periods_only: bool = False
+    scale: float = 1.0       # value_field × scale (a 0-1 share → percent)
+    unit: str = ""           # unit of the trend slope ("" = the indicator's own count)
 
 
 INDICATORS: list[Indicator] = [
     Indicator("humanitarian_needs", "İnsani ihtiyaç (kişi)",
               "affected-people/humanitarian-needs", "population", "sum", 0,
               {"population_status": "INN", "sector_code": "Intersectoral"}),
-    Indicator("food_security", "Gıda güvensizliği (kişi)",
-              "food/food-security", "population_in_phase", "sum", 0,
-              {"ipc_type": "current", "ipc_phase": "3+"}),
+    # Share of the analysed population in IPC 3+, not people: an IPC analysis may cover
+    # only part of a country (Yemen alternates ~35M nationwide / ~10M government-held
+    # areas), so counts from different periods are not comparable; the share is.
+    Indicator("food_security", "Gıda güvensizliği (IPC 3+, analiz edilen nüfusun %'si)",
+              "food/food-security", "population_fraction_in_phase", "mean", 0,
+              {"ipc_type": "current", "ipc_phase": "3+"}, scale=100, unit="percentage points"),
     Indicator("refugees", "Mülteci (kişi)",
               "affected-people/refugees", "population", "sum", 0,
               {"gender": "all", "age_range": "all", "population_group": "REF"},
