@@ -51,7 +51,8 @@ def describe_filters(filters: dict | None) -> str:
     """The retrieval filters in plain words for the chat prompt (rule 5 asks the
     model to state an applied date or country filter; it cannot see them)."""
     filters = filters or {}
-    parts = [f"{label}: {filters[key]}" for key, label in _FILTER_LABELS if filters.get(key)]
+    parts = [f"{label}: {', '.join(filters[key]) if isinstance(filters[key], list) else filters[key]}"
+             for key, label in _FILTER_LABELS if filters.get(key)]
     date = filters.get("date") or {}
     if date.get("$gte") and date.get("$lte"):
         parts.append(f"documents dated from {date['$gte']} to {date['$lte']}")

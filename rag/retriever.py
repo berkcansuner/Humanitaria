@@ -72,12 +72,17 @@ def _date_to_int(date_str: str) -> Optional[int]:
     return None
 
 
+def _country_names(country: str) -> List[str]:
+    """The name as given plus ReliefWeb's long official form, when it has one."""
+    return [country, *([_COUNTRY_RELIEFWEB_ALIASES[country]] if country in _COUNTRY_RELIEFWEB_ALIASES else [])]
+
+
 def build_sql_filter(filters: Optional[Dict[str, Any]]) -> Tuple[List[str], Dict[str, Any]]:
     """WHERE clauses (AND-ed) + bind params for the query-processor filters.
 
     Only known keys become SQL (column names are never taken from input); values are
     always bound. ``date`` is a numeric ``date_ts`` range ($gte, optional $lte);
-    ``country`` also matches ReliefWeb's long official name; ``theme`` matches the
+    ``country`` (one name or a list) also matches ReliefWeb's long official name; ``theme`` matches the
     primary theme or any entry of the multi-theme list."""
     clauses: List[str] = []
     params: Dict[str, Any] = {}
@@ -92,12 +97,14 @@ def build_sql_filter(filters: Optional[Dict[str, Any]]) -> Tuple[List[str], Dict
                 if ts_to is not None:
                     clauses.append("date_ts <= :date_to")
                     params["date_to"] = ts_to
+        elif key == "country" and isinstance(val, list) and val:
+            clauses.append("country = ANY(:countries)")
+            params["countries"] = [n for c in val for n in _country_names(c)]
         elif not isinstance(val, str) or not val:
             logger.debug("Ignoring non-string filter %s=%r", key, val)
         elif key == "country":
             clauses.append("country = ANY(:countries)")
-            params["countries"] = [val, *([_COUNTRY_RELIEFWEB_ALIASES[val]]
-                                          if val in _COUNTRY_RELIEFWEB_ALIASES else [])]
+            params["countries"] = _country_names(val)
         elif key == "theme":
             clauses.append("(theme = :theme OR :theme = ANY(themes))")
             params["theme"] = val

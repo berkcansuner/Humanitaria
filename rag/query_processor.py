@@ -2,7 +2,7 @@ import logging
 import re
 from collections import OrderedDict
 from datetime import datetime, timedelta
-from typing import Dict, Any, Optional
+from typing import Dict, Any, List, Optional, Union
 
 from dateutil.relativedelta import relativedelta
 from pydantic import BaseModel, Field, field_validator
@@ -11,14 +11,15 @@ logger = logging.getLogger(__name__)
 
 
 class QueryFilters(BaseModel):
-    country: Optional[str] = Field(default=None, description="Canonical ReliefWeb country name")
+    country: Optional[Union[str, List[str]]] = Field(
+        default=None, description="Canonical ReliefWeb country name; a list when several are named")
     theme: Optional[str] = Field(default=None, description="ReliefWeb theme name")
     doctype: Optional[str] = Field(default=None, description="Document type: report, disaster, or country")
     date_from: Optional[str] = Field(default=None, description="ISO date string for lower bound")
     source: Optional[str] = Field(default=None, description="Source organization name")
     format: Optional[str] = Field(default=None, description="Document format")
 
-    @field_validator("country", "theme", "doctype", "date_from", "source", "format", mode="before")
+    @field_validator("theme", "doctype", "date_from", "source", "format", mode="before")
     @classmethod
     def _coerce_list_to_str(cls, v):
         # Gemini (json_mode) sometimes returns these as single-element lists
@@ -26,6 +27,15 @@ class QueryFilters(BaseModel):
         # so structured parsing succeeds instead of failing into the fallback.
         if isinstance(v, list):
             return v[0] if v else None
+        return v
+
+    @field_validator("country", mode="before")
+    @classmethod
+    def _country_list(cls, v):
+        # Several countries come back as a list; one as a plain string.
+        if isinstance(v, list):
+            v = [c for c in v if isinstance(c, str) and c.strip()]
+            return v if len(v) > 1 else (v[0] if v else None)
         return v
 
 
@@ -69,6 +79,26 @@ _COUNTRY_KEYS_LONGEST_FIRST = sorted(_COUNTRY_MAP.items(), key=lambda kv: len(kv
 _CANONICAL_THEMES = set(_THEME_MAP.values())
 
 
+# A query naming several countries searches each separately (api/routes/chat.py);
+# more than this many is a regional question, not a comparison.
+MAX_COUNTRIES = 4
+
+
+def country_list(value) -> List[str]:
+    """The country filter as a list: absent -> [], one name -> [name]."""
+    if not value:
+        return []
+    return [value] if isinstance(value, str) else list(value)
+
+
+def _country_filter(names: List[str]):
+    """Distinct names in order, at most MAX_COUNTRIES: None, one name, or a list."""
+    unique = list(dict.fromkeys(names))[:MAX_COUNTRIES]
+    if not unique:
+        return None
+    return unique[0] if len(unique) == 1 else unique
+
+
 def _as_known_country(value: str) -> Optional[str]:
     """Return the canonical country name if `value` is a known country, else None.
 
@@ -93,6 +123,9 @@ _FILTER_RULES = """Rules:
   afganistan/Afghanistan -> Afghanistan, ukraine/Ukrayna/Ukraine -> Ukraine,
   yemen/Yemen -> Yemen, sudan/Sudan -> Sudan, iran/Iran/Iranda/Irandaki -> Iran,
   güney sudan/South Sudan -> South Sudan (a different country from Sudan).
+- When the query names more than one country, set country to a JSON list of all of them in the
+  order mentioned (e.g. "Sudan ve Çad" -> ["Sudan", "Chad"]; "between Afghanistan and Pakistan"
+  -> ["Afghanistan", "Pakistan"]). One country is a plain string.
 - Map SPECIFIC sector keywords to themes. "insani yardım / insani yardim" means "humanitarian aid"
   in general — do NOT assign it to any theme. "gelişmeler/gelismeler", "durum", "kriz", "rapor"
   are also general words — do NOT map them to themes either.
@@ -172,12 +205,10 @@ def _get_llm_extractor():
 def _normalize_llm_filters(result: QueryFilters) -> Dict[str, Any]:
     filters: Dict[str, Any] = {}
     if result.country:
-        country_lower = result.country.lower()
-        if country_lower in _COUNTRY_MAP:
-            filters["country"] = _COUNTRY_MAP[country_lower]
-        else:
-            # Accept canonical name or pass through for LLM output
-            filters["country"] = result.country
+        # Canonical name for a known alias, else the LLM's name as given.
+        country = _country_filter([_COUNTRY_MAP.get(c.lower(), c) for c in country_list(result.country)])
+        if country:
+            filters["country"] = country
     if result.theme:
         theme_lower = result.theme.lower()
         if theme_lower in _THEME_MAP:
@@ -274,10 +305,15 @@ def _extract_filters_rule_based(query: str) -> Dict[str, Any]:
     query_lower = _turkish_lower(query)
     filters: Dict[str, Any] = {}
 
+    countries, rest = [], query_lower
     for key, val in _COUNTRY_KEYS_LONGEST_FIRST:
-        if _match_word(key, query_lower):
-            filters["country"] = val
-            break
+        if _match_word(key, rest):
+            countries.append(val)
+            # Remove the match so "south sudan" does not also count as "sudan".
+            rest = re.sub(r"\b" + re.escape(key), " ", rest)
+    country = _country_filter(countries)
+    if country:
+        filters["country"] = country
     for key, val in _THEME_MAP.items():
         if _match_word(key, query_lower):
             filters["theme"] = val

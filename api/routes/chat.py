@@ -1,4 +1,5 @@
 import asyncio
+import itertools
 import json
 import logging
 import re
@@ -13,7 +14,9 @@ from langchain_core.messages import HumanMessage, AIMessage
 from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 
 from config import get_settings
-from rag.query_processor import extract_filters, analyze_query, plan_retrieval, should_boost_recency
+from rag.query_processor import (
+    extract_filters, analyze_query, plan_retrieval, should_boost_recency, country_list,
+)
 from rag.retriever import (
     build_retriever, rerank_by_recency, apply_date_filter,
     corpus_countries, dedupe_by_document, rerank_by_relevance,
@@ -53,8 +56,7 @@ def _is_greeting(text: str) -> bool:
 def _no_docs_message(filters: dict) -> str:
     """Return a clear message when the retriever finds nothing."""
     parts = []
-    if filters.get("country"):
-        parts.append(f"**{filters['country']}**")
+    parts += [f"**{country}**" for country in country_list(filters.get("country"))]
     if filters.get("theme"):
         parts.append(f"**{filters['theme']}**")
     if filters.get("date"):
@@ -102,14 +104,19 @@ def _drop_unknown_country(filters: dict) -> dict:
     nothing and the user would get "no documents found", while an unfiltered
     search still finds the country by text. Kept as-is when the corpus countries
     cannot be read."""
-    country = filters.get("country")
-    if not country:
+    names = country_list(filters.get("country"))
+    known = corpus_countries() if names else None
+    if known is None:
         return filters
-    known = corpus_countries()
-    if known is None or country.lower() in known:
+    kept = [name for name in names if name.lower() in known]
+    if len(kept) == len(names):
         return filters
-    logger.warning("Country filter %r is not in the corpus; searching without it", country)
-    return {key: value for key, value in filters.items() if key != "country"}
+    logger.warning("Country filter %r is not in the corpus; searching without it",
+                   [name for name in names if name not in kept])
+    rest = {key: value for key, value in filters.items() if key != "country"}
+    if kept:
+        rest["country"] = kept[0] if len(kept) == 1 else kept
+    return rest
 
 
 def _plan_retrieval(session_id: str, message: str) -> tuple:
@@ -222,6 +229,8 @@ async def _retrieve_docs(query: str, filters: dict):
     reports surface into the final top-k; date-scoped / historical queries keep
     the relevance-first ordering.
     """
+    if isinstance(filters.get("country"), list):
+        return await _retrieve_docs_per_country(query, filters, filters["country"])
     settings = get_settings()
     candidate_k = settings.TOP_K_RETRIEVAL * settings.RERANK_CANDIDATE_MULTIPLIER
     retriever = build_retriever(filter=filters if filters else None, k=candidate_k,
@@ -238,6 +247,47 @@ async def _retrieve_docs(query: str, filters: dict):
         docs = await anyio.to_thread.run_sync(rerank_by_relevance, query, docs, settings.TOP_K_RETRIEVAL)
         docs = rerank_by_recency(docs)
     return docs
+
+
+_DOCS_PER_COUNTRY = 3
+
+
+async def _retrieve_docs_per_country(query: str, filters: dict, countries: list) -> list:
+    """Several named countries ("Sudan ve Çad"): one filtered search per country, so
+    the country whose documents best match the query cannot crowd out the others. The
+    union is reranked in one call; each country's documents then get the single-country
+    ordering and the final list takes them in turn, _DOCS_PER_COUNTRY per country
+    (at least TOP_K_RETRIEVAL in all)."""
+    settings = get_settings()
+    candidate_k = settings.TOP_K_RETRIEVAL * settings.RERANK_CANDIDATE_MULTIPLIER
+    top_k = max(settings.TOP_K_RETRIEVAL, _DOCS_PER_COUNTRY * len(countries))
+    found: dict = {}
+
+    async def search_one(country: str) -> None:
+        retriever = build_retriever(filter={**filters, "country": country}, k=candidate_k,
+                                    lambda_mult=settings.CHAT_MMR_LAMBDA)
+        docs = apply_date_filter(await retriever.ainvoke(query), filters.get("date"))
+        found[country] = dedupe_by_document(docs)
+
+    async with anyio.create_task_group() as tg:
+        for country in countries:
+            tg.start_soon(search_one, country)
+
+    owner = {d.metadata.get("doc_id"): c for c in countries for d in found[c]}
+    pool = [d for c in countries for d in found[c]]
+    pool = await anyio.to_thread.run_sync(rerank_by_relevance, query, pool, len(pool))
+    boost = should_boost_recency(query, filters)
+    ranked = []
+    for country in countries:
+        mine = [d for d in pool if owner.get(d.metadata.get("doc_id")) == country]
+        if boost:
+            pool_n = max(settings.RECENCY_RERANK_POOL, settings.TOP_K_RETRIEVAL)
+            mine = rerank_by_recency(mine[:pool_n], decay_factor=settings.RECENCY_BOOST_FACTOR)
+        else:
+            mine = rerank_by_recency(mine[:top_k])
+        ranked.append(mine)
+    interleaved = [d for row in itertools.zip_longest(*ranked) for d in row if d is not None]
+    return interleaved[:top_k]
 
 
 class ChatMessage(BaseModel):
