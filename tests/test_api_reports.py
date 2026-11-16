@@ -409,6 +409,18 @@ class TestReportEndpoints:
             assert len(countries) > 100
             assert "Sudan" in countries and "Yemen" in countries
 
+    def test_stream_error_logs_traceback(self, caplog):
+        # The client only sees a generic error event, so the log must keep the stack.
+        with patch("api.routes.reports.retrieve_for_report",
+                   new=AsyncMock(side_effect=RuntimeError("retrieval exploded"))), \
+             caplog.at_level("ERROR", logger="api.routes.reports"):
+            _client().post("/reports/stream", json={
+                "country": "Sudan", "date_from": "2026-01-01", "date_to": "2026-06-30", "language": "en",
+            })
+
+        records = [r for r in caplog.records if "Report stream error" in r.getMessage()]
+        assert records and records[0].exc_info is not None
+
     def test_stream_then_persist_and_list(self):
         async def mock_astream(*args, **kwargs):
             yield "## Summary\n"

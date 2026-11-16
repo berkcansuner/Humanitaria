@@ -303,6 +303,23 @@ class TestSSEEventBody:
             assert "done" in event_types
             assert event_types[-1] == "done"
 
+    def test_stream_error_logs_traceback(self, caplog):
+        # The SSE error event hides the cause from the client, so the log is the
+        # only place the stack survives: it must carry exc_info, not just str(e).
+        with patch("api.routes.chat.build_retriever") as mock_retriever_builder, \
+             patch("api.routes.chat.extract_filters", return_value={}):
+            mock_retriever = MagicMock()
+            mock_retriever.ainvoke = AsyncMock(side_effect=RuntimeError("retriever offline"))
+            mock_retriever_builder.return_value = mock_retriever
+
+            from api.main import app
+            from fastapi.testclient import TestClient
+            with caplog.at_level("ERROR", logger="api.routes.chat"):
+                TestClient(app).post("/chat/stream", json={"message": "test error path"})
+
+        records = [r for r in caplog.records if "Streaming error" in r.getMessage()]
+        assert records and records[0].exc_info is not None
+
     def test_stream_busy_503_emits_friendly_busy_message(self):
         """A persistent upstream 503 ('high demand') after retries surfaces the
         clear busy message (not the generic error) and still ends with done."""

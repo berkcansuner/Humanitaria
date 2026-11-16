@@ -426,7 +426,7 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
             yield ServerSentEvent(event="done", data="{}")
 
         except Exception as e:
-            logger.error("Report stream error: %s", e)
+            logger.exception("Report stream error: %s", e)
             friendly = _BUSY_MESSAGE if _is_high_demand(e) else _GENERIC_ERROR_MESSAGE
             yield ServerSentEvent(
                 event="error",

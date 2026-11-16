@@ -434,7 +434,7 @@ async def chat_stream(request: Request, req: ChatRequest, user: dict = Depends(g
             yield ServerSentEvent(event="done", data="{}")
 
         except Exception as e:
-            logger.error("Streaming error: %s", e)
+            logger.exception("Streaming error: %s", e)
             if _is_quota_exhausted(e):
                 friendly = _QUOTA_MESSAGE
             elif _is_high_demand(e):
