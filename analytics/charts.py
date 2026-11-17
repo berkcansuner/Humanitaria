@@ -7,6 +7,7 @@ Temiz stil: başlık, eksen etiketleri, ızgara.
 import base64
 import io
 import logging
+import textwrap
 from datetime import date
 
 import matplotlib
@@ -103,9 +104,10 @@ def _date_axis(axis, language: str) -> None:
 
 
 def _to_datauri(fig, source: str = "", theme: dict | None = None) -> str:
-    """PNG data URI. *source* is printed under the chart, below the axis labels."""
+    """PNG data URI. *source* is printed under the chart, below the axis labels, wrapped
+    so a long credit line (IOM DTM's, or two of them) does not widen the image."""
     if source:
-        fig.text(0, 0, source, ha="left", va="top", fontsize=8,
+        fig.text(0, 0, textwrap.fill(source, 130), ha="left", va="top", fontsize=8,
                  color=(theme or _THEMES["light"])["muted"])
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=_DPI, bbox_inches="tight")

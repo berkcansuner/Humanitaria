@@ -32,6 +32,9 @@ class Indicator:
     unit: str = ""           # unit of the trend slope ("" = the indicator's own count)
     label_en: str = ""       # English name; `label` is the Turkish one
     source: str = ""         # who publishes the data HDX HAPI serves (printed under charts)
+    # The publisher's required credit line, when it has one; {month_year} is the month of
+    # the latest data shown. Printed instead of `source`.
+    credit: str = ""
 
     def name(self, language: str = "tr") -> str:
         """The indicator's name in the report language (Turkish unless "en")."""
@@ -63,7 +66,11 @@ INDICATORS: list[Indicator] = [
     Indicator("idps", "Yerinden edilmiş kişi (IDP)",
               "affected-people/idps", "population", "sum", 1,
               {"gender": "all", "age_range": "all"},
-              label_en="Internally displaced people (IDPs)", source="IOM DTM"),
+              label_en="Internally displaced people (IDPs)", source="IOM DTM",
+              # IOM's terms (https://dtm.iom.int/terms-and-conditions) require this credit
+              # line and the source URL wherever DTM data is shown.
+              credit="International Organization for Migration (IOM), {month_year}, "
+                     "Displacement Tracking Matrix (DTM), https://dtm.iom.int"),
     Indicator("funding", "İnsani fonlama (USD)",
               "coordination-context/funding", "funding_usd", "sum", 0, {},
               complete_periods_only=True,

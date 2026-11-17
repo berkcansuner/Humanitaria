@@ -387,7 +387,7 @@ def test_every_indicator_has_an_english_name():
 def test_source_line_names_the_publishers_then_hdx_hapi():
     from analytics.technical_report import _source_line
     assert _source_line(["IOM DTM"], "en") == "Source: IOM DTM · HDX HAPI"
-    assert _source_line(["IOM DTM", "OCHA FTS"], "tr") == "Kaynak: IOM DTM, OCHA FTS · HDX HAPI"
+    assert _source_line(["IOM DTM", "OCHA FTS"], "tr") == "Kaynak: IOM DTM; OCHA FTS · HDX HAPI"
     assert _source_line(["UNHCR", "UNHCR"], "en") == "Source: UNHCR · HDX HAPI"
     assert _source_line([""], "en") == "Source: HDX HAPI"
 
@@ -416,3 +416,19 @@ def test_trend_text_does_not_quote_slopes_to_the_cent():
     assert "Sen slope=-931000 per year" in text
     assert "95% CI -1150000 to -603000" in text
     assert ".92" not in text and ".78" not in text
+
+
+def test_dtm_charts_carry_iom_required_credit_line():
+    # IOM's terms require "International Organization for Migration (IOM), [month, year],
+    # Displacement Tracking Matrix (DTM)" plus the source URL wherever DTM data is shown.
+    from analytics.indicators import by_key
+    from analytics.technical_report import _credit, _source_line
+    idps = by_key("idps")
+    en = _source_line([_credit(idps, "2026-09-30T00:00:00", "en")], "en")
+    assert en == ("Source: International Organization for Migration (IOM), September 2026, "
+                  "Displacement Tracking Matrix (DTM), https://dtm.iom.int · HDX HAPI")
+    tr = _credit(idps, "2026-09-30", "tr")
+    assert tr.startswith("International Organization for Migration (IOM), Eylül 2026, ")
+    # Indicators without a required credit keep the short publisher name.
+    assert _credit(by_key("funding"), "2025-01-01", "en") == "OCHA FTS"
+

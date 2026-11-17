@@ -65,7 +65,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
     notes: list[str] = []
     national_by_label: dict[str, tuple[list, list]] = {}   # korelasyon için (periods, values)
     percent_by_label: dict[str, bool] = {}                 # share indicators (IPC %) → '%' ticks
-    source_by_label: dict[str, str] = {}                   # publisher, for the chart's source line
+    source_by_label: dict[str, str] = {}                   # credit, for the chart's source line
     # Dönem: seçilmediyse son N yıl; bitiş en geç bugün (HAPI gelecek yılların plan
     # kayıtlarını da döndürür — son nokta olarak sahte bir düşüş üretiyordu).
     today = date.today()
@@ -108,8 +108,8 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
             national_by_label[name] = (periods, values)
             percent = ind.scale == 100
             percent_by_label[name] = percent
-            source_by_label[name] = ind.source
-            source = _source_line([ind.source], language)
+            source_by_label[name] = _credit(ind, periods[-1], language)
+            source = _source_line([source_by_label[name]], language)
 
             # Trend (gerçek zaman ekseni: ilk dönemden beri yıl → eğim yıl başına)
             times = _years_since_first(periods)
@@ -194,11 +194,34 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                     notes=notes)
 
 
+_MONTH_NAMES = {
+    "en": ["January", "February", "March", "April", "May", "June", "July", "August",
+           "September", "October", "November", "December"],
+    "tr": ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos",
+           "Eylül", "Ekim", "Kasım", "Aralık"],
+}
+
+
+def _credit(ind, last_period, language: str) -> str:
+    """How a chart names the indicator's publisher: its required credit line (IOM DTM),
+    dated to the month of the latest data shown, or else the short publisher name."""
+    if not ind.credit:
+        return ind.source
+    months = _MONTH_NAMES.get(language, _MONTH_NAMES["en"])
+    try:
+        day = date.fromisoformat(str(last_period)[:10])
+        month_year = f"{months[day.month - 1]} {day.year}"
+    except ValueError:
+        month_year = str(last_period)
+    return ind.credit.format(month_year=month_year)
+
+
 def _source_line(publishers: list[str], language: str) -> str:
-    """'Source: IOM DTM · HDX HAPI' — the publishers, then the API we read them from."""
-    names = list(dict.fromkeys(p for p in publishers if p)) + ["HDX HAPI"]
+    """'Source: IOM DTM · HDX HAPI' — the publishers (or their required credit lines,
+    which contain commas, hence the semicolons), then the API we read them from."""
+    names = list(dict.fromkeys(p for p in publishers if p))
     prefix = "Kaynak" if language == "tr" else "Source"
-    return f"{prefix}: {', '.join(names[:-1])} · {names[-1]}" if len(names) > 1         else f"{prefix}: HDX HAPI"
+    return f"{prefix}: {'; '.join(names)} · HDX HAPI" if names else f"{prefix}: HDX HAPI"
 
 
 def _axis_unit(ind, language: str) -> str:
