@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { renumberCitations } from './renumberCitations.js'
+import { renumberCitations, numberByFirstAppearance } from './renumberCitations.js'
 
 describe('renumberCitations', () => {
   it('renumbers a lone non-first citation to [1]', () => {
@@ -97,5 +97,31 @@ describe('renumberCitations', () => {
     const result = renumberCitations(content, sources)
     expect(result.content).toBe('Both sources [1][2] agree.')
     expect(result.sources.map((s) => s.index)).toEqual([1, 2])
+  })
+})
+
+describe('numberByFirstAppearance', () => {
+  it('numbers markers 1, 2, 3 in order of first appearance', () => {
+    expect(numberByFirstAppearance('Rise [15]. Fall [16]. Again [15].')).toBe(
+      'Rise [1]. Fall [2]. Again [1].',
+    )
+  })
+
+  it('expands groups and leaves an unfinished marker alone', () => {
+    expect(numberByFirstAppearance('A [7, 3]. B [3]. C [1')).toBe('A [1][2]. B [2]. C [1')
+  })
+
+  it('matches renumberCitations once every cited source is valid', () => {
+    const content = 'X [15]. Y [4]. Z [15].'
+    const sources = [
+      { index: 4, title: 'Four', url: 'https://example.org/4' },
+      { index: 15, title: 'Fifteen', url: 'https://example.org/15' },
+    ]
+    expect(numberByFirstAppearance(content)).toBe(renumberCitations(content, sources).content)
+  })
+
+  it('passes empty text through', () => {
+    expect(numberByFirstAppearance('')).toBe('')
+    expect(numberByFirstAppearance(null)).toBe(null)
   })
 })

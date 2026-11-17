@@ -361,7 +361,7 @@
             v-html="
               injectComparisonNote(
                 injectSectionImages(
-                  renderMarkdown(current.content, current.sources),
+                  renderMarkdown(shown.content, shown.sources),
                   current.section_images,
                 ),
                 comparisonNote({
@@ -390,7 +390,7 @@
               Try again
             </button>
           </div>
-          <SourceList v-if="current.sources" :sources="current.sources" />
+          <SourceList v-if="shown.sources" :sources="shown.sources" />
         </div>
         <!-- Nothing open: Chat's empty pattern (left-aligned promise, coverage line,
              hairline rows), with the user's series as the starting points. -->
@@ -466,6 +466,7 @@ import UndoToast from '../components/UndoToast.vue'
 import CitePreview from '../components/CitePreview.vue'
 import { useUndoableDelete } from '../utils/undoableDelete.js'
 import { renderMarkdown } from '../utils/renderMarkdown.js'
+import { renumberCitations, numberByFirstAppearance } from '../utils/renumberCitations.js'
 import { injectSectionImages } from '../utils/reportImages.js'
 import { comparisonNote, injectComparisonNote } from '../utils/comparisonNote.js'
 import { revealSource, returnToCite } from '../utils/sources.js'
@@ -504,6 +505,17 @@ const form = ref({
 })
 
 const current = ref(null) // a saved report as toCurrent() shapes it, or the one streaming
+
+// A report still streaming (not saved yet) carries the model's retrieval numbers
+// ([15], [16]); the server renumbers them by first appearance when it saves. Show
+// that numbering while it streams, so the citations don't change at the end.
+const shown = computed(() => {
+  const c = current.value
+  if (!c) return { content: '', sources: null }
+  if (c.id) return { content: c.content, sources: c.sources }
+  if (c.sources) return renumberCitations(c.content, c.sources)
+  return { content: numberByFirstAppearance(c.content), sources: null }
+})
 
 // The viewer's copy of a saved report. The series fields (type, country, sector,
 // language, period, previous_report_id) drive "Run next period" and "Compared with".

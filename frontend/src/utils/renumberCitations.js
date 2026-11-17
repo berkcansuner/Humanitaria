@@ -54,3 +54,22 @@ export function renumberCitations(content, sources) {
   const newSources = ordered.map((s) => ({ ...s, index: remap.get(s.index) }))
   return { content: newContent, sources: newSources }
 }
+
+/**
+ * Number the [n] markers of a still-streaming text 1, 2, 3… in order of first
+ * appearance, before its sources are known. The model writes retrieval positions
+ * ([15], [16]); renumberCitations (and the server, on save) reorders by first
+ * appearance too, so the numbers shown while streaming are the ones that stay.
+ *
+ * @param {string} content - the text streamed so far
+ * @returns {string}
+ */
+export function numberByFirstAppearance(content) {
+  if (!content) return content
+  const text = expandCitationGroups(content)
+  const order = new Map()
+  return text.replace(/\[(\d+)\]/g, (_full, n) => {
+    if (!order.has(n)) order.set(n, order.size + 1)
+    return `[${order.get(n)}]`
+  })
+}
