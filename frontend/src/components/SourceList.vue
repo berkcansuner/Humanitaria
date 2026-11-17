@@ -155,7 +155,7 @@ function metaLine(src) {
 
 .ledger-table th {
   text-align: left;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-weight: 500;
   font-size: 10px;
   letter-spacing: 0.1em;
@@ -182,7 +182,7 @@ function metaLine(src) {
 .col-date {
   width: 1%;
   white-space: nowrap;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
 }
 
 .col-source {

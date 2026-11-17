@@ -25,7 +25,7 @@ import HelpingHandLogo from './HelpingHandLogo.vue'
 import UserMenu from './UserMenu.vue'
 
 defineProps({
-  // Mono line under the brand naming the screen ("M&E Reports", "Settings").
+  // Small line under the brand naming the screen ("M&E Reports", "Settings").
   context: { type: String, default: '' },
 })
 </script>
@@ -68,7 +68,7 @@ defineProps({
 }
 
 .brand-sub {
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 10px;
   letter-spacing: 0.06em;
   text-transform: uppercase;

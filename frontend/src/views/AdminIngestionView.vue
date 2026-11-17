@@ -442,7 +442,7 @@ onUnmounted(() => {
 }
 
 .grid dd {
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: var(--text-base);
   font-weight: 500;
   color: var(--color-text);
@@ -601,7 +601,7 @@ onUnmounted(() => {
 }
 
 .run-summary th {
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-weight: 500;
   font-size: 10px;
   letter-spacing: 0.1em;
@@ -663,7 +663,7 @@ onUnmounted(() => {
 }
 
 .doc-table th {
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-weight: 500;
   font-size: 10px;
   letter-spacing: 0.1em;
@@ -672,7 +672,7 @@ onUnmounted(() => {
 }
 
 .doc-date {
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 12.5px;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;

@@ -177,7 +177,7 @@ onBeforeUnmount(() => {
 }
 
 .cp-meta {
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 11.5px;
   font-variant-numeric: tabular-nums;
   color: var(--color-text-secondary);

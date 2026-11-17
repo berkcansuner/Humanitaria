@@ -708,7 +708,7 @@ watch(
 }
 
 .message-content :deep(code) {
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 0.9em;
   background-color: var(--color-code-bg);
   padding: 0.15em 0.35em;

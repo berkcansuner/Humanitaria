@@ -197,7 +197,7 @@ onUnmounted(() => clearTimeout(searchTimer))
 .users-table th {
   text-align: left;
   padding: var(--space-2);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-weight: 500;
   font-size: 10px;
   letter-spacing: 0.1em;
@@ -217,7 +217,7 @@ onUnmounted(() => clearTimeout(searchTimer))
 }
 
 .cell-date {
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 12.5px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;

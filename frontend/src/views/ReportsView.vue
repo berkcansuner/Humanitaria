@@ -548,7 +548,7 @@ function setDefaultDates() {
 }
 
 // Titles carry "[Type —] Country · Sector · period"; the country leads, the rest
-// moves to a mono meta line (type as text, not a pill).
+// moves to a small meta line (type as text, not a pill).
 function typeLabel(type) {
   return (REPORT_TYPES.find((t) => t.value === type) || REPORT_TYPES[0]).label
 }
@@ -1320,7 +1320,7 @@ function onCiteClick(e) {
   margin: 0;
 }
 .continues-period {
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -1404,7 +1404,7 @@ function onCiteClick(e) {
   white-space: nowrap;
 }
 .saved-meta {
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   color: var(--color-text-secondary);
@@ -1503,7 +1503,7 @@ function onCiteClick(e) {
   padding-block: 6px;
 }
 .saved-period-name {
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
@@ -1556,7 +1556,7 @@ function onCiteClick(e) {
   flex-wrap: wrap;
   column-gap: 1ch;
   margin: 6px 0 0;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   color: var(--color-text-secondary);
@@ -1607,7 +1607,7 @@ function onCiteClick(e) {
 
 .report-compared {
   margin: 4px 0 0;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   color: var(--color-text-secondary);
@@ -1809,7 +1809,7 @@ function onCiteClick(e) {
   color: var(--color-text);
 }
 .empty-row-meta {
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   color: var(--color-text-secondary);
