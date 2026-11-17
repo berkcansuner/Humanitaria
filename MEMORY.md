@@ -42,7 +42,7 @@ South Sudan kaynakları getiriyor. Test sohbetleri silindi.
   raporlar + "What changed" kontrolü `gemini-3.8-flash` (`REPORT_LLM_MODEL`, medium, `REPORT_LLM_TIMEOUT=240`).
   Fiyat ($/1M girdi/çıktı): 3.5 FL 0,30/2,50; 3.8 Flash 0,75/3,75 → **2027-01-01'den 1,50/7,50**.
   Rapor ~110 sn + kontrol ~27 sn; sonraki dönem raporu ≲2,5 TL, tek seferlik ≲1,5 TL.
-- **Gece ingest:** GitHub Actions `nightly-ingest.yml`, 03:00 UTC + elle çalıştırma → `/health` ile uyandırır → token'lı
+- **Gece ingest:** GitHub Actions `nightly-ingest.yml`, 03:17 + 14:47 UTC + elle çalıştırma → `/health` ile uyandırır → token'lı
   `POST /admin/ingest/cron` (202 arka plan). Repo sırrı `INGEST_TRIGGER_TOKEN` = Render'daki değer. Cloudflare Worker
   `humanitaria-daily-cron` cron'suz duruyor (Render, CF Worker IP'lerine 429 veriyordu); geri almak için
   `cloudflare-cron/wrangler.toml`'a cron satırını geri koy. Retention: 365 gün + ülke başına 200 belge.
@@ -86,7 +86,7 @@ South Sudan kaynakları getiriyor. Test sohbetleri silindi.
   önbellekli (Pinecone aylık rerank kotası; 2026-11-16 oturumu ~270 istek harcadı).
 
 ## Açık işler (öncelik sırasıyla)
-1. **17 Kasım 03:00 UTC** zamanlanmış gece çalışmasını doğrula (ilk zamanlanmış koşu; elle koşu başarılıydı).
+1. **Gece ingest zamanlaması:** 17 Kasım 03:00 UTC'deki ilk zamanlanmış koşu HİÇ BAŞLAMADI (Actions'ta kayıt yok, watermark 16 Kasım 07:04'te kaldı); GitHub saat başı yükte planlı koşuları düşürebiliyor. Cron 03:17 + 14:47 UTC'ye alındı (push sonrası geçerli). Doğrula: Actions API'de `event=schedule` koşusu + `ingest_state.updated_at`. Kaçan günler watermark'tan devam ettiği için kayıp yok.
 2. **Dalga 3 kalanı:** çoklu ülke yakalama CANLIDA (`aca6e47`; 2026-11-17 canlı "Sudan ve Çad" sohbeti: 3 Sudan + 3 Çad kaynağı, 12 rakamın hepsi atıflı kaynakta, sohbet silindi; "mülteci" sorusuna LLM Protection teması koyabiliyor). **Çeviri tekrarı düzeltildi — CANLIDA (`86729d4`; 2026-11-17 canlı "Sudan ve Çad" sohbeti: 6 belge / 5 atıflı, UNHCR bülteni tek kopya (İspanyolca, reranker'ın en iyisi), 7 rakamın hepsi atıflı kaynakta, sohbet silindi; not: arayüz [n]'leri ilk geçiş sırasına göre yeniden numaralandırıyor, doğrulamada kayıtlı yanıttaki ham [n] kullanılmalı):** aynı kurum + aynı gün + farklı dil artık yalnız başlık embedding kosinüsü ≥0,8 ise çeviri sayılıyor (12 çiftte çeviriler 0,85-0,96, ayrı belgeler ≤0,68; eski kural WHO kolera raporunu Ebola güncellemesiyle birleştirip düşürüyordu). Sohbet bu birleştirmeyi rerank'tan SONRA yapıyor ve reranker'ın en yükseğe koyduğu kopyayı tutuyor (İngilizce kopya düşük skorlu olunca bülten bağlamdan çıkıyordu). 16 soruda tekrarlanan yer 3 → 0, farklı belgelerin alaka toplamı 31,54 → 31,88; rapor bağlamları değişmedi (12/12 aynı): `country` filtresi liste olabiliyor (≤4), chat her ülkeyi ayrı arıyor, birleşimi tek rerank'le sıralayıp ülkeler arasında sırayla dolduruyor (ülke başına 3, top-k ≥5). Ölçüm (9 çok + 2 tek ülkeli soru, canlı LLM): tüm ülkeler filtrede 0/9 → 9/9, bağlamda 0/9 → 9/9; tek ülkeliler aynı. Ölçülüp REDDEDİLDİ: rerank skor
    eşiği (düşük skorda ilgili/ilgisiz ayrışmıyor), trend sorularında recency'yi kapatma (etkisiz: yalnız top-5 içi sıra),
    `RECENCY_BOOST_FACTOR` 0,6 → 0,3 (MRR +0,045 ama medyan yaş 38 → 46 gün; kullanıcı 0,6'da tuttu).

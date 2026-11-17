@@ -12,8 +12,13 @@ name: Nightly ingest
 # and GitHub masks it in logs.
 
 on:
+  # GitHub delays scheduled runs under load and may drop them, worst at the top of the
+  # hour: the first 03:00 UTC run (2026-11-17) never started. Off-peak minutes plus a
+  # second daily slot; a repeat run is harmless (incremental from the DB watermark,
+  # 409 if one is still going).
   schedule:
-    - cron: "0 3 * * *" # 03:00 UTC; GitHub may start scheduled runs some minutes late
+    - cron: "17 3 * * *"
+    - cron: "47 14 * * *"
   workflow_dispatch:
 
 permissions: {}
