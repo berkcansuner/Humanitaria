@@ -591,11 +591,13 @@ async function copyReport() {
 const titleParts = computed(() => splitReportTitle(current.value && current.value.title))
 // Type · sector · period, each kept whole: the line only wraps between parts,
 // and a part carries its leading "·" so no separator is left at a line end.
-// Under the report title: its type and period only.
+// Under the report title: its type, its sector unless it covers all sectors, and
+// its period.
 const metaParts = computed(() => {
   if (!current.value || !current.value.title) return []
-  const { period } = titleParts.value
-  return [typeLabel(current.value.report_type), period].filter(Boolean)
+  const { sector, period } = titleParts.value
+  const shownSector = sector === 'All sectors' ? '' : sector
+  return [typeLabel(current.value.report_type), shownSector, period].filter(Boolean)
 })
 
 onMounted(async () => {
