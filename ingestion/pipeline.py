@@ -45,7 +45,13 @@ def run_pipeline(
     date_from: Optional[str] = None,
     country: Optional[str] = None,
     oldest_first: bool = False,
+    skip_existing: bool = False,
 ) -> Dict[str, IngestionStats]:
+    """*skip_existing*: leave documents that are already indexed untouched (no
+    re-embedding, no rewrite). For a backfill after raising the per-country cap:
+    rewriting every existing chunk would cost a second embedding pass and, in
+    Postgres, leave the old rows as dead space until vacuum — on the 500 MB
+    Supabase plan that alone could hit the limit."""
     if endpoints is None:
         endpoints = ["reports"]
     settings = get_settings()
@@ -59,6 +65,9 @@ def run_pipeline(
 
     if force:
         store.clear_collection()
+    known: set = store.known_doc_ids() if skip_existing and not force else set()
+    if known:
+        logger.info("skip_existing: %d documents already indexed will be left as they are", len(known))
 
     all_stats: Dict[str, IngestionStats] = {}
 
@@ -92,6 +101,9 @@ def run_pipeline(
                 try:
                     doc = parse(raw, endpoint)
                     if not doc or not doc.get("body"):
+                        stats.skipped += 1
+                        continue
+                    if doc.get("id") in known:
                         stats.skipped += 1
                         continue
 

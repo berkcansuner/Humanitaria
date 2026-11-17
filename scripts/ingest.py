@@ -58,6 +58,9 @@ def main():
     parser = argparse.ArgumentParser(description="Ingest ReliefWeb content into Postgres (pgvector)")
     parser.add_argument("--limit", type=int, default=1000, help="Max documents per endpoint")
     parser.add_argument("--force", action="store_true", help="Force re-ingestion (clear collection first)")
+    parser.add_argument("--skip-existing", action="store_true",
+                        help="Leave already-indexed documents untouched (no re-embedding); "
+                             "use for a backfill after raising RETENTION_PER_COUNTRY_CAP")
     parser.add_argument("--date-from", type=str, default=None, help="Only ingest documents created on or after this date (YYYY-MM-DD)")
     parser.add_argument(
         "--endpoints",
@@ -101,11 +104,13 @@ def main():
         all_stats = {}
         for code in args.country:
             stats = run_pipeline(limit=args.limit, force=False, endpoints=args.endpoints,
-                                 date_from=date_from, country=code)
+                                 date_from=date_from, country=code,
+                                 skip_existing=args.skip_existing)
             for ep, st in stats.items():
                 all_stats[f"{ep}:{code}"] = st
     else:
-        all_stats = run_pipeline(limit=args.limit, force=args.force, endpoints=args.endpoints, date_from=date_from)
+        all_stats = run_pipeline(limit=args.limit, force=args.force, endpoints=args.endpoints,
+                                 date_from=date_from, skip_existing=args.skip_existing)
     _print_summary(all_stats)
     total_failed = sum(s.failed for s in all_stats.values())
     total_succeeded = sum(s.succeeded for s in all_stats.values())

@@ -372,3 +372,41 @@ class TestPipelineErrorIsolation:
             assert stats["reports"].total == 3
             # First call with batch_limit=min(500, 10)=10, second with batch_limit=min(500, 10-3)=7
             assert mock_client.fetch.call_count == 2
+
+
+class TestSkipExisting:
+    def _run(self, skip_existing):
+        with patch("ingestion.pipeline.ReliefWebClient") as MockClient, \
+             patch("ingestion.pipeline.parse") as mock_parse, \
+             patch("ingestion.pipeline.chunk_document") as mock_chunk, \
+             patch("ingestion.pipeline.get_embeddings") as mock_get_emb, \
+             patch("ingestion.pipeline.get_store") as mock_get_store:
+            mock_client = MagicMock()
+            mock_client.fetch.return_value = [{"id": "1"}, {"id": "2"}]
+            MockClient.return_value = mock_client
+            old = {"id": "old", "url": "u1", "title": "t1", "body": "b1", "doctype": "report"}
+            new = {"id": "new", "url": "u2", "title": "t2", "body": "b2", "doctype": "report"}
+            mock_parse.side_effect = [old, new]
+            mock_chunk.side_effect = lambda doc: [{"id": f"{doc['id']}_0", "content": doc["body"],
+                                                   "metadata": {"doc_id": doc["id"]}}]
+            mock_emb = MagicMock()
+            mock_emb.embed_documents.side_effect = lambda texts: [[0.1] * 4 for _ in texts]
+            mock_get_emb.return_value = mock_emb
+            mock_store = MagicMock()
+            mock_store.known_doc_ids.return_value = {"old"}
+            mock_get_store.return_value = mock_store
+            stats = run_pipeline(limit=2, skip_existing=skip_existing)
+            return stats["reports"], mock_emb, mock_store
+
+    def test_already_indexed_documents_are_not_re_embedded(self):
+        stats, emb, store = self._run(skip_existing=True)
+        assert stats.succeeded == 1 and stats.skipped == 1
+        emb.embed_documents.assert_called_once_with(["b2"])
+        upserted = store.upsert_chunks.call_args[0][0]
+        assert [c["id"] for c in upserted] == ["new_0"]
+
+    def test_default_still_rewrites_everything(self):
+        stats, emb, store = self._run(skip_existing=False)
+        assert stats.succeeded == 2
+        store.known_doc_ids.assert_not_called()
+        emb.embed_documents.assert_called_once_with(["b1", "b2"])

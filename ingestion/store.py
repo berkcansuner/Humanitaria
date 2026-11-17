@@ -72,6 +72,12 @@ class VectorStore:
             conn.execute(text("DELETE FROM documents"))
         logger.info("Cleared the vector index")
 
+    def known_doc_ids(self) -> Set[str]:
+        """doc_ids already indexed (the ``documents`` table), for a backfill that only
+        adds what is missing."""
+        with connect() as conn:
+            return {r[0] for r in conn.execute(text("SELECT doc_id FROM documents"))}
+
     def upsert_chunks(self, chunks: List[Dict[str, Any]], embeddings: List[List[float]]) -> None:
         if not chunks:
             return
