@@ -165,7 +165,7 @@
       <section id="uses" class="section">
         <div class="wrap">
           <div class="section-head">
-            <h2>From the field office to the newsroom.</h2>
+            <h2>For people who have to cite what they write.</h2>
           </div>
           <div class="uses">
             <div class="use">
