@@ -6,6 +6,12 @@ import { auth, refresh, isAuthenticated, isAdmin } from '../utils/authStore.js'
 const routes = [
   { path: '/', name: 'home', component: LandingView },
   {
+    path: '/privacy',
+    name: 'privacy',
+    component: () => import('../views/PrivacyView.vue'),
+    meta: { title: 'Privacy policy' },
+  },
+  {
     path: '/login',
     name: 'login',
     component: () => import('../views/AuthView.vue'),
