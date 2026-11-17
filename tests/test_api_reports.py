@@ -263,7 +263,10 @@ class TestReportService:
                       "World Food Programme", "2026-05-22", _EN_TEXT)
         fr = _src_doc("Le PAM intensifie sa réponse d'urgence contre Ebola dans l'est de la RDC",
                       "World Food Programme", "2026-05-22", _FR_TEXT)
-        out = _collapse_near_duplicates([en, fr])
+        emb = MagicMock()
+        emb.embed_documents.side_effect = lambda titles: [[1.0, 0.05 * i] for i, _ in enumerate(titles)]
+        with patch("rag.report_service.get_embeddings", return_value=emb):
+            out = _collapse_near_duplicates([en, fr])
         assert len(out) == 1
         assert out[0].metadata["title"].startswith("WFP scales up")
 

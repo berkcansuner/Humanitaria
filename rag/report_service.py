@@ -14,10 +14,12 @@ from collections import defaultdict
 from datetime import date
 from typing import List, Optional
 
+import numpy as np
 from langchain_core.documents import Document
 from langdetect import DetectorFactory, detect
 
 from config import get_settings
+from rag.embeddings import get_embeddings
 from rag.retriever import (
     build_retriever, apply_date_filter, dedupe_by_document,
     rerank_by_relevance,
@@ -40,6 +42,13 @@ _DUP_MIN_PREFIX = 25
 # they filter to English sources; francophone crises (DRC/Mali/Niger/CAR…) sit at
 # ~0.43-0.56 English, so they fall below the bar and keep their French-majority set.
 _ENGLISH_DOMINANCE = 0.6
+
+# Same organisation, same day, different language is a translation only when the titles
+# also say the same thing. Measured 2026-11-17 on 12 such pairs from chat candidate pools
+# (gemini-embedding-001 title cosine): translations 0.85-0.96 (one Arabic/Spanish pair
+# 0.72), distinct documents at most 0.68 (a WHO cholera sitrep vs an Ebola update; an IOM
+# press release vs a Pashto DTM brief). A missed translation only leaves a duplicate.
+_TRANSLATION_MIN_TITLE_COS = 0.8
 
 
 def _detect_lang(text: str) -> str:
@@ -82,6 +91,21 @@ def _prefer_english(docs: List[Document]) -> List[Document]:
     return docs
 
 
+def _translations(docs: List[Document], pairs: list) -> list:
+    """The (i, j) *pairs* whose titles are the same title in two languages (title
+    embedding cosine >= _TRANSLATION_MIN_TITLE_COS); none when embedding fails."""
+    if not pairs:
+        return []
+    idx = sorted({i for pair in pairs for i in pair})
+    try:
+        vecs = get_embeddings().embed_documents([docs[i].metadata["title"] for i in idx])
+    except Exception:
+        logger.warning("Title embedding failed; same-day translations are not collapsed", exc_info=True)
+        return []
+    unit = {i: np.asarray(v) / np.linalg.norm(v) for i, v in zip(idx, vecs)}
+    return [(i, j) for i, j in pairs if float(unit[i] @ unit[j]) >= _TRANSLATION_MIN_TITLE_COS]
+
+
 def _norm_title(t: str) -> str:
     """Lowercase a title and collapse every run of non-alphanumerics to a single space."""
     return re.sub(r"[^a-z0-9]+", " ", (t or "").lower()).strip()
@@ -106,13 +130,15 @@ def _collapse_near_duplicates(docs: List[Document]) -> List[Document]:
     """Collapse near-duplicate documents from the SAME organisation to one representative, so the LLM
     never sees — and never double-cites — the same underlying report twice. Within a source, two
     documents are duplicates when EITHER:
-      (A) translation pair — same publication date but different detected content language (e.g. a WFP
-          press release posted in both English and French); or
+      (A) translation pair — same publication date, different detected content language, and titles
+          that mean the same (see _translations; e.g. a WFP press release posted in English and French); or
       (B) republished/companion — one title is a prefix of the other (see _is_prefix_title_dup).
     Distinct same-source reports survive: a monthly market series has different dates AND non-prefix
     titles, so neither rule fires. The kept representative prefers English, then the most recent date,
     then the fuller text — matching the single-citation rule's 'most authoritative/original, else most
-    recent'. This is the retrieval-layer counterpart to the prompt's one-source-per-fact rule."""
+    recent'. Documents that were already reranked (chat) keep instead the copy the reranker scored
+    highest, so a translation it ranks low does not push the release out of the top-k. This is the
+    retrieval-layer counterpart to the prompt's one-source-per-fact rule."""
     n = len(docs)
     if n < 2:
         return docs
@@ -137,6 +163,7 @@ def _collapse_near_duplicates(docs: List[Document]) -> List[Document]:
         if src:
             by_source[src].append(i)
 
+    same_day_other_language = []
     for idxs in by_source.values():
         for p in range(len(idxs)):
             for q in range(p + 1, len(idxs)):
@@ -144,8 +171,12 @@ def _collapse_near_duplicates(docs: List[Document]) -> List[Document]:
                 di, dj = docs[i], docs[j]
                 same_date = bool(di.metadata.get("date")) and di.metadata.get("date") == dj.metadata.get("date")
                 diff_lang = langs[i] != "unknown" and langs[j] != "unknown" and langs[i] != langs[j]
-                if _is_prefix_title_dup(di.metadata.get("title"), dj.metadata.get("title")) or (same_date and diff_lang):
+                if _is_prefix_title_dup(di.metadata.get("title"), dj.metadata.get("title")):
                     union(i, j)
+                elif same_date and diff_lang and di.metadata.get("title") and dj.metadata.get("title"):
+                    same_day_other_language.append((i, j))
+    for i, j in _translations(docs, same_day_other_language):
+        union(i, j)
 
     clusters: dict = defaultdict(list)
     for i in range(n):
@@ -153,7 +184,8 @@ def _collapse_near_duplicates(docs: List[Document]) -> List[Document]:
 
     def rep_key(i: int):
         d = docs[i]
-        return (1 if langs[i] == "en" else 0, d.metadata.get("date") or "", len(d.page_content or ""), -i)
+        return (d.metadata.get("_relevance_score", 0.0), 1 if langs[i] == "en" else 0,
+                d.metadata.get("date") or "", len(d.page_content or ""), -i)
 
     keep = {max(members, key=rep_key) for members in clusters.values()}
     return [d for i, d in enumerate(docs) if i in keep]

@@ -22,6 +22,7 @@ from rag.retriever import (
     corpus_countries, dedupe_by_document, rerank_by_relevance,
 )
 from rag.chain import answer_language, build_chain, describe_filters
+from rag.report_service import _collapse_near_duplicates
 from rag.history import get_session_history, has_session, populate_history_from_messages
 from rag import conversations as convo_store
 from api.routes.conversations import can_open_conversation, _LIMIT_DETAIL as _CONVO_LIMIT_DETAIL
@@ -222,7 +223,8 @@ async def _retrieve_docs(query: str, filters: dict):
     """Shared retrieval pipeline used by both chat routes.
 
     candidates (larger k) -> date filter -> dedupe by document ->
-    relevance rerank (hosted reranker) -> recency blend -> final top-k.
+    relevance rerank (hosted reranker) -> one copy of each translated/republished
+    release (the best-ranked) -> recency blend -> final top-k.
 
     For "current"-style queries (no explicit date window, no historical intent)
     the recency boost reranks a wider relevance pool by recency so the newest
@@ -238,14 +240,14 @@ async def _retrieve_docs(query: str, filters: dict):
     docs = await retriever.ainvoke(query)
     docs = apply_date_filter(docs, filters.get("date"))
     docs = dedupe_by_document(docs)
+    docs = await anyio.to_thread.run_sync(rerank_by_relevance, query, docs, len(docs))
+    docs = await anyio.to_thread.run_sync(_collapse_near_duplicates, docs)
     if should_boost_recency(query, filters):
         pool = max(settings.RECENCY_RERANK_POOL, settings.TOP_K_RETRIEVAL)
-        docs = await anyio.to_thread.run_sync(rerank_by_relevance, query, docs, pool)
-        docs = rerank_by_recency(docs, decay_factor=settings.RECENCY_BOOST_FACTOR)
+        docs = rerank_by_recency(docs[:pool], decay_factor=settings.RECENCY_BOOST_FACTOR)
         docs = docs[:settings.TOP_K_RETRIEVAL]
     else:
-        docs = await anyio.to_thread.run_sync(rerank_by_relevance, query, docs, settings.TOP_K_RETRIEVAL)
-        docs = rerank_by_recency(docs)
+        docs = rerank_by_recency(docs[:settings.TOP_K_RETRIEVAL])
     return docs
 
 
@@ -280,6 +282,7 @@ async def _retrieve_docs_per_country(query: str, filters: dict, countries: list)
     ranked = []
     for country in countries:
         mine = [d for d in pool if owner.get(d.metadata.get("doc_id")) == country]
+        mine = await anyio.to_thread.run_sync(_collapse_near_duplicates, mine)
         if boost:
             pool_n = max(settings.RECENCY_RERANK_POOL, settings.TOP_K_RETRIEVAL)
             mine = rerank_by_recency(mine[:pool_n], decay_factor=settings.RECENCY_BOOST_FACTOR)

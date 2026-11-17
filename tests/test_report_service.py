@@ -1,5 +1,5 @@
 """Unit tests for rag.report_service pure helpers: title dedup + language filtering."""
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from langchain_core.documents import Document
 
@@ -64,17 +64,62 @@ class TestPreferEnglish:
         assert _prefer_english([]) == []
 
 
+def _title_embeddings(vectors):
+    """get_embeddings() stand-in: each title embeds to vectors[title]."""
+    emb = MagicMock()
+    emb.embed_documents.side_effect = lambda titles: [vectors[t] for t in titles]
+    return patch("rag.report_service.get_embeddings", return_value=emb)
+
+
+_LANGS = {"fr": "fr", "en": "en"}
+
+
 class TestCollapseNearDuplicates:
     def test_collapses_translation_pair_prefers_english(self):
-        # Same source + same date, different language → one representative (English).
+        # Same source + same date, different language, same title → one representative (English).
         docs = [
             _doc(body="fr", source="WFP", date="2026-05-01", title="Communiqué"),
             _doc(body="en", source="WFP", date="2026-05-01", title="Press release"),
         ]
-        with patch("rag.report_service._detect_lang", side_effect=lambda t: {"fr": "fr", "en": "en"}[t]):
+        with patch("rag.report_service._detect_lang", side_effect=_LANGS.get),              _title_embeddings({"Communiqué": [1.0, 0.1], "Press release": [1.0, 0.0]}):
             out = _collapse_near_duplicates(docs)
         assert len(out) == 1
         assert out[0].page_content == "en"
+
+    def test_same_day_documents_in_two_languages_with_different_titles_survive(self):
+        # WHO, same day: a French cholera sitrep and an English Ebola update (title cosine 0.67).
+        docs = [
+            _doc(body="fr", source="WHO", date="2026-10-14", title="Rapport choléra RDC"),
+            _doc(body="en", source="WHO", date="2026-10-14", title="Ebola outbreak update"),
+        ]
+        with patch("rag.report_service._detect_lang", side_effect=_LANGS.get),              _title_embeddings({"Rapport choléra RDC": [1.0, 0.0], "Ebola outbreak update": [0.67, 0.74]}):
+            assert len(_collapse_near_duplicates(docs)) == 2
+
+    def test_reranked_translations_keep_the_best_ranked_copy(self):
+        docs = [
+            _doc(body="fr", source="UNHCR", date="2026-09-28", title="Communiqué", _relevance_score=0.67),
+            _doc(body="en", source="UNHCR", date="2026-09-28", title="Press release", _relevance_score=0.30),
+        ]
+        with patch("rag.report_service._detect_lang", side_effect=_LANGS.get),              _title_embeddings({"Communiqué": [1.0, 0.1], "Press release": [1.0, 0.0]}):
+            out = _collapse_near_duplicates(docs)
+        assert [d.page_content for d in out] == ["fr"]
+
+    def test_translations_are_kept_when_title_embedding_fails(self):
+        docs = [
+            _doc(body="fr", source="WFP", date="2026-05-01", title="Communiqué"),
+            _doc(body="en", source="WFP", date="2026-05-01", title="Press release"),
+        ]
+        with patch("rag.report_service._detect_lang", side_effect=_LANGS.get),              patch("rag.report_service.get_embeddings", side_effect=RuntimeError("down")):
+            assert len(_collapse_near_duplicates(docs)) == 2
+
+    def test_no_embedding_call_without_a_same_day_language_pair(self):
+        docs = [
+            _doc(body="a", source="WFP", date="2026-05-01", title="One"),
+            _doc(body="b", source="WFP", date="2026-05-02", title="Two"),
+        ]
+        with patch("rag.report_service._detect_lang", return_value="en"),              patch("rag.report_service.get_embeddings") as emb:
+            assert len(_collapse_near_duplicates(docs)) == 2
+        emb.assert_not_called()
 
     def test_collapses_companion_prefix(self):
         base = "Sudan Food Security Situation Report May"
