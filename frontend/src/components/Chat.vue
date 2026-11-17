@@ -115,7 +115,6 @@
         ref="chatInput"
         v-model="input"
         rows="1"
-        placeholder="Ask about humanitarian documents…"
         class="chat-input"
         aria-label="Chat message input"
         enterkeyhint="send"
@@ -906,11 +905,6 @@ watch(
    text-field ring (style.css) on the textarea inside it doubled the ring. */
 .chat-input:focus-visible {
   box-shadow: none;
-}
-
-.chat-input::placeholder {
-  color: var(--color-muted);
-  font-style: italic;
 }
 
 .send-btn {
