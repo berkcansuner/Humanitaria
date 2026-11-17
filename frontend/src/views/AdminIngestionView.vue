@@ -46,8 +46,8 @@
                 <dt>Last ingest</dt>
                 <dd>{{ status?.last_ingest || '—' }}</dd>
               </div>
-              <!-- Production runs from the Cloudflare cron Worker (cloudflare-cron/), so
-                   the in-app scheduler is off there by design; say how runs happen
+              <!-- Production runs from GitHub Actions (.github/workflows/nightly-ingest.yml),
+                   so the in-app scheduler is off there by design; say how runs happen
                    instead of showing "Inactive" as if something were broken. -->
               <div v-if="status?.scheduler_active">
                 <dt>Next scheduled run</dt>
@@ -56,8 +56,8 @@
               <div v-else>
                 <dt>Schedule</dt>
                 <dd>
-                  Nightly, 03:00 UTC
-                  <span class="dd-note">via the Cloudflare cron</span>
+                  Daily, 03:17 and 14:47 UTC
+                  <span class="dd-note">via GitHub Actions</span>
                 </dd>
               </div>
               <div>
