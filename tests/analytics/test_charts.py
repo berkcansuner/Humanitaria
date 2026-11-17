@@ -31,3 +31,9 @@ def test_correlation_chart_returns_png():
     s = correlation_chart([1, 2, 3, 4], [2, 4, 6, 8],
                           xlabel="A", ylabel="B", title="Korelasyon")
     assert _is_png_datauri(s)
+
+
+def test_trend_chart_accepts_language():
+    s = trend_chart(["2025-01", "2025-02", "2025-03"], [1, 2, 3], slope=1.0, intercept=1.0,
+                    title="x", ylabel="y", language="en")
+    assert _is_png_datauri(s)

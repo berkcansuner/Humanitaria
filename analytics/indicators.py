@@ -30,32 +30,43 @@ class Indicator:
     complete_periods_only: bool = False
     scale: float = 1.0       # value_field × scale (a 0-1 share → percent)
     unit: str = ""           # unit of the trend slope ("" = the indicator's own count)
+    label_en: str = ""       # English name; `label` is the Turkish one
+
+    def name(self, language: str = "tr") -> str:
+        """The indicator's name in the report language (Turkish unless "en")."""
+        return self.label_en if language == "en" and self.label_en else self.label
 
 
 INDICATORS: list[Indicator] = [
     Indicator("humanitarian_needs", "İnsani ihtiyaç (kişi)",
               "affected-people/humanitarian-needs", "population", "sum", 0,
-              {"population_status": "INN", "sector_code": "Intersectoral"}),
+              {"population_status": "INN", "sector_code": "Intersectoral"},
+              label_en="People in need (people)"),
     # Share of the analysed population in IPC 3+, not people: an IPC analysis may cover
     # only part of a country (Yemen alternates ~35M nationwide / ~10M government-held
     # areas), so counts from different periods are not comparable; the share is.
     Indicator("food_security", "Gıda güvensizliği (IPC 3+, analiz edilen nüfusun %'si)",
               "food/food-security", "population_fraction_in_phase", "mean", 0,
-              {"ipc_type": "current", "ipc_phase": "3+"}, scale=100, unit="percentage points"),
+              {"ipc_type": "current", "ipc_phase": "3+"}, scale=100, unit="percentage points",
+              label_en="Food insecurity (IPC 3+, % of the analysed population)"),
     Indicator("refugees", "Mülteci (kişi)",
               "affected-people/refugees", "population", "sum", 0,
               {"gender": "all", "age_range": "all", "population_group": "REF"},
-              location_param="origin_location_code"),
+              location_param="origin_location_code",
+              label_en="Refugees (people)"),
     Indicator("returnees", "Dönüş yapan (kişi)",
               "affected-people/returnees", "population", "sum", 0,
               {"gender": "all", "age_range": "all", "population_group": "RET"},
-              location_param="origin_location_code"),
+              location_param="origin_location_code",
+              label_en="Returnees (people)"),
     Indicator("idps", "Yerinden edilmiş kişi (IDP)",
               "affected-people/idps", "population", "sum", 1,
-              {"gender": "all", "age_range": "all"}),
+              {"gender": "all", "age_range": "all"},
+              label_en="Internally displaced people (IDPs)"),
     Indicator("funding", "İnsani fonlama (USD)",
               "coordination-context/funding", "funding_usd", "sum", 0, {},
-              complete_periods_only=True),
+              complete_periods_only=True,
+              label_en="Humanitarian funding (USD)"),
 ]
 
 _BY_KEY = {i.key: i for i in INDICATORS}

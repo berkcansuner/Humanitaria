@@ -356,3 +356,26 @@ def test_food_security_trend_is_on_the_share_with_a_coverage_note(_mock):
     assert tr.stat_result["n_points"] == 5
     ctx = findings_to_context(f)
     assert "DATA NOTES:" in ctx and "analysed population" in ctx
+
+
+@patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _rows_for(
+    "idps" if ep.endswith("idps") else "other"))
+def test_english_report_names_sections_in_english(_mock):
+    # An English report used to get Turkish headings ("— Trend Analizi") and chart text.
+    f = compute_findings("AFG", "2025-01-01", "2025-12-31", language="en")
+    headings = [s.heading for s in f.sections]
+    assert "Internally displaced people (IDPs) — Trend Analysis" in headings
+    assert not any("Analizi" in h or "Yerinden" in h for h in headings)
+    trend_sections = [s for s in f.sections if s.stat_result.get("kind") == "trend"]
+    assert trend_sections[0].stat_result["indicator"] == "Internally displaced people (IDPs)"
+
+
+@patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _rows_for(
+    "idps" if ep.endswith("idps") else "other"))
+def test_turkish_report_keeps_turkish_headings(_mock):
+    f = compute_findings("AFG", "2025-01-01", "2025-12-31", language="tr")
+    assert "Yerinden edilmiş kişi (IDP) — Trend Analizi" in [s.heading for s in f.sections]
+
+
+def test_every_indicator_has_an_english_name():
+    assert all(ind.label_en and ind.name("en") != ind.name("tr") for ind in INDICATORS)

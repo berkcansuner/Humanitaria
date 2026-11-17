@@ -17,6 +17,12 @@ logger = logging.getLogger(__name__)
 _FIGSIZE = (8, 4.5)
 _DPI = 120
 
+# Legend text in the report language (the report itself is "tr" or "en").
+_LEGEND = {
+    "tr": {"observed": "Gözlem", "trend": "Trend (Sen)"},
+    "en": {"observed": "Observed", "trend": "Trend (Sen)"},
+}
+
 
 def _to_datauri(fig) -> str:
     buf = io.BytesIO()
@@ -26,15 +32,17 @@ def _to_datauri(fig) -> str:
     return f"data:image/png;base64,{encoded}"
 
 
-def trend_chart(periods, values, slope, intercept, title: str, ylabel: str, times=None) -> str:
+def trend_chart(periods, values, slope, intercept, title: str, ylabel: str, times=None,
+                language: str = "tr") -> str:
     """*times*: each period's position (years since the first); evenly spaced when
     omitted. slope/intercept use the same unit (Sen's slope per year)."""
+    legend = _LEGEND.get(language, _LEGEND["en"])
     fig, ax = plt.subplots(figsize=_FIGSIZE)
     x = list(times) if times is not None else list(range(len(values)))
-    ax.plot(x, values, marker="o", color="#1f77b4", label="Gözlem")
+    ax.plot(x, values, marker="o", color="#1f77b4", label=legend["observed"])
     if slope is not None and intercept is not None:
         line = [intercept + slope * i for i in x]
-        ax.plot(x, line, color="#d62728", linestyle="--", label="Trend (Sen)")
+        ax.plot(x, line, color="#d62728", linestyle="--", label=legend["trend"])
         ax.legend()
     ax.set_xticks(x)
     ax.set_xticklabels(periods, rotation=45, ha="right", fontsize=8)
@@ -44,7 +52,7 @@ def trend_chart(periods, values, slope, intercept, title: str, ylabel: str, time
     return _to_datauri(fig)
 
 
-def comparison_chart(labels, values, title: str, ylabel: str) -> str:
+def comparison_chart(labels, values, title: str, ylabel: str, language: str = "tr") -> str:
     fig, ax = plt.subplots(figsize=_FIGSIZE)
     ax.bar(labels, values, color="#2ca02c")
     ax.set_title(title)
@@ -54,7 +62,8 @@ def comparison_chart(labels, values, title: str, ylabel: str) -> str:
     return _to_datauri(fig)
 
 
-def correlation_chart(x, y, xlabel: str, ylabel: str, title: str) -> str:
+def correlation_chart(x, y, xlabel: str, ylabel: str, title: str,
+                      language: str = "tr") -> str:
     fig, ax = plt.subplots(figsize=_FIGSIZE)
     ax.scatter(x, y, color="#9467bd")
     ax.set_title(title)

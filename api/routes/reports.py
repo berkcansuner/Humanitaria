@@ -254,7 +254,8 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                     return
 
                 findings = await anyio.to_thread.run_sync(
-                    technical_report.compute_findings, iso3, req.date_from, req.date_to
+                    technical_report.compute_findings, iso3, req.date_from, req.date_to,
+                    req.language
                 )
                 if not findings.sections:
                     yield ServerSentEvent(

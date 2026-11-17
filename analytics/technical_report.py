@@ -40,8 +40,22 @@ class Findings:
     notes: list = field(default_factory=list)   # what was left out of a series, and why
 
 
-def compute_findings(iso3: str, date_from: str | None, date_to: str | None) -> Findings:
+# Section headings are copied verbatim by the model and matched back to their charts,
+# so they are written in the report language here, in code.
+_HEADINGS = {
+    "tr": {"trend": "{name} — Trend Analizi", "region": "{name} — Bölgesel Analiz",
+           "correlation": "Korelasyon — {x} ↔ {y}"},
+    "en": {"trend": "{name} — Trend Analysis", "region": "{name} — Regional Analysis",
+           "correlation": "Correlation — {x} ↔ {y}"},
+}
+
+
+def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
+                     language: str = "tr") -> Findings:
+    """*language* ("tr" or "en") names the indicators, section headings and chart
+    text; the statistics do not depend on it."""
     settings = get_settings()
+    headings = _HEADINGS.get(language, _HEADINGS["en"])
     min_pts = settings.TECHNICAL_REPORT_MIN_POINTS
     sections: list[ReportSection] = []
     gaps: list[str] = []
@@ -57,6 +71,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None) -> F
     date_to = min(date_to, today.isoformat()) if date_to else today.isoformat()
 
     for ind in INDICATORS:
+        name = ind.name(language)
         try:
             rows = fetch_rows(ind.endpoint, iso3,
                               extra_params=ind.query_params, admin_level=ind.admin_level,
@@ -67,7 +82,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None) -> F
             # SARMIYOR — gerçek bir ağ kesintisinde ham fırlar. Sarmazsak tüm rapor
             # iptal olur; burada geniş tutup yalnızca bu indikatörü gaps'e düşürüyoruz.
             logger.warning("HAPI %s başarısız (%s): %s", ind.key, iso3, exc)
-            gaps.append(f"{ind.label}: veri çekilemedi")
+            gaps.append(f"{name}: veri çekilemedi")
             continue
 
         # Fetch başarılıysa: seri kurma + tüm istatistik testleri + grafikler bu
@@ -80,25 +95,26 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None) -> F
                 rows = _completed(rows, today)
             rows, note = consistent_snapshots(rows)
             coverage = ipc_coverage_note(rows)
-            notes += [f"{ind.label}: {n}" for n in (note, coverage) if n]
+            notes += [f"{name}: {n}" for n in (note, coverage) if n]
             periods, values = national_series(rows, ind)
             if not values:
-                gaps.append(f"{ind.label}: dönem içinde veri yok")
+                gaps.append(f"{name}: dönem içinde veri yok")
                 continue
             covered.append(ind.key)
-            national_by_label[ind.label] = (periods, values)
+            national_by_label[name] = (periods, values)
 
             # Trend (gerçek zaman ekseni: ilk dönemden beri yıl → eğim yıl başına)
             times = _years_since_first(periods)
-            tr = trend(values, indicator=ind.label, min_points=min_pts, times=times)
+            tr = trend(values, indicator=name, min_points=min_pts, times=times)
             if tr.direction == "insufficient_data":
-                gaps.append(f"{ind.label}: trend için yetersiz veri (n={tr.n_points})")
+                gaps.append(f"{name}: trend için yetersiz veri (n={tr.n_points})")
             else:
                 chart = trend_chart(periods, values, tr.slope, tr.intercept,
-                                    title=f"{ind.label} — Trend", ylabel=ind.label, times=times)
+                                    title=f"{name} — Trend", ylabel=name, times=times,
+                                    language=language)
                 sections.append(ReportSection(
-                    heading=f"{ind.label} — Trend Analizi",
-                    stat_result={"kind": "trend", "indicator": ind.label,
+                    heading=headings["trend"].format(name=name),
+                    stat_result={"kind": "trend", "indicator": name,
                                  "direction": tr.direction, "slope": tr.slope,
                                  "p_value": tr.p_value, "pct_change": tr.pct_change,
                                  "n_points": tr.n_points, "ci_low": tr.ci_low,
@@ -112,15 +128,15 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None) -> F
             # Bölgeler-arası (admin-1)
             reg = regional_series(rows, ind)
             if len(reg) >= 2:
-                rr = by_region(reg, indicator=ind.label, period=f"{periods[0]}–{periods[-1]}")
+                rr = by_region(reg, indicator=name, period=f"{periods[0]}–{periods[-1]}")
                 labels = [r for r, _ in rr.ranking]
                 vals = [v for _, v in rr.ranking]
                 chart = comparison_chart(labels, vals,
-                                         title=f"{ind.label} — Bölge Karşılaştırması",
-                                         ylabel=ind.label)
+                                         title=headings["region"].format(name=name),
+                                         ylabel=name, language=language)
                 sections.append(ReportSection(
-                    heading=f"{ind.label} — Bölgesel Analiz",
-                    stat_result={"kind": "region", "indicator": ind.label,
+                    heading=headings["region"].format(name=name),
+                    stat_result={"kind": "region", "indicator": name,
                                  "ranking": rr.ranking, "p_value": rr.p_value,
                                  "kruskal_h": rr.kruskal_h},
                     chart=chart,
@@ -128,7 +144,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None) -> F
                 ))
         except Exception as exc:
             logger.warning("%s indikatörü analiz hatası (%s): %s", ind.key, iso3, exc)
-            gaps.append(f"{ind.label}: analiz hatası")
+            gaps.append(f"{name}: analiz hatası")
             continue
 
     # İndikatörler-arası korelasyon: ortak dönemi olan indikatör çiftleri.
@@ -144,9 +160,9 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None) -> F
             if cor.note == "insufficient_data":
                 continue
             chart = correlation_chart(xa, yb, xlabel=labels[i], ylabel=labels[j],
-                                      title=f"{labels[i]} ↔ {labels[j]}")
+                                      title=f"{labels[i]} ↔ {labels[j]}", language=language)
             sections.append(ReportSection(
-                heading=f"Korelasyon — {labels[i]} ↔ {labels[j]}",
+                heading=headings["correlation"].format(x=labels[i], y=labels[j]),
                 stat_result={"kind": "correlation", "indicator_x": labels[i],
                              "indicator_y": labels[j], "coefficient": cor.coefficient,
                              "p_value": cor.p_value,
