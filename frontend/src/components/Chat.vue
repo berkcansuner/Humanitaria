@@ -141,7 +141,6 @@
         <Send :size="20" />
       </button>
     </form>
-    <p class="composer-hint">Answers cite the reports they draw on · Shift+Enter for a new line</p>
   </div>
 </template>
 
@@ -912,16 +911,6 @@ watch(
 .chat-input::placeholder {
   color: var(--color-muted);
   font-style: italic;
-}
-
-/* Full Margin Gray (no extra fade) keeps the hint at AA contrast. */
-.composer-hint {
-  text-align: center;
-  font-size: 11px;
-  color: var(--color-muted);
-  margin-top: var(--space-2);
-  font-family: var(--font-mono);
-  letter-spacing: 0.02em;
 }
 
 .send-btn {
