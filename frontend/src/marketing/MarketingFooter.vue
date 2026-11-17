@@ -31,6 +31,7 @@
       </div>
       <div class="foot-base">
         <span>© 2026 Humanitaria. Content from ReliefWeb.</span>
+        <router-link to="/privacy">Privacy policy</router-link>
       </div>
     </div>
   </footer>
