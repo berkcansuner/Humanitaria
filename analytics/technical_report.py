@@ -64,6 +64,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
     notes: list[str] = []
     national_by_label: dict[str, tuple[list, list]] = {}   # korelasyon için (periods, values)
     percent_by_label: dict[str, bool] = {}                 # share indicators (IPC %) → '%' ticks
+    source_by_label: dict[str, str] = {}                   # publisher, for the chart's source line
     # Dönem: seçilmediyse son N yıl; bitiş en geç bugün (HAPI gelecek yılların plan
     # kayıtlarını da döndürür — son nokta olarak sahte bir düşüş üretiyordu).
     today = date.today()
@@ -106,6 +107,8 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
             national_by_label[name] = (periods, values)
             percent = ind.scale == 100
             percent_by_label[name] = percent
+            source_by_label[name] = ind.source
+            source = _source_line([ind.source], language)
 
             # Trend (gerçek zaman ekseni: ilk dönemden beri yıl → eğim yıl başına)
             times = _years_since_first(periods)
@@ -116,7 +119,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                 chart, chart_dark = _both_modes(
                     trend_chart, periods, values, tr.slope, tr.intercept,
                     unit=_axis_unit(ind, language), times=times,
-                    language=language, percent=percent)
+                    language=language, percent=percent, source=source)
                 sections.append(ReportSection(
                     heading=headings["trend"].format(name=name),
                     stat_result={"kind": "trend", "indicator": name,
@@ -138,7 +141,8 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                 labels = [r for r, _ in rr.ranking]
                 vals = [v for _, v in rr.ranking]
                 chart, chart_dark = _both_modes(
-                    comparison_chart, labels, vals, language=language, percent=percent)
+                    comparison_chart, labels, vals, language=language, percent=percent,
+                    source=source)
                 sections.append(ReportSection(
                     heading=headings["region"].format(name=name),
                     stat_result={"kind": "region", "indicator": name,
@@ -169,7 +173,9 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                 correlation_chart, xa, yb, xlabel=labels[i], ylabel=labels[j],
                 language=language,
                 x_percent=percent_by_label[labels[i]],
-                y_percent=percent_by_label[labels[j]])
+                y_percent=percent_by_label[labels[j]],
+                source=_source_line([source_by_label[labels[i]], source_by_label[labels[j]]],
+                                    language))
             sections.append(ReportSection(
                 heading=headings["correlation"].format(x=labels[i], y=labels[j]),
                 stat_result={"kind": "correlation", "indicator_x": labels[i],
@@ -185,6 +191,13 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
     return Findings(sections=sections, gaps=gaps, indicators_covered=covered,
                     date_from=date_from, date_to=date_to, default_years=default_years,
                     notes=notes)
+
+
+def _source_line(publishers: list[str], language: str) -> str:
+    """'Source: IOM DTM · HDX HAPI' — the publishers, then the API we read them from."""
+    names = list(dict.fromkeys(p for p in publishers if p)) + ["HDX HAPI"]
+    prefix = "Kaynak" if language == "tr" else "Source"
+    return f"{prefix}: {', '.join(names[:-1])} · {names[-1]}" if len(names) > 1         else f"{prefix}: HDX HAPI"
 
 
 def _axis_unit(ind, language: str) -> str:

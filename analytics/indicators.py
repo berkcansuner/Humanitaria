@@ -31,6 +31,7 @@ class Indicator:
     scale: float = 1.0       # value_field × scale (a 0-1 share → percent)
     unit: str = ""           # unit of the trend slope ("" = the indicator's own count)
     label_en: str = ""       # English name; `label` is the Turkish one
+    source: str = ""         # who publishes the data HDX HAPI serves (printed under charts)
 
     def name(self, language: str = "tr") -> str:
         """The indicator's name in the report language (Turkish unless "en")."""
@@ -41,32 +42,32 @@ INDICATORS: list[Indicator] = [
     Indicator("humanitarian_needs", "İnsani ihtiyaç (kişi)",
               "affected-people/humanitarian-needs", "population", "sum", 0,
               {"population_status": "INN", "sector_code": "Intersectoral"},
-              label_en="People in need (people)"),
+              label_en="People in need (people)", source="OCHA HNO"),
     # Share of the analysed population in IPC 3+, not people: an IPC analysis may cover
     # only part of a country (Yemen alternates ~35M nationwide / ~10M government-held
     # areas), so counts from different periods are not comparable; the share is.
     Indicator("food_security", "Gıda güvensizliği (IPC 3+, analiz edilen nüfusun %'si)",
               "food/food-security", "population_fraction_in_phase", "mean", 0,
               {"ipc_type": "current", "ipc_phase": "3+"}, scale=100, unit="percentage points",
-              label_en="Food insecurity (IPC 3+, % of the analysed population)"),
+              label_en="Food insecurity (IPC 3+, % of the analysed population)", source="IPC"),
     Indicator("refugees", "Mülteci (kişi)",
               "affected-people/refugees", "population", "sum", 0,
               {"gender": "all", "age_range": "all", "population_group": "REF"},
               location_param="origin_location_code",
-              label_en="Refugees (people)"),
+              label_en="Refugees (people)", source="UNHCR"),
     Indicator("returnees", "Dönüş yapan (kişi)",
               "affected-people/returnees", "population", "sum", 0,
               {"gender": "all", "age_range": "all", "population_group": "RET"},
               location_param="origin_location_code",
-              label_en="Returnees (people)"),
+              label_en="Returnees (people)", source="UNHCR"),
     Indicator("idps", "Yerinden edilmiş kişi (IDP)",
               "affected-people/idps", "population", "sum", 1,
               {"gender": "all", "age_range": "all"},
-              label_en="Internally displaced people (IDPs)"),
+              label_en="Internally displaced people (IDPs)", source="IOM DTM"),
     Indicator("funding", "İnsani fonlama (USD)",
               "coordination-context/funding", "funding_usd", "sum", 0, {},
               complete_periods_only=True,
-              label_en="Humanitarian funding (USD)"),
+              label_en="Humanitarian funding (USD)", source="OCHA FTS"),
 ]
 
 _BY_KEY = {i.key: i for i in INDICATORS}

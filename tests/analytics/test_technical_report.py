@@ -382,3 +382,15 @@ def test_turkish_report_keeps_turkish_headings(_mock):
 
 def test_every_indicator_has_an_english_name():
     assert all(ind.label_en and ind.name("en") != ind.name("tr") for ind in INDICATORS)
+
+
+def test_source_line_names_the_publishers_then_hdx_hapi():
+    from analytics.technical_report import _source_line
+    assert _source_line(["IOM DTM"], "en") == "Source: IOM DTM · HDX HAPI"
+    assert _source_line(["IOM DTM", "OCHA FTS"], "tr") == "Kaynak: IOM DTM, OCHA FTS · HDX HAPI"
+    assert _source_line(["UNHCR", "UNHCR"], "en") == "Source: UNHCR · HDX HAPI"
+    assert _source_line([""], "en") == "Source: HDX HAPI"
+
+
+def test_every_indicator_names_its_publisher():
+    assert all(ind.source for ind in INDICATORS)

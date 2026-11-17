@@ -84,3 +84,9 @@ def test_comparison_chart_grows_with_the_region_count():
 def test_comparison_chart_handles_zero_and_single_region():
     assert _is_png_datauri(comparison_chart(["Only"], [0]))
     assert _is_png_datauri(comparison_chart(["A", "B"], [0, 5], percent=True, language="tr"))
+
+
+def test_source_line_adds_to_the_image():
+    plain = comparison_chart(["A", "B"], [3, 1])
+    sourced = comparison_chart(["A", "B"], [3, 1], source="Source: IOM DTM · HDX HAPI")
+    assert _is_png_datauri(sourced) and sourced != plain

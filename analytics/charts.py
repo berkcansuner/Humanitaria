@@ -102,7 +102,11 @@ def _date_axis(axis, language: str) -> None:
     axis.set_major_formatter(FuncFormatter(label))
 
 
-def _to_datauri(fig) -> str:
+def _to_datauri(fig, source: str = "", theme: dict | None = None) -> str:
+    """PNG data URI. *source* is printed under the chart, below the axis labels."""
+    if source:
+        fig.text(0, 0, source, ha="left", va="top", fontsize=8,
+                 color=(theme or _THEMES["light"])["muted"])
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=_DPI, bbox_inches="tight")
     plt.close(fig)
@@ -132,7 +136,8 @@ def _label_colors(ax, theme) -> None:
 
 
 def trend_chart(periods, values, slope, intercept, unit: str = "", times=None,
-                language: str = "tr", percent: bool = False, mode: str = "light") -> str:
+                language: str = "tr", percent: bool = False, mode: str = "light",
+                source: str = "") -> str:
     """*times*: each period's position (years since the first); evenly spaced when
     omitted. slope/intercept use the same unit (Sen's slope per year). The x axis
     is a real date axis when the periods are ISO dates. No title: the report's section
@@ -166,7 +171,7 @@ def trend_chart(periods, values, slope, intercept, unit: str = "", times=None,
     ax.grid(False, axis="x")
     ax.set_ylabel(unit)
     _label_colors(ax, theme)
-    return _to_datauri(fig)
+    return _to_datauri(fig, source, theme)
 
 
 _ROW_INCHES = 0.34     # one region per row; the figure grows with the region count
@@ -175,7 +180,7 @@ _END_PX = 4            # rounded data end
 
 
 def comparison_chart(labels, values, language: str = "tr", percent: bool = False,
-                     mode: str = "light") -> str:
+                     mode: str = "light", source: str = "") -> str:
     """Horizontal bars, largest first, region names left and each value at its bar's
     tip (so there is no value axis). The data end is rounded, the baseline square."""
     theme = _THEMES.get(mode, _THEMES["light"])
@@ -183,6 +188,9 @@ def comparison_chart(labels, values, language: str = "tr", percent: bool = False
     n = len(order)
     height = max(1.6, n * _ROW_INCHES + 0.4)
     fig, ax = plt.subplots(figsize=(_FIGSIZE[0], height))
+    # Fixed margins in inches: the default fractions grow with the figure and left the
+    # source line far below the last bar.
+    fig.subplots_adjust(top=1 - 0.05 / height, bottom=0.3 / height)
     fig.patch.set_facecolor(theme["bg"])
     ax.set_facecolor(theme["bg"])
     for spine in ax.spines.values():
@@ -216,12 +224,13 @@ def comparison_chart(labels, values, language: str = "tr", percent: bool = False
     ax.set_yticklabels([label for label, _ in order])
     ax.tick_params(axis="y", colors=theme["muted"], labelsize=9, length=0, pad=8)
     ax.set_xticks([])
-    return _to_datauri(fig)
+    return _to_datauri(fig, source, theme)
 
 
 def correlation_chart(x, y, xlabel: str, ylabel: str,
                       language: str = "tr", x_percent: bool = False,
-                      y_percent: bool = False, mode: str = "light") -> str:
+                      y_percent: bool = False, mode: str = "light",
+                      source: str = "") -> str:
     fig, ax, theme = _new_chart(mode)
     ax.scatter(x, y, s=48, color=theme["series"], edgecolors=theme["bg"], linewidths=1.5,
                zorder=3)
@@ -230,4 +239,4 @@ def correlation_chart(x, y, xlabel: str, ylabel: str,
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     _label_colors(ax, theme)
-    return _to_datauri(fig)
+    return _to_datauri(fig, source, theme)
