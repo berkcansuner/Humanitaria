@@ -28,7 +28,7 @@ services:
       - key: RETENTION_DAYS
         value: "365"
       - key: RETENTION_PER_COUNTRY_CAP
-        value: "200"
+        value: "750"
       # Observed XFF on Render (2026-11): client, Cloudflare edge, Render internal 10.x
       # → real client IP = 3rd entry from the right. 1 keyed every user on 10.x.
       - key: RATE_LIMIT_TRUSTED_HOPS
