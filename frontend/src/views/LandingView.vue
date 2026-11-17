@@ -71,10 +71,11 @@
               </dd>
             </div>
             <div class="feature">
-              <dt>Current and comprehensive</dt>
+              <dt>Current, and clear about its window</dt>
               <dd>
-                Continuously indexed across countries and clusters — from displacement and food
-                security to health and protection.
+                The last twelve months of ReliefWeb, updated automatically every day, across
+                countries and sectors, from displacement and food security to health and protection.
+                When something falls outside that window, Humanitaria says so.
               </dd>
             </div>
           </dl>
