@@ -1,7 +1,8 @@
 <template>
-  <!-- Inline sample answer in the citations section. Example content, labelled as such
-       in the card header. Mirrors the app's answer: quiet [n] chips and a collapsed
-       sources line that opens a # · Source · Date ledger (see SourceList.vue). -->
+  <!-- Inline sample answer in the citations section: a real answer the app gave on
+       2026-11-16, word for word, with its five real sources. Every figure was checked
+       against the report it cites. Mirrors the app's answer: quiet [n] chips and a
+       collapsed sources line that opens a # · Source · Date ledger (see SourceList.vue). -->
   <figure ref="root" class="sample" aria-label="Sample answer" @click="onCiteClick">
     <div class="sample-head">
       <HandMark :size="26" :radius="7" :stroke="1.7" solid />
@@ -9,65 +10,53 @@
       <span class="sample-tag" aria-hidden="true">Sample answer</span>
     </div>
     <div class="sample-body">
-      <div class="q">What's the latest humanitarian situation in Sudan?</div>
+      <div class="q">How many people are internally displaced in Haiti, and where?</div>
       <div class="a">
-        <h3>Sudan — current situation</h3>
         <p>
-          Sudan is facing one of the world's largest displacement crises, with
-          <strong>millions forced from their homes</strong> since April 2023 — most displaced inside
-          the country, and many seeking refuge across borders<a
-            class="cite"
-            href="#sample-src-1"
-            data-cite="1"
-            >1</a
+          In Haiti, as of late 2026, there are an estimated
+          <strong>1.5 million internally displaced persons (IDPs)</strong>, accounting for
+          approximately 12 percent of the population<template v-for="n in [1, 2, 3, 5]" :key="n"
+            ><a class="cite" :href="'#sample-src-' + n" :data-cite="n">{{ n }}</a></template
           >.
         </p>
-        <p>
-          Food insecurity has deteriorated sharply. Market collapse and disrupted farming have
-          pushed several regions to <strong>critical levels of acute food insecurity</strong>, with
-          famine conditions confirmed in some areas<a
-            class="cite"
-            href="#sample-src-2"
-            data-cite="2"
-            >2</a
-          >.
-        </p>
-        <p>The health system is under severe strain:</p>
+        <p>Regarding their locations:</p>
         <ul>
           <li>
-            A large share of health facilities are partly or fully out of service<a
+            <strong>Geographical Distribution:</strong> Nearly 80 percent of the displaced
+            population is now located outside of the capital, Port-au-Prince, as violence spreads
+            across the country<template v-for="n in [1, 3]" :key="n"
+              ><a class="cite" :href="'#sample-src-' + n" :data-cite="n">{{ n }}</a></template
+            >. Earlier data from mid-2026 showed concentrations in the Grand Sud (39%) and Ouest
+            (28%) departments, alongside growing numbers in the Centre and Artibonite departments<a
               class="cite"
-              href="#sample-src-3"
-              data-cite="3"
-              >3</a
-            >
+              href="#sample-src-4"
+              data-cite="4"
+              >4</a
+            >.
           </li>
           <li>
-            Outbreaks of cholera and malaria are on the rise<a
-              class="cite"
-              href="#sample-src-3"
-              data-cite="3"
-              >3</a
-            >
-          </li>
-          <li>
-            Supplies of medicine and essentials are limited<a
-              class="cite"
-              href="#sample-src-2"
-              data-cite="2"
-              >2</a
-            >
+            <strong>Recent Displacement Hotspots:</strong> Ongoing armed violence and clashes
+            continue to displace thousands in specific areas. For example, recent attacks have
+            uprooted people in the Artibonite department (including Petite-Rivière de l’Artibonite
+            and Gros Morne) and the Ouest department (including Couyo in Arcahaie and
+            Croix-des-Bouquets on the outskirts of Port-au-Prince)<template
+              v-for="n in [1, 5]"
+              :key="n"
+              ><a class="cite" :href="'#sample-src-' + n" :data-cite="n">{{ n }}</a></template
+            >.
           </li>
         </ul>
         <p>
-          Humanitarian access remains difficult in many areas due to insecurity and bureaucratic
-          constraints<a class="cite" href="#sample-src-1" data-cite="1">1</a>.
+          Most of those displaced are currently staying with host families rather than in
+          displacement sites<template v-for="n in [1, 4]" :key="n"
+            ><a class="cite" :href="'#sample-src-' + n" :data-cite="n">{{ n }}</a></template
+          >.
         </p>
         <details class="sources" @toggle="open = $event.target.open">
           <summary class="sources-summary">
-            <span>3 sources</span>
+            <span>5 sources</span>
             <span aria-hidden="true">·</span>
-            <span>OCHA, IPC, WHO</span>
+            <span>OCHA, WFP, IOM +1</span>
             <span aria-hidden="true">·</span>
             <span class="sources-toggle">{{ open ? 'Hide' : 'Show' }}</span>
           </summary>
@@ -92,7 +81,13 @@
                     <span class="source-index">{{ src.n }}</span>
                   </td>
                   <td>
-                    <span class="source-title">{{ src.title }}</span>
+                    <a
+                      class="source-title"
+                      :href="src.url"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      >{{ src.title }}</a
+                    >
                     <span class="source-meta">{{ src.meta }}</span>
                   </td>
                   <td class="col-date">
@@ -117,11 +112,46 @@ const root = ref(null)
 // Mirrors the <details> state for the Show/Hide label; a chip may open it directly.
 const open = ref(false)
 
-// Example sources only: titles and publishers illustrate the format, so they are not links.
+// The answer's real sources on ReliefWeb, as the app listed them (titles in the
+// report's own language).
 const sources = [
-  { n: 1, title: 'Sudan Situation Report', meta: 'OCHA · Sudan', date: '2025-03-12' },
-  { n: 2, title: 'Acute Food Insecurity Snapshot', meta: 'IPC · Sudan', date: '2024-12-20' },
-  { n: 3, title: 'Sudan Health Cluster Bulletin', meta: 'WHO · Sudan', date: '2025-02-28' },
+  {
+    n: 1,
+    title: 'Latin America & The Caribbean Weekly Situation Update as of 6 November 2026',
+    meta: 'OCHA · Haiti',
+    date: '2026-11-06',
+    url: 'https://reliefweb.int/report/haiti/latin-america-caribbean-weekly-situation-update-6-november-2026',
+  },
+  {
+    n: 2,
+    title: 'WFP Haiti Country Brief, October 2026',
+    meta: 'WFP · Haiti',
+    date: '2026-11-04',
+    url: 'https://reliefweb.int/report/haiti/wfp-haiti-country-brief-october-2026',
+  },
+  {
+    n: 3,
+    title:
+      'Nuevos datos de la OIM: Cerca de 1,5 millones de personas desplazadas en Haití mientras aumentan los riesgos de huracanes',
+    meta: 'IOM · Haiti',
+    date: '2026-09-25',
+    url: 'https://reliefweb.int/report/haiti/nuevos-datos-de-la-oim-cerca-de-15-millones-de-personas-desplazadas-en-haiti-mientras-aumentan-los-riesgos-de-huracanes',
+  },
+  {
+    n: 4,
+    title: 'Haïti : Cluster Abris et Biens non alimentaires - Aperçu de la réponse : aout 2026',
+    meta: 'IOM · Haiti',
+    date: '2026-09-21',
+    url: 'https://reliefweb.int/report/haiti/haiti-cluster-abris-et-biens-non-alimentaires-apercu-de-la-reponse-aout-2026',
+  },
+  {
+    n: 5,
+    title:
+      'Oficina Integrada de las Naciones Unidas en Haití - Informe del Secretario General (S/2026/800)',
+    meta: 'UN Security Council · Haiti',
+    date: '2026-10-20',
+    url: 'https://reliefweb.int/report/haiti/oficina-integrada-de-las-naciones-unidas-en-haiti-informe-del-secretario-general-s2026800',
+  },
 ]
 
 // Same behaviour as a chip in the app: open the ledger and point at the cited row.
