@@ -10,32 +10,30 @@ def _is_png_datauri(s: str) -> bool:
 
 def test_trend_chart_returns_png():
     s = trend_chart(["2025-01", "2025-02", "2025-03", "2025-04"],
-                    [10, 20, 30, 40], slope=10.0, intercept=10.0,
-                    title="IDP trend", ylabel="Kişi")
+                    [10, 20, 30, 40], slope=10.0, intercept=10.0, unit="kişi")
     assert _is_png_datauri(s)
 
 
 def test_trend_chart_without_regression_line():
     s = trend_chart(["2025-01", "2025-02"], [10, 20],
-                    slope=None, intercept=None, title="x", ylabel="y")
+                    slope=None, intercept=None)
     assert _is_png_datauri(s)
 
 
 def test_comparison_chart_returns_png():
-    s = comparison_chart(["North", "South", "East"], [120, 30, 55],
-                         title="Bölge", ylabel="Kişi")
+    s = comparison_chart(["North", "South", "East"], [120, 30, 55], unit="kişi")
     assert _is_png_datauri(s)
 
 
 def test_correlation_chart_returns_png():
     s = correlation_chart([1, 2, 3, 4], [2, 4, 6, 8],
-                          xlabel="A", ylabel="B", title="Korelasyon")
+                          xlabel="A", ylabel="B")
     assert _is_png_datauri(s)
 
 
 def test_trend_chart_accepts_language():
     s = trend_chart(["2025-01", "2025-02", "2025-03"], [1, 2, 3], slope=1.0, intercept=1.0,
-                    title="x", ylabel="y", language="en")
+                    language="en")
     assert _is_png_datauri(s)
 
 
@@ -59,12 +57,12 @@ def test_format_value_writes_shares_as_percent():
 
 def test_trend_chart_on_iso_dates():
     s = trend_chart(["2022-04-01T00:00:00", "2023-06-01T00:00:00", "2024-04-01T00:00:00"],
-                    [20, 35, 45], slope=10.0, intercept=25.0, title="x", ylabel="y",
+                    [20, 35, 45], slope=10.0, intercept=25.0,
                     times=[0, 1.17, 2.0], language="tr", percent=True)
     assert _is_png_datauri(s)
 
 
 def test_charts_draw_a_dark_variant():
-    light = comparison_chart(["North", "South"], [120, 30], title="t", ylabel="y")
-    dark = comparison_chart(["North", "South"], [120, 30], title="t", ylabel="y", mode="dark")
+    light = comparison_chart(["North", "South"], [120, 30])
+    dark = comparison_chart(["North", "South"], [120, 30], mode="dark")
     assert _is_png_datauri(dark) and dark != light

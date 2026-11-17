@@ -115,7 +115,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
             else:
                 chart, chart_dark = _both_modes(
                     trend_chart, periods, values, tr.slope, tr.intercept,
-                    title=f"{name} — Trend", ylabel=name, times=times,
+                    unit=_axis_unit(ind, language), times=times,
                     language=language, percent=percent)
                 sections.append(ReportSection(
                     heading=headings["trend"].format(name=name),
@@ -139,8 +139,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                 vals = [v for _, v in rr.ranking]
                 chart, chart_dark = _both_modes(
                     comparison_chart, labels, vals,
-                    title=headings["region"].format(name=name),
-                    ylabel=name, language=language, percent=percent)
+                    unit=_axis_unit(ind, language), language=language, percent=percent)
                 sections.append(ReportSection(
                     heading=headings["region"].format(name=name),
                     stat_result={"kind": "region", "indicator": name,
@@ -169,7 +168,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                 continue
             chart, chart_dark = _both_modes(
                 correlation_chart, xa, yb, xlabel=labels[i], ylabel=labels[j],
-                title=f"{labels[i]} ↔ {labels[j]}", language=language,
+                language=language,
                 x_percent=percent_by_label[labels[i]],
                 y_percent=percent_by_label[labels[j]])
             sections.append(ReportSection(
@@ -187,6 +186,15 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
     return Findings(sections=sections, gaps=gaps, indicators_covered=covered,
                     date_from=date_from, date_to=date_to, default_years=default_years,
                     notes=notes)
+
+
+def _axis_unit(ind, language: str) -> str:
+    """What the value axis counts. Shares need none: their ticks read '45%'."""
+    if ind.scale == 100:
+        return ""
+    if ind.key == "funding":
+        return "USD"
+    return "kişi" if language == "tr" else "people"
 
 
 def _both_modes(draw, *args, **kwargs) -> tuple[str, str]:

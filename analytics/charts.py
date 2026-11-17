@@ -123,16 +123,16 @@ def _new_chart(mode: str):
 
 
 def _label_colors(ax, theme) -> None:
-    ax.title.set_color(theme["text"])
     ax.xaxis.label.set_color(theme["muted"])
     ax.yaxis.label.set_color(theme["muted"])
 
 
-def trend_chart(periods, values, slope, intercept, title: str, ylabel: str, times=None,
+def trend_chart(periods, values, slope, intercept, unit: str = "", times=None,
                 language: str = "tr", percent: bool = False, mode: str = "light") -> str:
     """*times*: each period's position (years since the first); evenly spaced when
     omitted. slope/intercept use the same unit (Sen's slope per year). The x axis
-    is a real date axis when the periods are ISO dates."""
+    is a real date axis when the periods are ISO dates. No title: the report's section
+    heading sits right above the chart. *unit* labels the value axis ("people")."""
     legend = _LEGEND.get(language, _LEGEND["en"])
     fig, ax, theme = _new_chart(mode)
     t = list(times) if times is not None else list(range(len(values)))
@@ -160,26 +160,24 @@ def trend_chart(periods, values, slope, intercept, title: str, ylabel: str, time
         ax.set_xticklabels([str(p) for p in periods])
     _value_axis(ax.yaxis, language, percent)
     ax.grid(False, axis="x")
-    ax.set_title(title)
-    ax.set_ylabel(ylabel)
+    ax.set_ylabel(unit)
     _label_colors(ax, theme)
     return _to_datauri(fig)
 
 
-def comparison_chart(labels, values, title: str, ylabel: str, language: str = "tr",
+def comparison_chart(labels, values, unit: str = "", language: str = "tr",
                      percent: bool = False, mode: str = "light") -> str:
     fig, ax, theme = _new_chart(mode)
     ax.bar(labels, values, color=theme["series"], width=0.6)
     _value_axis(ax.yaxis, language, percent)
     ax.grid(False, axis="x")
-    ax.set_title(title)
-    ax.set_ylabel(ylabel)
+    ax.set_ylabel(unit)
     ax.tick_params(axis="x", rotation=45)
     _label_colors(ax, theme)
     return _to_datauri(fig)
 
 
-def correlation_chart(x, y, xlabel: str, ylabel: str, title: str,
+def correlation_chart(x, y, xlabel: str, ylabel: str,
                       language: str = "tr", x_percent: bool = False,
                       y_percent: bool = False, mode: str = "light") -> str:
     fig, ax, theme = _new_chart(mode)
@@ -187,7 +185,6 @@ def correlation_chart(x, y, xlabel: str, ylabel: str, title: str,
                zorder=3)
     _value_axis(ax.xaxis, language, x_percent)
     _value_axis(ax.yaxis, language, y_percent)
-    ax.set_title(title)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     _label_colors(ax, theme)
