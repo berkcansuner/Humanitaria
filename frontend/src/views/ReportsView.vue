@@ -326,9 +326,6 @@
                   {{ savedPeriod(continuedBy) || 'a later report' }}
                 </button>
               </p>
-              <p v-else-if="nextSuggestion && nextSuggestion.notStarted" class="report-compared">
-                Next period starts {{ nextSuggestion.startsOn }}
-              </p>
             </div>
             <div v-if="current.id" class="report-actions">
               <button
@@ -594,10 +591,11 @@ async function copyReport() {
 const titleParts = computed(() => splitReportTitle(current.value && current.value.title))
 // Type · sector · period, each kept whole: the line only wraps between parts,
 // and a part carries its leading "·" so no separator is left at a line end.
+// Under the report title: its type and period only.
 const metaParts = computed(() => {
   if (!current.value || !current.value.title) return []
-  const { sector, period } = titleParts.value
-  return [typeLabel(current.value.report_type), sector, period].filter(Boolean)
+  const { period } = titleParts.value
+  return [typeLabel(current.value.report_type), period].filter(Boolean)
 })
 
 onMounted(async () => {
