@@ -394,3 +394,25 @@ def test_source_line_names_the_publishers_then_hdx_hapi():
 
 def test_every_indicator_names_its_publisher():
     assert all(ind.source for ind in INDICATORS)
+
+
+def test_plain_keeps_three_significant_digits_for_large_values():
+    from analytics.technical_report import _plain
+    assert _plain(-931170.92) == "-931000"
+    assert _plain(1_794_000.4) == "1790000"
+    assert _plain(4.7923) == "4.79"
+    assert _plain(45.27) == "45.3"
+    assert _plain(0) == "0"
+
+
+def test_trend_text_does_not_quote_slopes_to_the_cent():
+    from analytics.technical_report import _trend_text
+    text = _trend_text({
+        "indicator": "IDPs", "direction": "decreasing", "slope": -931170.92,
+        "ci_low": -1153344.92, "ci_high": -603416.78, "tau": -0.34, "p_value": 0.002,
+        "p_adjusted": 0.012, "significant": True, "pct_change": -24.9,
+        "first_period": "2023-08-31", "last_period": "2026-09-30", "n_points": 40, "unit": "",
+    })
+    assert "Sen slope=-931000 per year" in text
+    assert "95% CI -1150000 to -603000" in text
+    assert ".92" not in text and ".78" not in text

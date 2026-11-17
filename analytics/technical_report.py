@@ -6,6 +6,7 @@ findings_to_context, hesaplanmış sayıları LLM'e 'context' olarak verilecek m
 çevirir; LLM bunları yalnızca yorumlar, asla yeniden hesaplamaz.
 """
 import logging
+import math
 from dataclasses import dataclass, field
 from datetime import date
 
@@ -284,19 +285,30 @@ def _verdict(r: dict) -> str:
             f"{'SIGNIFICANT' if r['significant'] else 'NOT SIGNIFICANT'} (α=0.05)")
 
 
+def _plain(x: float) -> str:
+    """A value as the model should repeat it: three significant digits for large
+    magnitudes (931170.92 → 931000), one decimal from 10, two below. The report
+    used to quote slopes and intervals to the cent ("-931,170.92 people a year")."""
+    if x == 0 or not math.isfinite(x):
+        return f"{x:g}"
+    if abs(x) >= 1000:
+        return f"{round(x, 2 - int(math.floor(math.log10(abs(x))))):.0f}"
+    return f"{x:.1f}" if abs(x) >= 10 else f"{x:.2f}"
+
+
 def _trend_text(r: dict) -> str:
     pct = "n/a" if r["pct_change"] is None else f"{r['pct_change']:+.1f}%"
     ci = ("95% CI: too few points" if r["ci_low"] is None
-          else f"95% CI {r['ci_low']:.2f} to {r['ci_high']:.2f}")
+          else f"95% CI {_plain(r['ci_low'])} to {_plain(r['ci_high'])}")
     unit = f" {r['unit']}" if r.get("unit") else ""
-    return (f"{r['indicator']}: direction={r['direction']}, Sen slope={r['slope']:.2f}{unit} per year "
+    return (f"{r['indicator']}: direction={r['direction']}, Sen slope={_plain(r['slope'])}{unit} per year "
             f"({ci}), Kendall tau={r['tau']:.2f}, Mann-Kendall {_verdict(r)}, "
             f"relative change along the trend line {str(r['first_period'])[:10]} → {str(r['last_period'])[:10]}={pct}, "
             f"n={r['n_points']}.")
 
 
 def _region_text(r: dict) -> str:
-    top = ", ".join(f"{name} ({val:.0f})" for name, val in r["ranking"][:3])
+    top = ", ".join(f"{name} ({_plain(val)})" for name, val in r["ranking"][:3])
     h = "n/a" if r["kruskal_h"] is None else f"{r['kruskal_h']:.2f}"
     return (f"{r['indicator']}: highest regions — {top}; difference between regions "
             f"Kruskal-Wallis H={h}, {_verdict(r)}.")
