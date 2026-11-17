@@ -506,13 +506,16 @@ const form = ref({
 
 const current = ref(null) // a saved report as toCurrent() shapes it, or the one streaming
 
-// A report still streaming (not saved yet) carries the model's retrieval numbers
-// ([15], [16]); the server renumbers them by first appearance when it saves. Show
-// that numbering while it streams, so the citations don't change at the end.
+// A report still streaming carries the model's retrieval numbers ([15], [16]); the
+// server renumbers them by first appearance when it saves. Show that numbering
+// until the stored copy has replaced the streamed text, so the citations never
+// change. `generating` stays on after "saved" sets the id, while the stored copy
+// loads; renumbering it again is harmless (already 1..n by first appearance). A
+// stopped, unsaved report keeps the numbering too.
 const shown = computed(() => {
   const c = current.value
   if (!c) return { content: '', sources: null }
-  if (c.id) return { content: c.content, sources: c.sources }
+  if (c.id && !generating.value) return { content: c.content, sources: c.sources }
   if (c.sources) return renumberCitations(c.content, c.sources)
   return { content: numberByFirstAppearance(c.content), sources: null }
 })
