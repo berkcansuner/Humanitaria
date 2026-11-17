@@ -62,6 +62,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
     covered: list[str] = []
     notes: list[str] = []
     national_by_label: dict[str, tuple[list, list]] = {}   # korelasyon için (periods, values)
+    percent_by_label: dict[str, bool] = {}                 # share indicators (IPC %) → '%' ticks
     # Dönem: seçilmediyse son N yıl; bitiş en geç bugün (HAPI gelecek yılların plan
     # kayıtlarını da döndürür — son nokta olarak sahte bir düşüş üretiyordu).
     today = date.today()
@@ -102,6 +103,8 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                 continue
             covered.append(ind.key)
             national_by_label[name] = (periods, values)
+            percent = ind.scale == 100
+            percent_by_label[name] = percent
 
             # Trend (gerçek zaman ekseni: ilk dönemden beri yıl → eğim yıl başına)
             times = _years_since_first(periods)
@@ -111,7 +114,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
             else:
                 chart = trend_chart(periods, values, tr.slope, tr.intercept,
                                     title=f"{name} — Trend", ylabel=name, times=times,
-                                    language=language)
+                                    language=language, percent=percent)
                 sections.append(ReportSection(
                     heading=headings["trend"].format(name=name),
                     stat_result={"kind": "trend", "indicator": name,
@@ -133,7 +136,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                 vals = [v for _, v in rr.ranking]
                 chart = comparison_chart(labels, vals,
                                          title=headings["region"].format(name=name),
-                                         ylabel=name, language=language)
+                                         ylabel=name, language=language, percent=percent)
                 sections.append(ReportSection(
                     heading=headings["region"].format(name=name),
                     stat_result={"kind": "region", "indicator": name,
@@ -160,7 +163,9 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
             if cor.note == "insufficient_data":
                 continue
             chart = correlation_chart(xa, yb, xlabel=labels[i], ylabel=labels[j],
-                                      title=f"{labels[i]} ↔ {labels[j]}", language=language)
+                                      title=f"{labels[i]} ↔ {labels[j]}", language=language,
+                                      x_percent=percent_by_label[labels[i]],
+                                      y_percent=percent_by_label[labels[j]])
             sections.append(ReportSection(
                 heading=headings["correlation"].format(x=labels[i], y=labels[j]),
                 stat_result={"kind": "correlation", "indicator_x": labels[i],
