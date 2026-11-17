@@ -1,109 +1,142 @@
-# ReliefWeb RAG Sistemi
+# Humanitaria
 
-ReliefWeb insani yardım veritabanı üzerinden Türkçe/İngilizce çok dilli sohbet yapılabilen RAG
-(Retrieval-Augmented Generation) sistemidir. Arayüz markası: **Humanitaria**.
+Humanitaria answers questions about humanitarian crises from ReliefWeb reports, with a
+numbered citation on every claim. It is built for monitoring and evaluation (M&E) teams and
+humanitarian analysts who have to cite what they write.
 
-## Mimari
+**Live demo:** https://humanitaria.onrender.com (free hosting: the first request after a
+quiet period can take up to a minute while the server wakes up)
+
+![Humanitaria answering a question with numbered citations and its source list](docs/images/humanitaria-chat.png)
+
+## What it does
+
+- **Cited answers in English or Turkish.** Answers are written only from the reports the
+  system retrieves, and each `[n]` opens the original report with its publisher and date. If
+  nothing relevant is found, it says so instead of answering from the model's memory. The
+  country, sector and dates are picked out of the question and used as search filters.
+- **M&E reports.** Pick a country, sector, period and language, then choose one of four
+  report types: situation, indicator monitoring, needs assessment or technical monitoring.
+  Reports use the same citations, are saved to your account and export to PDF.
+- **Statistics computed in code, not by the model.** The technical monitoring report pulls
+  indicator series from HDX HAPI and runs the trend and comparison tests in Python (Sen's
+  slope, Holm correction). The model only writes them up, and a check removes any sentence
+  whose numbers it cannot match to the computed results.
+- **A rolling 12-month index.** A scheduled GitHub Actions workflow triggers an incremental
+  ingest of new ReliefWeb reports, and reports older than a year are pruned.
+- **Accounts.** Email and password or Google sign-in. Deleting an account removes its
+  conversations and reports.
+
+## Architecture
 
 ```
-ReliefWeb API → Ingestion Pipeline → Postgres + pgvector (Supabase)
+ReliefWeb API → ingestion pipeline → Postgres + pgvector (Supabase: chunks + documents)
                                             ↓
-Kullanıcı → Vue 3 Frontend → FastAPI → RAG Engine (LangChain LCEL) → Google Gemini (chat yanıtı)
-                                              ↑
-                       Gemini embedding (gemini-embedding-001, 768 boyut) + query processor
+User → Vue 3 frontend → FastAPI → retrieval (pgvector + MMR + rerank) → Gemini (answer)
+                            ↑                 ↑
+            query processor (filters)   Gemini embeddings (768-dim)
 ```
 
-- **Chat & sorgu-işleme LLM'i:** Google Gemini (`gemini-3.5-flash-lite`, OpenAI-uyumlu endpoint).
-- **Rapor LLM'i:** Google Gemini (`gemini-3.8-flash`).
-- **Embedding:** Google Gemini (`gemini-embedding-001`, 768 boyut).
-- **Vektör DB:** Postgres + pgvector (Supabase; `chunks` tablosu, `halfvec` + HNSW). Sıralama için
-  Pinecone Inference reranker'ı (veri tutulmaz).
-- **Kimlik doğrulama:** httpOnly cookie session — e-posta/şifre + opsiyonel Google OAuth.
-- **Tamamen bulut** — yerel model sunucusu gerektirmez.
+| Layer | Technology |
+|---|---|
+| Chat and query processing | Google Gemini `gemini-3.5-flash-lite` (OpenAI-compatible endpoint) |
+| Reports | Google Gemini `gemini-3.8-flash` |
+| Embeddings | Google Gemini `gemini-embedding-001`, truncated to 768 dimensions |
+| Vector search | Postgres + pgvector on Supabase (`halfvec(768)`, HNSW index) |
+| Reranking | Pinecone Inference `bge-reranker-v2-m3` (rerank API only, no data stored) |
+| Indicator data | HDX HAPI |
+| Backend | Python 3.12, FastAPI, LangChain (LCEL), server-sent events for streaming |
+| Frontend | Vue 3, Vite |
+| Hosting and CI | Render (Docker), GitHub Actions |
 
-## Kurulum
+## Running it locally
 
-1. Gerekli Python sürümü: 3.12
-2. Sanal ortam oluşturun:
+Requirements: Python 3.12, Node.js, and a Postgres database with the `vector` extension
+(vector search only works on Postgres).
+
+1. Create a virtual environment and install the dependencies:
    ```bash
    python -m venv venv
-   venv\Scripts\activate       # Windows
-   source venv/bin/activate    # Linux/macOS
-   ```
-3. Bağımlılıkları yükleyin:
-   ```bash
+   source venv/bin/activate      # Windows: venv\Scripts\activate
    pip install -r requirements.txt
    ```
-4. `.env.example` dosyasını `.env` olarak kopyalayın ve anahtarlarınızı girin:
-   ```bash
-   cp .env.example .env
-   ```
-   En az şunlar gerekir: `GEMINI_API_KEY` (chat + embedding), `DATABASE_URL` (pgvector'lü
-   Postgres — vektör araması yalnız Postgres'te), `RELIEFWEB_APPNAME` (ReliefWeb API);
-   `PINECONE_API_KEY` opsiyonel (reranker). Kimlik doğrulama e-posta/şifre ile kutudan çıktığı gibi
-   çalışır; production için `AUTH_SESSION_SECRET`'i değiştirin (bkz. Kimlik Doğrulama bölümü).
-5. Veritabanında `vector` eklentisini açın (Supabase: Database → Extensions → vector).
-   Tablolar (`chunks`, `documents`, …) uygulama ilk açıldığında otomatik oluşturulur.
-6. Frontend bağımlılıklarını yükleyin ve build edin:
+2. Copy `.env.example` to `.env` and fill in at least:
+   - `GEMINI_API_KEY` for chat, reports and embeddings
+   - `DATABASE_URL` for Postgres with pgvector
+   - `RELIEFWEB_APPNAME` for the ReliefWeb API
+
+   `PINECONE_API_KEY` is optional. Without it, results keep their retrieval order.
+   `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are only needed for Google sign-in. For
+   production, set a long random `AUTH_SESSION_SECRET` and `SESSION_COOKIE_SECURE=True`.
+3. Enable the `vector` extension in the database (Supabase: Database → Extensions →
+   vector). The app creates its tables on first start.
+4. Build the frontend:
    ```bash
    cd frontend
    npm install
    npm run build
    cd ..
    ```
+5. Start the server, which also serves the built frontend, then open
+   http://localhost:8000:
+   ```bash
+   python -m uvicorn api.main:app
+   ```
+6. Load some reports:
+   ```bash
+   python scripts/ingest.py --limit 1000
+   ```
+   `--date-from YYYY-MM-DD` limits it to newer reports. Ingestion is idempotent, so
+   running it twice does not duplicate anything. `--force` clears the index first.
 
-## Çalıştırma
+Tests: `python -m pytest tests/ -q` for the backend and `npm test` in `frontend/`.
+Deployment notes are in `DEPLOY.md`.
 
-- Backend (Vue build'ini de sunar) başlatmak için:
-  ```bash
-  python -m uvicorn api.main:app
-  ```
-  Tarayıcıda `http://localhost:8000` adresine gidin (port `.env` içindeki `API_PORT` ile değiştirilebilir).
+## How it was built
 
-- Veri çekmek için:
-  ```bash
-  python scripts/ingest.py --limit 1000
-  ```
-  Seçenekler: `--endpoints reports disasters countries` (varsayılan `reports`),
-  `--date-from YYYY-MM-DD` (yalnız belirli tarihten sonraki belgeler).
-  Not: ingestion idempotent'tir; `--force` koleksiyonu temizler (dikkatli kullanın).
+I built Humanitaria with [Claude Code](https://claude.com/claude-code), Anthropic's coding
+agent, which wrote most of the code. My part was deciding what to build and checking that
+it worked:
 
-## Kimlik Doğrulama
+- **Product decisions.** I chose who it is for (M&E staff first, then analysts,
+  researchers and journalists), what to build and in what order.
+- **Architecture and technology choices.** I picked Supabase with pgvector, Gemini, Render
+  and GitHub Actions, and kept hosting and the database on free tiers.
+- **Quality evaluation.** I decided what counted as good enough and whether a change
+  stayed. For retrieval there is a 30-query evaluation set with LLM-judged relevance
+  labels: one round of changes raised nDCG@5 from 0.658 to 0.761. For reports, the bar was
+  that every cited figure must appear in the report it cites. In one Yemen test, all 62
+  did.
+- **Live testing.** I used the deployed app myself, found problems and asked for fixes.
 
-Chat endpoint'leri (`/chat`, `/chat/stream`) oturum açmayı gerektirir; istek bir oturum
-cookie'si taşımıyorsa **401** döner. İki yöntem desteklenir:
+A 20-pass security review was part of the work. The summary is in
+[docs/security-audit.md](docs/security-audit.md).
 
-- **E-posta / şifre** — kutudan çıktığı gibi çalışır, ek kurulum gerekmez
-  (`POST /auth/signup`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`).
-- **Google OAuth (opsiyonel)** — `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` boşsa
-  `GET /auth/google/login` `503` döner. Etkinleştirmek için Google Cloud Console'da bir
-  OAuth 2.0 Client ID oluşturun ve yetkili callback URI'yi `GOOGLE_REDIRECT_URI` ile eşitleyin.
+## Known limitations
 
-Oturum, httpOnly cookie'de tutulan opak bir token'dır (SQLite'ta hash'li saklanır).
+- **Reranker quota.** Pinecone's free plan allows 500 rerank requests a month, shared by
+  the live app and evaluation runs. When the quota is used up, results fall back to
+  retrieval order. The app keeps working, but ranking quality drops until the monthly
+  reset.
+- **Free-tier hosting.** The Render instance sleeps when idle, so the first request can be
+  slow. The Supabase database is capped at 500 MB, which is why the index keeps only 12
+  months of reports and caps how many it keeps per country.
+- **ReliefWeb only, text only.** Report bodies are indexed. PDF attachments are skipped by
+  default. Images and infographics are searchable only by their title and description.
+- **Embedding task type.** Embeddings go through Gemini's OpenAI-compatible endpoint, which
+  has no separate query and document modes. This is a small quality trade-off.
+- **Silver labels.** The retrieval evaluation set is labelled by an LLM, not by people, so
+  the scores are useful for comparing changes, not as absolute numbers.
 
-**Production:** `AUTH_SESSION_SECRET`'i uzun, rastgele bir değerle değiştirin ve HTTPS
-arkasında `SESSION_COOKIE_SECURE=True` yapın.
-
-## Dizin Yapısı
+## Repository layout
 
 ```
-.
-├── config.py            # Pydantic ayarları
-├── requirements.txt     # Python bağımlılıkları
-├── .env.example         # Ortam değişkenleri şablonu
-├── api/                 # FastAPI uygulaması
-│   ├── main.py          # Uygulama giriş noktası
-│   └── routes/          # API route'ları (auth, chat, conversations, health)
-├── frontend/            # Vue 3 SPA
-│   ├── src/             # Kaynak kodlar
-│   └── dist/            # Build edilmiş production bundle (gitignore'da)
-├── ingestion/           # ReliefWeb'den veri çekme, parse, chunk, store
-├── rag/                 # Embedding, retriever, LangChain zinciri, query processor
-├── scripts/             # CLI komutları (ingest.py, eval_rag.py)
-├── tests/               # pytest testleri
-└── conversations.db     # Sohbet geçmişi (SQLite; gitignore'da)
+api/          FastAPI app and routes (auth, chat, conversations, reports, admin)
+rag/          embeddings, retrieval, chains, query processing, report generation
+ingestion/    ReliefWeb client, parsing, chunking, storage, scheduling, retention
+analytics/    HDX HAPI client and statistics for the technical monitoring report
+frontend/     Vue 3 app (src/), built into dist/
+scripts/      CLI tools: ingest.py, eval_rag.py, build_eval_labels.py
+tests/        pytest suite
+docs/         security audit summary and design notes
 ```
-
-## Deployment
-
-Canlı dağıtım adımları (Render + OAuth ortam değişkenleri) için `DEPLOY.md`'ye bakın.
