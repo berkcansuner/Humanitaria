@@ -9,9 +9,8 @@
           <div>
             <h1>Ask the humanitarian record. Get answers you can <em>cite.</em></h1>
             <p class="lead">
-              Humanitaria turns thousands of humanitarian reports into clear, source-grounded
-              answers so your team can read a crisis in seconds, with every claim traced back to the
-              original report.
+              Humanitaria answers questions from ReliefWeb's reports. Each claim carries a numbered
+              citation that opens the original, so you can check it before you quote it.
             </p>
             <div class="hero-cta">
               <router-link class="btn btn-solid btn-lg" to="/app"
@@ -41,41 +40,41 @@
       <section id="features" class="section">
         <div class="wrap">
           <div class="section-head">
-            <h2>Built for people who need the answer — and the source.</h2>
+            <h2>Built for people who need the source as much as the answer.</h2>
             <p>
-              No query syntax, no dashboards to configure. Just ask, and get a grounded answer you
-              can act on and quote.
+              There's no query syntax to learn. You ask, and the answer comes back with its sources
+              attached.
             </p>
           </div>
           <dl class="features">
             <div class="feature">
               <dt>Ask in plain language</dt>
               <dd>
-                Pose a question the way you'd ask a colleague. Humanitaria understands country,
-                theme, and timeframe — and asks to clarify when it helps.
+                Ask the way you'd ask a colleague. Humanitaria picks out the country, sector and
+                dates you mean, and if the question is too broad it asks you to narrow it down.
               </dd>
             </div>
             <div class="feature">
               <dt>Cited, source-grounded answers</dt>
               <dd>
-                Every response is assembled from published reports and footnoted — so you can verify
-                each claim and quote it with confidence.
+                Answers are written only from the reports Humanitaria retrieves, and each statement
+                points to the one it came from. If no report matches, it tells you instead of
+                guessing.
               </dd>
             </div>
             <div class="feature">
               <dt>Situation reports in one step</dt>
               <dd>
-                Pick a country, sector, period and language. Humanitaria synthesizes the matching
-                reports into a structured M&amp;E brief, cited like every answer, saved to your
-                account and exportable as PDF.
+                Pick a country, sector, period and language. Humanitaria reads the matching reports
+                and writes a structured M&amp;E brief with the same numbered citations. Briefs are
+                saved to your account, and you can export them as PDF.
               </dd>
             </div>
             <div class="feature">
-              <dt>Current, and clear about its window</dt>
+              <dt>Updated every day</dt>
               <dd>
-                The last twelve months of ReliefWeb, updated automatically every day, across
-                countries and sectors, from displacement and food security to health and protection.
-                When something falls outside that window, Humanitaria says so.
+                The index holds the last twelve months of ReliefWeb and adds new reports daily. Ask
+                about something older and Humanitaria will tell you it's outside that window.
               </dd>
             </div>
           </dl>
@@ -103,8 +102,8 @@
             <div class="cit-copy">
               <h2>Every claim links back to a real report.</h2>
               <p>
-                Numbered citations point straight to the source document — open the original, check
-                the date and publisher, and carry it into your own brief.
+                Each number opens the source document, with its publisher and date, so you can check
+                it and cite it in your own brief.
               </p>
               <ul class="cit-list">
                 <li>
@@ -121,7 +120,7 @@
                     >
                       <path d="M20 6 9 17l-5-5" /></svg
                   ></span>
-                  One click from claim to the published source
+                  One click from a claim to the published report
                 </li>
                 <li>
                   <span class="tick"
@@ -153,7 +152,7 @@
                     >
                       <path d="M20 6 9 17l-5-5" /></svg
                   ></span>
-                  Nothing asserted without a citation behind it
+                  If no report matches, Humanitaria says so
                 </li>
               </ul>
             </div>
@@ -179,8 +178,8 @@
             <div class="use">
               <h3>Humanitarian organizations</h3>
               <p>
-                Brief faster, align teams, and ground decisions in the latest field reporting —
-                without combing through PDFs.
+                Get a sourced picture of a crisis before the coordination meeting, without opening
+                every PDF first.
               </p>
             </div>
             <div class="use">
@@ -193,8 +192,8 @@
             <div class="use">
               <h3>Journalists</h3>
               <p>
-                Find and verify what the response actually reported — with the original source one
-                click away.
+                Check what agencies on the ground actually reported, and open the original report in
+                one click.
               </p>
             </div>
           </div>
@@ -205,7 +204,7 @@
       <section class="section" style="padding-top: 8px">
         <div class="wrap">
           <div class="cta">
-            <h2>Spend your time on the evidence, not the search.</h2>
+            <h2>Spend your time on the evidence.</h2>
             <p>
               Ask your first question free, or generate a situation report for the country you're
               tracking.
