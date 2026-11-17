@@ -169,6 +169,13 @@
           </div>
           <div class="uses">
             <div class="use">
+              <h3>Monitoring &amp; evaluation teams</h3>
+              <p>
+                Track a country or sector over time, pull the evidence behind each finding, and turn
+                it into a cited situation brief for your next report.
+              </p>
+            </div>
+            <div class="use">
               <h3>Humanitarian organizations</h3>
               <p>
                 Brief faster, align teams, and ground decisions in the latest field reporting —
@@ -187,13 +194,6 @@
               <p>
                 Find and verify what the response actually reported — with the original source one
                 click away.
-              </p>
-            </div>
-            <div class="use">
-              <h3>Responders in the field</h3>
-              <p>
-                Get oriented on a new context in minutes — clear, cited, and light enough for a slow
-                connection.
               </p>
             </div>
           </div>
