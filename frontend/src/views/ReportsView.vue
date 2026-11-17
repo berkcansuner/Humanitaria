@@ -161,16 +161,12 @@
                   @click="openReport(e.report.id)"
                 >
                   <span class="saved-name">{{ savedName(e.report) }}</span>
-                  <span class="saved-meta"
-                    >{{ savedType(e.report)
-                    }}<template v-if="savedPeriod(e.report)"
-                      >{{ ' ' }}<!-- The separator travels with the period, so a wrapped line
-                           starts with "·" instead of leaving one at a line end. --><span
-                        class="saved-period"
-                        >· {{ savedPeriod(e.report) }}</span
-                      ></template
-                    ></span
-                  >
+                  <span class="saved-meta">
+                    <span>{{ savedType(e.report) }}</span>
+                    <span v-if="savedPeriod(e.report)" class="saved-period">{{
+                      savedPeriod(e.report)
+                    }}</span>
+                  </span>
                 </button>
                 <button
                   type="button"
@@ -567,8 +563,9 @@ function deleteLabel(r) {
   return `Delete report: ${savedName(r)}, ${savedType(r)}${period ? `, ${period}` : ''}`
 }
 
+// Periods read "17.11.2025 - 17.11.2026" wherever a saved report is named.
 function savedPeriod(r) {
-  return splitReportTitle(r.title).period
+  return formatPeriod(splitReportTitle(r.title).period)
 }
 
 // Copy the report text with its numbered Sources list (the PDF stays separate).
@@ -1403,7 +1400,10 @@ function onCiteClick(e) {
 .saved-period {
   white-space: nowrap;
 }
+/* Type, then the period on its own line, as under the open report's title. */
 .saved-meta {
+  display: flex;
+  flex-direction: column;
   font-family: var(--font-body);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
