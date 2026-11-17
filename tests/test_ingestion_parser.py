@@ -140,7 +140,7 @@ class TestParseDisaster:
         assert doc["format"] == "past"
         assert doc["doctype"] == "disaster"
         assert "50910" in doc["url"]
-        # Enrichment fields (metadata-only — see chunker.py / CLAUDE.md).
+        # Enrichment fields (metadata-only — see chunker.py).
         assert doc["disaster_type"] == "Flood"
         assert doc["glide"] == "FL-2021-000145-BEN"
 

@@ -142,8 +142,8 @@ def parse_disaster(raw: Dict[str, Any]) -> Dict[str, Any]:
     # Keep it out of `theme` so the sector-theme filter ($eq on report themes like
     # "Health"/"Protection and Human Rights") is not polluted if the disasters
     # endpoint is ingested alongside reports. It IS useful, so it is captured
-    # separately below as `disaster_type` — metadata-only for now (see chunker.py
-    # and CLAUDE.md's metadata schema), not yet a query-filter dimension.
+    # separately below as `disaster_type` — metadata-only for now (see chunker.py),
+    # not yet a query-filter dimension.
     theme = ""
     # primary_type is ReliefWeb's single "main" type (a dict); type is the full
     # list-of-dict (a disaster can carry more than one type, e.g. Flood + Flash
