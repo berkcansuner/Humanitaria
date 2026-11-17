@@ -13,6 +13,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.dates as mdates  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
+from matplotlib.patches import FancyBboxPatch, Rectangle  # noqa: E402
 from matplotlib.ticker import FuncFormatter, MaxNLocator  # noqa: E402
 
 logger = logging.getLogger(__name__)
@@ -69,7 +70,10 @@ def format_value(value: float, language: str = "tr", percent: bool = False) -> s
         return f"%{num}" if language == "tr" else f"{num}%"
     for limit, suffix in _SUFFIXES.get(language, _SUFFIXES["en"]):
         if abs(value) >= max(limit, 1e4):
-            return _number(value / limit, language) + suffix
+            scaled = value / limit
+            # Three significant digits: 929K, 78.5K, 1.79M.
+            decimals = 0 if abs(scaled) >= 100 else 1 if abs(scaled) >= 10 else 2
+            return _number(scaled, language, decimals) + suffix
     return _number(value, language, 0)
 
 
@@ -165,15 +169,53 @@ def trend_chart(periods, values, slope, intercept, unit: str = "", times=None,
     return _to_datauri(fig)
 
 
-def comparison_chart(labels, values, unit: str = "", language: str = "tr",
-                     percent: bool = False, mode: str = "light") -> str:
-    fig, ax, theme = _new_chart(mode)
-    ax.bar(labels, values, color=theme["series"], width=0.6)
-    _value_axis(ax.yaxis, language, percent)
-    ax.grid(False, axis="x")
-    ax.set_ylabel(unit)
-    ax.tick_params(axis="x", rotation=45)
-    _label_colors(ax, theme)
+_ROW_INCHES = 0.34     # one region per row; the figure grows with the region count
+_BAR_PX = 22           # bar thickness (the dataviz cap is 24 px)
+_END_PX = 4            # rounded data end
+
+
+def comparison_chart(labels, values, language: str = "tr", percent: bool = False,
+                     mode: str = "light") -> str:
+    """Horizontal bars, largest first, region names left and each value at its bar's
+    tip (so there is no value axis). The data end is rounded, the baseline square."""
+    theme = _THEMES.get(mode, _THEMES["light"])
+    order = sorted(zip(labels, values), key=lambda lv: lv[1], reverse=True)
+    n = len(order)
+    height = max(1.6, n * _ROW_INCHES + 0.4)
+    fig, ax = plt.subplots(figsize=(_FIGSIZE[0], height))
+    fig.patch.set_facecolor(theme["bg"])
+    ax.set_facecolor(theme["bg"])
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+
+    top = max((v for _, v in order), default=0) or 1
+    ax.set_xlim(0, top * 1.14)              # room for the value labels past the longest bar
+    ax.set_ylim(n - 0.5, -0.5)              # first (largest) row at the top
+    fig.canvas.draw()
+    bbox = ax.get_window_extent()
+    x_per_px = (top * 1.14) / bbox.width
+    y_per_px = n / bbox.height
+    bar_h = _BAR_PX * y_per_px
+    end_x = _END_PX * x_per_px
+
+    for row, (_, value) in enumerate(order):
+        if value <= 0:
+            continue
+        y0 = row - bar_h / 2
+        # Rounded box, then a square block over its baseline end.
+        ax.add_patch(FancyBboxPatch((0, y0), value, bar_h,
+                                    boxstyle=f"round,pad=0,rounding_size={end_x}",
+                                    mutation_aspect=y_per_px / x_per_px,
+                                    facecolor=theme["series"], edgecolor="none"))
+        ax.add_patch(Rectangle((0, y0), min(value, end_x * 1.5), bar_h,
+                               facecolor=theme["series"], edgecolor="none"))
+        ax.text(value + 6 * x_per_px, row, format_value(value, language, percent),
+                va="center", ha="left", fontsize=9, color=theme["text"])
+
+    ax.set_yticks(range(n))
+    ax.set_yticklabels([label for label, _ in order])
+    ax.tick_params(axis="y", colors=theme["muted"], labelsize=9, length=0, pad=8)
+    ax.set_xticks([])
     return _to_datauri(fig)
 
 

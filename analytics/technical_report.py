@@ -138,8 +138,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                 labels = [r for r, _ in rr.ranking]
                 vals = [v for _, v in rr.ranking]
                 chart, chart_dark = _both_modes(
-                    comparison_chart, labels, vals,
-                    unit=_axis_unit(ind, language), language=language, percent=percent)
+                    comparison_chart, labels, vals, language=language, percent=percent)
                 sections.append(ReportSection(
                     heading=headings["region"].format(name=name),
                     stat_result={"kind": "region", "indicator": name,
