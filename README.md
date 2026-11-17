@@ -7,8 +7,6 @@ humanitarian analysts who have to cite what they write.
 **Live demo:** https://humanitaria.onrender.com (free hosting: the first request after a
 quiet period can take up to a minute while the server wakes up)
 
-![Humanitaria answering a question with numbered citations and its source list](docs/images/humanitaria-chat.png)
-
 ## What it does
 
 - **Cited answers in English or Turkish.** Answers are written only from the reports the
