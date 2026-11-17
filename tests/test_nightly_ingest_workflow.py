@@ -27,8 +27,11 @@ def test_only_schedule_and_manual_triggers(workflow):
     assert set(_triggers(workflow)) == {"schedule", "workflow_dispatch"}
 
 
-def test_runs_daily_at_03_utc(workflow):
-    assert _triggers(workflow)["schedule"] == [{"cron": "0 3 * * *"}]
+def test_runs_twice_daily_off_the_top_of_the_hour(workflow):
+    # GitHub may drop scheduled runs at :00 under load (the first 03:00 run never started).
+    crons = [s["cron"] for s in _triggers(workflow)["schedule"]]
+    assert crons == ["17 3 * * *", "47 14 * * *"]
+    assert all(c.split()[0] != "0" for c in crons)
 
 
 def test_no_repository_permissions(workflow):
