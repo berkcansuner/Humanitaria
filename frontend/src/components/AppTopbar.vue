@@ -120,7 +120,7 @@ defineProps({
 }
 /* The brand sits over the 288px sidebar: exactly the sidebar's width less the
    bar's 16px padding, on every screen. The subtitle fits inside it (longest:
-   "Humanitarian Information Assistant"), and the Chat · Reports switch starts
+   "M&E Reports"), and the Chat · Reports switch starts
    just past the sidebar edge, in the same place everywhere. */
 @media (min-width: 641px) {
   .brand {

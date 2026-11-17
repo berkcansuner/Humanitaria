@@ -2,7 +2,7 @@
   <div class="app">
     <!-- Full-width top bar as on every other screen, so the brand and the
          Chat · Reports switch stay put when moving between screens. -->
-    <AppTopbar context="Humanitarian Information Assistant">
+    <AppTopbar>
       <template #start>
         <button class="hamburger" aria-label="Toggle menu" @click="sidebarOpen = !sidebarOpen">
           <Menu :size="20" />
