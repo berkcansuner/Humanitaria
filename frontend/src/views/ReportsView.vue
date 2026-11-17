@@ -283,9 +283,7 @@
             <div class="report-head-text">
               <h2 v-if="titleParts.heading" class="report-title-h">{{ titleParts.heading }}</h2>
               <p v-if="metaParts.length" class="report-meta">
-                <span v-for="(part, i) in metaParts" :key="i" class="meta-part"
-                  >{{ i ? '· ' : '' }}{{ part }}</span
-                >
+                <span v-for="(part, i) in metaParts" :key="i" class="meta-part">{{ part }}</span>
               </p>
               <p v-if="comparedWith" class="report-compared">
                 <template v-if="comparedWith.deleted">
@@ -478,7 +476,7 @@ import { revealSource, returnToCite } from '../utils/sources.js'
 import { parseSSE } from '../utils/parseSSE.js'
 import { getReportOptions, listReports, getReport, deleteReport } from '../utils/reportsApi.js'
 import { REPORT_TYPES, reportTypeBadge } from '../utils/reportTypes.js'
-import { splitReportTitle } from '../utils/reportTitle.js'
+import { splitReportTitle, formatPeriod } from '../utils/reportTitle.js'
 import { groupSeries, newerInSeries, olderInSeries, seriesKey } from '../utils/reportSeries.js'
 import { nextPeriod } from '../utils/nextPeriod.js'
 import { copyWithSources } from '../utils/citationCopy.js'
@@ -591,13 +589,13 @@ async function copyReport() {
 const titleParts = computed(() => splitReportTitle(current.value && current.value.title))
 // Type · sector · period, each kept whole: the line only wraps between parts,
 // and a part carries its leading "·" so no separator is left at a line end.
-// Under the report title: its type, its sector unless it covers all sectors, and
-// its period.
+// Under the report title, one per line: its type, its sector unless it covers all
+// sectors, and its period (17.11.2025 - 17.11.2026).
 const metaParts = computed(() => {
   if (!current.value || !current.value.title) return []
   const { sector, period } = titleParts.value
   const shownSector = sector === 'All sectors' ? '' : sector
-  return [typeLabel(current.value.report_type), shownSector, period].filter(Boolean)
+  return [typeLabel(current.value.report_type), shownSector, formatPeriod(period)].filter(Boolean)
 })
 
 onMounted(async () => {
@@ -1555,8 +1553,8 @@ function onCiteClick(e) {
 }
 .report-meta {
   display: flex;
-  flex-wrap: wrap;
-  column-gap: 1ch;
+  flex-direction: column;
+  row-gap: 2px;
   margin: 6px 0 0;
   font-family: var(--font-body);
   font-size: 12px;

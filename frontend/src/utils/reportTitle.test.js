@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { splitReportTitle } from './reportTitle.js'
+import { splitReportTitle, formatPeriod } from './reportTitle.js'
 
 describe('splitReportTitle', () => {
   it('splits a situation report title (no type prefix)', () => {
@@ -29,5 +29,17 @@ describe('splitReportTitle', () => {
       period: '',
     })
     expect(splitReportTitle(null)).toEqual({ heading: '', sector: '', period: '' })
+  })
+})
+
+describe('formatPeriod', () => {
+  it('writes ISO dates as day.month.year with a plain hyphen', () => {
+    expect(formatPeriod('2025-11-17 – 2026-11-17')).toBe('17.11.2025 - 17.11.2026')
+  })
+
+  it('leaves other text alone', () => {
+    expect(formatPeriod('')).toBe('')
+    expect(formatPeriod(null)).toBe('')
+    expect(formatPeriod('last 12 months')).toBe('last 12 months')
   })
 })

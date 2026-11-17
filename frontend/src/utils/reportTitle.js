@@ -17,3 +17,13 @@ export function splitReportTitle(title) {
   const heading = dash >= 0 ? first.slice(dash + 3).trim() : first
   return { heading: heading || first, sector, period }
 }
+
+/**
+ * A title's period ("2025-11-17 – 2026-11-17") written the way the report header
+ * shows it: day.month.year with a plain hyphen ("17.11.2025 - 17.11.2026").
+ */
+export function formatPeriod(period) {
+  return String(period || '')
+    .replace(/(\d{4})-(\d{2})-(\d{2})/g, '$3.$2.$1')
+    .replace(/\s+–\s+/g, ' - ')
+}
