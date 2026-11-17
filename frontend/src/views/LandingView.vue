@@ -63,6 +63,14 @@
               </dd>
             </div>
             <div class="feature">
+              <dt>Situation reports in one step</dt>
+              <dd>
+                Pick a country, sector, period and language. Humanitaria synthesizes the matching
+                reports into a structured M&amp;E brief, cited like every answer, saved to your
+                account and exportable as PDF.
+              </dd>
+            </div>
+            <div class="feature">
               <dt>Current and comprehensive</dt>
               <dd>
                 Continuously indexed across countries and clusters — from displacement and food
