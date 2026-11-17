@@ -205,10 +205,10 @@
       <section class="section" style="padding-top: 8px">
         <div class="wrap">
           <div class="cta">
-            <h2>Understand any crisis in seconds.</h2>
+            <h2>Spend your time on the evidence, not the search.</h2>
             <p>
-              Join the teams using Humanitaria to turn the humanitarian record into answers they can
-              trust and cite.
+              Ask your first question free, or generate a situation report for the country you're
+              tracking.
             </p>
             <div class="cta-btns">
               <router-link class="btn btn-onink" to="/signup">Sign up free</router-link>
