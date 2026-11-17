@@ -58,7 +58,6 @@ docs/superpowers/
 # OS
 .DS_Store
 Thumbs.db
-.wrangler/
 scripts/eval_data/rerank_cache.json
 
 # AI working files (kept locally, not part of the portfolio repo)
@@ -70,3 +69,4 @@ DESIGN.md
 docs/audit/
 docs/report-series-brief.md
 docs/frontend-audit-roadmap-*.md
+.wrangler/

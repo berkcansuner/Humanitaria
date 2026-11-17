@@ -108,7 +108,7 @@ async def list_users(
 
 @router.post("/ingest/cron", status_code=202)
 async def cron_ingest(x_cron_token: str = Header(default="", alias="X-Cron-Token")):
-    """Token-gated automation trigger (called daily by the Cloudflare Worker cron).
+    """Token-gated automation trigger (called by the GitHub Actions nightly-ingest workflow).
 
     Responds 202 immediately and runs ONE ingest + rolling-retention pass in the
     background (same pattern as /ingest/trigger): Render's proxy times out long

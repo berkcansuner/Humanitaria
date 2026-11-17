@@ -189,7 +189,7 @@ class Settings(BaseSettings):
     RETENTION_DAYS: int = 0
     RETENTION_PER_COUNTRY_CAP: int = 0
     # Shared secret for the automation trigger POST /admin/ingest/cron (empty = endpoint
-    # disabled). Set in prod env; the Cloudflare Worker cron sends it as X-Cron-Token.
+    # disabled). Set in prod env; the GitHub Actions nightly-ingest workflow sends it as X-Cron-Token.
     INGEST_TRIGGER_TOKEN: str = ""
 
     @property

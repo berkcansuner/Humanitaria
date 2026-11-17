@@ -15,12 +15,12 @@ services:
         value: production
       - key: SESSION_COOKIE_SECURE
         value: "true"
-      - key: INGEST_SCHEDULE_HOURS   # no in-process scheduler; the Cloudflare Worker cron triggers ingest
+      - key: INGEST_SCHEDULE_HOURS   # no in-process scheduler; GitHub Actions (nightly-ingest.yml) triggers ingest
         value: "0"
       - key: GEMINI_REASONING_EFFORT
         value: medium
       # All-country × last-1-year corpus + daily rolling-window retention
-      # (ingest via Cloudflare Worker cron → POST /admin/ingest/cron).
+      # (ingest via GitHub Actions nightly-ingest.yml → POST /admin/ingest/cron).
       # Vector index = Supabase pgvector (DATABASE_URL); EMBED_DIM must match the
       # chunks.embedding column (halfvec(768)).
       - key: EMBED_DIM
@@ -47,7 +47,7 @@ services:
       # Secrets — set these in the Render dashboard (never committed).
       - key: DATABASE_URL           # Supabase Postgres (session pooler URI): app tables + pgvector index
         sync: false
-      - key: INGEST_TRIGGER_TOKEN   # shared secret for POST /admin/ingest/cron (Cloudflare Worker)
+      - key: INGEST_TRIGGER_TOKEN   # shared secret for POST /admin/ingest/cron (GitHub Actions)
         sync: false
       - key: GEMINI_API_KEY
         sync: false
