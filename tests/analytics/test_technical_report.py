@@ -57,8 +57,11 @@ def test_findings_to_context_is_string_with_numbers(_mock):
 def test_assemble_section_images_shape(_mock):
     f = compute_findings("AFG", None, None)
     imgs = assemble_section_images(f)
-    assert all(set(d.keys()) == {"heading", "image"} for d in imgs)
+    assert all(set(d.keys()) == {"heading", "image", "image_dark"} for d in imgs)
     assert all(d["image"].startswith("data:image/png;base64,") for d in imgs)
+    # The dark-theme chart is a separate drawing, not the light one again.
+    assert all(d["image_dark"].startswith("data:image/png;base64,") for d in imgs)
+    assert all(d["image_dark"] != d["image"] for d in imgs)
 
 
 def _multi_region_rows(key):

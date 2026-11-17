@@ -1601,6 +1601,11 @@ function onCiteClick(e) {
   margin: 0.4em 0 1em;
   border-radius: var(--radius-md);
 }
+/* Technical-report charts are drawn for each theme; the dark one is hidden here and
+   swapped in by the unscoped dark-theme rules at the end of this file. */
+.report-content :deep(.section-img--dark) {
+  display: none;
+}
 
 .report-compared {
   margin: 4px 0 0;
@@ -1900,5 +1905,17 @@ function onCiteClick(e) {
   .back-to-list {
     display: inline-flex;
   }
+}
+</style>
+
+<style>
+/* Dark theme: show the dark-drawn technical-report chart instead of the light one.
+   Unscoped because the theme attribute sits on <html>, outside this component; the
+   extra :root[data-theme] specificity outranks the scoped display rules above. */
+:root[data-theme='dark'] .report-content .section-img--light {
+  display: none;
+}
+:root[data-theme='dark'] .report-content .section-img--dark {
+  display: block;
 }
 </style>

@@ -62,3 +62,9 @@ def test_trend_chart_on_iso_dates():
                     [20, 35, 45], slope=10.0, intercept=25.0, title="x", ylabel="y",
                     times=[0, 1.17, 2.0], language="tr", percent=True)
     assert _is_png_datauri(s)
+
+
+def test_charts_draw_a_dark_variant():
+    light = comparison_chart(["North", "South"], [120, 30], title="t", ylabel="y")
+    dark = comparison_chart(["North", "South"], [120, 30], title="t", ylabel="y", mode="dark")
+    assert _is_png_datauri(dark) and dark != light

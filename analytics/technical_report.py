@@ -27,6 +27,7 @@ class ReportSection:
     stat_result: dict          # {"kind": "trend"|"region"|"correlation", ..., "p_adjusted", "significant"}
     chart: str | None          # base64 data-URI veya None
     findings_text: str         # LLM context'ine giren kod-hesaplı özet
+    chart_dark: str | None = None   # the same chart drawn for the dark theme
 
 
 @dataclass
@@ -112,9 +113,10 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
             if tr.direction == "insufficient_data":
                 gaps.append(f"{name}: trend için yetersiz veri (n={tr.n_points})")
             else:
-                chart = trend_chart(periods, values, tr.slope, tr.intercept,
-                                    title=f"{name} — Trend", ylabel=name, times=times,
-                                    language=language, percent=percent)
+                chart, chart_dark = _both_modes(
+                    trend_chart, periods, values, tr.slope, tr.intercept,
+                    title=f"{name} — Trend", ylabel=name, times=times,
+                    language=language, percent=percent)
                 sections.append(ReportSection(
                     heading=headings["trend"].format(name=name),
                     stat_result={"kind": "trend", "indicator": name,
@@ -125,6 +127,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                                  "first_period": periods[0], "last_period": periods[-1],
                                  "unit": ind.unit},
                     chart=chart,
+                    chart_dark=chart_dark,
                     findings_text="",
                 ))
 
@@ -134,15 +137,17 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                 rr = by_region(reg, indicator=name, period=f"{periods[0]}–{periods[-1]}")
                 labels = [r for r, _ in rr.ranking]
                 vals = [v for _, v in rr.ranking]
-                chart = comparison_chart(labels, vals,
-                                         title=headings["region"].format(name=name),
-                                         ylabel=name, language=language, percent=percent)
+                chart, chart_dark = _both_modes(
+                    comparison_chart, labels, vals,
+                    title=headings["region"].format(name=name),
+                    ylabel=name, language=language, percent=percent)
                 sections.append(ReportSection(
                     heading=headings["region"].format(name=name),
                     stat_result={"kind": "region", "indicator": name,
                                  "ranking": rr.ranking, "p_value": rr.p_value,
                                  "kruskal_h": rr.kruskal_h},
                     chart=chart,
+                    chart_dark=chart_dark,
                     findings_text="",
                 ))
         except Exception as exc:
@@ -162,10 +167,11 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
             cor = correlate(xa, yb, indicator_x=labels[i], indicator_y=labels[j])
             if cor.note == "insufficient_data":
                 continue
-            chart = correlation_chart(xa, yb, xlabel=labels[i], ylabel=labels[j],
-                                      title=f"{labels[i]} ↔ {labels[j]}", language=language,
-                                      x_percent=percent_by_label[labels[i]],
-                                      y_percent=percent_by_label[labels[j]])
+            chart, chart_dark = _both_modes(
+                correlation_chart, xa, yb, xlabel=labels[i], ylabel=labels[j],
+                title=f"{labels[i]} ↔ {labels[j]}", language=language,
+                x_percent=percent_by_label[labels[i]],
+                y_percent=percent_by_label[labels[j]])
             sections.append(ReportSection(
                 heading=headings["correlation"].format(x=labels[i], y=labels[j]),
                 stat_result={"kind": "correlation", "indicator_x": labels[i],
@@ -173,6 +179,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                              "p_value": cor.p_value,
                              "method": cor.method, "n_points": cor.n_points},
                 chart=chart,
+                chart_dark=chart_dark,
                 findings_text="",
             ))
 
@@ -180,6 +187,11 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
     return Findings(sections=sections, gaps=gaps, indicators_covered=covered,
                     date_from=date_from, date_to=date_to, default_years=default_years,
                     notes=notes)
+
+
+def _both_modes(draw, *args, **kwargs) -> tuple[str, str]:
+    """The chart for the light theme (also used in the PDF) and for the dark theme."""
+    return draw(*args, mode="light", **kwargs), draw(*args, mode="dark", **kwargs)
 
 
 def _years_before(day: date, years: int) -> date:
@@ -321,5 +333,13 @@ def findings_to_context(findings: Findings) -> str:
 
 
 def assemble_section_images(findings: Findings) -> list[dict]:
-    return [{"heading": s.heading, "image": s.chart}
-            for s in findings.sections if s.chart]
+    """`image` is the light chart (the PDF uses it); `image_dark` the dark-theme one."""
+    out = []
+    for s in findings.sections:
+        if not s.chart:
+            continue
+        item = {"heading": s.heading, "image": s.chart}
+        if s.chart_dark:
+            item["image_dark"] = s.chart_dark
+        out.append(item)
+    return out
