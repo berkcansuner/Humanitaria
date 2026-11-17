@@ -161,16 +161,22 @@ def _no_findings_message(req: ReportRequest) -> str:
     )
 
 
+# ReliefWeb tags global reports with the country "World". They stay in the index for
+# chat, but a country report on "World" makes no sense, so the form leaves it out.
+_NOT_A_COUNTRY = {"World"}
+
+
 def _countries() -> list[str]:
     """Country options for the form. Prefer the indexed-derived list when the scan
     cache is warm (precise, data-backed); fall back to the static COUNTRIES snapshot
     when the cache is cold — e.g. a fresh deploy on Render's ephemeral filesystem — so
     the dropdown is never empty and report generation is never blocked."""
     try:
-        return analytics.distinct_countries() or COUNTRIES
+        countries = analytics.distinct_countries() or COUNTRIES
     except Exception as exc:   # the form must never be blocked by the list query
         logger.warning("Indexed country list unavailable: %s", exc)
-        return COUNTRIES
+        countries = COUNTRIES
+    return [c for c in countries if c not in _NOT_A_COUNTRY]
 
 
 def _series_key(row: dict) -> tuple:

@@ -410,6 +410,13 @@ class TestReportEndpoints:
             countries = r.json()["countries"]
             assert len(countries) > 100
             assert "Sudan" in countries and "Yemen" in countries
+            assert "World" not in countries
+
+    def test_options_leave_out_world(self):
+        # ReliefWeb's "World" tag is not a country to report on.
+        with patch("ingestion.analytics.distinct_countries", return_value=["Sudan", "World", "Yemen"]):
+            r = _client().get("/reports/options")
+        assert r.json()["countries"] == ["Sudan", "Yemen"]
 
     def test_stream_error_logs_traceback(self, caplog):
         # The client only sees a generic error event, so the log must keep the stack.
