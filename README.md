@@ -136,5 +136,5 @@ analytics/    HDX HAPI client and statistics for the technical monitoring report
 frontend/     Vue 3 app (src/), built into dist/
 scripts/      CLI tools: ingest.py, eval_rag.py, build_eval_labels.py
 tests/        pytest suite
-docs/         security audit summary and design notes
+docs/         security audit summary
 ```
