@@ -485,6 +485,97 @@ describe('ReportsView in two languages', () => {
       ])
     })
 
+    // What the server says it is reading, before the first word (the "status" event).
+    const READING = {
+      stage: 'reading',
+      count: 14,
+      sources: [
+        { title: 'Sudan: Humanitarian Access Snapshot', source: 'OCHA', date: '2026-10-11' },
+        { title: 'IPC Acute Food Insecurity Analysis', source: 'IPC', date: '2026-10-02' },
+        { title: 'WFP Sudan Situation Report #42', source: 'WFP', date: null },
+      ],
+    }
+    const rows = () =>
+      [...host.querySelectorAll('.progress-read li')].map((li) => [
+        li.querySelector('.read-title').textContent.trim(),
+        li.querySelector('.read-meta').textContent.trim(),
+      ])
+
+    it('names the sources being read once the server lists them', async () => {
+      const stream = stubStream()
+      await mount()
+      await start()
+      // Before the event: the general stage, and no list.
+      expect(stage()).toBe(en.reports.viewer.reading)
+      expect(host.querySelector('.progress-read')).toBeNull()
+
+      stream.push('status', READING)
+      await flush()
+      expect(stage()).toBe('Reading 14 sources. The first words usually appear within two minutes.')
+      expect(text('.progress-read .read-caption')).toBe('Sources being read')
+      expect(rows()).toEqual([
+        ['Sudan: Humanitarian Access Snapshot', 'OCHA · 2026-10-11'],
+        ['IPC Acute Food Insecurity Analysis', 'IPC · 2026-10-02'],
+        ['WFP Sudan Situation Report #42', 'WFP'],
+      ])
+      // All rows are in the page at once: the row-by-row reveal is CSS only, so
+      // reduced motion shows the same static list.
+      expect(host.querySelectorAll('.progress-read li')).toHaveLength(3)
+      expect(text('.progress-read .read-more')).toBe('and 11 more')
+      // The outline of the sections to come is still there below it.
+      expect(outline()).toEqual(['Executive Summary', 'Key Findings', 'Outlook'])
+
+      stream.push('token', { content: '## Executive Summary\n\nNeeds rose [12].' })
+      await flush()
+      expect(host.querySelector('.progress-read')).toBeNull()
+      expect(stage()).toBe(en.reports.progress.writing)
+    })
+
+    it('keeps the sources through a language switch, titles untranslated', async () => {
+      const stream = stubStream()
+      await mount()
+      await start()
+      stream.push('status', READING)
+      await flush()
+      await seconds(20)
+      setLocale('tr')
+      await flush()
+      expect(stage()).toBe(
+        '14 kaynak okunuyor. İlk sözcükler genellikle iki dakika içinde görünür.',
+      )
+      expect(text('.progress-read .read-caption')).toBe('Okunan kaynaklar')
+      expect(rows()[0]).toEqual(['Sudan: Humanitarian Access Snapshot', 'OCHA · 11 Eki 2026'])
+      expect(text('.progress-read .read-more')).toBe('ve 11 kaynak daha')
+      expect(text('.progress-elapsed')).toBe('0:20 geçti')
+    })
+
+    it('names the indicators a technical report computed, then the narrative', async () => {
+      const stream = stubStream()
+      await mount()
+      await start({ type: 'technical_monitoring', theme: '' })
+      stream.push('status', {
+        stage: 'computed',
+        indicators: ['Internally displaced people (IDPs)', 'Refugees', 'Returnees'],
+        date_from: '2021-11-18',
+        date_to: '2026-11-18',
+      })
+      await flush()
+      expect(stage()).toBe(
+        'Statistics computed from HDX HAPI data: 3 indicators. The narrative is being prepared.',
+      )
+      expect(text('.progress-read .read-caption')).toBe('Indicators with data')
+      expect(
+        [...host.querySelectorAll('.progress-read li')].map((li) => li.textContent.trim()),
+      ).toEqual(['Internally displaced people (IDPs)', 'Refugees', 'Returnees'])
+      expect(text('.progress-read .read-period')).toBe('Period analysed: 18.11.2021 - 18.11.2026')
+      // The names come in the report's language; the list says so.
+      expect(host.querySelector('.progress-read ul').getAttribute('lang')).toBe('en')
+
+      stream.push('token', { content: '## Executive Summary\n\nText.' })
+      await flush()
+      expect(stage()).toBe(en.reports.progress.writingTechnical)
+    })
+
     it('outlines "What changed" for the next period of a series', async () => {
       const q2 = {
         ...SAVED,

@@ -379,7 +379,13 @@
       "slow": "Bu, her zamankinden uzun sürüyor. Rapor hâlâ hazırlanıyor; beklemeyi sürdürebilir ya da durdurabilirsiniz.",
       "writing": "Rapor yazılıyor.",
       "writingTechnical": "Anlatım, hesaplanan istatistiklerden yazılıyor.",
-      "checking": "Değişenler önceki raporla karşılaştırılarak denetleniyor."
+      "checking": "Değişenler önceki raporla karşılaştırılarak denetleniyor.",
+      "readingCount": "{n} kaynak okunuyor. İlk sözcükler genellikle iki dakika içinde görünür. | {n} kaynak okunuyor. İlk sözcükler genellikle iki dakika içinde görünür.",
+      "readCaption": "Okunan kaynaklar",
+      "readMore": "ve {n} kaynak daha | ve {n} kaynak daha",
+      "computed": "İstatistikler HDX HAPI verilerinden hesaplandı: {n} gösterge. Anlatım hazırlanıyor. | İstatistikler HDX HAPI verilerinden hesaplandı: {n} gösterge. Anlatım hazırlanıyor.",
+      "computedCaption": "Verisi olan göstergeler",
+      "periodAnalysed": "İncelenen dönem: {period}"
     },
     "outline": {
       "executiveSummary": "Yönetici özeti",

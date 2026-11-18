@@ -57,6 +57,20 @@ describe('progressStage', () => {
     expect(progressStage({ type: 'technical_monitoring', elapsed: SLOW_AFTER_S })).toBe('slow')
   })
 
+  it('becomes factual once the server says what it read or computed', () => {
+    expect(progressStage({ type: 'situation', reading: { count: 12 }, elapsed: 5 })).toBe(
+      'readingCount',
+    )
+    expect(
+      progressStage({ type: 'technical_monitoring', computed: { indicators: [] }, elapsed: 5 }),
+    ).toBe('computed')
+    // A long wait is still said to be long; words still win over both.
+    expect(progressStage({ type: 'situation', reading: { count: 12 }, elapsed: 130 })).toBe('slow')
+    expect(progressStage({ type: 'situation', reading: { count: 12 }, started: true })).toBe(
+      'writing',
+    )
+  })
+
   it('follows the stream once words arrive, and the check of a next-period report', () => {
     expect(progressStage({ type: 'situation', started: true, elapsed: 300 })).toBe('writing')
     expect(progressStage({ type: 'technical_monitoring', started: true })).toBe('writingTechnical')

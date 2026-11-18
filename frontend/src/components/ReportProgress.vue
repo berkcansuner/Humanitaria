@@ -1,8 +1,8 @@
 <template>
   <!-- The wait for a report, said with what is known: what was asked for, what the
-       pipeline is doing, how long it has been, and the sections the report type
-       always has. The server sends nothing before the first word, so nothing here
-       pretends to measure progress. -->
+       pipeline is doing, how long it has been, what the server says it is reading
+       (or, for technical monitoring, which indicators it computed), and the sections
+       the report type always has. Nothing here pretends to measure progress. -->
   <div class="report-progress">
     <p class="progress-request">{{ requestLine }}</p>
     <p class="progress-status">
@@ -13,6 +13,37 @@
         t('reports.progress.elapsed', { time: elapsedClock(elapsed) })
       }}</span>
     </p>
+    <!-- What is being read, as the server listed it: titles and publishers as they
+         are (never translated), revealed row by row once; still under reduced motion. -->
+    <section v-if="!started && reading" class="progress-read" aria-labelledby="read-caption">
+      <p id="read-caption" class="read-caption">{{ t('reports.progress.readCaption') }}</p>
+      <ul class="read-list">
+        <li v-for="(src, i) in readSources" :key="i" class="read-row" :style="{ '--i': i }">
+          <span class="read-title" :title="src.title">{{ src.title }}</span>
+          <span class="read-meta">{{ sourceMeta(src) }}</span>
+        </li>
+      </ul>
+      <p v-if="moreCount > 0" class="read-more">
+        {{ t('reports.progress.readMore', { n: moreCount }, moreCount) }}
+      </p>
+    </section>
+    <section v-else-if="!started && stats" class="progress-read" aria-labelledby="read-caption">
+      <p id="read-caption" class="read-caption">{{ t('reports.progress.computedCaption') }}</p>
+      <!-- Indicator names come in the report's language, from the computed findings. -->
+      <ul class="read-list" :lang="language || undefined">
+        <li
+          v-for="(name, i) in stats.indicators || []"
+          :key="name"
+          class="read-row"
+          :style="{ '--i': i }"
+        >
+          <span class="read-title">{{ name }}</span>
+        </li>
+      </ul>
+      <p v-if="computedPeriod" class="read-period">
+        {{ t('reports.progress.periodAnalysed', { period: computedPeriod }) }}
+      </p>
+    </section>
     <div v-if="!started" class="progress-outline">
       <p class="outline-caption">{{ t('reports.progress.outline') }}</p>
       <ol class="outline-list">
@@ -37,6 +68,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { reportTypeLabel, sectorLabel } from '../utils/reportTypes.js'
 import { formatPeriod } from '../utils/reportTitle.js'
+import { ledgerDate } from '../utils/sources.js'
 import { reportOutline, progressStage, elapsedClock } from '../utils/reportProgress.js'
 
 const props = defineProps({
@@ -50,9 +82,29 @@ const props = defineProps({
   comparedPeriod: { type: String, default: '' },
   started: { type: Boolean, default: false }, // the first words have arrived
   checking: { type: Boolean, default: false }, // "What changed" is being checked
+  // The server's status before the first word: { count, sources: [{ title, source,
+  // date }] } for document reports, { indicators, date_from, date_to } for technical.
+  reading: { type: Object, default: null },
+  stats: { type: Object, default: null },
 })
 
-const { t, te } = useI18n()
+const { t, te, locale } = useI18n()
+
+const readSources = computed(() => (props.reading && props.reading.sources) || [])
+// The server lists the first sources; the count covers every document read.
+const moreCount = computed(() =>
+  props.reading ? Math.max(0, (props.reading.count || 0) - readSources.value.length) : 0,
+)
+// "OCHA · 2026-10-11" ("OCHA · 11 Eki 2026"): the publisher as it is, the date in
+// the interface's format.
+const sourceMeta = (src) =>
+  [src.source, ledgerDate(src.date, locale.value)].filter(Boolean).join(' · ')
+const computedPeriod = computed(() => {
+  const c = props.stats
+  return c && (c.date_from || c.date_to)
+    ? formatPeriod(`${c.date_from || ''} – ${c.date_to || ''}`)
+    : ''
+})
 
 // Counted from when the waiting state appears, which is when the request is sent.
 const startedAt = Date.now()
@@ -97,12 +149,24 @@ const stage = computed(() =>
     started: props.started,
     checking: props.checking,
     elapsed: elapsed.value,
+    reading: props.reading,
+    computed: props.stats,
   }),
 )
-// The document reports keep the viewer's long-standing note for the first wait.
-const stageText = computed(() =>
-  stage.value === 'reading' ? t('reports.viewer.reading') : t(`reports.progress.${stage.value}`),
-)
+// The document reports keep the viewer's long-standing note for the first wait; the
+// counted stages name what the server said it read or computed.
+const stageText = computed(() => {
+  if (stage.value === 'reading') return t('reports.viewer.reading')
+  if (stage.value === 'readingCount') {
+    const n = props.reading.count || 0
+    return t('reports.progress.readingCount', { n }, n)
+  }
+  if (stage.value === 'computed') {
+    const n = (props.stats.indicators || []).length
+    return t('reports.progress.computed', { n }, n)
+  }
+  return t(`reports.progress.${stage.value}`)
+})
 
 const outline = computed(() => reportOutline(props.type, { comparing: !!props.comparedPeriod }))
 
@@ -147,6 +211,59 @@ const widthOf = (section, line) =>
   font-variant-numeric: tabular-nums;
   color: var(--color-text-secondary);
   white-space: nowrap;
+}
+
+/* What is being read: hairline-ruled rows like the Sources list the report ends with,
+   the title on one line (cut with an ellipsis, whole in its tooltip), publisher and
+   date under it. */
+.progress-read {
+  margin-top: var(--space-5);
+}
+.read-caption {
+  margin: 0 0 var(--space-2);
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+.read-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--color-border);
+}
+.read-row {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--color-border);
+  animation: read-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i) * 0.09s);
+}
+.read-title {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+}
+.read-meta {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
+.read-more,
+.read-period {
+  margin: var(--space-2) 0 0;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
+@keyframes read-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
 }
 
 .progress-outline {
@@ -218,7 +335,8 @@ const widthOf = (section, line) =>
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .scan-line {
+  .scan-line,
+  .read-row {
     animation: none;
   }
 }

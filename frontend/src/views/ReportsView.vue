@@ -420,6 +420,8 @@
             :compared-period="current.comparedPeriod || ''"
             :started="!!current.content"
             :checking="!!current.checking"
+            :reading="current.reading"
+            :stats="current.computed"
           />
           <!-- The report body is in the report's language, whatever the interface's. -->
           <article
@@ -1158,6 +1160,8 @@ async function generate() {
     cover_image: null,
     section_images: null,
     imagesStatus: null,
+    reading: null, // { count, sources } once the server says what it reads
+    computed: null, // { indicators, date_from, date_to } for technical monitoring
     // The period this report is compared with, for the note under "What changed".
     comparedPeriod: continuesSeries.value ? savedPeriod(continuation.value.report) : null,
   }
@@ -1241,7 +1245,20 @@ async function generate() {
             // Next-period reports: the streamed "What changed" is checked before it
             // is saved; the note under its heading says so, then what the check did.
             const d = JSON.parse(sse.data)
-            if (d.stage === 'checking_comparison') {
+            // Before the first word: what the report reads, or which statistics
+            // a technical report computed (shown by the waiting state).
+            if (d.stage === 'reading') {
+              current.value.reading = {
+                count: d.count,
+                sources: Array.isArray(d.sources) ? d.sources : [],
+              }
+            } else if (d.stage === 'computed') {
+              current.value.computed = {
+                indicators: Array.isArray(d.indicators) ? d.indicators : [],
+                date_from: d.date_from || null,
+                date_to: d.date_to || null,
+              }
+            } else if (d.stage === 'checking_comparison') {
               current.value.checking = true
             } else if (d.stage === 'comparison_checked') {
               current.value.checking = false

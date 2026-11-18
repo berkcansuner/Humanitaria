@@ -33,12 +33,23 @@ export function reportOutline(type, { comparing = false } = {}) {
 // "The first words usually appear within two minutes": past that, say it is slow.
 export const SLOW_AFTER_S = 120
 
-/** The stage to name (`reports.progress.*`, or `reading`, the viewer's own note). */
-export function progressStage({ type, started = false, checking = false, elapsed = 0 }) {
+/** The stage to name (`reports.progress.*`, or `reading`, the viewer's own note).
+ * `reading` ({ count, sources }) and `computed` ({ indicators, date_from, date_to })
+ * are what the server's `status` event says before the first word, when it has. */
+export function progressStage({
+  type,
+  started = false,
+  checking = false,
+  elapsed = 0,
+  reading = null,
+  computed = null,
+}) {
   const technical = type === 'technical_monitoring'
   if (checking) return 'checking'
   if (started) return technical ? 'writingTechnical' : 'writing'
   if (elapsed >= SLOW_AFTER_S) return 'slow'
+  if (computed) return 'computed'
+  if (reading) return 'readingCount'
   return technical ? 'computing' : 'reading'
 }
 
