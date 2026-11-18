@@ -100,8 +100,16 @@ def test_runner_advances_watermark_when_everything_landed():
 
 def test_postgres_tables_are_closed_to_the_supabase_data_api():
     from rag import db
+    rls_off = MagicMock()
+    rls_off.scalar.return_value = False   # a new database: RLS not enabled yet
+
+    def answer(sql):
+        if "pg_roles" in sql:
+            return [("anon",), ("authenticated",)]
+        return rls_off if "relrowsecurity" in sql else None
+
     conn = MagicMock()
-    conn.exec_driver_sql.side_effect = lambda sql: [("anon",), ("authenticated",)] if "pg_roles" in sql else None
+    conn.exec_driver_sql.side_effect = answer
     engine = MagicMock()
     engine.begin.return_value.__enter__.return_value = conn
     db._close_supabase_data_api(engine)
