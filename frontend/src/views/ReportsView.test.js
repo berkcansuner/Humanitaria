@@ -581,9 +581,9 @@ describe('ReportsView in two languages', () => {
       expect(request()).toMatch(/^Durum raporu · Sudan · Sağlık · .+ · İngilizce$/)
       expect(stage()).toBe(tr.reports.viewer.reading)
       expect(outline()).toEqual(['Yönetici özeti', 'Temel bulgular', 'Beklentiler'])
-      expect(text('.progress-elapsed')).toBe('0:30 geçti')
+      expect(text('.progress-elapsed')).toBe('Geçen süre: 0:30')
       await seconds(5)
-      expect(text('.progress-elapsed')).toBe('0:35 geçti')
+      expect(text('.progress-elapsed')).toBe('Geçen süre: 0:35')
     })
 
     it('words the technical monitoring pipeline as it runs', async () => {
@@ -661,7 +661,7 @@ describe('ReportsView in two languages', () => {
       expect(text('.progress-read .read-caption')).toBe('Okunan kaynaklar')
       expect(rows()[0]).toEqual(['Sudan: Humanitarian Access Snapshot', 'OCHA · 11 Eki 2026'])
       expect(text('.progress-read .read-more')).toBe('ve 11 kaynak daha')
-      expect(text('.progress-elapsed')).toBe('0:20 geçti')
+      expect(text('.progress-elapsed')).toBe('Geçen süre: 0:20')
     })
 
     it('names the indicators a technical report computed, then the narrative', async () => {

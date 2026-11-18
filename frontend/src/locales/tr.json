@@ -362,7 +362,7 @@
       "continuedBy": "Devamı: {link}",
       "laterReport": "sonraki bir rapor",
       "runNext": "Sonraki dönemi raporla",
-      "nextNoData": "Sonraki dönem raporlanamaz: HDX HAPI'de bu sektör için sayısal veri yok, bu yüzden bu seri teknik izleme raporuyla sürdürülemez.",
+      "nextNoData": "Sonraki dönem raporlanamıyor: HDX HAPI'de bu sektör için sayısal veri olmadığından seri, teknik izleme raporuyla sürdürülemez.",
       "copy": "Kaynaklarıyla kopyala",
       "copied": "Kopyalandı",
       "pdf": "PDF indir",
@@ -374,11 +374,11 @@
       "imagesSection": "“{heading}” bölümünün görseli hazırlanıyor…"
     },
     "progress": {
-      "elapsed": "{time} geçti",
+      "elapsed": "Geçen süre: {time}",
       "outline": "Bu raporda şu bölümler yer alacak",
       "compared": "{period} ile karşılaştırmalı",
       "computing": "İstatistikler HDX HAPI verilerinden hesaplanıyor, ardından anlatım yazılacak. İlk sözcükler genellikle iki dakika içinde görünür.",
-      "slow": "Bu, her zamankinden uzun sürüyor. Rapor hâlâ hazırlanıyor; beklemeyi sürdürebilir ya da durdurabilirsiniz.",
+      "slow": "Bu işlem her zamankinden uzun sürüyor. Rapor hâlâ hazırlanıyor; bekleyebilir ya da raporu durdurabilirsiniz.",
       "writing": "Rapor yazılıyor.",
       "writingTechnical": "Anlatım, hesaplanan istatistiklerden yazılıyor.",
       "checking": "Değişenler önceki raporla karşılaştırılarak denetleniyor.",
