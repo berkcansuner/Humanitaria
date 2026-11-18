@@ -48,21 +48,52 @@ _GREETING_PATTERN = re.compile(
     re.IGNORECASE | re.UNICODE,
 )
 
-_GREETING_REPLY = "Hello! How can I help you with humanitarian reports?"
+_TR_GREETING_PATTERN = re.compile(
+    r'^(merhaba|selam|nasılsın|günaydın|iyi\s*günler)[\s!.?]*$',
+    re.IGNORECASE | re.UNICODE,
+)
+
+_GREETING_REPLIES = {
+    "en": "Hello! How can I help you with humanitarian reports?",
+    "tr": "Merhaba! İnsani yardım raporlarıyla ilgili nasıl yardımcı olabilirim?",
+}
 
 
 def _is_greeting(text: str) -> bool:
     return bool(_GREETING_PATTERN.match(text.strip()))
 
 
-def _no_docs_message(filters: dict) -> str:
+def _greeting_lang(text: str) -> str:
+    """Greetings skip retrieval and the LLM, and are too short for language
+    detection, so Turkish is recognised by its own greeting words."""
+    return "tr" if _TR_GREETING_PATTERN.match(text.strip()) else "en"
+
+
+def greeting_reply(lang: str) -> str:
+    return _GREETING_REPLIES.get(lang, _GREETING_REPLIES["en"])
+
+
+def _reply_lang(message: str, history: list) -> str:
+    """'tr' when the question is Turkish, else 'en' (only these two reply texts exist)."""
+    return "tr" if answer_language(message, history) == "Turkish" else "en"
+
+
+def no_docs_message(filters: dict, lang: str) -> str:
     """Return a clear message when the retriever finds nothing."""
+    tr = lang == "tr"
     parts = []
     parts += [f"**{country}**" for country in country_list(filters.get("country"))]
     if filters.get("theme"):
         parts.append(f"**{filters['theme']}**")
     if filters.get("date"):
-        parts.append("the specified date range")
+        parts.append("belirtilen tarih aralığı" if tr else "the specified date range")
+    if tr:
+        scope = " + ".join(parts) if parts else "bu sorgu"
+        return (
+            f"Veritabanımızda {scope} için eşleşen belge bulunamadı.\n\n"
+            "Farklı bir ülke, konu ya da tarih aralığı deneyebilir veya sorunuzu "
+            "daha genel biçimde yeniden yazabilirsiniz."
+        )
     scope = " + ".join(parts) if parts else "this query"
     return (
         f"No matching documents were found in our database for {scope}.\n\n"
@@ -344,14 +375,16 @@ async def chat(request: Request, req: ChatRequest, user: dict = Depends(get_curr
         raise api_error(409, ErrorCode.conversation_limit, _CONVO_LIMIT_DETAIL)
 
     if _is_greeting(req.message):
-        return ChatResponse(answer=_GREETING_REPLY, sources=[], session_id=session_id)
+        return ChatResponse(
+            answer=greeting_reply(_greeting_lang(req.message)), sources=[], session_id=session_id
+        )
 
     try:
         retrieval_query, filters = await anyio.to_thread.run_sync(_plan_retrieval, session_id, req.message)
         docs = await _retrieve_docs(retrieval_query, filters)
 
         if not docs:
-            msg = _no_docs_message(filters)
+            msg = no_docs_message(filters, _reply_lang(req.message, list(get_session_history(session_id).messages)))
             return ChatResponse(answer=msg, sources=[], session_id=session_id)
 
         await anyio.to_thread.run_sync(_ensure_conversation_and_seed, user["id"], session_id, req.message)
@@ -409,7 +442,7 @@ async def chat_stream(request: Request, req: ChatRequest, user: dict = Depends(g
         async def greeting_generator():
             yield ServerSentEvent(
                 event="token",
-                data=json.dumps({"content": _GREETING_REPLY}, ensure_ascii=False),
+                data=json.dumps({"content": greeting_reply(_greeting_lang(req.message))}, ensure_ascii=False),
             )
             yield ServerSentEvent(event="session", data=json.dumps({"session_id": session_id}))
             yield ServerSentEvent(event="done", data="{}")
@@ -426,7 +459,7 @@ async def chat_stream(request: Request, req: ChatRequest, user: dict = Depends(g
             _retrieval_ms = (time.perf_counter() - _t0) * 1000 - _filter_ms
 
             if not docs:
-                msg = _no_docs_message(filters)
+                msg = no_docs_message(filters, _reply_lang(req.message, list(get_session_history(session_id).messages)))
                 yield ServerSentEvent(
                     event="token",
                     data=json.dumps({"content": msg}, ensure_ascii=False),

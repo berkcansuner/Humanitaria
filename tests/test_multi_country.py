@@ -63,7 +63,7 @@ def test_unknown_country_is_dropped_from_a_list():
 
 def test_country_list_is_described_and_named_in_the_no_docs_message():
     assert "country: Sudan, Chad" in describe_filters({"country": ["Sudan", "Chad"]})
-    msg = chat_mod._no_docs_message({"country": ["Sudan", "Chad"]})
+    msg = chat_mod.no_docs_message({"country": ["Sudan", "Chad"]}, "en")
     assert "**Sudan**" in msg and "**Chad**" in msg
 
 
