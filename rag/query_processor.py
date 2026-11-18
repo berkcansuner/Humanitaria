@@ -301,16 +301,17 @@ def _match_word(keyword: str, text: str) -> bool:
     return bool(re.search(r"\b" + re.escape(keyword), text))
 
 
-# "ülke içinde (yerinden edilmiş)" = internally (displaced), "ülke içi" = domestic: these
-# say where, not which document type. Read as doctype=country they limited every Turkish
-# IDP question to country-profile records, and the chat found no documents.
-_IN_COUNTRY = re.compile(r"\b[uü]lke\s+i[çc]i")
+# "ülke içinde (yerinden edilmiş)" = internally (displaced), "ülke içi" = domestic,
+# "ülke genelinde" / "ülke çapında" = nationwide: these say where, not which document
+# type. Read as doctype=country they limited such Turkish questions to country-profile
+# records, and the chat found no documents.
+_IN_COUNTRY = re.compile(r"\b[uü]lke\s+(?:i[çc]i|genel[iı]|[çc]ap[ıi])")
 
 
 def _without_misread_doctype(query: str, filters: Dict[str, Any],
                              rule_filters: Dict[str, Any]) -> Dict[str, Any]:
-    """Drop an LLM doctype=country that only the "ülke içinde" phrase can have prompted
-    (the rule-based extractor, which skips that phrase, found no country doctype)."""
+    """Drop an LLM doctype=country that only an "ülke içinde / genelinde / çapında" phrase
+    can have prompted (the rule-based extractor, which skips those, found no country doctype)."""
     if (filters.get("doctype") == "country" and rule_filters.get("doctype") != "country"
             and _IN_COUNTRY.search(_turkish_lower(query))):
         return {key: value for key, value in filters.items() if key != "doctype"}

@@ -557,3 +557,33 @@ class TestInCountryIsNotADoctype:
         _, f = plan_retrieval("ya yerinden edilmiş kişiler?", history, planner=planner)
         assert "doctype" not in f
         assert f["country"] == "Syria"
+
+
+class TestCountryWideIsNotADoctype:
+    """'ülke genelinde' / 'ülke çapında' (nationwide) also say where, not which document
+    type; the bare 'ülke' key read them as doctype=country like 'ülke içinde' before."""
+
+    @pytest.mark.parametrize("text", [
+        "Suriye'de ülke genelinde gıda güvensizliği",
+        "Sudan'da ülke çapında kolera salgını",
+        "ULKE GENELINDE ASI KAMPANYASI",
+        "ulke capinda sel",
+        "Ülke Çapında Yerinden Edilme",
+        "ülke geneli",
+    ])
+    def test_rule_based_nationwide_phrase_has_no_doctype(self, text):
+        assert _extract_filters_rule_based(text).get("doctype") != "country"
+
+    @patch("rag.query_processor._extract_filters_llm")
+    def test_llm_country_doctype_for_a_nationwide_phrase_is_dropped(self, mock_llm):
+        _clear_llm_cache()
+        mock_llm.return_value = {"country": "Sudan", "doctype": "country"}
+        f = extract_filters("Sudan'da ülke çapında kolera salgını")
+        assert "doctype" not in f
+        assert f["country"] == "Sudan"
+        _clear_llm_cache()
+
+    @patch("rag.query_processor._extract_filters_llm", return_value=None)
+    def test_country_profile_next_to_a_nationwide_phrase_keeps_the_doctype(self, _mock):
+        f = extract_filters("Suriye ülke profili ve ülke genelinde gıda güvensizliği")
+        assert f.get("doctype") == "country"
