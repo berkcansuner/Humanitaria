@@ -4,7 +4,7 @@ contradicts the code's verdict, is removed (the prompt alone could not enforce i
 from analytics.narrative_check import verify_narrative
 from analytics.technical_report import Findings, ReportSection
 
-TREND_H = "Ülke içinde yerinden edilmiş kişiler (IDP) — Trend Analizi"
+TREND_H = "Ülke içinde yerinden edilmiş kişiler (IDP) — Eğilim Analizi"
 REGION_H = "Ülke içinde yerinden edilmiş kişiler (IDP) — Bölgesel Analiz"
 
 CONTEXT = (

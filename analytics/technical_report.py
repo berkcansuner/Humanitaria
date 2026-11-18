@@ -45,7 +45,7 @@ class Findings:
 # Section headings are copied verbatim by the model and matched back to their charts,
 # so they are written in the report language here, in code.
 _HEADINGS = {
-    "tr": {"trend": "{name} — Trend Analizi", "region": "{name} — Bölgesel Analiz",
+    "tr": {"trend": "{name} — Eğilim Analizi", "region": "{name} — Bölgesel Analiz",
            "correlation": "Korelasyon — {x} ↔ {y}"},
     "en": {"trend": "{name} — Trend Analysis", "region": "{name} — Regional Analysis",
            "correlation": "Correlation — {x} ↔ {y}"},

@@ -125,7 +125,7 @@ class TestTechnicalReportLanguage:
         findings, calls = self._findings("tr")
         headings = [s.heading for s in findings.sections]
         idps = "Ülke içinde yerinden edilmiş kişiler (IDP)"
-        assert f"{idps} — Trend Analizi" in headings
+        assert f"{idps} — Eğilim Analizi" in headings
         assert f"{idps} — Bölgesel Analiz" in headings
         assert any(h.startswith("Korelasyon — ") for h in headings)
         assert not any("Analysis" in h or "Correlation" in h for h in headings)

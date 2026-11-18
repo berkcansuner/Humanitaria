@@ -36,7 +36,7 @@ _THEMES = {
 
 # Legend text in the report language (the report itself is "tr" or "en").
 _LEGEND = {
-    "tr": {"observed": "Gözlem", "trend": "Trend (Sen)"},
+    "tr": {"observed": "Gözlem", "trend": "Eğilim (Sen)"},
     "en": {"observed": "Observed", "trend": "Trend (Sen)"},
 }
 

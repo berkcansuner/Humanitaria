@@ -14,7 +14,7 @@
     "delete": "Sil",
     "close": "Kapat",
     "loading": "Yükleniyor…",
-    "tryAgain": "Tekrar dene",
+    "tryAgain": "Yeniden dene",
     "dismiss": "Kapat"
   },
   "lang": {
@@ -33,7 +33,7 @@
     "startFree": "Ücretsiz başla"
   },
   "footer": {
-    "tagline": "İnsani yardım kayıtlarından, kaynağı belli yanıtlar.",
+    "tagline": "İnsani yardım kayıtlarından kaynağı belli yanıtlar.",
     "product": "Ürün",
     "chatReports": "Sohbet ve raporlar",
     "dashboards": "Gösterge panelleri",
@@ -63,12 +63,12 @@
     "hero": {
       "titleLead": "İnsani yardım kayıtlarına sorun,",
       "titleAccent": "kaynağıyla yanıt alın.",
-      "lede": "Herhangi bir kriz hakkında soru sorun, İzleme ve Değerlendirme (M&E) için durum ve teknik izleme raporları hazırlayın, dayandıkları göstergeleri görün. Her bilginin yanında geldiği raporun bağlantısı durur.",
+      "lede": "Herhangi bir kriz hakkında soru sorun, İzleme ve Değerlendirme (M&E) için durum ve teknik izleme raporları hazırlayın, dayandıkları göstergeleri görün. Her bilginin yanında, alındığı raporun bağlantısı yer alır.",
       "askLabel": "Bir kriz hakkında sorun",
       "askPlaceholder": "Sudan'da kimler yerinden edildi?",
       "ask": "Sor",
       "startFree": "Ücretsiz başla",
-      "howItWorks": "Nasıl çalışır",
+      "howItWorks": "Nasıl çalıştığını gör",
       "countries": "ülke",
       "reports": "rapor",
       "months": "ay"
@@ -108,14 +108,14 @@
         "window": "{start} – {end}, {start} zirvesinden itibaren",
         "trend": {
           "decreasing": {
-            "significant": "{peak} zirvesinden {end} yılına kadar yurt dışındaki Suriyeli mülteci sayısında istatistiksel olarak anlamlı bir düşüş var (p {p}).",
-            "notSignificant": "{peak} zirvesinden {end} yılına kadar yurt dışındaki Suriyeli mülteci sayısında bir düşüş var, ancak istatistiksel olarak anlamlı değil (p {p})."
+            "significant": "{peak} zirvesinden {end} yılına kadar yurt dışındaki Suriyeli mülteci sayısında istatistiksel olarak anlamlı bir azalma eğilimi görülüyor (p {p}).",
+            "notSignificant": "{peak} zirvesinden {end} yılına kadar yurt dışındaki Suriyeli mülteci sayısında bir azalma eğilimi görülüyor, ancak bu eğilim istatistiksel olarak anlamlı değil (p {p})."
           },
           "increasing": {
-            "significant": "{peak} zirvesinden {end} yılına kadar yurt dışındaki Suriyeli mülteci sayısında istatistiksel olarak anlamlı bir artış var (p {p}).",
-            "notSignificant": "{peak} zirvesinden {end} yılına kadar yurt dışındaki Suriyeli mülteci sayısında bir artış var, ancak istatistiksel olarak anlamlı değil (p {p})."
+            "significant": "{peak} zirvesinden {end} yılına kadar yurt dışındaki Suriyeli mülteci sayısında istatistiksel olarak anlamlı bir artış eğilimi görülüyor (p {p}).",
+            "notSignificant": "{peak} zirvesinden {end} yılına kadar yurt dışındaki Suriyeli mülteci sayısında bir artış eğilimi görülüyor, ancak bu eğilim istatistiksel olarak anlamlı değil (p {p})."
           },
-          "none": "{peak} zirvesinden {end} yılına kadar yurt dışındaki Suriyeli mülteci sayısında belirgin bir eğilim yok (p {p})."
+          "none": "{peak} zirvesinden {end} yılına kadar yurt dışındaki Suriyeli mülteci sayısında belirgin bir eğilim görülmüyor (p {p})."
         },
         "slope": "Sen eğimi",
         "perYear": "/ yıl",
@@ -165,7 +165,7 @@
       "title": "Yazdıklarına kaynak göstermesi gerekenler için.",
       "me": {
         "title": "İzleme ve Değerlendirme ekipleri",
-        "body": "Bir ülkeyi ya da sektörü zaman içinde izleyin, her bulgunun dayanağını toplayın ve bir sonraki raporunuz için atıflı bir durum özetine dönüştürün."
+        "body": "Bir ülkeyi ya da sektörü zaman içinde izleyin, her bulgunun dayanağını toplayın ve bunları bir sonraki raporunuz için atıflı bir durum özetine dönüştürün."
       },
       "orgs": {
         "title": "İnsani yardım kuruluşları",
@@ -353,8 +353,8 @@
       "comparedDeleted": "Daha sonra silinen önceki bir raporla karşılaştırıldı.",
       "comparedWith": "Karşılaştırıldığı rapor: {link}",
       "previousReport": "önceki rapor",
-      "notComparedWith": "Önceki dönemin raporuyla karşılaştırılmadı: {link}",
-      "earlierPeriod": "raporu aç",
+      "notComparedWith": "Şu dönemin raporuyla karşılaştırılmadı: {link}",
+      "earlierPeriod": "önceki dönem",
       "continuedBy": "Devamı: {link}",
       "laterReport": "sonraki bir rapor",
       "runNext": "Sonraki dönemi raporla",
@@ -455,7 +455,7 @@
     "quota_exhausted": "Yapay zekâ hizmetinin kullanım kotası doldu. Lütfen yöneticiyle iletişime geçin.",
     "report_failed": "Rapor oluşturulamadı. Lütfen yeniden deneyin.",
     "chat_failed": "Yanıt hazırlanırken bir sorun oluştu. Lütfen yeniden deneyin.",
-    "body_too_large": "İstek göndermek için çok büyük.",
+    "body_too_large": "İstek gönderilemeyecek kadar büyük.",
     "validation_failed": "Bazı bilgiler geçerli değil. Kontrol edip yeniden deneyin.",
     "ingest_running": "Bir veri alımı zaten çalışıyor.",
     "network": "Sunucuya ulaşılamıyor. Bağlantınızı kontrol edip yeniden deneyin.",
@@ -498,7 +498,7 @@
       "title": "Neleri saklıyoruz",
       "l1": {
         "lead": "Hesabınız.",
-        "text": "E-posta adresiniz ve adınız. Parolayla kayıt olursanız parolanızın bcrypt hash'ini saklarız, parolanın kendisini asla saklamayız. Google ile giriş yaparsanız bunun yerine Google hesap kimliğinizi saklarız."
+        "text": "E-posta adresiniz ve adınız. Parolayla kayıt olursanız parolanızın bcrypt özetini (hash) saklarız, parolanın kendisini asla saklamayız. Google ile giriş yaparsanız bunun yerine Google hesap kimliğinizi saklarız."
       },
       "l2": {
         "lead": "Sohbetleriniz.",
@@ -510,7 +510,7 @@
       },
       "l4": {
         "lead": "Giriş çerezi.",
-        "text": "Tek bir çerez ({cookie}) oturumunuzu en fazla 24 saat açık tutar. Çerez rastgele bir belirteç (token) içerir ve biz bu belirtecin yalnızca hash'ini saklarız."
+        "text": "Tek bir çerez ({cookie}) oturumunuzu en fazla 24 saat açık tutar. Çerez rastgele bir belirteç (token) içerir ve biz bu belirtecin yalnızca özetini saklarız."
       },
       "after": "Analitik, reklam ya da izleme çerezleri kullanmayız; verilerinizi kimseye satmayız veya kiralamayız."
     },
@@ -546,7 +546,7 @@
     },
     "s5": {
       "title": "Seçenekleriniz",
-      "p1": "Adınızı ve parolanızı Ayarlar'dan değiştirebilir, hesabınızı da oradan silebilirsiniz. Verilerinizle ilgili başka bir talebiniz varsa (örneğin elimizdeki verilerin bir kopyası) {email} adresine e-posta gönderin."
+      "p1": "Adınızı ve parolanızı Ayarlar sayfasından değiştirebilir, hesabınızı da oradan silebilirsiniz. Verilerinizle ilgili başka bir talebiniz varsa (örneğin elimizdeki verilerin bir kopyası) {email} adresine e-posta gönderin."
     },
     "s6": {
       "title": "Çocuklar",
@@ -592,7 +592,7 @@
       "trigger": "Hesabımı sil",
       "dialogLabel": "Hesap silme onayı",
       "dialogTitle": "Hesap silinsin mi?",
-      "bodyPassword": "Hesabınız ve tüm verileriniz kalıcı olarak silinir. Onaylamak için parolanızı girin.",
+      "bodyPassword": "Hesabınız ve tüm verileriniz kalıcı olarak silinir. Onaylamak için parolanızı yazın.",
       "bodyEmail": "Hesabınız ve tüm verileriniz kalıcı olarak silinir. Onaylamak için e-posta adresinizi yazın.",
       "confirm": "Kalıcı olarak sil",
       "deleting": "Siliniyor…",

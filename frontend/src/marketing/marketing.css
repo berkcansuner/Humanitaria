@@ -611,6 +611,20 @@ html:has(.mkt-scope) {
     padding: 0 8px;
   }
 }
+/* Turkish phone hero: the sample question ("Sudan'da kimler yerinden edildi?") is
+   longer than the English one, so a slimmer Ask button (still 44px tall, 58px wide)
+   lets it fit from 390px, and narrower phones end it with an ellipsis, not a hard cut. */
+@media (max-width: 560px) {
+  html[lang='tr'] .mkt-scope .ask {
+    padding-left: 16px;
+  }
+  html[lang='tr'] .mkt-scope .ask-btn {
+    padding: 0 16px;
+  }
+  html[lang='tr'] .mkt-scope .ask-input {
+    text-overflow: ellipsis;
+  }
+}
 @media (max-width: 360px) {
   html[lang='tr'] .mkt-scope .nav .brand .name {
     position: absolute;

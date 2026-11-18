@@ -138,7 +138,7 @@ def _no_docs_message(req: ReportRequest) -> str:
     if req.language == "tr":
         return (
             f"**{req.country}** · {scope} · {window} için eşleşen belge bulunamadı.\n\n"
-            "Farklı bir ülke, tema veya tarih aralığı deneyin."
+            "Farklı bir ülke, sektör ya da tarih aralığı deneyin."
         )
     return (
         f"No matching documents were found for **{req.country}** · {scope} · {window}.\n\n"
@@ -154,7 +154,7 @@ def _no_findings_message(req: ReportRequest) -> str:
     if req.language == "tr":
         return (
             f"**{req.country}** için seçilen dönemde ({window}) HDX HAPI'den istatistiksel "
-            "analiz yapmaya yetecek indikatör verisi bulunamadı."
+            "analiz yapmaya yetecek gösterge verisi bulunamadı."
         )
     return (
         f"No HDX HAPI indicator data sufficient for statistical analysis was found for "

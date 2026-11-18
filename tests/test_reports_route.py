@@ -53,7 +53,7 @@ def _client():
 def _findings_with_sections():
     from analytics.technical_report import Findings, ReportSection
     section = ReportSection(
-        heading="İnsani ihtiyaç — Trend Analizi",
+        heading="İnsani ihtiyaç — Eğilim Analizi",
         stat_result={"kind": "trend"},
         chart="data:image/png;base64,ZZZ",
         findings_text="İnsani ihtiyaç: yön=artış, eğim=1.00/dönem, p=0.010, n=6.",
@@ -93,7 +93,7 @@ class TestTechnicalMonitoringRoute:
             rep = _client().get(f"/reports/{rid}").json()
             assert rep["report_type"] == "technical_monitoring"
             assert rep["section_images"] == [
-                {"heading": "İnsani ihtiyaç — Trend Analizi", "image": "data:image/png;base64,ZZZ"}
+                {"heading": "İnsani ihtiyaç — Eğilim Analizi", "image": "data:image/png;base64,ZZZ"}
             ]
 
     def test_technical_unknown_iso3_country_message(self):
@@ -148,7 +148,7 @@ class TestTechnicalMonitoringRoute:
 def test_technical_report_is_saved_after_the_narrative_check():
     """A sentence whose number is not in the findings never reaches the saved report."""
     async def mock_astream(*a, **k):
-        yield "## İnsani ihtiyaç — Trend Analizi\n\n"
+        yield "## İnsani ihtiyaç — Eğilim Analizi\n\n"
         yield "The trend has p=0.010 across 6 periods. Needs grew by 4,812 people per year."
 
     mock_chain = MagicMock()

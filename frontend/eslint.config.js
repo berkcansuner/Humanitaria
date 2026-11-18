@@ -26,6 +26,74 @@ export default [
     },
   },
   {
+    // Every user-visible template string comes from the message files (en.json / tr.json).
+    // Only symbols, digits and names that are never translated are allowed bare.
+    files: ['src/views/**/*.vue', 'src/components/**/*.vue', 'src/marketing/**/*.vue'],
+    rules: {
+      'vue/no-bare-strings-in-template': [
+        'error',
+        {
+          allowlist: [
+            '(',
+            ')',
+            ',',
+            '.',
+            '&',
+            '+',
+            '-',
+            '=',
+            '*',
+            '/',
+            '#',
+            '%',
+            '!',
+            '?',
+            ':',
+            ';',
+            '[',
+            ']',
+            '{',
+            '}',
+            '<',
+            '>',
+            '·',
+            '•',
+            '‐',
+            '–',
+            '—',
+            '−',
+            '|',
+            '→',
+            '←',
+            '…',
+            '/[0-9]/',
+            // Never translated: the product name, a cookie name, language endonyms
+            // (each language is named in itself), and a contact e-mail address (its dots
+            // are already stripped by '.' above when this pattern runs).
+            'Humanitaria',
+            'rw_session',
+            'English',
+            'Türkçe',
+            '/[\\w.+-]+@[\\w.-]+/',
+          ],
+          attributes: {
+            '/.+/': [
+              'title',
+              'aria-label',
+              'aria-placeholder',
+              'aria-roledescription',
+              'aria-valuetext',
+              'aria-description',
+              'placeholder',
+              'alt',
+            ],
+          },
+          directives: ['v-text'],
+        },
+      ],
+    },
+  },
+  {
     // The React island is the one JSX file; parse JSX without pulling in react plugins.
     files: ['**/*.jsx'],
     languageOptions: { parserOptions: { ecmaFeatures: { jsx: true } } },

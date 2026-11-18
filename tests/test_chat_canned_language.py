@@ -36,7 +36,7 @@ def _sse_tokens(text: str) -> str:
     return out
 
 
-@pytest.mark.parametrize("word", ["merhaba", "Selam!", "günaydın", "iyi günler"])
+@pytest.mark.parametrize("word", ["merhaba", "Selam!", "nasılsın?", "günaydın", "iyi günler"])
 def test_turkish_greeting_gets_turkish_reply(word):
     r = _client().post("/chat", json={"message": word})
     assert r.json()["answer"] == TR_GREETING

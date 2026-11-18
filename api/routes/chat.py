@@ -43,13 +43,17 @@ def _rate_limit() -> str:
     return get_settings().RATE_LIMIT
 
 
+# One list of Turkish greeting words: it both marks a greeting and picks the Turkish reply.
+_TR_GREETINGS = r'merhaba|selam|nasılsın|günaydın|iyi\s*günler'
+_EN_GREETINGS = r'hey|hi|hello|good\s*(?:morning|afternoon|evening)|how are you'
+
 _GREETING_PATTERN = re.compile(
-    r'^(merhaba|selam|hey|hi|hello|good\s*(morning|afternoon|evening)|nasılsın|how are you|günaydın|iyi\s*günler)[\s!.?]*$',
+    rf'^(?:{_TR_GREETINGS}|{_EN_GREETINGS})[\s!.?]*$',
     re.IGNORECASE | re.UNICODE,
 )
 
 _TR_GREETING_PATTERN = re.compile(
-    r'^(merhaba|selam|nasılsın|günaydın|iyi\s*günler)[\s!.?]*$',
+    rf'^(?:{_TR_GREETINGS})[\s!.?]*$',
     re.IGNORECASE | re.UNICODE,
 )
 

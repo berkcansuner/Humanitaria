@@ -377,7 +377,7 @@ def test_english_report_names_sections_in_english(_mock):
     "idps" if ep.endswith("idps") else "other"))
 def test_turkish_report_keeps_turkish_headings(_mock):
     f = compute_findings("AFG", "2025-01-01", "2025-12-31", language="tr")
-    assert "Ülke içinde yerinden edilmiş kişiler (IDP) — Trend Analizi" in [s.heading for s in f.sections]
+    assert "Ülke içinde yerinden edilmiş kişiler (IDP) — Eğilim Analizi" in [s.heading for s in f.sections]
 
 
 def test_every_indicator_has_an_english_name():
