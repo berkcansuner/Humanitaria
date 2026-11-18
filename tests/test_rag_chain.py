@@ -362,3 +362,11 @@ def test_technical_prompt_opens_the_summary_with_the_headline():
     p = _REPORT_PROMPTS["technical_monitoring"]
     assert "Open the Executive Summary with the HEADLINE figures" in p
     assert "then the main tested result; then the main limitation" in p
+
+
+def test_indicator_prompt_cites_every_factual_paragraph():
+    # Round 3: a live Health report's second Overview paragraph (Kandahar, Helmand, eastern
+    # and northern provinces) carried no citation.
+    from rag.chain import _INDICATOR_SYSTEM_PROMPT
+    assert ("Every paragraph that states facts carries at least one [n] citation, the Overview "
+            "included") in _INDICATOR_SYSTEM_PROMPT
