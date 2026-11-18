@@ -1,105 +1,90 @@
+<!--
+  Privacy policy. The English text (locales/en.json, privacy.*) is the original and
+  the legally binding version; the Turkish text (locales/tr.json, privacy.*) is a
+  translation of it. Keep the structure of both identical: same sections, same lists,
+  same links. /privacy is the URL used for Google OAuth brand verification.
+-->
 <template>
   <div class="mkt-scope">
     <MarketingNav />
 
     <main id="top" class="section">
       <article class="wrap policy">
-        <h1>Privacy policy</h1>
-        <p class="updated">Last updated: 17 November 2026</p>
+        <h1>{{ t('privacy.title') }}</h1>
+        <p class="updated">{{ t('privacy.updated') }}</p>
+        <p v-if="locale === 'tr'" class="translation-note">{{ t('privacy.translationNote') }}</p>
 
-        <p>
-          Humanitaria answers questions about humanitarian crises using public reports from
-          ReliefWeb. This page explains what we store about you when you use it, who else handles
-          that data, and how to delete it.
-        </p>
+        <p>{{ t('privacy.intro') }}</p>
 
-        <h2>What we store</h2>
+        <h2>{{ t('privacy.s1.title') }}</h2>
         <ul>
           <li>
-            <strong>Your account.</strong> Your email address and name. If you sign up with a
-            password, we store a bcrypt hash of it, never the password itself. If you sign in with
-            Google, we store your Google account ID instead.
+            <strong>{{ t('privacy.s1.l1.lead') }}</strong> {{ t('privacy.s1.l1.text') }}
           </li>
           <li>
-            <strong>Your conversations.</strong> The questions you ask, the answers, and the list of
-            sources shown with each answer, so you can come back to them.
+            <strong>{{ t('privacy.s1.l2.lead') }}</strong> {{ t('privacy.s1.l2.text') }}
           </li>
           <li>
-            <strong>Your reports.</strong> The situation reports you generate, with the country,
-            sector, period and language you chose.
+            <strong>{{ t('privacy.s1.l3.lead') }}</strong> {{ t('privacy.s1.l3.text') }}
           </li>
           <li>
-            <strong>A sign-in cookie.</strong> One cookie (<code>rw_session</code>) keeps you signed
-            in for up to 24 hours. It holds a random token, and we store only a hash of that token.
+            <strong>{{ t('privacy.s1.l4.lead') }}</strong
+            >{{ ' ' }}
+            <i18n-t keypath="privacy.s1.l4.text" scope="global">
+              <template #cookie><code>rw_session</code></template>
+            </i18n-t>
           </li>
         </ul>
-        <p>
-          We do not use analytics, advertising or tracking cookies, and we do not sell or rent your
-          data to anyone.
-        </p>
+        <p>{{ t('privacy.s1.after') }}</p>
 
-        <h2>Signing in with Google</h2>
-        <p>
-          If you choose Google sign-in, Google shares your name, email address and Google account ID
-          with us. We use them only to create your account and sign you in. We do not request access
-          to your Gmail, Drive, contacts or any other Google data. Our use of information received
-          from Google APIs follows the
-          <a
-            href="https://developers.google.com/terms/api-services-user-data-policy"
-            target="_blank"
-            rel="noopener"
-            >Google API Services User Data Policy</a
-          >, including its Limited Use requirements.
-        </p>
+        <h2>{{ t('privacy.s2.title') }}</h2>
+        <i18n-t keypath="privacy.s2.p1" tag="p" scope="global">
+          <template #policy>
+            <a
+              href="https://developers.google.com/terms/api-services-user-data-policy"
+              target="_blank"
+              rel="noopener"
+              >{{ t('privacy.s2.policyLink') }}</a
+            >
+          </template>
+        </i18n-t>
 
-        <h2>Services that process your data</h2>
+        <h2>{{ t('privacy.s3.title') }}</h2>
         <ul>
           <li>
-            <strong>Render</strong> hosts the application. Like any web host, it handles your IP
-            address and request logs.
+            <strong>{{ t('privacy.s3.l1.lead') }}</strong> {{ t('privacy.s3.l1.text') }}
           </li>
           <li>
-            <strong>Supabase</strong> hosts the database that holds your account, conversations and
-            reports.
+            <strong>{{ t('privacy.s3.l2.lead') }}</strong> {{ t('privacy.s3.l2.text') }}
           </li>
           <li>
-            <strong>Google Gemini API</strong> writes the answers and reports. Your question and the
-            report excerpts we retrieve for it are sent to Gemini. We use the paid tier, under which
-            Google does not use this content to improve its products.
+            <strong>{{ t('privacy.s3.l3.lead') }}</strong> {{ t('privacy.s3.l3.text') }}
           </li>
           <li>
-            <strong>Pinecone</strong> ranks the retrieved report excerpts by relevance. Your
-            question and those excerpts are sent to its ranking service; we keep no data there.
+            <strong>{{ t('privacy.s3.l4.lead') }}</strong> {{ t('privacy.s3.l4.text') }}
           </li>
         </ul>
-        <p>
-          The application also writes short technical logs (for example, sign-in events with your
-          user ID) to help us find and fix errors.
-        </p>
+        <p>{{ t('privacy.s3.after') }}</p>
 
-        <h2>How long we keep it</h2>
-        <p>
-          We keep your data until you delete it. You can delete a conversation or a report at any
-          time. Deleting your account under <strong>Settings → Delete account</strong> removes your
-          account, all your conversations and all your reports from our database straight away.
-          Copies can remain in our hosting providers' logs or backups for a limited time before they
-          expire.
-        </p>
+        <h2>{{ t('privacy.s4.title') }}</h2>
+        <i18n-t keypath="privacy.s4.p1" tag="p" scope="global">
+          <template #path
+            ><strong>{{ t('privacy.s4.path') }}</strong></template
+          >
+        </i18n-t>
 
-        <h2>Your choices</h2>
-        <p>
-          You can change your name and password in Settings, and delete your account there. For any
-          other request about your data, such as a copy of what we hold, email
-          <a href="mailto:berkcansuner@gmail.com">berkcansuner@gmail.com</a>.
-        </p>
+        <h2>{{ t('privacy.s5.title') }}</h2>
+        <i18n-t keypath="privacy.s5.p1" tag="p" scope="global">
+          <template #email>
+            <a href="mailto:berkcansuner@gmail.com">berkcansuner@gmail.com</a>
+          </template>
+        </i18n-t>
 
-        <h2>Children</h2>
-        <p>Humanitaria is not meant for children under 16, and we do not knowingly serve them.</p>
+        <h2>{{ t('privacy.s6.title') }}</h2>
+        <p>{{ t('privacy.s6.p1') }}</p>
 
-        <h2>Changes</h2>
-        <p>
-          If we change how we handle your data, we will update this page and the date at the top.
-        </p>
+        <h2>{{ t('privacy.s7.title') }}</h2>
+        <p>{{ t('privacy.s7.p1') }}</p>
       </article>
     </main>
 
@@ -108,8 +93,12 @@
 </template>
 
 <script setup>
+import { useI18n } from 'vue-i18n'
+
 import MarketingNav from '../marketing/MarketingNav.vue'
 import MarketingFooter from '../marketing/MarketingFooter.vue'
+
+const { t, locale } = useI18n()
 </script>
 
 <style scoped>
@@ -125,6 +114,11 @@ import MarketingFooter from '../marketing/MarketingFooter.vue'
 }
 .updated {
   margin-top: 10px;
+  color: var(--color-text-secondary);
+  font-size: 15px;
+}
+.policy .translation-note {
+  margin-top: 6px;
   color: var(--color-text-secondary);
   font-size: 15px;
 }

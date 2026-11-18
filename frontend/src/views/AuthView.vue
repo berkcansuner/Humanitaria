@@ -3,13 +3,9 @@
     <MarketingNav />
     <main class="auth-main">
       <div class="auth-card">
-        <h1 class="auth-title">{{ isSignup ? 'Create your account' : 'Welcome back' }}</h1>
+        <h1 class="auth-title">{{ t(`auth.${ns}.title`) }}</h1>
         <p class="auth-sub">
-          {{
-            isSignup
-              ? 'Start asking the humanitarian record — answers you can cite.'
-              : 'Sign in to continue to Humanitaria.'
-          }}
+          {{ t(`auth.${ns}.sub`) }}
         </p>
 
         <a class="btn btn-ghost auth-google" :href="'/auth/google/login'">
@@ -31,28 +27,28 @@
               d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1A11 11 0 0 0 2.18 7.06l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"
             />
           </svg>
-          Continue with Google
+          {{ t('auth.google') }}
         </a>
 
-        <div class="auth-divider"><span>or</span></div>
+        <div class="auth-divider">
+          <span>{{ t('auth.or') }}</span>
+        </div>
 
-        <form class="auth-form" @submit.prevent="submit">
+        <form class="auth-form" novalidate @submit.prevent="submit">
           <label v-if="isSignup" class="auth-label">
-            Name
-            <input v-model="name" type="text" autocomplete="name" required class="auth-input" />
+            {{ t('auth.name') }}
+            <input v-model="name" type="text" autocomplete="name" class="auth-input" />
           </label>
           <label class="auth-label">
-            Email
-            <input v-model="email" type="email" autocomplete="email" required class="auth-input" />
+            {{ t('auth.email') }}
+            <input v-model="email" type="email" autocomplete="email" class="auth-input" />
           </label>
           <label class="auth-label">
-            Password
+            {{ t('auth.password') }}
             <input
               v-model="password"
               type="password"
               :autocomplete="isSignup ? 'new-password' : 'current-password'"
-              required
-              minlength="8"
               class="auth-input"
             />
           </label>
@@ -60,19 +56,15 @@
           <p v-if="error" class="auth-error">{{ error }}</p>
 
           <button type="submit" class="btn btn-solid btn-lg auth-submit" :disabled="loading">
-            {{ loading ? 'Please wait…' : isSignup ? 'Create account' : 'Log in' }}
+            {{ loading ? t('auth.wait') : t(`auth.${ns}.submit`) }}
           </button>
         </form>
 
         <p class="auth-switch">
-          <template v-if="isSignup">
-            Already have an account?
-            <router-link :to="switchTo('/login')">Log in</router-link>
-          </template>
-          <template v-else>
-            New to Humanitaria?
-            <router-link :to="switchTo('/signup')">Sign up</router-link>
-          </template>
+          {{ t(`auth.${ns}.switchPrompt`) }}
+          <router-link :to="switchTo(isSignup ? '/login' : '/signup')">{{
+            t(`auth.${ns}.switchLink`)
+          }}</router-link>
         </p>
       </div>
     </main>
@@ -83,32 +75,31 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 
 import MarketingNav from '../marketing/MarketingNav.vue'
 import MarketingFooter from '../marketing/MarketingFooter.vue'
 import { doLogin, doSignup } from '../utils/authStore.js'
+import { errorMessage } from '../utils/errorMessage.js'
+import { validateAuth } from '../utils/authValidation.js'
 
 const props = defineProps({
   mode: { type: String, default: 'login' },
 })
 
+const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 
 const isSignup = computed(() => props.mode === 'signup')
+// Message-key namespace for the current mode: auth.login.* or auth.signup.*
+const ns = computed(() => (isSignup.value ? 'signup' : 'login'))
 
 const name = ref('')
 const email = ref('')
 const password = ref('')
 const error = ref('')
 const loading = ref(false)
-
-function messageFor(status) {
-  if (status === 409) return 'An account with this email already exists.'
-  if (status === 401) return 'Invalid email or password.'
-  if (status === 422) return 'Please check your details — password must be at least 8 characters.'
-  return 'Something went wrong. Please try again.'
-}
 
 // The login <-> signup switch keeps `redirect`, so the landing question survives it.
 function switchTo(path) {
@@ -119,6 +110,16 @@ function switchTo(path) {
 
 async function submit() {
   error.value = ''
+  const invalid = validateAuth({
+    isSignup: isSignup.value,
+    name: name.value,
+    email: email.value,
+    password: password.value,
+  })
+  if (invalid) {
+    error.value = t(invalid)
+    return
+  }
   loading.value = true
   try {
     if (isSignup.value) {
@@ -129,7 +130,7 @@ async function submit() {
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/app'
     router.push(redirect)
   } catch (e) {
-    error.value = messageFor(e?.status)
+    error.value = errorMessage(e, t)
   } finally {
     loading.value = false
   }

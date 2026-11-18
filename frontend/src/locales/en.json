@@ -213,5 +213,101 @@
     "validation_failed": "Some of the information isn't valid. Check it and try again.",
     "network": "Can't reach the server. Check your connection and try again.",
     "generic": "Something went wrong. Please try again."
+  },
+  "auth": {
+    "login": {
+      "title": "Welcome back",
+      "sub": "Sign in to continue to Humanitaria.",
+      "submit": "Log in",
+      "switchPrompt": "New to Humanitaria?",
+      "switchLink": "Sign up"
+    },
+    "signup": {
+      "title": "Create your account",
+      "sub": "Start asking the humanitarian record — answers you can cite.",
+      "submit": "Create account",
+      "switchPrompt": "Already have an account?",
+      "switchLink": "Log in"
+    },
+    "google": "Continue with Google",
+    "or": "or",
+    "name": "Name",
+    "email": "Email",
+    "password": "Password",
+    "wait": "Please wait…",
+    "validation": {
+      "name": "Enter your name.",
+      "email": "Enter your email address.",
+      "emailInvalid": "Enter a valid email address.",
+      "password": "Enter your password."
+    }
+  },
+  "privacy": {
+    "title": "Privacy policy",
+    "updated": "Last updated: 17 November 2026",
+    "translationNote": "This page is a translation of the English original. If the two differ, the English version prevails.",
+    "intro": "Humanitaria answers questions about humanitarian crises using public reports from ReliefWeb. This page explains what we store about you when you use it, who else handles that data, and how to delete it.",
+    "s1": {
+      "title": "What we store",
+      "l1": {
+        "lead": "Your account.",
+        "text": "Your email address and name. If you sign up with a password, we store a bcrypt hash of it, never the password itself. If you sign in with Google, we store your Google account ID instead."
+      },
+      "l2": {
+        "lead": "Your conversations.",
+        "text": "The questions you ask, the answers, and the list of sources shown with each answer, so you can come back to them."
+      },
+      "l3": {
+        "lead": "Your reports.",
+        "text": "The situation reports you generate, with the country, sector, period and language you chose."
+      },
+      "l4": {
+        "lead": "A sign-in cookie.",
+        "text": "One cookie ({cookie}) keeps you signed in for up to 24 hours. It holds a random token, and we store only a hash of that token."
+      },
+      "after": "We do not use analytics, advertising or tracking cookies, and we do not sell or rent your data to anyone."
+    },
+    "s2": {
+      "title": "Signing in with Google",
+      "p1": "If you choose Google sign-in, Google shares your name, email address and Google account ID with us. We use them only to create your account and sign you in. We do not request access to your Gmail, Drive, contacts or any other Google data. Our use of information received from Google APIs follows the {policy}, including its Limited Use requirements.",
+      "policyLink": "Google API Services User Data Policy"
+    },
+    "s3": {
+      "title": "Services that process your data",
+      "l1": {
+        "lead": "Render",
+        "text": "hosts the application. Like any web host, it handles your IP address and request logs."
+      },
+      "l2": {
+        "lead": "Supabase",
+        "text": "hosts the database that holds your account, conversations and reports."
+      },
+      "l3": {
+        "lead": "Google Gemini API",
+        "text": "writes the answers and reports. Your question and the report excerpts we retrieve for it are sent to Gemini. We use the paid tier, under which Google does not use this content to improve its products."
+      },
+      "l4": {
+        "lead": "Pinecone",
+        "text": "ranks the retrieved report excerpts by relevance. Your question and those excerpts are sent to its ranking service; we keep no data there."
+      },
+      "after": "The application also writes short technical logs (for example, sign-in events with your user ID) to help us find and fix errors."
+    },
+    "s4": {
+      "title": "How long we keep it",
+      "p1": "We keep your data until you delete it. You can delete a conversation or a report at any time. Deleting your account under {path} removes your account, all your conversations and all your reports from our database straight away. Copies can remain in our hosting providers' logs or backups for a limited time before they expire.",
+      "path": "Settings → Delete account"
+    },
+    "s5": {
+      "title": "Your choices",
+      "p1": "You can change your name and password in Settings, and delete your account there. For any other request about your data, such as a copy of what we hold, email {email}."
+    },
+    "s6": {
+      "title": "Children",
+      "p1": "Humanitaria is not meant for children under 16, and we do not knowingly serve them."
+    },
+    "s7": {
+      "title": "Changes",
+      "p1": "If we change how we handle your data, we will update this page and the date at the top."
+    }
   }
 }

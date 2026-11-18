@@ -213,5 +213,101 @@
     "validation_failed": "Bazı bilgiler geçerli değil. Kontrol edip yeniden deneyin.",
     "network": "Sunucuya ulaşılamıyor. Bağlantınızı kontrol edip yeniden deneyin.",
     "generic": "Bir sorun oluştu. Lütfen yeniden deneyin."
+  },
+  "auth": {
+    "login": {
+      "title": "Tekrar hoş geldiniz",
+      "sub": "Humanitaria'ya devam etmek için giriş yapın.",
+      "submit": "Giriş yap",
+      "switchPrompt": "Humanitaria'ya yeni misiniz?",
+      "switchLink": "Kayıt ol"
+    },
+    "signup": {
+      "title": "Hesabınızı oluşturun",
+      "sub": "İnsani yardım kayıtlarına soru sormaya başlayın; atıf verebileceğiniz yanıtlar alın.",
+      "submit": "Hesap oluştur",
+      "switchPrompt": "Zaten hesabınız var mı?",
+      "switchLink": "Giriş yap"
+    },
+    "google": "Google ile devam et",
+    "or": "ya da",
+    "name": "Ad",
+    "email": "E-posta",
+    "password": "Parola",
+    "wait": "Lütfen bekleyin…",
+    "validation": {
+      "name": "Adınızı yazın.",
+      "email": "E-posta adresinizi yazın.",
+      "emailInvalid": "Geçerli bir e-posta adresi yazın.",
+      "password": "Parolanızı yazın."
+    }
+  },
+  "privacy": {
+    "title": "Gizlilik politikası",
+    "updated": "Son güncelleme: 17 Kasım 2026",
+    "translationNote": "Bu sayfa İngilizce özgün metnin çevirisidir. İkisi arasında fark olursa İngilizce sürüm geçerlidir.",
+    "intro": "Humanitaria, ReliefWeb'deki kamuya açık raporlardan yararlanarak insani krizlerle ilgili soruları yanıtlar. Bu sayfa, hizmeti kullandığınızda sizinle ilgili neleri sakladığımızı, bu verileri başka kimlerin işlediğini ve verileri nasıl sileceğinizi açıklar.",
+    "s1": {
+      "title": "Neleri saklıyoruz",
+      "l1": {
+        "lead": "Hesabınız.",
+        "text": "E-posta adresiniz ve adınız. Parolayla kayıt olursanız parolanızın bcrypt hash'ini saklarız, parolanın kendisini asla saklamayız. Google ile giriş yaparsanız bunun yerine Google hesap kimliğinizi saklarız."
+      },
+      "l2": {
+        "lead": "Sohbetleriniz.",
+        "text": "Sorduğunuz sorular, yanıtlar ve her yanıtla birlikte gösterilen kaynakların listesi; böylece sohbetlerinize geri dönebilirsiniz."
+      },
+      "l3": {
+        "lead": "Raporlarınız.",
+        "text": "Oluşturduğunuz durum raporları; seçtiğiniz ülke, sektör, dönem ve dil bilgisiyle birlikte."
+      },
+      "l4": {
+        "lead": "Giriş çerezi.",
+        "text": "Tek bir çerez ({cookie}) oturumunuzu en fazla 24 saat açık tutar. Çerez rastgele bir belirteç (token) içerir ve biz bu belirtecin yalnızca hash'ini saklarız."
+      },
+      "after": "Analitik, reklam ya da izleme çerezleri kullanmayız; verilerinizi kimseye satmayız veya kiralamayız."
+    },
+    "s2": {
+      "title": "Google ile giriş",
+      "p1": "Google ile girişi seçerseniz Google adınızı, e-posta adresinizi ve Google hesap kimliğinizi bizimle paylaşır. Bunları yalnızca hesabınızı oluşturmak ve oturumunuzu açmak için kullanırız. Gmail, Drive, kişiler ya da başka herhangi bir Google verinize erişim istemeyiz. Google API'lerinden aldığımız bilgileri kullanırken, Sınırlı Kullanım (Limited Use) gereklilikleri de dâhil olmak üzere {policy} belgesine uyarız.",
+      "policyLink": "Google API Services User Data Policy"
+    },
+    "s3": {
+      "title": "Verilerinizi işleyen hizmetler",
+      "l1": {
+        "lead": "Render",
+        "text": "uygulamayı barındırır. Her web barındırma hizmeti gibi IP adresinizi ve istek günlüklerinizi işler."
+      },
+      "l2": {
+        "lead": "Supabase",
+        "text": "hesabınızı, sohbetlerinizi ve raporlarınızı tutan veritabanını barındırır."
+      },
+      "l3": {
+        "lead": "Google Gemini API",
+        "text": "yanıtları ve raporları yazar. Sorunuz ve bu soru için getirdiğimiz rapor alıntıları Gemini'ye gönderilir. Ücretli katmanı kullanıyoruz; bu katmanda Google bu içeriği ürünlerini iyileştirmek için kullanmaz."
+      },
+      "l4": {
+        "lead": "Pinecone",
+        "text": "getirilen rapor alıntılarını alaka düzeyine göre sıralar. Sorunuz ve bu alıntılar sıralama hizmetine gönderilir; orada hiçbir veri tutmayız."
+      },
+      "after": "Uygulama ayrıca hataları bulup düzeltmemize yardımcı olması için kısa teknik günlükler (örneğin kullanıcı kimliğinizle birlikte giriş olayları) yazar."
+    },
+    "s4": {
+      "title": "Verileri ne kadar süre tutuyoruz",
+      "p1": "Verilerinizi siz silene kadar saklarız. Bir sohbeti ya da raporu istediğiniz zaman silebilirsiniz. {path} yolundan hesabınızı silmeniz; hesabınızı, tüm sohbetlerinizi ve tüm raporlarınızı veritabanımızdan hemen kaldırır. Kopyalar, geçerlilik süreleri dolmadan önce sınırlı bir süre boyunca barındırma sağlayıcılarımızın günlüklerinde veya yedeklerinde kalabilir.",
+      "path": "Ayarlar → Hesabı sil"
+    },
+    "s5": {
+      "title": "Seçenekleriniz",
+      "p1": "Adınızı ve parolanızı Ayarlar'dan değiştirebilir, hesabınızı da oradan silebilirsiniz. Verilerinizle ilgili diğer talepleriniz için, örneğin elimizdeki verilerin bir kopyası için, {email} adresine e-posta gönderin."
+    },
+    "s6": {
+      "title": "Çocuklar",
+      "p1": "Humanitaria 16 yaşın altındaki çocuklara yönelik değildir ve bilerek onlara hizmet vermeyiz."
+    },
+    "s7": {
+      "title": "Değişiklikler",
+      "p1": "Verilerinizi ele alış biçimimizi değiştirirsek bu sayfayı ve en üstteki tarihi güncelleriz."
+    }
   }
 }
