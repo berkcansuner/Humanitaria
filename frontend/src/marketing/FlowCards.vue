@@ -10,12 +10,11 @@ import { citeLabel, revealSource } from '../utils/sources.js'
 
 gsap.registerPlugin(ScrollTrigger)
 
-const top = sudan.regions[0][1]
-const regions = sudan.regions.map(([name, value]) => ({
-  name,
-  value: formatCompact(value),
-  width: `${(value / top) * 100}%`,
-}))
+// The technical report's trend test on the same IDP series the hero card draws.
+const test = sudan.idps.trend_test
+const slope = `${test.slope_per_year < 0 ? '−' : '+'}${formatCompact(Math.abs(test.slope_per_year))}`
+const testPeriod = `${monthLabel(test.period[0])} – ${monthLabel(test.period[1])}`
+const pAdjusted = test.p_adjusted < 0.001 ? '< 0.001' : `= ${test.p_adjusted}`
 const dtmCredit = `${sudan.idps.credit} · HDX HAPI`
 
 // A passage of the hero's Haiti answer, quoted with its own citations.
@@ -154,13 +153,27 @@ onBeforeUnmount(() => mm?.revert())
           <h3>Technical monitoring</h3>
           <p>Indicator trends and regional comparisons, tested in code, narrated by the model.</p>
           <div class="flow-ui">
-            <ul class="fu-bars" aria-label="Internally displaced people in Sudan, top 5 states">
-              <li v-for="r in regions" :key="r.name">
-                <span class="fu-name">{{ r.name }}</span>
-                <span class="fu-track"><i :style="{ width: r.width }"></i></span>
-                <b>{{ r.value }}</b>
-              </li>
-            </ul>
+            <p class="fu-head">Sudan · Technical monitoring · IDPs</p>
+            <p class="fu-meta">{{ testPeriod }}</p>
+            <p class="fu-finding">
+              Internally displaced people show a
+              {{ test.significant ? 'significant' : 'non-significant' }} {{ test.direction }} trend
+              (Holm-adjusted p {{ pAdjusted }}).
+            </p>
+            <dl class="fu-test">
+              <div>
+                <dt>Sen's slope</dt>
+                <dd>{{ slope }}<small> / year</small></dd>
+              </div>
+              <div>
+                <dt>Mann-Kendall p</dt>
+                <dd>{{ test.p_value }}</dd>
+              </div>
+              <div>
+                <dt>Points</dt>
+                <dd>{{ test.n_points }}</dd>
+              </div>
+            </dl>
             <p class="fu-credit">{{ dtmCredit }}</p>
           </div>
         </article>
@@ -295,37 +308,33 @@ onBeforeUnmount(() => mm?.revert())
 .fu-head:first-child {
   margin-top: 0;
 }
-.fu-bars {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.fu-test {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  margin: 14px 0 0;
 }
-.fu-bars li {
-  display: grid;
-  grid-template-columns: 96px minmax(0, 1fr) 44px;
-  gap: 8px;
-  align-items: center;
-  margin: 2px 0 8px;
-  color: var(--color-text-secondary);
-}
-.fu-name {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.fu-track i {
-  display: block;
-  height: 10px;
-  border-radius: 0 4px 4px 0;
-  background: var(--mkt-brand-chart);
-}
-.fu-bars b {
-  font-family: var(--font-mono);
+.fu-test dt {
   font-size: 12px;
+  white-space: nowrap;
+  color: var(--color-muted);
+}
+.fu-test dd {
+  margin: 2px 0 0;
+  font-family: var(--font-mono);
+  font-size: 18px;
   font-weight: 600;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
-  text-align: right;
+  white-space: nowrap;
   color: var(--color-text);
+}
+.fu-test small {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--color-text-secondary);
 }
 .fu-date {
   white-space: nowrap;

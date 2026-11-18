@@ -1,4 +1,4 @@
-from scripts.build_landing_snapshot import coverage_points, top_regions
+from scripts.build_landing_snapshot import coverage_points, top_regions, trend_test
 
 
 def _country(iso3, name, lat, lon):
@@ -41,3 +41,21 @@ def test_coverage_points_match_documents_country_by_short_or_plain_name():
     ]
     points = coverage_points(countries, {"Iran": 283, "Aruba": 2})
     assert [(p["iso3"], p["reports"]) for p in points] == [("IRN", 283), ("ABW", 2)]
+
+
+def test_trend_test_keeps_the_report_trend_result():
+    stat = {"kind": "trend", "indicator": "Internally displaced people (IDPs)",
+            "direction": "decreasing", "slope": -412345.678, "p_value": 0.000123456,
+            "p_adjusted": 0.000370368, "significant": True, "pct_change": -9.87,
+            "n_points": 31, "ci_low": -500000.0, "ci_high": -300000.0, "tau": -0.61,
+            "first_period": "2023-08-31", "last_period": "2026-09-30T00:00:00", "unit": "people"}
+    assert trend_test(stat) == {
+        "test": "Mann-Kendall trend test, Sen's slope",
+        "direction": "decreasing",
+        "slope_per_year": -412346,
+        "p_value": 0.000123,
+        "p_adjusted": 0.00037,
+        "significant": True,
+        "n_points": 31,
+        "period": ["2023-08-31", "2026-09-30"],
+    }

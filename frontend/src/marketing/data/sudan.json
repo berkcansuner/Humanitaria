@@ -164,7 +164,20 @@
    ]
   ],
   "credit": "International Organization for Migration (IOM), September 2026, Displacement Tracking Matrix (DTM), https://dtm.iom.int",
-  "pct_change": -24.866323626351424
+  "pct_change": -24.866323626351424,
+  "trend_test": {
+   "test": "Mann-Kendall trend test, Sen's slope",
+   "direction": "decreasing",
+   "slope_per_year": -931171,
+   "p_value": 0.00236,
+   "p_adjusted": 0.0118,
+   "significant": true,
+   "n_points": 40,
+   "period": [
+    "2023-08-31",
+    "2026-09-30"
+   ]
+  }
  },
  "regions": [
   [

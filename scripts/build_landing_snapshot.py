@@ -55,6 +55,24 @@ def top_regions(ranking: list[tuple[str, float]], n: int = 5) -> list[list]:
     return [[name, round(value)] for name, value in ranking[:n]]
 
 
+def _sig3(p):
+    return None if p is None else float(f"{p:.3g}")
+
+
+def trend_test(stat: dict) -> dict:
+    """The technical report's trend result for one indicator, as the landing shows it."""
+    return {
+        "test": "Mann-Kendall trend test, Sen's slope",
+        "direction": stat["direction"],
+        "slope_per_year": round(stat["slope"]),
+        "p_value": _sig3(stat["p_value"]),
+        "p_adjusted": _sig3(stat.get("p_adjusted")),
+        "significant": stat.get("significant", False),
+        "n_points": stat["n_points"],
+        "period": [stat["first_period"][:10], stat["last_period"][:10]],
+    }
+
+
 def _fetch_countries() -> list[dict]:
     """ReliefWeb countries (full profile carries `location`); iso3 upper-cased."""
     import requests
@@ -138,7 +156,8 @@ def _sudan(db_sudan: dict) -> dict:
         "generated": today.isoformat(),
         "idps": {"series": [[p[:10], round(v)] for p, v in zip(periods, values)],
                  "credit": _credit(ind, periods[-1], "en"),
-                 "pct_change": trend["pct_change"]},
+                 "pct_change": trend["pct_change"],
+                 "trend_test": trend_test(trend)},
         "regions": top_regions(region["ranking"]),
         "ipc_share": {"value": round(ipc_values[-1], 1), "period": ipc_periods[-1][:10]},
         "funding": [[y, round(v, 2)] for y, v in sorted(funding.items())],
