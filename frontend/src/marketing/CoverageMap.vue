@@ -13,7 +13,7 @@ const maxReports = Math.max(1, ...points.map((p) => p.reports))
 // Stable phase offset per country so rings never pulse in unison.
 const phases = points.map((p) => {
   let h = 0
-  for (const c of p.iso3) h = (h * 31 + c.charCodeAt(0)) % 997
+  for (const c of String(p.iso3 ?? '')) h = (h * 31 + c.charCodeAt(0)) % 997
   return h / 997
 })
 

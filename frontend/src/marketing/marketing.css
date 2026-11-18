@@ -170,7 +170,7 @@
   font-size: 14px;
   color: var(--color-text);
   background: transparent;
-  border-radius: 9px;
+  border-radius: 999px;
 }
 .mkt-scope .btn-text:hover {
   background: var(--color-surface-container-low);
@@ -180,16 +180,16 @@
   font-size: 14px;
   color: var(--color-on-accent);
   background: var(--color-accent-container);
-  border-radius: 10px;
+  border-radius: 999px;
 }
 .mkt-scope .btn-solid:hover {
-  background: var(--color-accent);
+  background: color-mix(in oklch, var(--color-accent), black 14%);
   transform: translateY(-1px);
 }
 .mkt-scope .btn-lg {
   padding: 14px 24px;
   font-size: 15.5px;
-  border-radius: var(--radius-xl);
+  border-radius: 999px;
 }
 .mkt-scope .btn-arrow {
   transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
@@ -203,7 +203,7 @@
   color: var(--color-text);
   background: var(--color-surface);
   border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-xl);
+  border-radius: 999px;
 }
 .mkt-scope .btn-ghost:hover {
   border-color: var(--color-accent);
@@ -212,303 +212,84 @@
 
 /* ---------- hero ---------- */
 .mkt-scope .hero {
-  padding: 96px 0 64px;
   position: relative;
   overflow: hidden;
+  padding: 48px 0 56px;
+  background: radial-gradient(
+    56% 64% at 82% 34%,
+    color-mix(in srgb, var(--mkt-brand-tint) 70%, transparent),
+    transparent 72%
+  );
 }
 .mkt-scope .hero-grid {
-  display: block;
-  max-width: 800px;
-  margin: 0 auto;
-  text-align: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr);
+  gap: 56px;
+  align-items: center;
+}
+.mkt-scope .hero-copy {
   position: relative;
   z-index: 1;
 }
-.mkt-scope .hero h1 {
-  font-family: var(--font-display);
-  font-size: clamp(38px, 4.4vw, 56px);
-  line-height: 1.04;
-  letter-spacing: -0.03em;
-  font-weight: 700;
-  margin: 18px 0 0;
-}
-.mkt-scope .hero h1 em {
-  font-style: normal;
-  color: var(--color-accent);
-  position: relative;
-}
-.mkt-scope .hero h1 em::after {
-  content: '';
-  position: absolute;
-  left: 0.02em;
-  right: 0.02em;
-  bottom: 0.04em;
-  height: 0.085em;
-  border-radius: 3px;
-  background: var(--color-accent);
-  transform: scaleX(0);
-  transform-origin: left;
-  animation: cite-ul 0.9s 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
-}
-.mkt-scope .hero .lead {
-  font-size: 18px;
-  color: var(--color-text-secondary);
-  margin: 22px auto 0;
-  max-width: 36em;
-}
-.mkt-scope .hero-cta {
-  display: flex;
-  gap: var(--space-3);
-  margin-top: var(--space-6);
-  flex-wrap: wrap;
-  justify-content: center;
-}
-.mkt-scope .hero-trust {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  margin-top: var(--space-5);
-  font-size: 13px;
-  color: var(--color-muted);
-  flex-wrap: wrap;
-  justify-content: center;
-}
-.mkt-scope .hero-trust .dotline {
+.mkt-scope .hero-status {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--mkt-brand-tint);
+  color: var(--color-accent);
+  font-size: 13px;
+  font-weight: 550;
 }
-.mkt-scope .hero-trust .dot {
+.mkt-scope .status-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--color-accent);
+  background: var(--mkt-brand-chart);
 }
-@keyframes cite-ul {
-  to {
-    transform: scaleX(1);
-  }
-}
-
-/* sample answer (inline in the citations section) */
-.mkt-scope .sample {
-  margin: 0;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 16px;
-  overflow: hidden;
-}
-.mkt-scope .sample-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface-container-low);
-}
-.mkt-scope .sample-title {
+.mkt-scope .hero h1 {
+  margin-top: 22px;
   font-family: var(--font-display);
+  font-size: clamp(40px, 4.4vw, 60px);
+  line-height: 1.02;
+  letter-spacing: -0.035em;
   font-weight: 700;
-  font-size: 14.5px;
-  letter-spacing: -0.01em;
+  text-wrap: balance;
 }
-.mkt-scope .sample-tag {
-  margin-left: auto;
-  font-size: 12.5px;
-  color: var(--color-text-secondary);
+.mkt-scope .h1-accent {
+  color: var(--color-accent);
 }
-.mkt-scope .sample-body {
-  padding: 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.mkt-scope .q {
-  align-self: flex-end;
-  max-width: 78%;
-  background: var(--color-ink);
-  color: #f1f0ec;
-  padding: 11px 15px;
-  border-radius: 13px 4px 13px 13px;
-  font-size: 14px;
-}
-.mkt-scope .a {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 4px 13px 13px 13px;
-  padding: 16px 18px;
-  box-shadow: 0 6px 18px -10px rgba(0, 0, 0, 0.1);
-}
-.mkt-scope .a p {
-  font-size: 13.7px;
-  color: var(--color-text);
-  line-height: 1.6;
-  margin-bottom: 6px;
-}
-.mkt-scope .a p strong {
-  font-weight: 700;
-}
-.mkt-scope .a ul {
-  margin: 8px 0 4px;
-  padding-left: 18px;
-}
-.mkt-scope .a ul li {
-  font-size: 13.7px;
-  color: var(--color-text);
-  margin-bottom: 5px;
+.mkt-scope .hero-lede {
+  max-width: 31em;
+  margin-top: 22px;
+  font-size: 19px;
   line-height: 1.55;
-}
-/* Citations and sources mirror the app (style.css .cite, SourceList.vue):
-   quiet outlined chips that fill with the accent on hover/focus, and one count
-   line that opens a # · Source · Date ledger. */
-.mkt-scope .cite {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 4px;
-  margin: 0 1px;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
   color: var(--color-text-secondary);
-  background: transparent;
-  border: 1px solid var(--color-border);
-  border-radius: 5px;
-  text-decoration: none;
-  vertical-align: text-top;
-  cursor: pointer;
-  transition:
-    background-color 0.15s,
-    border-color 0.15s,
-    color 0.15s;
+  text-wrap: pretty;
 }
-.mkt-scope .cite:hover,
-.mkt-scope .cite:focus-visible {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-  color: var(--color-on-accent);
-  outline: none;
-}
-.mkt-scope .sources {
-  margin-top: var(--space-4);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--color-border);
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--color-text-secondary);
-}
-.mkt-scope .sources-summary {
-  display: inline-flex;
+.mkt-scope .hero-cta {
+  display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 6px;
-  cursor: pointer;
+  gap: var(--space-3);
+  margin-top: 32px;
+}
+.mkt-scope .hero-proof {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+  margin-top: 28px;
+  padding: 0;
   list-style: none;
-  border-radius: 6px;
+  font-size: 13.5px;
+  color: var(--color-muted);
 }
-.mkt-scope .sources-summary::-webkit-details-marker {
-  display: none;
-}
-.mkt-scope .sources-summary:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
-.mkt-scope .sources-toggle {
-  color: var(--color-accent);
-  font-weight: 600;
-}
-.mkt-scope .sources-summary:hover .sources-toggle {
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-.mkt-scope .sources[open] .sources-toggle {
-  color: var(--color-text-secondary);
-  font-weight: 500;
-}
-.mkt-scope .ledger {
-  margin-top: var(--space-3);
-  overflow-x: auto;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-}
-.mkt-scope .ledger-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-variant-numeric: tabular-nums;
-}
-.mkt-scope .ledger-table th {
-  text-align: left;
+.mkt-scope .hero-proof b {
   font-family: var(--font-mono);
-  font-weight: 500;
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--color-text-secondary);
-  padding: 6px var(--space-2);
-  border-bottom: 1px solid var(--color-border-strong);
-}
-.mkt-scope .ledger-table td {
-  padding: 7px var(--space-2);
-  border-bottom: 1px solid var(--color-border);
-  vertical-align: top;
-}
-.mkt-scope .ledger-table tr:last-child td {
-  border-bottom: none;
-}
-.mkt-scope .col-index {
-  width: 1%;
-}
-.mkt-scope .col-date {
-  width: 1%;
-  white-space: nowrap;
-  font-family: var(--font-mono);
-}
-.mkt-scope .source-item {
-  transition: background-color 0.3s;
-}
-.mkt-scope .source-item.flash {
-  background: var(--color-accent-soft);
-}
-.mkt-scope .source-index {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 4px;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: 5px;
-  transition:
-    color 0.15s,
-    border-color 0.15s;
-}
-.mkt-scope .source-item.active .source-index {
-  color: var(--color-accent);
-  border-color: var(--color-accent);
-}
-.mkt-scope .source-title {
-  display: block;
-  color: var(--color-text);
-  font-weight: 600;
   font-size: 13px;
-}
-/* The sample's sources are the real ReliefWeb reports, linked as in the app. */
-.mkt-scope a.source-title:hover,
-.mkt-scope a.source-title:focus-visible {
-  color: var(--color-accent);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-.mkt-scope .source-meta {
-  display: block;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
 }
 
 /* ---------- logos strip (marquee) ---------- */
@@ -607,60 +388,6 @@
   max-width: 60ch;
   font-size: 16px;
   color: var(--color-text-secondary);
-}
-
-/* citations highlight */
-.mkt-scope .cit {
-  background: var(--color-surface-container-low);
-  border-top: 1px solid var(--color-border);
-  border-bottom: 1px solid var(--color-border);
-}
-.mkt-scope .cit-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
-  gap: 56px;
-  align-items: start;
-}
-.mkt-scope .cit-copy {
-  position: sticky;
-  top: 104px;
-}
-.mkt-scope .cit-copy h2 {
-  font-family: var(--font-display);
-  font-size: clamp(30px, 3.3vw, 43px);
-  line-height: 1.03;
-  letter-spacing: -0.025em;
-  font-weight: 700;
-}
-.mkt-scope .cit-copy p {
-  font-size: 16.5px;
-  color: var(--color-text-secondary);
-  margin-top: var(--space-4);
-}
-.mkt-scope .cit-list {
-  margin-top: var(--space-5);
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.mkt-scope .cit-list li {
-  display: flex;
-  gap: var(--space-3);
-  align-items: flex-start;
-  list-style: none;
-  font-size: 15px;
-  color: var(--color-text);
-}
-.mkt-scope .cit-list .tick {
-  width: 22px;
-  height: 22px;
-  border-radius: 7px;
-  background: var(--color-accent-soft);
-  color: var(--color-accent);
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  margin-top: 1px;
 }
 
 /* use cases */
@@ -797,20 +524,18 @@
   .mkt-scope .marquee-track {
     animation: none;
   }
-  .mkt-scope .hero h1 em::after {
-    animation: none;
-    transform: scaleX(1);
-  }
 }
 
+@media (max-width: 1023px) {
+  .mkt-scope .hero {
+    padding: 48px 0 56px;
+  }
+  .mkt-scope .hero-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 48px;
+  }
+}
 @media (max-width: 900px) {
-  .mkt-scope .cit-grid {
-    grid-template-columns: 1fr;
-    gap: 36px;
-  }
-  .mkt-scope .cit-copy {
-    position: static;
-  }
   .mkt-scope .feature {
     grid-template-columns: 1fr;
     gap: var(--space-2);
@@ -827,6 +552,12 @@
   }
 }
 @media (max-width: 560px) {
+  .mkt-scope .hero .wrap {
+    padding: 0 20px;
+  }
+  .mkt-scope .hero-lede {
+    font-size: 17px;
+  }
   .mkt-scope .nav-right .btn-text {
     display: none;
   }

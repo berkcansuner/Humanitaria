@@ -4,17 +4,21 @@
 
     <main id="top">
       <!-- HERO -->
-      <section class="hero">
+      <section ref="hero" class="hero">
         <div class="wrap hero-grid">
-          <div>
-            <h1>Ask the humanitarian record. Get answers you can <em>cite.</em></h1>
-            <p class="lead">
-              Humanitaria answers questions from ReliefWeb's reports. Each claim carries a numbered
-              citation that opens the original, so you can check it before you quote it.
+          <div class="hero-copy">
+            <p class="hero-status">
+              <span class="status-dot" aria-hidden="true"></span>{{ reportsLabel }} ReliefWeb
+              reports · updated daily
+            </p>
+            <h1>The humanitarian record, <span class="h1-accent">answered and cited.</span></h1>
+            <p class="hero-lede">
+              Ask about any crisis, generate M&amp;E situation and technical reports, and see the
+              indicators behind them. Every claim links to the report it came from.
             </p>
             <div class="hero-cta">
-              <router-link class="btn btn-solid btn-lg" to="/app"
-                >Start asking<svg
+              <router-link class="btn btn-solid btn-lg" to="/signup"
+                >Start free<svg
                   class="btn-arrow"
                   width="16"
                   height="16"
@@ -28,11 +32,19 @@
                 >
                   <path d="M5 12h14M13 6l6 6-6 6" /></svg
               ></router-link>
-              <router-link class="btn btn-ghost" :to="{ path: '/', hash: '#citations' }">
-                See a sample answer
+              <router-link class="btn btn-ghost" :to="{ path: '/', hash: '#workflows' }">
+                See how it works
               </router-link>
             </div>
+            <ul class="hero-proof">
+              <li>
+                <b>{{ coverage.countries }}</b> countries
+              </li>
+              <li><b>12</b> months of reports</li>
+              <li><b>4</b> report types</li>
+            </ul>
           </div>
+          <HeroComposite ref="composite" />
         </div>
       </section>
 
@@ -91,72 +103,6 @@
             <div class="marquee-group" aria-hidden="true">
               <span v-for="(s, i) in marqueeSources" :key="'b' + i">{{ s }}</span>
             </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- CITATIONS HIGHLIGHT -->
-      <section id="citations" class="cit section">
-        <div class="wrap">
-          <div class="cit-grid">
-            <div class="cit-copy">
-              <h2>Every claim links back to a real report.</h2>
-              <p>
-                Each number opens the source document, with its publisher and date, so you can check
-                it and cite it in your own brief.
-              </p>
-              <ul class="cit-list">
-                <li>
-                  <span class="tick"
-                    ><svg
-                      width="13"
-                      height="13"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2.4"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <path d="M20 6 9 17l-5-5" /></svg
-                  ></span>
-                  One click from a claim to the published report
-                </li>
-                <li>
-                  <span class="tick"
-                    ><svg
-                      width="13"
-                      height="13"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2.4"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <path d="M20 6 9 17l-5-5" /></svg
-                  ></span>
-                  Publisher and date on every reference
-                </li>
-                <li>
-                  <span class="tick"
-                    ><svg
-                      width="13"
-                      height="13"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2.4"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <path d="M20 6 9 17l-5-5" /></svg
-                  ></span>
-                  If no report matches, Humanitaria says so
-                </li>
-              </ul>
-            </div>
-            <SampleAnswer />
           </div>
         </div>
       </section>
@@ -223,9 +169,46 @@
 </template>
 
 <script setup>
+import { onBeforeUnmount, onMounted, useTemplateRef } from 'vue'
+import { gsap } from 'gsap'
 import MarketingNav from '../marketing/MarketingNav.vue'
 import MarketingFooter from '../marketing/MarketingFooter.vue'
-import SampleAnswer from '../marketing/SampleAnswer.vue'
+import HeroComposite from '../marketing/HeroComposite.vue'
+import coverage from '../marketing/data/coverage.json'
+
+const reportsLabel = coverage.reports.toLocaleString('en-US')
+
+const hero = useTemplateRef('hero')
+const composite = useTemplateRef('composite')
+
+// One hero sequence: copy in, cards in, the answer streams, the trend line draws.
+// Reduced motion never runs it, so everything stays in its final state. The
+// sequence pauses while the hero is off screen.
+let mm = null
+onMounted(() => {
+  mm = gsap.matchMedia()
+  mm.add(
+    '(prefers-reduced-motion: no-preference)',
+    () => {
+      const tl = gsap
+        .timeline({ defaults: { ease: 'expo.out', duration: 0.9 } })
+        .from('.hero-copy > *', { y: 18, autoAlpha: 0, stagger: 0.07 })
+        .add(composite.value.intro(), 0.2)
+      const observer = new IntersectionObserver(([entry]) => {
+        if (entry.isIntersecting) tl.resume()
+        else if (tl.progress() < 1) tl.pause()
+      })
+      observer.observe(hero.value)
+      return () => {
+        observer.disconnect()
+        composite.value?.finish()
+      }
+    },
+    hero.value,
+  )
+})
+
+onBeforeUnmount(() => mm?.revert())
 
 const marqueeSources = [
   'OCHA',

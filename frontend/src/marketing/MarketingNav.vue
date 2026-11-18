@@ -6,9 +6,10 @@
         <span class="name">Humanitaria</span>
       </router-link>
       <nav class="nav-links">
-        <router-link :to="{ path: '/', hash: '#features' }">Product</router-link>
-        <router-link :to="{ path: '/', hash: '#sources' }">Sources</router-link>
-        <router-link :to="{ path: '/', hash: '#uses' }">Use cases</router-link>
+        <router-link :to="{ path: '/', hash: '#workflows' }">Chat</router-link>
+        <router-link :to="{ path: '/', hash: '#workflows' }">Reports</router-link>
+        <router-link :to="{ path: '/', hash: '#dashboards' }">Dashboards</router-link>
+        <router-link :to="{ path: '/', hash: '#coverage' }">Coverage</router-link>
       </nav>
       <div class="nav-right">
         <template v-if="isAuthenticated()">
@@ -17,7 +18,7 @@
         </template>
         <template v-else>
           <router-link class="btn btn-text" to="/login">Log in</router-link>
-          <router-link class="btn btn-solid" to="/signup">Sign up</router-link>
+          <router-link class="btn btn-solid" to="/signup">Start free</router-link>
         </template>
       </div>
     </div>

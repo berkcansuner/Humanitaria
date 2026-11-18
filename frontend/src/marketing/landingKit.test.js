@@ -1,5 +1,16 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { formatCompact, project, pulseRadius, linePath, countUp, onVisible, drawablePoints } from './landingKit.js'
+import {
+  formatCompact,
+  project,
+  pulseRadius,
+  linePath,
+  countUp,
+  onVisible,
+  drawablePoints,
+  answerLength,
+  revealedParts,
+  peakChange,
+} from './landingKit.js'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -90,5 +101,45 @@ describe('drawablePoints', () => {
     const noLat = { iso3: 'XXX', lon: 30, reports: 10 }
     const noReports = { iso3: 'YYY', lat: 1, lon: 2, reports: 0 }
     expect(drawablePoints([noLat, noReports, ok])).toEqual([ok])
+  })
+})
+
+describe('revealedParts', () => {
+  const parts = [
+    { text: 'Abc ' },
+    { text: 'bold', strong: true },
+    { cite: 1 },
+    { cite: 2 },
+    { text: '.' },
+  ]
+
+  it('counts only text towards the answer length', () => {
+    expect(answerLength(parts)).toBe(9)
+  })
+  it('cuts the part being typed and hides everything after it', () => {
+    expect(revealedParts(parts, 6)).toEqual([{ text: 'Abc ' }, { text: 'bo', strong: true }])
+  })
+  it('shows citations as soon as the text before them is complete', () => {
+    expect(revealedParts(parts, 8)).toEqual(parts.slice(0, 4))
+  })
+  it('shows nothing at zero and everything at the full length', () => {
+    expect(revealedParts(parts, 0)).toEqual([])
+    expect(revealedParts(parts, 9)).toEqual(parts)
+    expect(revealedParts(parts, 99)).toEqual(parts)
+  })
+})
+
+describe('peakChange', () => {
+  it('compares the latest value with the series peak', () => {
+    const series = [
+      ['2023-08-31', 7_000_000],
+      ['2025-01-28', 11_600_000],
+      ['2026-09-30', 8_700_000],
+    ]
+    expect(peakChange(series)).toEqual({
+      peak: ['2025-01-28', 11_600_000],
+      latest: ['2026-09-30', 8_700_000],
+      pct: -25,
+    })
   })
 })

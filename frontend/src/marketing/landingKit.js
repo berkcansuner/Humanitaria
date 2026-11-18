@@ -97,3 +97,36 @@ export function countUp(el, to, { duration = 1.2, format = (v) => String(Math.ro
     },
   })
 }
+
+// Characters a streamed answer types out; citation chips cost nothing.
+export function answerLength(parts) {
+  return parts.reduce((n, p) => n + (p.text?.length ?? 0), 0)
+}
+
+// The parts visible after `count` characters: the part being typed is cut,
+// chips appear once the text before them is complete.
+export function revealedParts(parts, count) {
+  const shown = []
+  let left = count
+  for (const part of parts) {
+    if (part.text === undefined) {
+      shown.push(part)
+      continue
+    }
+    if (left <= 0) break
+    if (part.text.length > left) {
+      shown.push({ ...part, text: part.text.slice(0, left) })
+      break
+    }
+    shown.push(part)
+    left -= part.text.length
+  }
+  return shown
+}
+
+// Latest [date, value] against the series peak, as a whole-number percent change.
+export function peakChange(series) {
+  const peak = series.reduce((a, b) => (b[1] > a[1] ? b : a))
+  const latest = series[series.length - 1]
+  return { peak, latest, pct: Math.round((latest[1] / peak[1] - 1) * 100) }
+}

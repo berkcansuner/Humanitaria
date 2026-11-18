@@ -105,6 +105,15 @@ describe('revealSource', () => {
   it('returns false for a missing container', () => {
     expect(revealSource(null, '1')).toBe(false)
   })
+
+  it('centres the row by default and accepts a gentler alignment', () => {
+    const container = mount()
+    const row = container.querySelector('[data-srcid="2"]')
+    revealSource(container, '2')
+    expect(row.scrollIntoView).toHaveBeenLastCalledWith({ behavior: 'smooth', block: 'center' })
+    revealSource(container, '2', null, { block: 'nearest' })
+    expect(row.scrollIntoView).toHaveBeenLastCalledWith({ behavior: 'smooth', block: 'nearest' })
+  })
 })
 
 describe('returnToCite', () => {
