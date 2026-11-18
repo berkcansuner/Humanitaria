@@ -10,6 +10,13 @@ import {
   answerLength,
   revealedParts,
   peakChange,
+  peakPhrase,
+  monthLabel,
+  dayLabel,
+  yearChange,
+  signedPct,
+  axisTicks,
+  nearestIndex,
 } from './landingKit.js'
 
 afterEach(() => {
@@ -141,5 +148,79 @@ describe('peakChange', () => {
       latest: ['2026-09-30', 8_700_000],
       pct: -25,
     })
+  })
+})
+
+describe('peakPhrase', () => {
+  it('words the latest value against the peak month', () => {
+    const series = [
+      ['2023-08-31', 7_000_000],
+      ['2025-01-28', 11_600_000],
+      ['2026-09-30', 8_700_000],
+    ]
+    expect(peakPhrase(series)).toBe('25% below the Jan 2025 peak')
+  })
+  it('says "at its peak" when the series ends on its peak', () => {
+    expect(
+      peakPhrase([
+        ['2025-01-31', 5],
+        ['2025-02-28', 9],
+      ]),
+    ).toBe('at its peak')
+  })
+})
+
+describe('monthLabel and dayLabel', () => {
+  it('formats ISO dates in UTC, whatever the local zone', () => {
+    expect(monthLabel('2026-09-30')).toBe('Sep 2026')
+    expect(monthLabel('2026-02-01')).toBe('Feb 2026')
+    expect(dayLabel('2026-01-27')).toBe('27 Jan 2026')
+    expect(dayLabel('2026-09-01')).toBe('1 Sep 2026')
+  })
+})
+
+describe('yearChange', () => {
+  it('compares the last year with the one before it', () => {
+    const funding = [
+      [2023, 1_500_000_000],
+      [2024, 2_038_731_400],
+      [2025, 1_782_902_647],
+    ]
+    expect(yearChange(funding)).toEqual({
+      year: 2025,
+      value: 1_782_902_647,
+      prevYear: 2024,
+      pct: -13,
+    })
+  })
+  it('has no change for a single year', () => {
+    expect(yearChange([[2025, 10]])).toEqual({ year: 2025, value: 10, prevYear: null, pct: null })
+  })
+})
+
+describe('signedPct', () => {
+  it('signs a whole-number percent with a true minus', () => {
+    expect(signedPct(-13)).toBe('−13%')
+    expect(signedPct(5)).toBe('+5%')
+    expect(signedPct(0)).toBe('0%')
+  })
+})
+
+describe('axisTicks', () => {
+  it('spans the data with whole steps', () => {
+    expect(axisTicks(7_071_674, 11_585_384, 2_000_000)).toEqual([
+      6_000_000, 8_000_000, 10_000_000, 12_000_000,
+    ])
+  })
+  it('keeps a tick that lands exactly on the data', () => {
+    expect(axisTicks(6_000_000, 8_000_000, 2_000_000)).toEqual([6_000_000, 8_000_000])
+  })
+})
+
+describe('nearestIndex', () => {
+  it('finds the closest x', () => {
+    expect(nearestIndex([0, 10, 30], 18)).toBe(1)
+    expect(nearestIndex([0, 10, 30], 25)).toBe(2)
+    expect(nearestIndex([0, 10, 30], -5)).toBe(0)
   })
 })

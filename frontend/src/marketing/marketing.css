@@ -24,6 +24,14 @@
   --mkt-brand-chart: #0a8f88; /* chart marks only */
   --mkt-brand-tint: #e6f4f3;
   --mkt-coral: #d9452a;
+  /* Night band: the same in both themes. */
+  --mkt-night: #0b1d2e;
+  --mkt-night-2: #12283d;
+  --mkt-night-line: #22394f;
+  --mkt-night-ink: #e8eef5;
+  --mkt-night-ink-2: #aebdcd;
+  --mkt-teal-d: #16a196;
+  --mkt-coral-d: #e8553a;
 
   --font-body: 'Geist Variable', system-ui, sans-serif;
   --font-display: 'Geist Variable', system-ui, sans-serif;

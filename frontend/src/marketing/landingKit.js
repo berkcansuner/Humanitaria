@@ -130,3 +130,55 @@ export function peakChange(series) {
   const latest = series[series.length - 1]
   return { peak, latest, pct: Math.round((latest[1] / peak[1] - 1) * 100) }
 }
+
+const MONTH = new Intl.DateTimeFormat('en-US', { month: 'short', timeZone: 'UTC' })
+
+// 'Sep 2026' for an ISO date, read in UTC.
+export function monthLabel(iso) {
+  const d = new Date(iso)
+  return `${MONTH.format(d)} ${d.getUTCFullYear()}`
+}
+
+// '27 Jan 2026' for an ISO date, read in UTC.
+export function dayLabel(iso) {
+  return `${new Date(iso).getUTCDate()} ${monthLabel(iso)}`
+}
+
+// The latest value worded against the series peak: '26% below the Jan 2025 peak'.
+export function peakPhrase(series) {
+  const { peak, latest, pct } = peakChange(series)
+  if (latest[1] >= peak[1]) return 'at its peak'
+  return `${Math.abs(pct)}% below the ${monthLabel(peak[0])} peak`
+}
+
+// Last [year, value] against the year before, as a whole-number percent change.
+export function yearChange(series) {
+  const [year, value] = series[series.length - 1]
+  const prev = series[series.length - 2]
+  if (!prev) return { year, value, prevYear: null, pct: null }
+  return { year, value, prevYear: prev[0], pct: Math.round((value / prev[1] - 1) * 100) }
+}
+
+// '−13%' / '+5%' / '0%', with a true minus sign.
+export function signedPct(pct) {
+  if (pct < 0) return `−${Math.abs(pct)}%`
+  return pct > 0 ? `+${pct}%` : '0%'
+}
+
+// Axis ticks every `step`, from the step at or below `lo` to the one at or above `hi`.
+export function axisTicks(lo, hi, step) {
+  const ticks = []
+  for (let t = Math.floor(lo / step) * step; t <= Math.ceil(hi / step) * step; t += step) {
+    ticks.push(t)
+  }
+  return ticks
+}
+
+// Index of the value in `xs` closest to `x`.
+export function nearestIndex(xs, x) {
+  let best = 0
+  xs.forEach((v, i) => {
+    if (Math.abs(v - x) < Math.abs(xs[best] - x)) best = i
+  })
+  return best
+}

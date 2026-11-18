@@ -1,6 +1,13 @@
 <script setup>
 import { computed, shallowRef } from 'vue'
-import { formatCompact, linePath, peakChange } from './landingKit.js'
+import {
+  formatCompact,
+  linePath,
+  monthLabel as monthOf,
+  nearestIndex,
+  peakChange,
+  peakPhrase,
+} from './landingKit.js'
 
 const props = defineProps({
   // [ISO date, value] pairs, oldest first.
@@ -12,9 +19,6 @@ const props = defineProps({
 // Drawing box in SVG units; the SVG stretches to the card width.
 const W = 300
 const H = 56
-
-const month = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' })
-const monthOf = (iso) => month.format(new Date(iso))
 
 const points = computed(() => props.series.map(([d, v]) => [Date.parse(d), v]))
 const bounds = computed(() => {
@@ -42,11 +46,7 @@ function onHover(event) {
   const box = event.currentTarget.getBoundingClientRect()
   const [t0, t1] = [xs.value[0], xs.value[xs.value.length - 1]]
   const t = t0 + ((event.clientX - box.left) / box.width) * (t1 - t0)
-  let best = 0
-  xs.value.forEach((x, i) => {
-    if (Math.abs(x - t) < Math.abs(xs.value[best] - t)) best = i
-  })
-  hovered.value = best
+  hovered.value = nearestIndex(xs.value, t)
 }
 const readout = computed(() => (hovered.value === null ? null : props.series[hovered.value]))
 const marker = computed(() => {
@@ -65,8 +65,8 @@ const lastMonth = computed(() => monthOf(latest.value[0]))
 const summary = computed(
   () =>
     `${props.title}: ${formatCompact(latest.value[1])} in ${lastMonth.value}, ` +
-    `${Math.abs(change.value.pct)}% below the ${monthOf(change.value.peak[0])} peak of ` +
-    `${formatCompact(change.value.peak[1])}. Series from ${firstMonth.value} to ${lastMonth.value}.`,
+    `${peakPhrase(props.series)} of ${formatCompact(change.value.peak[1])}. ` +
+    `Series from ${firstMonth.value} to ${lastMonth.value}.`,
 )
 </script>
 
@@ -76,9 +76,7 @@ const summary = computed(
     <p class="tc-figure">
       <span class="tc-value">{{ formatCompact((readout ?? latest)[1]) }}</span>
       <span v-if="readout" class="tc-change">{{ monthOf(readout[0]) }}</span>
-      <span v-else class="tc-change"
-        >{{ Math.abs(change.pct) }}% below the {{ monthOf(change.peak[0]) }} peak</span
-      >
+      <span v-else class="tc-change">{{ peakPhrase(series) }}</span>
     </p>
     <div class="tc-chart" @pointermove="onHover" @pointerleave="hovered = null">
       <svg

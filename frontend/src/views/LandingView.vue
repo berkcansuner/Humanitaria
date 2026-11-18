@@ -62,6 +62,9 @@
         </div>
       </section>
 
+      <FlowCards />
+      <DashboardPreview />
+
       <!-- FEATURES -->
       <section id="features" class="section">
         <div class="wrap">
@@ -190,6 +193,8 @@ import { gsap } from 'gsap'
 import MarketingNav from '../marketing/MarketingNav.vue'
 import MarketingFooter from '../marketing/MarketingFooter.vue'
 import HeroComposite from '../marketing/HeroComposite.vue'
+import FlowCards from '../marketing/FlowCards.vue'
+import DashboardPreview from '../marketing/DashboardPreview.vue'
 import coverage from '../marketing/data/coverage.json'
 
 const reportsLabel = coverage.reports.toLocaleString('en-US')
