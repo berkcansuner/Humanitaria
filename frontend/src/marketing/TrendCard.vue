@@ -8,6 +8,7 @@ import {
   peakChange,
   peakPhrase,
 } from './landingKit.js'
+import { t } from '../i18n/index.js'
 
 const props = defineProps({
   // [ISO date, value] pairs, oldest first.
@@ -65,7 +66,7 @@ const lastMonth = computed(() => monthOf(latest.value[0]))
 const summary = computed(
   () =>
     `${props.title}: ${formatCompact(latest.value[1])} in ${lastMonth.value}, ` +
-    `${peakPhrase(props.series)} of ${formatCompact(change.value.peak[1])}. ` +
+    `${peakPhrase(props.series, t)} of ${formatCompact(change.value.peak[1])}. ` +
     `Series from ${firstMonth.value} to ${lastMonth.value}.`,
 )
 </script>
@@ -76,7 +77,7 @@ const summary = computed(
     <p class="tc-figure">
       <span class="tc-value">{{ formatCompact((readout ?? latest)[1]) }}</span>
       <span v-if="readout" class="tc-change">{{ monthOf(readout[0]) }}</span>
-      <span v-else class="tc-change">{{ peakPhrase(series) }}</span>
+      <span v-else class="tc-change">{{ peakPhrase(series, t) }}</span>
     </p>
     <div class="tc-chart" @pointermove="onHover" @pointerleave="hovered = null">
       <svg

@@ -21,6 +21,12 @@
     "listLabel": "Dil",
     "changed": "Dil {name} olarak ayarlandı"
   },
+  "landing": {
+    "peak": {
+      "below": "{month} zirvesinin %{pct} altında",
+      "at": "zirvede"
+    }
+  },
   "errors": {
     "not_authenticated": "Devam etmek için giriş yapın.",
     "forbidden": "Buna erişim izniniz yok.",

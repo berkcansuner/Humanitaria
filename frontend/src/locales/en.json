@@ -21,6 +21,12 @@
     "listLabel": "Language",
     "changed": "Language set to {name}"
   },
+  "landing": {
+    "peak": {
+      "below": "{pct}% below the {month} peak",
+      "at": "at its peak"
+    }
+  },
   "errors": {
     "not_authenticated": "Please log in to continue.",
     "forbidden": "You don't have access to this.",

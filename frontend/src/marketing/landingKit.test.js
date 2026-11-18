@@ -23,6 +23,9 @@ import {
   citedParts,
   mapLabels,
 } from './landingKit.js'
+import { i18n } from '../i18n/index.js'
+
+const tIn = (locale) => (key, params) => i18n.global.t(key, params ?? {}, { locale })
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -36,6 +39,12 @@ describe('formatCompact', () => {
   })
   it('leaves small numbers alone', () => {
     expect(formatCompact(780)).toBe('780')
+  })
+  it('uses Turkish suffixes and a decimal comma for tr', () => {
+    expect(formatCompact(8_585_611, 'tr')).toBe('8,6 Mn')
+    expect(formatCompact(1_782_902_647, 'tr')).toBe('1,8 Mr')
+    expect(formatCompact(929_250, 'tr')).toBe('929 B')
+    expect(formatCompact(780, 'tr')).toBe('780')
   })
 })
 
@@ -163,15 +172,36 @@ describe('peakPhrase', () => {
       ['2025-01-28', 11_600_000],
       ['2026-09-30', 8_700_000],
     ]
-    expect(peakPhrase(series)).toBe('25% below the Jan 2025 peak')
+    expect(peakPhrase(series, tIn('en'))).toBe('25% below the Jan 2025 peak')
   })
   it('says "at its peak" when the series ends on its peak', () => {
     expect(
-      peakPhrase([
-        ['2025-01-31', 5],
-        ['2025-02-28', 9],
-      ]),
+      peakPhrase(
+        [
+          ['2025-01-31', 5],
+          ['2025-02-28', 9],
+        ],
+        tIn('en'),
+      ),
     ).toBe('at its peak')
+  })
+  it('words the Turkish phrase from the tr messages', () => {
+    const series = [
+      ['2025-01-28', 11_600_000],
+      ['2026-09-30', 8_700_000],
+    ]
+    expect(peakPhrase(series, tIn('tr'), 'tr')).toBe('Oca 2025 zirvesinin %25 altında')
+    expect(peakPhrase(series, tIn('en'))).toBe('25% below the Jan 2025 peak')
+    expect(
+      peakPhrase(
+        [
+          ['2025-01-31', 5],
+          ['2025-02-28', 9],
+        ],
+        tIn('tr'),
+        'tr',
+      ),
+    ).toBe('zirvede')
   })
 })
 
@@ -181,6 +211,10 @@ describe('monthLabel and dayLabel', () => {
     expect(monthLabel('2026-02-01')).toBe('Feb 2026')
     expect(dayLabel('2026-01-27')).toBe('27 Jan 2026')
     expect(dayLabel('2026-09-01')).toBe('1 Sep 2026')
+  })
+  it('formats Turkish month names for tr', () => {
+    expect(monthLabel('2025-01-28', 'tr')).toBe('Oca 2025')
+    expect(dayLabel('2026-11-18', 'tr')).toBe('18 Kas 2026')
   })
 })
 
@@ -208,6 +242,11 @@ describe('signedPct', () => {
     expect(signedPct(-13)).toBe('−13%')
     expect(signedPct(5)).toBe('+5%')
     expect(signedPct(0)).toBe('0%')
+  })
+  it('puts the percent sign first for tr', () => {
+    expect(signedPct(-13, 'tr')).toBe('−%13')
+    expect(signedPct(5, 'tr')).toBe('+%5')
+    expect(signedPct(0, 'tr')).toBe('%0')
   })
 })
 

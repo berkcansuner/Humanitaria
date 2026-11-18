@@ -50,6 +50,11 @@ describe('ledgerDate', () => {
     expect(ledgerDate('2026-11-03T08:15:00+00:00')).toBe('2026-11-03')
   })
 
+  it('writes the date with a Turkish month name for tr', () => {
+    expect(ledgerDate('2026-11-03T08:15:00+00:00', 'tr')).toBe('3 Kas 2026')
+    expect(ledgerDate('Nov 2026', 'tr')).toBe('')
+  })
+
   it('returns an empty string for a missing or malformed date', () => {
     expect(ledgerDate(null)).toBe('')
     expect(ledgerDate('Nov 2026')).toBe('')

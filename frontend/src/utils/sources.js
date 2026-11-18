@@ -28,10 +28,17 @@ export function summarizePublishers(sources, max = 3) {
   return seen.length > max ? `${shown} +${seen.length - max}` : shown
 }
 
-/** The YYYY-MM-DD part of an ISO date for the ledger's Date column; '' otherwise. */
-export function ledgerDate(iso) {
+/** The YYYY-MM-DD part of an ISO date for the ledger's Date column (a Turkish day-month-year for tr); '' otherwise. */
+export function ledgerDate(iso, locale = 'en') {
   const m = /^(\d{4}-\d{2}-\d{2})/.exec(iso || '')
-  return m ? m[1] : ''
+  if (!m) return ''
+  if (locale !== 'tr') return m[1]
+  return new Intl.DateTimeFormat('tr-TR', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(m[1]))
 }
 
 // The chip that last opened a source, per container, so "Back to text" can

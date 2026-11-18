@@ -16,6 +16,7 @@ import {
   signedPct,
   yearChange,
 } from './landingKit.js'
+import { t } from '../i18n/index.js'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -29,7 +30,7 @@ const kpis = [
     label: 'Internally displaced people',
     to: latest[1],
     format: formatCompact,
-    note: peakPhrase(series),
+    note: peakPhrase(series, t),
     source: dtmCredit,
   },
   {
@@ -87,7 +88,7 @@ const range = `${monthLabel(series[0][0])} – ${monthLabel(latest[0])}`
 const chartTitle = `Internally displaced people, ${range}`
 const chartSummary =
   `${chartTitle}: ${formatCompact(latest[1])} in ${monthLabel(latest[0])}, ` +
-  `${peakPhrase(series)} of ${formatCompact(peakChange(series).peak[1])}.`
+  `${peakPhrase(series, t)} of ${formatCompact(peakChange(series).peak[1])}.`
 
 // Hover readout: the nearest observation under the pointer.
 const hovered = shallowRef(null)

@@ -6,7 +6,21 @@ const LAT_LIMIT = 70
 
 const round = (n) => Math.round(n * 100) / 100
 
-export function formatCompact(n) {
+const INTL_LOCALE = { en: 'en-US', tr: 'tr-TR' }
+const intlLocale = (locale) => INTL_LOCALE[locale] ?? INTL_LOCALE.en
+
+// Intl separates Turkish number and unit with a no-break space; the UI uses plain ones.
+const plainSpaces = (s) => s.replace(/[\u00a0\u202f]/g, ' ')
+
+export function formatCompact(n, locale = 'en') {
+  if (locale === 'tr') {
+    const digits = Math.abs(n) >= 1e6 ? 1 : 0
+    return plainSpaces(
+      new Intl.NumberFormat('tr-TR', { notation: 'compact', maximumFractionDigits: digits }).format(
+        n,
+      ),
+    )
+  }
   const units = [
     [1e9, 'B', 2],
     [1e6, 'M', 1],
@@ -137,24 +151,30 @@ export function monthsSpan(from, to) {
   return b.getUTCDate() < a.getUTCDate() ? months - 1 : months
 }
 
-const MONTH = new Intl.DateTimeFormat('en-US', { month: 'short', timeZone: 'UTC' })
+const MONTHS = {}
+const monthFormat = (locale) =>
+  (MONTHS[locale] ??= new Intl.DateTimeFormat(intlLocale(locale), {
+    month: 'short',
+    timeZone: 'UTC',
+  }))
 
 // 'Sep 2026' for an ISO date, read in UTC.
-export function monthLabel(iso) {
+export function monthLabel(iso, locale = 'en') {
   const d = new Date(iso)
-  return `${MONTH.format(d)} ${d.getUTCFullYear()}`
+  return `${monthFormat(locale).format(d)} ${d.getUTCFullYear()}`
 }
 
 // '27 Jan 2026' for an ISO date, read in UTC.
-export function dayLabel(iso) {
-  return `${new Date(iso).getUTCDate()} ${monthLabel(iso)}`
+export function dayLabel(iso, locale = 'en') {
+  return `${new Date(iso).getUTCDate()} ${monthLabel(iso, locale)}`
 }
 
 // The latest value worded against the series peak: '26% below the Jan 2025 peak'.
-export function peakPhrase(series) {
+// `t` is the message translator; the wording lives in landing.peak.*.
+export function peakPhrase(series, t, locale = 'en') {
   const { peak, latest, pct } = peakChange(series)
-  if (latest[1] >= peak[1]) return 'at its peak'
-  return `${Math.abs(pct)}% below the ${monthLabel(peak[0])} peak`
+  if (latest[1] >= peak[1]) return t('landing.peak.at')
+  return t('landing.peak.below', { pct: Math.abs(pct), month: monthLabel(peak[0], locale) })
 }
 
 // Last [year, value] against the year before, as a whole-number percent change.
@@ -165,10 +185,11 @@ export function yearChange(series) {
   return { year, value, prevYear: prev[0], pct: Math.round((value / prev[1] - 1) * 100) }
 }
 
-// '−13%' / '+5%' / '0%', with a true minus sign.
-export function signedPct(pct) {
-  if (pct < 0) return `−${Math.abs(pct)}%`
-  return pct > 0 ? `+${pct}%` : '0%'
+// '−13%' / '+5%' / '0%', with a true minus sign; Turkish writes '−%13'.
+export function signedPct(pct, locale = 'en') {
+  const sign = pct < 0 ? '−' : pct > 0 ? '+' : ''
+  const n = Math.abs(pct)
+  return locale === 'tr' ? `${sign}%${n}` : `${sign}${n}%`
 }
 
 // Axis ticks every `step`, from the step at or below `lo` to the one at or above `hi`.
