@@ -686,7 +686,8 @@ def test_an_untestable_regional_comparison_is_a_ranking_snapshot(_mock):
         "regions: Herat (443000), Balkh (363000), Kabul (310000); a statistical comparison "
         "between regions was not possible: one observation per region.")
     assert region.stat_result["tested"] is False and region.stat_result["significant"] is False
-    assert "Holm correction across all 0 tests" in findings_to_context(f)
+    ctx = findings_to_context(f)
+    assert "No statistical test was possible" in ctx and "Holm correction" not in ctx
 
 
 def test_a_partly_testable_regional_comparison_names_why():
@@ -772,3 +773,68 @@ def test_a_count_trend_keeps_its_relative_change_and_gives_observed_values(_mock
     assert "observed first value 8000 people (" in tr.findings_text
     assert "latest value 8300 people (" in tr.findings_text
     assert tr.stat_result["line_change"] is None
+
+
+# --- Review 2026-11-18, minor items. ---
+
+def test_a_constant_series_says_its_values_do_not_vary(monkeypatch):
+    def rows(ep, params):
+        if params.get("sector_code") != "NUT":
+            return []
+        return [{"population": 7_000_000, "category": "", "reference_period_start": f"{y}-01-01",
+                 "reference_period_end": f"{y}-12-31"} for y in (2021, 2022, 2023, 2024, 2025)]
+    monkeypatch.setattr("analytics.technical_report.fetch_rows", _recording_fetch([], rows))
+    f = compute_findings("AFG", "2021-01-01", None, language="en", theme="Food and Nutrition")
+    text = next(s for s in f.sections if s.stat_result["kind"] == "snapshot").findings_text
+    assert "5 observations from 2021-01-01 to 2025-01-01 — the values do not vary" in text
+    assert "too few" not in text
+
+
+def test_a_report_of_snapshots_only_names_no_test_methods(monkeypatch):
+    monkeypatch.setattr("analytics.technical_report.fetch_rows",
+                        _recording_fetch([], _three_year_pin_rows))
+    ctx = findings_to_context(compute_findings("AFG", None, None, language="en",
+                                               theme="Food and Nutrition"))
+    assert "- No statistical test was possible: every finding is reported as its observed values." in ctx
+    for ran_never in ("Holm correction", "Kruskal-Wallis", "Pearson", "Mann-Kendall"):
+        assert ran_never not in ctx
+
+
+def test_fetch_failures_are_recorded_apart_from_missing_data():
+    def fetch(ep, iso3, **k):
+        raise requests.exceptions.ConnectionError("down")
+    with patch("analytics.technical_report.fetch_rows", side_effect=fetch):
+        f = compute_findings("AFG", None, None, language="en", theme="Food and Nutrition")
+    assert f.failed == ["pin_food_security", "pin_nutrition", "food_security"]
+    with patch("analytics.technical_report.fetch_rows", side_effect=lambda *a, **k: []):
+        assert compute_findings("AFG", None, None, theme="Food and Nutrition").failed == []
+
+
+def _dtm_rows_with_an_old_partial_round(ep):
+    # Chosen year: two operations (one is left out). Look-back years: one round covers
+    # only two of ten regions (left out). The two windows leave out different things.
+    if not ep.endswith("idps"):
+        return []
+    from datetime import date
+    y = date.today().year
+    regions = [f"R{i}" for i in range(10)]
+    rows = [{"operation": "Overview", "admin1_name": r, "population": 100 + k,
+             "reference_period_start": f"{y - 4 + k}-01-01"} for k in range(5) for r in regions]
+    rows += [{"operation": "Overview", "admin1_name": r, "population": 50,
+              "reference_period_start": f"{y - 3}-06-01"} for r in regions[:2]]
+    rows += [{"operation": "Flood", "admin1_name": r, "population": 7,
+              "reference_period_start": f"{y}-01-01"} for r in regions[:3]]
+    return rows
+
+
+@patch("analytics.technical_report.fetch_rows",
+       side_effect=lambda ep, iso3, **k: _dtm_rows_with_an_old_partial_round(ep))
+def test_look_back_keeps_the_chosen_period_notes_too(_mock):
+    date_from, date_to = _last_year()
+    f = compute_findings("AFG", date_from, date_to, language="en")
+    lb = f.look_backs[0]
+    name = "Internally displaced people (IDPs)"
+    chosen = [n for n in f.notes if n.startswith(f"{name} (chosen period {date_from} to {date_to}): ")]
+    looked = [n for n in f.notes if n.startswith(f"{name} (trend look-back {lb['date_from']} to {date_to}): ")]
+    assert chosen and "1 other operation(s)" in chosen[0]
+    assert looked and "incomplete round(s)" in looked[0]

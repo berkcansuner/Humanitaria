@@ -305,3 +305,10 @@ def test_technical_prompt_keeps_share_changes_in_percentage_points():
     p = _REPORT_PROMPTS["technical_monitoring"]
     assert "percentage points" in p and "'halved'" in p
     assert "percent change" not in p
+
+
+def test_technical_prompt_dates_values_from_before_the_period():
+    # A 2024 figure labelled "before the chosen period" must not read as current.
+    from rag.chain import _REPORT_PROMPTS
+    p = _REPORT_PROMPTS["technical_monitoring"]
+    assert "'before the chosen period'" in p and "state its date" in p

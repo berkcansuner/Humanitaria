@@ -46,6 +46,8 @@ class Findings:
     # Trends taken over a longer look-back than the chosen period (too few points in it):
     # {"indicator", "chosen_points", "date_from", "date_to"} — the window the trend covers.
     look_backs: list = field(default_factory=list)
+    # Indicators whose HAPI request failed (an outage, not an absence of data).
+    failed: list = field(default_factory=list)
 
 
 # Section headings are copied verbatim by the model and matched back to their charts,
@@ -83,6 +85,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
     look_back_from = _years_before(date.fromisoformat(date_to),
                                    settings.TECHNICAL_REPORT_DEFAULT_YEARS).isoformat()
     look_backs: list[dict] = []
+    failed: list[str] = []
 
     for ind in indicators_for(theme):
         name = ind.name(language)
@@ -97,6 +100,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
             # iptal olur; burada geniş tutup yalnızca bu indikatörü gaps'e düşürüyoruz.
             logger.warning("HAPI %s başarısız (%s): %s", ind.key, iso3, exc)
             gaps.append(f"{name}: veri çekilemedi")
+            failed.append(ind.key)
             continue
 
         # Fetch başarılıysa: seri kurma + tüm istatistik testleri + grafikler bu
@@ -118,8 +122,16 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                 if len(lb_values) > len(values):
                     look_back = {"date_from": look_back_from, "date_to": date_to,
                                  "chosen_points": len(values)}
-                    t_periods, t_values, series_notes = lb_periods, lb_values, lb_notes
-            notes += [f"{name}: {n}" for n in series_notes]
+                    t_periods, t_values = lb_periods, lb_values
+            if look_back and lb_notes != series_notes:
+                # Each window's notes, named: the regional ranking stays on the chosen
+                # period, the trend covers the look-back.
+                notes += [f"{name} (chosen period {date_from} to {date_to}): {n}"
+                          for n in series_notes]
+                notes += [f"{name} (trend look-back {look_back_from} to {date_to}): {n}"
+                          for n in lb_notes]
+            else:
+                notes += [f"{name}: {n}" for n in series_notes]
             if not t_values:
                 gaps.append(f"{name}: dönem içinde veri yok")
                 continue
@@ -240,7 +252,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
     _adjust_and_describe(sections)
     return Findings(sections=sections, gaps=gaps, indicators_covered=covered,
                     date_from=date_from, date_to=date_to, default_years=default_years,
-                    notes=notes, look_backs=look_backs)
+                    notes=notes, look_backs=look_backs, failed=failed)
 
 
 def _series(rows: list[dict], ind, date_from: str, date_to: str, today: date):
@@ -468,9 +480,10 @@ def _snapshot_text(r: dict) -> str:
     span = f"({periods[0]})" if n == 1 else f"from {periods[0]} to {periods[-1]}"
     values = "; ".join(f"{p} {_value(v, unit)}" for p, v in zip(periods, r["values"]))
     as_of = ("before" if lb and not lb["chosen_points"] else "as of")
-    return (f"{window}{r['indicator']}: {_observations(n)} {span} — too few for a trend test "
-            f"(at least {r['min_points']} are needed), so no trend or statistical test is "
-            f"reported. Values: {values}. Latest value {as_of} the chosen period: "
+    why = ("the values do not vary" if n >= r["min_points"]
+           else f"too few for a trend test (at least {r['min_points']} are needed)")
+    return (f"{window}{r['indicator']}: {_observations(n)} {span} — {why}, so no trend or "
+            f"statistical test is reported. Values: {values}. Latest value {as_of} the chosen period: "
             f"{_value(r['values'][-1], unit)} ({periods[-1]}).")
 
 
@@ -511,6 +524,14 @@ def findings_to_context(findings: Findings) -> str:
         lines += [f"- {n}" for n in findings.notes]
         lines.append("")
     tested = sum(1 for s in findings.sections if s.stat_result.get("p_value") is not None)
+    if not tested:
+        # Nothing was tested: no test methods to restate, no Holm family.
+        lines += [
+            "METHOD NOTES:",
+            "- No statistical test was possible: every finding is reported as its observed values.",
+            "- Limitation: the series are short, so the values are descriptive.",
+        ]
+        return "\n".join(lines)
     lines += [
         "METHOD NOTES:",
         "- Trend: Mann-Kendall test; the slope is Sen's slope per year on the real dates of "
