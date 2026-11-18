@@ -44,6 +44,8 @@ function onReportCite(event) {
 }
 
 // Each card rises in as it reaches the viewport; side by side they arrive staggered.
+// Opacity, not autoAlpha: a hidden card would drop its chips and links from the tab
+// order, and tabbing to them scrolls the card in, which plays its entrance.
 // Reduced motion never runs this, so the cards stay in place.
 let mm = null
 onMounted(() => {
@@ -54,7 +56,7 @@ onMounted(() => {
       gsap.utils.toArray('.flow', root.value).forEach((card, i) => {
         gsap.from(card, {
           y: 28,
-          autoAlpha: 0,
+          opacity: 0,
           duration: 0.9,
           ease: 'expo.out',
           delay: i * 0.09,
@@ -352,6 +354,9 @@ onBeforeUnmount(() => mm?.revert())
 @media (max-width: 900px) {
   .flows {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .fu-sources .source-link {
+    line-height: 24px;
   }
 }
 </style>

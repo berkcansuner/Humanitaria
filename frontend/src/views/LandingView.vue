@@ -1,8 +1,9 @@
 <template>
   <div class="mkt-scope">
+    <a class="skip-link" href="#main" @click.prevent="skipToMain">Skip to content</a>
     <MarketingNav />
 
-    <main id="top">
+    <main id="main" ref="main" tabindex="-1">
       <!-- HERO -->
       <section ref="hero" class="hero">
         <div class="wrap hero-grid">
@@ -148,6 +149,10 @@ function ask() {
   const target = askTarget(question.value)
   if (target) router.push(target)
 }
+
+// The router owns the URL, so the skip link moves focus itself.
+const main = useTemplateRef('main')
+const skipToMain = () => main.value.focus()
 
 const hero = useTemplateRef('hero')
 const composite = useTemplateRef('composite')

@@ -64,7 +64,6 @@ watch(
 function onCite(event) {
   const cite = event.target.closest('.cite')
   if (!cite) return
-  event.preventDefault()
   revealSource(chat.value, cite.dataset.cite, cite, { block: 'nearest' })
 }
 
@@ -176,13 +175,14 @@ onBeforeUnmount(() => mm?.revert())
         >
           <p v-for="(para, p) in paragraphs" :key="p">
             <template v-for="(part, i) in para" :key="i"
-              ><a
+              ><button
                 v-if="part.cite"
                 class="cite"
-                :href="'#hero-src-' + part.cite"
+                type="button"
                 :data-cite="part.cite"
                 :aria-label="chipLabel(part.cite)"
-                >{{ part.cite }}</a
+              >
+                {{ part.cite }}</button
               ><strong v-else-if="part.strong">{{ part.text }}</strong
               ><template v-else>{{ part.text }}</template></template
             ><span
@@ -369,9 +369,11 @@ onBeforeUnmount(() => mm?.revert())
   line-height: 1;
   font-variant-numeric: tabular-nums;
   color: var(--color-text-secondary);
+  background: transparent;
   border: 1px solid var(--color-border);
   border-radius: 5px;
   vertical-align: 1px;
+  cursor: pointer;
   transition:
     background-color 0.15s,
     border-color 0.15s,
@@ -474,6 +476,10 @@ onBeforeUnmount(() => mm?.revert())
   .hc-trend-slot {
     width: min(340px, 92%);
     margin: -14px 0 0;
+  }
+  /* Touch-sized source rows (24px link targets). */
+  .source-link {
+    line-height: 24px;
   }
 }
 </style>
