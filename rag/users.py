@@ -226,6 +226,14 @@ def update_user_name(user_id: str, name: str) -> None:
         )
 
 
+def update_user_language(user_id: str, lang: str) -> None:
+    with _connect() as conn:
+        conn.execute(
+            text("UPDATE users SET ui_language = :lang WHERE id = :id"),
+            {"lang": lang, "id": user_id},
+        )
+
+
 def change_password(user_id: str, new_password: str) -> None:
     """Set a new bcrypt hash. Current-password verification is the route's job."""
     with _connect() as conn:

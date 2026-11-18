@@ -8,7 +8,7 @@ Google OAuth routes (``/auth/google/login`` + ``/auth/google/callback``) are
 defined below in this module.
 """
 import logging
-from typing import Optional
+from typing import Literal, Optional
 
 import anyio
 from authlib.integrations.starlette_client import OAuth, OAuthError
@@ -84,6 +84,10 @@ class UpdateProfileIn(BaseModel):
         return v
 
 
+class UpdateLanguageIn(BaseModel):
+    ui_language: Literal["en", "tr"]
+
+
 class ChangePasswordIn(BaseModel):
     current_password: str = Field(..., min_length=1, max_length=72)
     new_password: str = Field(..., min_length=8, max_length=72)  # bcrypt 72-byte cap
@@ -103,6 +107,7 @@ class UserOut(BaseModel):
     is_admin: bool = False
     auth_provider: str = "password"
     has_password: bool = False
+    ui_language: Optional[str] = None
 
 
 def _is_admin_email(email: str) -> bool:
@@ -127,6 +132,7 @@ def _user_out(user: dict) -> UserOut:
         is_admin=_is_admin(user),
         auth_provider=user.get("auth_provider", "password"),
         has_password=bool(user.get("password_hash")),
+        ui_language=user.get("ui_language"),
     )
 
 
@@ -235,6 +241,13 @@ async def update_me(body: UpdateProfileIn, user: dict = Depends(get_current_user
     await anyio.to_thread.run_sync(users_store.update_user_name, user["id"], body.name)
     logger.info("auth: name updated (user=%s)", user["id"])
     return _user_out({**user, "name": body.name})
+
+
+@router.patch("/me/language", response_model=UserOut)
+async def update_language(body: UpdateLanguageIn, user: dict = Depends(get_current_user)):
+    await anyio.to_thread.run_sync(users_store.update_user_language, user["id"], body.ui_language)
+    logger.info("auth: language updated (user=%s)", user["id"])
+    return _user_out({**user, "ui_language": body.ui_language})
 
 
 @router.post("/me/password", status_code=204)

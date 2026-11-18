@@ -47,6 +47,8 @@ users_table = Table(
     Column("password_hash", Text),
     Column("auth_provider", Text, nullable=False, server_default="password"),
     Column("google_sub", Text, unique=True),
+    # Interface language ("en" | "tr"); NULL = never chosen on an account-linked device.
+    Column("ui_language", Text),
     Column("created_at", Text, nullable=False),
 )
 
@@ -185,6 +187,10 @@ def _ensure_schema(engine: Engine) -> None:
             cols = {r[1] for r in conn.exec_driver_sql("PRAGMA table_info(conversations)")}
             if cols and "user_id" not in cols:
                 conn.exec_driver_sql("ALTER TABLE conversations ADD COLUMN user_id TEXT")
+            # Migrate SQLite files that predate users.ui_language.
+            cols = {r[1] for r in conn.exec_driver_sql("PRAGMA table_info(users)")}
+            if cols and "ui_language" not in cols:
+                conn.exec_driver_sql("ALTER TABLE users ADD COLUMN ui_language TEXT")
             # Migrate pre-report-types SQLite files that lack reports.report_type.
             # (Legacy rows keep report_type NULL → normalized to "situation" on read.)
             cols = {r[1] for r in conn.exec_driver_sql("PRAGMA table_info(reports)")}
@@ -203,6 +209,8 @@ def _ensure_schema(engine: Engine) -> None:
         # fresh, already including report_type).
         with engine.begin() as conn:
             # to_regclass resolves through search_path, like the ALTERs below.
+            if conn.exec_driver_sql("SELECT to_regclass('users')").scalar():
+                conn.exec_driver_sql("ALTER TABLE users ADD COLUMN IF NOT EXISTS ui_language TEXT")
             exists = conn.exec_driver_sql("SELECT to_regclass('reports')").scalar()
             if exists:
                 conn.exec_driver_sql("ALTER TABLE reports ADD COLUMN IF NOT EXISTS report_type TEXT")

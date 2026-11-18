@@ -4,10 +4,11 @@
  */
 import { reactive } from 'vue'
 
-import { me, login, signup, logout } from './authApi.js'
+import { me, login, signup, logout, updateLanguage } from './authApi.js'
+import { hasExplicitChoice, onLocaleChange, setLocale } from '../i18n/locale.js'
 
 export const auth = reactive({
-  user: null, // { id, email, name, is_admin, auth_provider, has_password } when signed in, else null
+  user: null, // { id, email, name, is_admin, auth_provider, has_password, ui_language } when signed in, else null
   ready: false, // true once the initial /auth/me probe has resolved
 })
 
@@ -19,6 +20,29 @@ export function isAdmin() {
   return auth.user?.is_admin === true
 }
 
+function saveLanguage(lang) {
+  updateLanguage(lang).catch((err) => console.warn('Could not save the interface language', err))
+}
+
+// Reconcile the device language with the account's. An explicit device choice
+// wins and is written to the account; otherwise the account language applies
+// (not stored on the device, so it never counts as an explicit choice).
+function syncLanguage(user) {
+  if (!user) return
+  if (hasExplicitChoice()) {
+    const current = document.documentElement.lang
+    if (current !== user.ui_language) saveLanguage(current)
+  } else if (user.ui_language) {
+    setLocale(user.ui_language, { explicit: false })
+  }
+}
+
+// A language picked while signed in goes to the account; applying the account's
+// own value is non-explicit and is not echoed back. Subscribed once at load.
+onLocaleChange((lang, { explicit }) => {
+  if (explicit && auth.user) saveLanguage(lang)
+})
+
 /** Probe the session once on startup / before a guarded navigation. */
 export async function refresh() {
   try {
@@ -27,16 +51,19 @@ export async function refresh() {
     auth.user = null
   }
   auth.ready = true
+  syncLanguage(auth.user)
   return auth.user
 }
 
 export async function doLogin(email, password) {
   auth.user = await login(email, password)
+  syncLanguage(auth.user)
   return auth.user
 }
 
 export async function doSignup(email, password, name) {
   auth.user = await signup(email, password, name)
+  syncLanguage(auth.user)
   return auth.user
 }
 

@@ -44,6 +44,13 @@ export function updateProfile(name) {
   return request('/auth/me', { method: 'PATCH', body: JSON.stringify({ name }) })
 }
 
+export function updateLanguage(lang) {
+  return request('/auth/me/language', {
+    method: 'PATCH',
+    body: JSON.stringify({ ui_language: lang }),
+  })
+}
+
 export function changePassword(currentPassword, newPassword) {
   return request('/auth/me/password', {
     method: 'POST',

@@ -38,7 +38,7 @@ export function setLocale(locale, { explicit = true } = {}) {
       // Not persisted; the choice still applies for this page view.
     }
   }
-  for (const cb of listeners) cb(next)
+  for (const cb of listeners) cb(next, { explicit })
 }
 
 export function onLocaleChange(cb) {
