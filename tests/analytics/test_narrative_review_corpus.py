@@ -205,3 +205,21 @@ READER_FORMS = [
 def test_reader_form_sentences_survive(key, heading, sentence, language):
     findings, context = (FOOD_R3, FOOD_R3_CTX) if key == "food" else (PROT_R3, PROT_R3_CTX)
     assert verify_narrative(f"## {heading}\n\n{sentence}", findings, context, language).removed == 0
+
+
+# --- Round 3: an Executive Summary opening with the sector's headline and its caveat
+# survives; the same figure presented as a rise from the previous year does not. ---
+
+@pytest.mark.parametrize("sentence,language,keep", [
+    ("Protection needs stood at 15.0 million people in 2026; earlier years are reported on a "
+     "different basis and are not comparable.", "en", True),
+    ("Koruma ihtiyacı 2026'da 15,0 milyon kişiydi; önceki yıllar farklı bir temelde raporlandığı "
+     "için karşılaştırılamaz.", "tr", True),
+    ("Protection needs rose to 15.0 million people in 2026 from 14.2 million in 2025.", "en", False),
+    ("Koruma ihtiyacı 2025'teki 14,2 milyondan 2026'da 15,0 milyon kişiye yükseldi.", "tr", False),
+])
+def test_the_headline_sentence_with_its_caveat_survives(sentence, language, keep):
+    assert "HEADLINE" in PROT_R3_CTX
+    heading = "Executive Summary" if language == "en" else "Yönetici Özeti"
+    res = verify_narrative(f"## {heading}\n\n{sentence}", PROT_R3, PROT_R3_CTX, language)
+    assert (res.removed == 0) == keep

@@ -355,3 +355,10 @@ def test_technical_prompt_methods_come_from_the_notes_only():
     from rag.chain import _REPORT_PROMPTS
     p = _REPORT_PROMPTS["technical_monitoring"]
     assert "do not describe a method the notes do not list" in p
+
+
+def test_technical_prompt_opens_the_summary_with_the_headline():
+    from rag.chain import _REPORT_PROMPTS
+    p = _REPORT_PROMPTS["technical_monitoring"]
+    assert "Open the Executive Summary with the HEADLINE figures" in p
+    assert "then the main tested result; then the main limitation" in p

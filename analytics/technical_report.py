@@ -51,6 +51,9 @@ class Findings:
     # One entry per indicator with data: what the report's source list is built from
     # ({"key", "title", "source", "first_period", "last_period", "resource_hdx_id"}).
     data_sources: list = field(default_factory=list)
+    # A sector report's own figures (its people-in-need series), each with the short caveat
+    # a summary sentence must carry: what the Executive Summary opens with.
+    headline: list = field(default_factory=list)
 
 
 # Section headings are copied verbatim by the model and matched back to their charts,
@@ -90,6 +93,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
     look_backs: list[dict] = []
     failed: list[str] = []
     used: list[dict] = []
+    headline: list[str] = []
 
     for ind in indicators_for(theme):
         name = ind.name(language)
@@ -128,8 +132,8 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                     look_back = {"date_from": look_back_from, "date_to": date_to,
                                  "chosen_points": len(values)}
                     t_periods, t_values = lb_periods, lb_values
-            name, line_notes, not_comparable = _plan_line(ind, all_rows, t_periods, t_values,
-                                                          language)
+            name, line_notes, not_comparable, latest_caveat = _plan_line(
+                ind, all_rows, t_periods, t_values, language)
             if look_back and lb_notes != series_notes:
                 # Each window's notes, named: the regional ranking stays on the chosen
                 # period, the trend covers the look-back.
@@ -241,6 +245,14 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
             # Only a gap line ("All sectors" keeps a short series as one): not a source of
             # anything the report shows.
             used[:] = [u for u in used if u["key"] != ind.key]
+        elif theme is not None and ind.query_params.get("sector_code"):
+            # The sector's own figure, for the Executive Summary to open with.
+            caveats = [c for c in (
+                "earlier years are reported on a different basis and are not comparable"
+                if not_comparable else None, latest_caveat) if c]
+            headline.append(f"{name}: {_amount(t_values[-1], _value_unit(ind))} "
+                            f"({_when(t_periods[-1], ind.resolution)})"
+                            + (f"; {'; '.join(caveats)}" if caveats else "") + ".")
 
     # İndikatörler-arası korelasyon: ortak dönemi olan indikatör çiftleri.
     labels = list(national_by_label.keys())
@@ -275,7 +287,8 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
     _adjust_and_describe(sections)
     return Findings(sections=sections, gaps=gaps, indicators_covered=covered,
                     date_from=date_from, date_to=date_to, default_years=default_years,
-                    notes=notes, look_backs=look_backs, failed=failed, data_sources=used)
+                    notes=notes, look_backs=look_backs, failed=failed, data_sources=used,
+                    headline=headline)
 
 
 def _full(value: float) -> str:
@@ -302,7 +315,7 @@ def _plan_line(ind, rows: list[dict], periods: list, values: list,
     by_period = {str(p)[:10]: v for p, v in zip(periods, values)}
     lines = {p: subs for p, subs in lines.items() if p in by_period}
     if not lines:
-        return name, [], None
+        return name, [], None, None
 
     def below(period):
         return any(v > by_period[period] for _, v in lines.get(period, []))
@@ -323,7 +336,12 @@ def _plan_line(ind, rows: list[dict], periods: list, values: list,
         notes.append(f"{name}, {period[:4]}: the plan reports {sector} in separate lines "
                      f"({listed}); {what}; this report does not add the lines up, because people "
                      f"can be counted in more than one.")
-    return name, notes, _not_comparable(by_period, lines, below, sector)
+    latest = str(periods[-1])[:10]
+    caveat = None
+    if latest in lines:
+        caveat = (f"it is not the plan's overall {sector} figure" if below(latest)
+                  else f"it may not be the plan's overall {sector} figure")
+    return name, notes, _not_comparable(by_period, lines, below, sector), caveat
 
 
 def _not_comparable(by_period: dict, lines: dict, below, sector: str) -> str | None:
@@ -680,6 +698,9 @@ def findings_to_context(findings: Findings) -> str:
                   if findings.default_years else "")
         lines += [f"PERIOD ANALYSED: {_day(findings.date_from)} to {_day(findings.date_to)}"
                   f"{chosen}", ""]
+    if findings.headline:
+        lines += ["HEADLINE (the sector's own figures; open the Executive Summary with them): "
+                  + " ".join(findings.headline), ""]
     # The look-back, once for the report: the sections only mark "(look-back window)".
     looked = [s.stat_result for s in findings.sections if s.stat_result.get("look_back")]
     if looked:

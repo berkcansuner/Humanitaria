@@ -1168,3 +1168,41 @@ def test_a_single_test_is_reported_without_a_holm_adjustment(monkeypatch):
     f = compute_findings("AFG", None, None, language="en", theme="Food and Nutrition")
     tr = next(s for s in f.sections if s.stat_result["kind"] == "trend")
     assert "Holm" not in tr.findings_text and "p=0.027 → SIGNIFICANT (α=0.05)" in tr.findings_text
+
+
+# --- Round 3: the Executive Summary leads with the sector's own figures. The context
+# gives them, with a short checker-safe caveat, in one HEADLINE line. ---
+
+_HEADLINE = "HEADLINE (the sector's own figures; open the Executive Summary with them): "
+
+
+def test_a_sector_report_has_a_headline_with_its_caveat(monkeypatch):
+    monkeypatch.setattr("analytics.technical_report.fetch_rows", _recording_fetch([], _afg_like_rows()))
+    f = compute_findings("AFG", None, None, language="en", theme="Protection and Human Rights")
+    assert (_HEADLINE + "Protection: people in need: 15.0 million people (2026); earlier years are "
+            "reported on a different basis and are not comparable.") in findings_to_context(f)
+
+
+def test_a_headline_says_when_the_latest_figure_is_not_the_overall_one():
+    f = _real_protection("HTI", with_hti_2024=True)
+    assert (_HEADLINE + "Protection: people in need: 467,000 people (2025); earlier years are "
+            "reported on a different basis and are not comparable; it is not the plan's overall "
+            "protection figure.") in findings_to_context(f)
+
+
+def test_food_and_nutrition_headline_lists_both_people_in_need_figures(monkeypatch):
+    def rows(ep, params):
+        if params.get("sector_code") in ("FSC", "NUT"):
+            return _three_year_pin_rows(ep, {"sector_code": "FSC"})
+        return []
+    monkeypatch.setattr("analytics.technical_report.fetch_rows", _recording_fetch([], rows))
+    f = compute_findings("AFG", None, None, language="en", theme="Food and Nutrition")
+    from datetime import date
+    y = date.today().year
+    assert (_HEADLINE + f"Food security: people in need: 17.4 million people ({y}). Nutrition: "
+            f"people in need: 17.4 million people ({y}).") in findings_to_context(f)
+
+
+@patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _yearly_ipc_rows(ep))
+def test_all_sectors_has_no_headline(_mock):
+    assert "HEADLINE" not in findings_to_context(compute_findings("AFG", None, None, language="en"))
