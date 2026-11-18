@@ -55,6 +55,7 @@ describe('errorMessage', () => {
       'model_busy',
       'quota_exhausted',
       'report_failed',
+      'no_sector_data',
       'chat_failed',
       'body_too_large',
       'validation_failed',

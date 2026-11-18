@@ -330,7 +330,8 @@
       "stop": "Oluşturmayı durdur",
       "optionsError": "Seçenekler yüklenemedi. Sayfayı yenilemeyi deneyin.",
       "loadingCountries": "Ülke listesi hazırlanıyor…",
-      "chooseCountry": "Rapor oluşturmak için bir ülke seçin."
+      "chooseCountry": "Rapor oluşturmak için bir ülke seçin.",
+      "noData": "Sayısal veri yok"
     },
     "continues": {
       "series": "{name} ({period}) raporunun devamı. Yeni rapor o dönemden bu yana değişenlerle başlar.",

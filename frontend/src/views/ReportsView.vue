@@ -38,9 +38,18 @@
 
           <label class="field">
             <span>{{ t('reports.form.sector') }}</span>
+            <!-- A technical monitoring report needs HDX HAPI series for its sector:
+                 the others stay listed, disabled, under a group that says why. -->
             <select v-model="form.theme" :disabled="generating">
               <option value="">{{ t('reports.form.allSectors') }}</option>
-              <option v-for="th in themes" :key="th" :value="th">{{ sectorLabel(th, t) }}</option>
+              <option v-for="th in sectorChoices.open" :key="th" :value="th">
+                {{ sectorLabel(th, t) }}
+              </option>
+              <optgroup v-if="sectorChoices.closed.length" :label="t('reports.form.noData')">
+                <option v-for="th in sectorChoices.closed" :key="th" :value="th" disabled>
+                  {{ sectorLabel(th, t) }}
+                </option>
+              </optgroup>
             </select>
           </label>
 
@@ -573,6 +582,9 @@ const maxDate = computed(() => maxReportDate())
 
 const countries = ref([])
 const themes = ref([])
+// The sectors a technical monitoring report can analyse (/reports/options); null when
+// the server does not say, and then nothing is restricted.
+const technicalThemes = ref(null)
 const optionsError = ref(false)
 
 const reports = ref([])
@@ -590,6 +602,27 @@ const form = ref({
   date_to: '',
   language: locale.value,
 })
+
+// Sector options: all open, except for a technical monitoring report, which can only
+// analyse the sectors with series; a sector it cannot analyse is cleared when the
+// type changes to it (the server would refuse it with no_sector_data).
+const technicalOnly = computed(
+  () => form.value.report_type === 'technical_monitoring' && !!technicalThemes.value,
+)
+const sectorChoices = computed(() => {
+  if (!technicalOnly.value) return { open: themes.value, closed: [] }
+  const covered = new Set(technicalThemes.value)
+  return {
+    open: themes.value.filter((th) => covered.has(th)),
+    closed: themes.value.filter((th) => !covered.has(th)),
+  }
+})
+watch(
+  () => [technicalOnly.value, form.value.theme],
+  ([only, theme]) => {
+    if (only && theme && !technicalThemes.value.includes(theme)) form.value.theme = ''
+  },
+)
 
 const current = ref(null) // a saved report as toCurrent() shapes it, or the one streaming
 
@@ -772,6 +805,7 @@ onMounted(async () => {
     const opts = await getReportOptions()
     countries.value = opts.countries || []
     themes.value = opts.themes || []
+    technicalThemes.value = Array.isArray(opts.technical_themes) ? opts.technical_themes : null
   } catch (e) {
     optionsError.value = true
   }

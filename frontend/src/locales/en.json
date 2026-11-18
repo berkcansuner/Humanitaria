@@ -330,7 +330,8 @@
       "stop": "Stop generating",
       "optionsError": "Could not load options. Try refreshing.",
       "loadingCountries": "Preparing the country list…",
-      "chooseCountry": "Choose a country to generate a report."
+      "chooseCountry": "Choose a country to generate a report.",
+      "noData": "No quantitative data"
     },
     "continues": {
       "series": "Continues {name}, {period}. The new report opens with what changed since then.",

@@ -360,6 +360,70 @@ describe('ReportsView in two languages', () => {
     })
   })
 
+  describe('technical monitoring offers only sectors that have data', () => {
+    beforeEach(() => {
+      vi.mocked(getReportOptions).mockResolvedValue({
+        countries: ['Sudan'],
+        themes: ['Agriculture', 'Health'],
+        technical_themes: ['Health'],
+      })
+    })
+    const selects = () => host.querySelectorAll('.report-form select')
+    const choose = async (select, value) => {
+      select.value = value
+      select.dispatchEvent(new Event('change'))
+      await flush()
+    }
+    // [label, disabled, optgroup label or null] for each sector option.
+    const sectorOptions = () =>
+      [...selects()[2].options].map((o) => [
+        o.text,
+        o.disabled,
+        o.parentElement.tagName === 'OPTGROUP' ? o.parentElement.label : null,
+      ])
+
+    it('lists every sector, all selectable, for the other report types', async () => {
+      await mount()
+      expect(sectorOptions()).toEqual([
+        ['All sectors', false, null],
+        ['Agriculture', false, null],
+        ['Health', false, null],
+      ])
+    })
+
+    it('disables the sectors without data under a labelled group, and resets one chosen', async () => {
+      await mount()
+      await choose(selects()[2], 'Agriculture')
+      await choose(selects()[0], 'technical_monitoring')
+      expect(selects()[2].value).toBe('')
+      expect(sectorOptions()).toEqual([
+        ['All sectors', false, null],
+        ['Health', false, null],
+        ['Agriculture', true, 'No quantitative data'],
+      ])
+      setLocale('tr')
+      await flush()
+      expect(sectorOptions().at(-1)).toEqual(['Tarım', true, 'Sayısal veri yok'])
+      // A covered sector stays chosen across a type switch.
+      await choose(selects()[2], 'Health')
+      await choose(selects()[0], 'situation')
+      await choose(selects()[0], 'technical_monitoring')
+      expect(selects()[2].value).toBe('Health')
+    })
+
+    it('restricts nothing when the server does not say which sectors have data', async () => {
+      vi.mocked(getReportOptions).mockResolvedValue({
+        countries: ['Sudan'],
+        themes: ['Agriculture', 'Health'],
+      })
+      await mount()
+      await choose(selects()[2], 'Agriculture')
+      await choose(selects()[0], 'technical_monitoring')
+      expect(selects()[2].value).toBe('Agriculture')
+      expect(sectorOptions().every(([, disabled]) => !disabled)).toBe(true)
+    })
+  })
+
   describe('while a report is being prepared', () => {
     // A stream the test feeds by hand: push() delivers one SSE event.
     function stubStream() {
