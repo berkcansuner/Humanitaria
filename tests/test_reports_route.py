@@ -269,3 +269,18 @@ def test_technical_stream_without_findings_sends_no_status():
             "country": "Afghanistan", "report_type": "technical_monitoring", "language": "en",
         })
     assert "status" not in [e["event"] for e in _parse_sse_events(resp.text)]
+
+
+def test_a_hapi_outage_is_not_reported_as_a_sector_without_data():
+    from analytics.technical_report import Findings
+    down = Findings(sections=[], gaps=["Food security: people in need: veri çekilemedi"],
+                    indicators_covered=[], failed=["pin_food_security"])
+    for theme in ("Food and Nutrition", None):
+        with patch("api.routes.reports.technical_report.compute_findings", return_value=down):
+            resp = _client().post("/reports/stream", json={
+                "country": "Afghanistan", "report_type": "technical_monitoring", "language": "en",
+                "theme": theme,
+            })
+        events = _parse_sse_events(resp.text)
+        assert next(e for e in events if e["event"] == "error")["data"]["code"] == "report_failed"
+        assert "token" not in [e["event"] for e in events]

@@ -316,6 +316,13 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                     technical_report.compute_findings, iso3, req.date_from, req.date_to,
                     req.language, req.theme
                 )
+                if not findings.sections and findings.failed:
+                    # HAPI could not be reached: not a sector or country without data.
+                    yield ServerSentEvent(event="error", data=json.dumps({
+                        "code": ErrorCode.report_failed.value,
+                        "message": "HDX HAPI could not be reached. Please try again."}))
+                    yield ServerSentEvent(event="done", data="{}")
+                    return
                 if not findings.sections and req.theme:
                     yield _no_sector_data_event()
                     yield ServerSentEvent(event="done", data="{}")
