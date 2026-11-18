@@ -451,6 +451,7 @@
     "model_busy": "The model is busy right now. Try again in a moment.",
     "quota_exhausted": "The AI service has run out of capacity. Please contact the administrator.",
     "report_failed": "The report couldn't be created. Please try again.",
+    "no_sector_data": "HDX HAPI has no figures for this sector in this country, so a technical monitoring report can't be made. Choose “All sectors” or another report type.",
     "chat_failed": "Something went wrong while answering. Please try again.",
     "body_too_large": "That request is too large to send.",
     "validation_failed": "Some of the information isn't valid. Check it and try again.",

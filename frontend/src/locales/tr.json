@@ -451,6 +451,7 @@
     "model_busy": "Model şu anda yoğun. Biraz sonra yeniden deneyin.",
     "quota_exhausted": "Yapay zekâ hizmetinin kullanım kotası doldu. Lütfen yöneticiyle iletişime geçin.",
     "report_failed": "Rapor oluşturulamadı. Lütfen yeniden deneyin.",
+    "no_sector_data": "HDX HAPI'de bu ülke için bu sektöre ait sayısal veri yok; bu nedenle teknik izleme raporu oluşturulamıyor. “Tüm sektörler”i ya da başka bir rapor türünü seçin.",
     "chat_failed": "Yanıt hazırlanırken bir sorun oluştu. Lütfen yeniden deneyin.",
     "body_too_large": "İstek gönderilemeyecek kadar büyük.",
     "validation_failed": "Bazı bilgiler geçerli değil. Kontrol edip yeniden deneyin.",

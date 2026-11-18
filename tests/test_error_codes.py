@@ -190,3 +190,16 @@ def test_report_stream_error_event_carries_code(client, exc, code):
     event = _error_event(r.text)
     assert event["code"] == code
     assert "boom" not in event["message"]
+
+
+def test_every_error_code_has_a_message_in_both_interface_languages():
+    # The interface names an error by its code (errors.<code>); a code without a
+    # message shows the generic text instead of saying what went wrong.
+    import json
+    from pathlib import Path
+    from api.errors import ErrorCode
+    locales = Path(__file__).resolve().parent.parent / "frontend" / "src" / "locales"
+    for lang in ("en", "tr"):
+        messages = json.loads((locales / f"{lang}.json").read_text(encoding="utf-8"))["errors"]
+        missing = [c.value for c in ErrorCode if not messages.get(c.value)]
+        assert missing == [], f"{lang}: {missing}"
