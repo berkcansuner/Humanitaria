@@ -344,7 +344,8 @@
       "noPeriod": "Dönem belirtilmemiş",
       "empty": "Henüz kayıtlı rapor yok.",
       "delete": "Raporu sil: {name}, {type}",
-      "deleteWithPeriod": "Raporu sil: {name}, {type}, {period}"
+      "deleteWithPeriod": "Raporu sil: {name}, {type}, {period}",
+      "tooltip": "{name} · {period}"
     },
     "viewer": {
       "back": "Tüm raporlar",
@@ -352,8 +353,8 @@
       "comparedDeleted": "Daha sonra silinen önceki bir raporla karşılaştırıldı.",
       "comparedWith": "Karşılaştırıldığı rapor: {link}",
       "previousReport": "önceki rapor",
-      "notComparedWith": "Şu dönemin raporuyla karşılaştırılmadı: {link}",
-      "earlierPeriod": "önceki dönem",
+      "notComparedWith": "Önceki dönemin raporuyla karşılaştırılmadı: {link}",
+      "earlierPeriod": "raporu aç",
       "continuedBy": "Devamı: {link}",
       "laterReport": "sonraki bir rapor",
       "runNext": "Sonraki dönemi raporla",
@@ -381,7 +382,7 @@
       "seriesLabel": "Rapor serileriniz",
       "recentLabel": "Son raporlar",
       "nextStarts": "sonraki dönem {date} tarihinde başlıyor",
-      "nextReady": "sonraki dönem hazır, {date} tarihinden itibaren"
+      "nextReady": "sonraki dönem {date} tarihinden itibaren hazır"
     },
     "toast": {
       "deleted": "Rapor silindi.",
@@ -394,7 +395,7 @@
       "delete": "Rapor silinemedi. Listeye geri eklendi."
     },
     "errors": {
-      "previousDeleted": "Bu raporun devamı olduğu rapor silinmiş, karşılaştırma yapılamıyor. Raporu karşılaştırma olmadan yeniden oluşturun.",
+      "previousDeleted": "Bu raporun devamı olduğu rapor silindiği için karşılaştırma yapılamıyor. Raporu karşılaştırma olmadan yeniden oluşturun.",
       "previousMismatch": "Ayarlar, bu raporun devamı olduğu raporla artık eşleşmiyor. Raporu karşılaştırma olmadan yeniden oluşturun.",
       "generate": "Rapor oluşturulamadı. Lütfen yeniden deneyin.",
       "stream": "Bir sorun oluştu.",

@@ -11,6 +11,7 @@ describe('comparisonNote', () => {
     expect(comparisonNote({ checking: true, period: '2026-07-01 – 2026-09-30' })).toEqual({
       checking: true,
       text: 'Checking against the previous report (2026-07-01 – 2026-09-30)…',
+      lang: 'en',
     })
   })
 
@@ -36,6 +37,7 @@ describe('comparisonNote', () => {
         'Önceki raporla karşılaştırıldı: Eski ya da tarihsiz bilgiyi yeniymiş gibi sunan 2 ifade çıkarıldı.',
       )
       expect(comparisonNote({ checking: true }).text).toBe('Önceki raporla karşılaştırılıyor…')
+      expect(comparisonNote({ checking: true }).lang).toBe('tr')
     } finally {
       setLocale('en')
       localStorage.clear()
@@ -67,6 +69,14 @@ describe('injectComparisonNote', () => {
   it('finds the Turkish heading', () => {
     const html = '<h2>Son rapordan bu yana neler değişti</h2><p>b</p>'
     expect(injectComparisonNote(html, { text: 'x' })).toContain('</h2><p class="compare-note"')
+  })
+
+  it('marks the note with the language it is written in', () => {
+    // The note is the interface speaking, inside a report body in its own language.
+    expect(comparisonNote({ removed: 0 }).lang).toBe('en')
+    const html = '<h2>Son rapordan bu yana neler değişti</h2><p>b</p>'
+    const out = injectComparisonNote(html, comparisonNote({ removed: 0 }))
+    expect(out).toContain('<p class="compare-note" lang="en" role="status">Checked against')
   })
 
   it('escapes the note text', () => {

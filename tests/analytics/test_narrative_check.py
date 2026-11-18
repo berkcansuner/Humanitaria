@@ -4,17 +4,17 @@ contradicts the code's verdict, is removed (the prompt alone could not enforce i
 from analytics.narrative_check import verify_narrative
 from analytics.technical_report import Findings, ReportSection
 
-TREND_H = "Yerinden edilmiş kişi (IDP) — Trend Analizi"
-REGION_H = "Yerinden edilmiş kişi (IDP) — Bölgesel Analiz"
+TREND_H = "Ülke içinde yerinden edilmiş kişiler (IDP) — Trend Analizi"
+REGION_H = "Ülke içinde yerinden edilmiş kişiler (IDP) — Bölgesel Analiz"
 
 CONTEXT = (
     "COMPUTED STATISTICAL FINDINGS (do not recompute — narrate only):\n\n"
     f"## {TREND_H}\n"
-    "Yerinden edilmiş kişi (IDP): direction=increasing, Sen slope=1234.50 per year "
+    "Ülke içinde yerinden edilmiş kişiler (IDP): direction=increasing, Sen slope=1234.50 per year "
     "(95% CI: too few points), Kendall tau=0.80, Mann-Kendall p=0.012, Holm-adjusted p=0.024 "
     "→ SIGNIFICANT (α=0.05), change 2021-01-01 → 2025-01-01=%412.3, n=5.\n\n"
     f"## {REGION_H}\n"
-    "Yerinden edilmiş kişi (IDP): highest regions — North (2345678), South (120000); "
+    "Ülke içinde yerinden edilmiş kişiler (IDP): highest regions — North (2345678), South (120000); "
     "difference between regions Kruskal-Wallis H=1.20, p=0.270, Holm-adjusted p=0.270 → "
     "NOT SIGNIFICANT (α=0.05).\n"
 )

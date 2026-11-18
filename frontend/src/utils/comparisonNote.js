@@ -11,7 +11,7 @@
  * it is in the interface language (`t` defaults to the app's i18n) even under a
  * heading in another report language.
  */
-import { t as appT } from '../i18n/index.js'
+import { i18n, t as appT } from '../i18n/index.js'
 
 // The section heading as the report prompt writes it (rag/report_service.py
 // COMPARISON_HEADINGS), in each report language.
@@ -25,20 +25,25 @@ function escapeHtml(text) {
     .replace(/"/g, '&quot;')
 }
 
-/** { checking, text } for the current state, or null when there is nothing to say. */
-export function comparisonNote(state, t = appT) {
+/**
+ * { checking, text, lang } for the current state, or null when there is nothing to
+ * say. `lang` is the language the text is written in (the interface's), for the
+ * note's own lang attribute inside a report body in another language.
+ */
+export function comparisonNote(state, t = appT, lang = i18n.global.locale.value) {
   if (!state) return null
   if (state.checking) {
     const text = state.period
       ? t('reports.compare.checkingPeriod', { period: state.period })
       : t('reports.compare.checking')
-    return { checking: true, text }
+    return { checking: true, text, lang }
   }
   if (typeof state.removed !== 'number') return null
-  if (state.removed === 0) return { checking: false, text: t('reports.compare.none') }
+  if (state.removed === 0) return { checking: false, text: t('reports.compare.none'), lang }
   return {
     checking: false,
     text: t('reports.compare.removed', { n: state.removed }, state.removed),
+    lang,
   }
 }
 
@@ -46,7 +51,8 @@ export function comparisonNote(state, t = appT) {
 export function injectComparisonNote(html, note) {
   if (!html || !note || !note.text) return html
   const spin = note.checking ? '<span class="compare-note-spin" aria-hidden="true"></span>' : ''
-  const tag = `<p class="compare-note" role="status">${spin}${escapeHtml(note.text)}</p>`
+  const lang = note.lang ? ` lang="${escapeHtml(note.lang)}"` : ''
+  const tag = `<p class="compare-note"${lang} role="status">${spin}${escapeHtml(note.text)}</p>`
   for (const heading of HEADINGS) {
     const marker = `<h2>${escapeHtml(heading)}</h2>`
     const i = html.indexOf(marker)

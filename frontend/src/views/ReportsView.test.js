@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest'
 import { createApp, nextTick } from 'vue'
 import { i18n } from '../i18n/index.js'
 import { setLocale } from '../i18n/locale.js'
@@ -36,7 +36,13 @@ const SAVED = {
 }
 
 // jsdom has no scrolling; the router's scrollBehavior calls it on every navigation.
-window.scrollTo = () => {}
+const realScrollTo = window.scrollTo
+beforeAll(() => {
+  window.scrollTo = () => {}
+})
+afterAll(() => {
+  window.scrollTo = realScrollTo
+})
 
 let app
 let host
@@ -152,6 +158,29 @@ describe('ReportsView in two languages', () => {
     expect([...host.querySelectorAll('.report-form select')].at(-1).value).toBe('en')
   })
 
+  it('names a saved row in full in its tooltip, in the interface language', async () => {
+    const yemen = {
+      ...SAVED,
+      id: 'y1',
+      report_type: 'needs_assessment',
+      country: 'Yemen',
+      theme: 'Shelter and Non-Food Items',
+      title:
+        'Needs Assessment Brief — Yemen · Shelter and Non-Food Items · 2026-07-01 – 2026-09-30',
+    }
+    vi.mocked(listReports).mockResolvedValue({ reports: [yemen] })
+    await mount()
+    const tooltip = () => host.querySelector('.saved-open').getAttribute('title')
+    // English keeps the stored title exactly as before.
+    expect(tooltip()).toBe(yemen.title)
+    setLocale('tr')
+    await flush()
+    expect(tooltip()).toBe('Yemen · Barınma ve gıda dışı malzemeler · 01.07.2026 - 30.09.2026')
+    setLocale('en')
+    await flush()
+    expect(tooltip()).toBe(yemen.title)
+  })
+
   it('shows a generation error in the current language and follows a switch', async () => {
     vi.stubGlobal(
       'fetch',
@@ -162,7 +191,6 @@ describe('ReportsView in two languages', () => {
       }),
     )
     await mount()
-    host.querySelector('.report-form select:nth-of-type(1)')
     const country = host.querySelectorAll('.report-form select')[1]
     country.value = 'Sudan'
     country.dispatchEvent(new Event('change'))

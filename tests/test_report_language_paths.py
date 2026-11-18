@@ -75,6 +75,20 @@ class TestPdfLabels:
         from rag.report_pdf import _SECTORS_TR
         assert set(THEMES) <= set(_SECTORS_TR)
 
+    def test_sector_names_match_the_interface(self):
+        # The PDF and the interface name each sector the same way: the English
+        # interface names are the form's themes, and each Turkish name is the PDF's.
+        # (frontend/src/utils/reportTypes.test.js checks the frontend's theme keys.)
+        import json
+        from pathlib import Path
+        from api.routes.reports import THEMES
+        from rag.report_pdf import _SECTORS_TR
+        locales = Path(__file__).resolve().parents[1] / "frontend" / "src" / "locales"
+        en = json.loads((locales / "en.json").read_text(encoding="utf-8"))["reports"]["sectors"]
+        tr = json.loads((locales / "tr.json").read_text(encoding="utf-8"))["reports"]["sectors"]
+        assert sorted(en.values()) == sorted(THEMES)
+        assert {theme: tr[key] for key, theme in en.items()} == _SECTORS_TR
+
 
 def _syr_rows(ep, iso3, **_k):
     """Two regions of IDPs and an IPC share: trend + regional + correlation sections."""

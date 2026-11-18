@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest'
 import { REPORT_TYPES, reportTypeBadge, reportTypeLabel, sectorLabel } from './reportTypes.js'
 import { setLocale } from '../i18n/locale.js'
 import en from '../locales/en.json'
+import tr from '../locales/tr.json'
 
 describe('reportTypes', () => {
   it('lists exactly the four backend report types', () => {
@@ -65,8 +66,14 @@ describe('sectorLabel', () => {
     expect(sectorLabel('Some New Theme')).toBe('Some New Theme')
   })
 
-  it('has an English name equal to the theme for every sector key', () => {
-    for (const name of Object.values(en.reports.sectors)) expect(sectorLabel(name)).toBe(name)
+  it('maps every theme to its own key (English name = theme, Turkish name from that key)', () => {
+    // tests/test_report_language_paths.py checks the English names against the
+    // backend's THEMES and the Turkish ones against the PDF's _SECTORS_TR.
+    const t = (key) => key.split('.').reduce((o, k) => o[k], tr)
+    for (const [key, name] of Object.entries(en.reports.sectors)) {
+      expect(sectorLabel(name)).toBe(name)
+      expect(sectorLabel(name, t)).toBe(tr.reports.sectors[key])
+    }
     expect(Object.keys(en.reports.sectors)).toHaveLength(20)
   })
 })

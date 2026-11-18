@@ -344,7 +344,8 @@
       "noPeriod": "No period set",
       "empty": "No saved reports yet.",
       "delete": "Delete report: {name}, {type}",
-      "deleteWithPeriod": "Delete report: {name}, {type}, {period}"
+      "deleteWithPeriod": "Delete report: {name}, {type}, {period}",
+      "tooltip": "{name} · {period}"
     },
     "viewer": {
       "back": "All reports",

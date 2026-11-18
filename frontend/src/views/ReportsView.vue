@@ -163,7 +163,7 @@
                 <button
                   type="button"
                   class="saved-open"
-                  :title="e.report.title"
+                  :title="rowTitle(e.report)"
                   :aria-disabled="generating ? 'true' : undefined"
                   @click="openReport(e.report.id)"
                 >
@@ -235,7 +235,7 @@
                     <button
                       type="button"
                       class="saved-open"
-                      :title="r.title"
+                      :title="rowTitle(r)"
                       :aria-disabled="generating ? 'true' : undefined"
                       @click="openReport(r.id)"
                     >
@@ -397,11 +397,15 @@
                   renderMarkdown(shown.content, shown.sources),
                   current.section_images,
                 ),
-                comparisonNote({
-                  checking: current.checking,
-                  period: current.comparedPeriod,
-                  removed: current.checkRemoved,
-                }),
+                comparisonNote(
+                  {
+                    checking: current.checking,
+                    period: current.comparedPeriod,
+                    removed: current.checkRemoved,
+                  },
+                  t,
+                  locale,
+                ),
               )
             "
           ></article>
@@ -647,6 +651,16 @@ function savedType(r) {
   return reportTypeBadge(r.report_type, t) || t('reports.typesShort.situation')
 }
 
+// A list row's tooltip, the full name of a row that may be cut off: the stored
+// title in English (unchanged), the row's own name and period otherwise, so a
+// Turkish row is not explained in English.
+function rowTitle(r) {
+  if (locale.value === 'en') return r.title
+  const period = savedPeriod(r)
+  const name = savedName(r)
+  return period ? t('reports.saved.tooltip', { name, period }) : name
+}
+
 // A single day in a list line: ISO in English as before, day.month.year in Turkish.
 function shownDay(iso) {
   return locale.value === 'tr' ? formatPeriod(iso) : iso
@@ -789,7 +803,7 @@ async function openReport(id, { fromRoute = false } = {}) {
   try {
     const rep = await getReport(id)
     current.value = toCurrent(rep)
-    genError.value = ''
+    genError.value = null
     nextTick(() => {
       if (viewer.value) viewer.value.scrollTop = 0
     })
