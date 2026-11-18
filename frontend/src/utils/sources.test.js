@@ -55,6 +55,8 @@ describe('ledgerDate', () => {
     expect(ledgerDate('2026-11-03T08:15:00+00:00', 'tr')).toBe('3 Kas 2026')
     expect(ledgerDate('Nov 2026', 'tr')).toBe('')
     expect(ledgerDate('2026-13-45', 'tr')).toBe('2026-13-45')
+    // A day the month does not have stays as written, as in English (no shift to March).
+    expect(ledgerDate('2026-02-30', 'tr')).toBe('2026-02-30')
   })
 
   it('returns an empty string for a missing or malformed date', () => {

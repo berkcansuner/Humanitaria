@@ -35,7 +35,8 @@ export function ledgerDate(iso, locale = 'en') {
   const m = /^(\d{4}-\d{2}-\d{2})/.exec(iso || '')
   if (!m) return ''
   const date = new Date(m[1])
-  if (locale !== 'tr' || isNaN(date)) return m[1]
+  // A calendar overflow (2026-02-30) would roll into the next month: keep it as written.
+  if (locale !== 'tr' || isNaN(date) || date.toISOString().slice(0, 10) !== m[1]) return m[1]
   return new Intl.DateTimeFormat('tr-TR', {
     day: 'numeric',
     month: 'short',
