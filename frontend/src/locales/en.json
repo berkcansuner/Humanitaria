@@ -457,6 +457,7 @@
     "chat_failed": "Something went wrong while answering. Please try again.",
     "body_too_large": "That request is too large to send.",
     "validation_failed": "Some of the information isn't valid. Check it and try again.",
+    "ingest_running": "An ingest is already running.",
     "network": "Can't reach the server. Check your connection and try again.",
     "generic": "Something went wrong. Please try again."
   },
@@ -554,6 +555,136 @@
     "s7": {
       "title": "Changes",
       "p1": "If we change how we handle your data, we will update this page and the date at the top."
+    }
+  },
+  "settings": {
+    "profile": {
+      "title": "Profile",
+      "email": "Email",
+      "signIn": "Sign-in method",
+      "providerGoogle": "Google",
+      "providerPassword": "Email & password",
+      "name": "Display name",
+      "saving": "Saving…",
+      "saved": "Name updated.",
+      "failed": "Could not update your name. Please try again."
+    },
+    "appearance": {
+      "title": "Appearance",
+      "theme": "Theme",
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "password": {
+      "title": "Password",
+      "current": "Current password",
+      "new": "New password",
+      "repeat": "Repeat new password",
+      "submit": "Change password",
+      "submitting": "Changing…",
+      "changed": "Password changed. Other sessions were signed out.",
+      "mismatch": "New passwords do not match.",
+      "failed": "Could not change the password. Please try again."
+    },
+    "delete": {
+      "title": "Delete account",
+      "warning": "Deleting your account permanently removes your conversations, reports and profile. This cannot be undone.",
+      "trigger": "Delete my account",
+      "dialogLabel": "Confirm account deletion",
+      "dialogTitle": "Delete account?",
+      "bodyPassword": "This permanently deletes your account and all data. Enter your password to confirm.",
+      "bodyEmail": "This permanently deletes your account and all data. Type your email address to confirm.",
+      "confirm": "Delete forever",
+      "deleting": "Deleting…",
+      "failed": "Could not delete the account. Please try again."
+    }
+  },
+  "admin": {
+    "forbidden": {
+      "title": "Access denied",
+      "text": "You don't have permission to view this page.",
+      "back": "Back to chat"
+    },
+    "tabsLabel": "Admin sections",
+    "tabs": {
+      "ingestion": "Ingestion",
+      "users": "Users"
+    },
+    "status": {
+      "title": "Ingestion status",
+      "running": "Running",
+      "idle": "Idle",
+      "lastIngest": "Last ingest",
+      "nextRun": "Next scheduled run",
+      "schedule": "Schedule",
+      "scheduleValue": "Daily, 03:17 and 14:47 UTC",
+      "scheduleNote": "via GitHub Actions",
+      "chunks": "Indexed chunks",
+      "unavailable": "unavailable",
+      "dbUnavailable": "Database unavailable",
+      "documents": "{n} document | {n} documents"
+    },
+    "run": {
+      "title": "Run ingest",
+      "text": "Fetches ReliefWeb documents published since the last run and adds them to the search index. The nightly run uses the same path, so only one runs at a time.",
+      "button": "Run ingest now",
+      "inProgress": "Ingest in progress…",
+      "lastFailed": "Last run failed: {error}",
+      "lastRun": "Last run",
+      "meta": "{source} · started {start}",
+      "metaFinished": "{source} · started {start} · finished {end}",
+      "endpoint": "Endpoint",
+      "total": "Total",
+      "ok": "OK",
+      "failed": "Failed",
+      "skipped": "Skipped"
+    },
+    "reports": {
+      "title": "Reports",
+      "building": "Building",
+      "text": "Indexed reports, newest first. The list updates as each ingest writes new documents.",
+      "placeholder": "Search title, source, country…",
+      "searchLabel": "Search reports",
+      "count": "{n} report · updated {time} | {n} reports · updated {time}",
+      "scanFailed": "Last scan failed: {error}",
+      "buildingList": "Building the report list… this can take up to a minute.",
+      "noMatch": "No reports match “{q}”.",
+      "none": "No reports found.",
+      "date": "Date",
+      "titleCol": "Title",
+      "source": "Source",
+      "country": "Country",
+      "untitled": "(untitled)"
+    },
+    "users": {
+      "title": "Users",
+      "text": "Registered accounts, newest first. Read-only.",
+      "placeholder": "Search email or name…",
+      "searchLabel": "Search users",
+      "count": "{n} user | {n} users",
+      "loadFailed": "Could not load users.",
+      "retry": "Retry",
+      "noMatch": "No users match “{q}”.",
+      "none": "No users found.",
+      "name": "Name",
+      "email": "Email",
+      "provider": "Provider",
+      "admin": "Admin",
+      "joined": "Joined",
+      "lastLogin": "Last login",
+      "providerGoogle": "Google",
+      "providerPassword": "Password",
+      "adminBadge": "Admin"
+    },
+    "pager": {
+      "prev": "Prev",
+      "next": "Next",
+      "page": "Page {page} of {total}"
+    },
+    "errors": {
+      "status": "Could not load ingestion status.",
+      "start": "Could not start the ingest.",
+      "reports": "Could not load the reports list."
     }
   }
 }

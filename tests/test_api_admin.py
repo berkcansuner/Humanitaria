@@ -129,6 +129,7 @@ def test_trigger_conflict_when_running(client):
          patch("api.routes.admin.runner.is_running", return_value=True):
         r = client.post("/admin/ingest/trigger")
     assert r.status_code == 409
+    assert r.json() == {"detail": "An ingest is already running", "code": "ingest_running"}
 
 
 def test_trigger_starts_when_idle(client):

@@ -23,10 +23,11 @@ export async function errorFromResponse(res, url) {
  * Translated, user-facing text for an error: `errorMessage(err, t)` with the
  * vue-i18n `t` (useI18n().t or the exported `t`). A known `err.code` gets its
  * own message; a TypeError (fetch failed) or an error with neither status nor
- * code reads as a network problem; anything else gets the generic message.
+ * code reads as a network problem; anything else gets the generic message, or
+ * `fallbackKey` when a screen can say which action failed.
  */
-export function errorMessage(err, t) {
+export function errorMessage(err, t, fallbackKey) {
   if (err?.code && KNOWN_CODES.has(err.code)) return t(`errors.${err.code}`)
   if (err instanceof TypeError || (err?.status == null && !err?.code)) return t('errors.network')
-  return t('errors.generic')
+  return t(fallbackKey || 'errors.generic')
 }

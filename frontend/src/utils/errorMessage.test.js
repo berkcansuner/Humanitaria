@@ -59,10 +59,22 @@ describe('errorMessage', () => {
       'body_too_large',
       'validation_failed',
     ]
+    codes.push('ingest_running')
     for (const code of codes) {
       expect(en.errors[code], code).toBeTruthy()
       expect(tr.errors[code], code).toBeTruthy()
     }
+  })
+})
+
+describe('errorMessage with a fallback key', () => {
+  it('replaces only the generic message with the screen-specific one', () => {
+    const t = tFor('tr')
+    expect(errorMessage({ status: 500 }, t, 'admin.errors.start')).toBe(tr.admin.errors.start)
+    expect(errorMessage({ code: 'ingest_running', status: 409 }, t, 'admin.errors.start')).toBe(
+      tr.errors.ingest_running,
+    )
+    expect(errorMessage(new TypeError('x'), t, 'admin.errors.start')).toBe(tr.errors.network)
   })
 })
 

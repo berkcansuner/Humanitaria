@@ -457,6 +457,7 @@
     "chat_failed": "Yanıt hazırlanırken bir sorun oluştu. Lütfen yeniden deneyin.",
     "body_too_large": "İstek göndermek için çok büyük.",
     "validation_failed": "Bazı bilgiler geçerli değil. Kontrol edip yeniden deneyin.",
+    "ingest_running": "Bir veri alımı zaten çalışıyor.",
     "network": "Sunucuya ulaşılamıyor. Bağlantınızı kontrol edip yeniden deneyin.",
     "generic": "Bir sorun oluştu. Lütfen yeniden deneyin."
   },
@@ -554,6 +555,136 @@
     "s7": {
       "title": "Değişiklikler",
       "p1": "Verilerinizi ele alış biçimimizi değiştirirsek bu sayfayı ve en üstteki tarihi güncelleriz."
+    }
+  },
+  "settings": {
+    "profile": {
+      "title": "Profil",
+      "email": "E-posta",
+      "signIn": "Giriş yöntemi",
+      "providerGoogle": "Google",
+      "providerPassword": "E-posta ve parola",
+      "name": "Görünen ad",
+      "saving": "Kaydediliyor…",
+      "saved": "Ad güncellendi.",
+      "failed": "Adınız güncellenemedi. Lütfen yeniden deneyin."
+    },
+    "appearance": {
+      "title": "Görünüm",
+      "theme": "Tema",
+      "light": "Açık",
+      "dark": "Koyu"
+    },
+    "password": {
+      "title": "Parola",
+      "current": "Mevcut parola",
+      "new": "Yeni parola",
+      "repeat": "Yeni parolayı tekrarlayın",
+      "submit": "Parolayı değiştir",
+      "submitting": "Değiştiriliyor…",
+      "changed": "Parola değiştirildi. Diğer oturumlardaki girişler kapatıldı.",
+      "mismatch": "Yeni parolalar eşleşmiyor.",
+      "failed": "Parola değiştirilemedi. Lütfen yeniden deneyin."
+    },
+    "delete": {
+      "title": "Hesabı sil",
+      "warning": "Hesabınızı silerseniz sohbetleriniz, raporlarınız ve profiliniz kalıcı olarak kaldırılır. Bu işlem geri alınamaz.",
+      "trigger": "Hesabımı sil",
+      "dialogLabel": "Hesap silme onayı",
+      "dialogTitle": "Hesap silinsin mi?",
+      "bodyPassword": "Hesabınız ve tüm verileriniz kalıcı olarak silinir. Onaylamak için parolanızı girin.",
+      "bodyEmail": "Hesabınız ve tüm verileriniz kalıcı olarak silinir. Onaylamak için e-posta adresinizi yazın.",
+      "confirm": "Kalıcı olarak sil",
+      "deleting": "Siliniyor…",
+      "failed": "Hesap silinemedi. Lütfen yeniden deneyin."
+    }
+  },
+  "admin": {
+    "forbidden": {
+      "title": "Erişim reddedildi",
+      "text": "Bu sayfayı görüntüleme izniniz yok.",
+      "back": "Sohbete dön"
+    },
+    "tabsLabel": "Yönetim bölümleri",
+    "tabs": {
+      "ingestion": "Veri alımı",
+      "users": "Kullanıcılar"
+    },
+    "status": {
+      "title": "Veri alımı durumu",
+      "running": "Çalışıyor",
+      "idle": "Beklemede",
+      "lastIngest": "Son veri alımı",
+      "nextRun": "Sonraki planlı çalıştırma",
+      "schedule": "Zamanlama",
+      "scheduleValue": "Her gün 03:17 ve 14:47 (UTC)",
+      "scheduleNote": "GitHub Actions ile",
+      "chunks": "Dizinlenen parçalar",
+      "unavailable": "ulaşılamıyor",
+      "dbUnavailable": "Veritabanına ulaşılamıyor",
+      "documents": "{n} belge | {n} belge"
+    },
+    "run": {
+      "title": "Veri alımını çalıştır",
+      "text": "ReliefWeb'de son çalıştırmadan bu yana yayımlanan belgeleri getirir ve arama dizinine ekler. Gece çalıştırması da aynı yolu kullanır, bu yüzden aynı anda yalnızca biri çalışır.",
+      "button": "Veri alımını şimdi çalıştır",
+      "inProgress": "Veri alımı sürüyor…",
+      "lastFailed": "Son çalıştırma başarısız oldu: {error}",
+      "lastRun": "Son çalıştırma",
+      "meta": "{source} · başlangıç: {start}",
+      "metaFinished": "{source} · başlangıç: {start} · bitiş: {end}",
+      "endpoint": "Uç nokta",
+      "total": "Toplam",
+      "ok": "Başarılı",
+      "failed": "Başarısız",
+      "skipped": "Atlanan"
+    },
+    "reports": {
+      "title": "Raporlar",
+      "building": "Oluşturuluyor",
+      "text": "Dizine eklenen raporlar, en yenisi başta. Liste, her veri alımı yeni belge yazdıkça güncellenir.",
+      "placeholder": "Başlık, kaynak veya ülkeye göre ara…",
+      "searchLabel": "Raporlarda ara",
+      "count": "{n} rapor · güncellenme: {time} | {n} rapor · güncellenme: {time}",
+      "scanFailed": "Son tarama başarısız oldu: {error}",
+      "buildingList": "Rapor listesi oluşturuluyor… Bu işlem bir dakikayı bulabilir.",
+      "noMatch": "“{q}” ile eşleşen rapor yok.",
+      "none": "Rapor bulunamadı.",
+      "date": "Tarih",
+      "titleCol": "Başlık",
+      "source": "Kaynak",
+      "country": "Ülke",
+      "untitled": "(başlıksız)"
+    },
+    "users": {
+      "title": "Kullanıcılar",
+      "text": "Kayıtlı hesaplar, en yenisi başta. Salt okunur.",
+      "placeholder": "E-posta veya ada göre ara…",
+      "searchLabel": "Kullanıcılarda ara",
+      "count": "{n} kullanıcı | {n} kullanıcı",
+      "loadFailed": "Kullanıcılar yüklenemedi.",
+      "retry": "Yeniden dene",
+      "noMatch": "“{q}” ile eşleşen kullanıcı yok.",
+      "none": "Kullanıcı bulunamadı.",
+      "name": "Ad",
+      "email": "E-posta",
+      "provider": "Sağlayıcı",
+      "admin": "Yönetici",
+      "joined": "Katılım",
+      "lastLogin": "Son giriş",
+      "providerGoogle": "Google",
+      "providerPassword": "Parola",
+      "adminBadge": "Yönetici"
+    },
+    "pager": {
+      "prev": "Önceki",
+      "next": "Sonraki",
+      "page": "Sayfa {page} / {total}"
+    },
+    "errors": {
+      "status": "Veri alımı durumu yüklenemedi.",
+      "start": "Veri alımı başlatılamadı.",
+      "reports": "Rapor listesi yüklenemedi."
     }
   }
 }

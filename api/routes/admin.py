@@ -12,6 +12,7 @@ import anyio
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 
+from api.errors import ErrorCode, api_error
 from api.routes.auth import get_admin_user, _is_admin
 from config import get_settings
 from ingestion import analytics
@@ -67,7 +68,7 @@ async def trigger_ingest(admin: dict = Depends(get_admin_user)):
     UI feedback.
     """
     if runner.is_running():
-        raise HTTPException(status_code=409, detail="An ingest is already running")
+        raise api_error(409, ErrorCode.ingest_running, "An ingest is already running")
     logger.info("admin: ingest trigger by user=%s", admin.get("id"))
     task = asyncio.create_task(anyio.to_thread.run_sync(runner.run_ingest_once, "manual"))
     _bg_tasks.add(task)

@@ -1,31 +1,33 @@
 <template>
   <section class="card">
-    <div class="card-head"><h2>Users</h2></div>
-    <p class="muted">Registered accounts, newest first. Read-only.</p>
+    <div class="card-head">
+      <h2>{{ t('admin.users.title') }}</h2>
+    </div>
+    <p class="muted">{{ t('admin.users.text') }}</p>
 
     <div class="users-actions">
       <input
         v-model="query"
         class="user-search"
         type="search"
-        placeholder="Search email or name…"
-        aria-label="Search users"
+        :placeholder="t('admin.users.placeholder')"
+        :aria-label="t('admin.users.searchLabel')"
         @input="onSearchInput"
       />
-      <span v-if="!loading" class="users-meta"
-        >{{ formatNumber(total) }} {{ total === 1 ? 'user' : 'users' }}</span
-      >
+      <span v-if="!loading" class="users-meta">{{
+        t('admin.users.count', { n: formatNumber(total) }, total)
+      }}</span>
     </div>
 
     <div v-if="error" class="error-box" role="alert">
-      Could not load users.
-      <button class="retry-btn" type="button" @click="load">Retry</button>
+      {{ t('admin.users.loadFailed') }}
+      <button class="retry-btn" type="button" @click="load">{{ t('admin.users.retry') }}</button>
     </div>
 
-    <p v-if="loading && !items.length" class="muted">Loading…</p>
+    <p v-if="loading && !items.length" class="muted">{{ t('common.loading') }}</p>
     <p v-else-if="!loading && !items.length" class="muted">
-      <template v-if="query.trim()">No users match “{{ query }}”.</template>
-      <template v-else>No users found.</template>
+      <template v-if="query.trim()">{{ t('admin.users.noMatch', { q: query }) }}</template>
+      <template v-else>{{ t('admin.users.none') }}</template>
     </p>
 
     <template v-if="items.length">
@@ -33,21 +35,27 @@
         <table class="users-table">
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Provider</th>
-              <th>Admin</th>
-              <th>Joined</th>
-              <th>Last login</th>
+              <th>{{ t('admin.users.name') }}</th>
+              <th>{{ t('admin.users.email') }}</th>
+              <th>{{ t('admin.users.provider') }}</th>
+              <th>{{ t('admin.users.admin') }}</th>
+              <th>{{ t('admin.users.joined') }}</th>
+              <th>{{ t('admin.users.lastLogin') }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="u in items" :key="u.id">
               <td>{{ u.name || '—' }}</td>
               <td>{{ u.email }}</td>
-              <td>{{ u.auth_provider === 'google' ? 'Google' : 'Password' }}</td>
               <td>
-                <span v-if="u.is_admin" class="role-admin">Admin</span>
+                {{
+                  u.auth_provider === 'google'
+                    ? t('admin.users.providerGoogle')
+                    : t('admin.users.providerPassword')
+                }}
+              </td>
+              <td>
+                <span v-if="u.is_admin" class="role-admin">{{ t('admin.users.adminBadge') }}</span>
                 <span v-else>—</span>
               </td>
               <td class="cell-date">{{ formatDate(u.created_at) }}</td>
@@ -58,9 +66,13 @@
       </div>
 
       <div v-if="pageCount > 1" class="users-pager">
-        <button class="pager-btn" :disabled="offset === 0" @click="prevPage">Prev</button>
-        <span class="pager-info">Page {{ page }} of {{ pageCount }}</span>
-        <button class="pager-btn" :disabled="page >= pageCount" @click="nextPage">Next</button>
+        <button class="pager-btn" :disabled="offset === 0" @click="prevPage">
+          {{ t('admin.pager.prev') }}
+        </button>
+        <span class="pager-info">{{ t('admin.pager.page', { page, total: pageCount }) }}</span>
+        <button class="pager-btn" :disabled="page >= pageCount" @click="nextPage">
+          {{ t('admin.pager.next') }}
+        </button>
       </div>
     </template>
   </section>
@@ -68,9 +80,11 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { listUsers } from '../utils/adminApi.js'
 import { isoDate } from '../utils/isoDate.js'
 
+const { t, n } = useI18n()
 const PAGE_SIZE = 50
 
 const items = ref([])
@@ -84,8 +98,8 @@ let searchTimer = null
 const page = computed(() => Math.floor(offset.value / PAGE_SIZE) + 1)
 const pageCount = computed(() => Math.max(1, Math.ceil(total.value / PAGE_SIZE)))
 
-function formatNumber(n) {
-  return typeof n === 'number' ? n.toLocaleString('en-US') : '—'
+function formatNumber(value) {
+  return typeof value === 'number' ? n(value, 'integer') : '—'
 }
 
 async function load() {

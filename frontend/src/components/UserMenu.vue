@@ -42,10 +42,10 @@ import { Settings, Shield, LogOut } from 'lucide-vue-next'
 import { auth, doLogout } from '../utils/authStore.js'
 import { userInitials } from '../utils/userDisplay.js'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const open = ref(false)
 const rootEl = ref(null)
-const initials = computed(() => userInitials(auth.user))
+const initials = computed(() => userInitials(auth.user, locale.value))
 
 const router = useRouter()
 async function logout() {

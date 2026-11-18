@@ -36,6 +36,7 @@ class ErrorCode(str, Enum):
     chat_failed = "chat_failed"
     body_too_large = "body_too_large"
     validation_failed = "validation_failed"
+    ingest_running = "ingest_running"
 
 
 class ApiError(HTTPException):

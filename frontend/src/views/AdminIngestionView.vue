@@ -1,25 +1,25 @@
 <template>
   <div class="admin">
-    <AppTopbar context="Admin" />
+    <AppTopbar :context="t('titles.admin')" />
 
     <main class="content">
       <div v-if="forbidden" class="card error-card" role="alert">
-        <h2>Access denied</h2>
-        <p>You don't have permission to view this page.</p>
-        <router-link class="primary-btn" to="/app">Back to chat</router-link>
+        <h2>{{ t('admin.forbidden.title') }}</h2>
+        <p>{{ t('admin.forbidden.text') }}</p>
+        <router-link class="primary-btn" to="/app">{{ t('admin.forbidden.back') }}</router-link>
       </div>
 
       <template v-else>
         <div v-if="actionError" class="action-error" role="alert">{{ actionError }}</div>
 
-        <nav class="tabs" aria-label="Admin sections">
+        <nav class="tabs" :aria-label="t('admin.tabsLabel')">
           <button
             type="button"
             :class="['tab-btn', { active: tab === 'ingestion' }]"
             :aria-current="tab === 'ingestion' ? 'true' : undefined"
             @click="tab = 'ingestion'"
           >
-            Ingestion
+            {{ t('admin.tabs.ingestion') }}
           </button>
           <button
             type="button"
@@ -27,50 +27,57 @@
             :aria-current="tab === 'users' ? 'true' : undefined"
             @click="tab = 'users'"
           >
-            Users
+            {{ t('admin.tabs.users') }}
           </button>
         </nav>
 
         <template v-if="tab === 'ingestion'">
           <section class="card">
             <div class="card-head">
-              <h2>Ingestion status</h2>
+              <h2>{{ t('admin.status.title') }}</h2>
               <span :class="['state', { 'state-on': running }]">
-                <span class="dot" aria-hidden="true"></span>{{ running ? 'Running' : 'Idle' }}
+                <span class="dot" aria-hidden="true"></span
+                >{{ running ? t('admin.status.running') : t('admin.status.idle') }}
               </span>
             </div>
 
-            <p v-if="loading && !status" class="muted">Loading…</p>
+            <p v-if="loading && !status" class="muted">{{ t('common.loading') }}</p>
             <dl v-else class="grid">
               <div>
-                <dt>Last ingest</dt>
+                <dt>{{ t('admin.status.lastIngest') }}</dt>
                 <dd>{{ status?.last_ingest || '—' }}</dd>
               </div>
               <!-- Production runs from GitHub Actions (.github/workflows/nightly-ingest.yml),
                    so the in-app scheduler is off there by design; say how runs happen
                    instead of showing "Inactive" as if something were broken. -->
               <div v-if="status?.scheduler_active">
-                <dt>Next scheduled run</dt>
+                <dt>{{ t('admin.status.nextRun') }}</dt>
                 <dd>{{ formatDateTime(status?.next_scheduled_run) }}</dd>
               </div>
               <div v-else>
-                <dt>Schedule</dt>
+                <dt>{{ t('admin.status.schedule') }}</dt>
                 <dd>
-                  Daily, 03:17 and 14:47 UTC
-                  <span class="dd-note">via GitHub Actions</span>
+                  {{ t('admin.status.scheduleValue') }}
+                  <span class="dd-note">{{ t('admin.status.scheduleNote') }}</span>
                 </dd>
               </div>
               <div>
-                <dt>Indexed chunks</dt>
+                <dt>{{ t('admin.status.chunks') }}</dt>
                 <dd>
-                  <span v-if="status?.vector_count_error" title="Database unavailable"
-                    >unavailable</span
+                  <span
+                    v-if="status?.vector_count_error"
+                    :title="t('admin.status.dbUnavailable')"
+                    >{{ t('admin.status.unavailable') }}</span
                   >
                   <template v-else>
                     {{ formatNumber(status?.chunk_count) }}
-                    <span class="dd-note"
-                      >{{ formatNumber(status?.document_count) }} documents</span
-                    >
+                    <span class="dd-note">{{
+                      t(
+                        'admin.status.documents',
+                        { n: formatNumber(status?.document_count) },
+                        status?.document_count ?? 0,
+                      )
+                    }}</span>
                   </template>
                 </dd>
               </div>
@@ -78,36 +85,43 @@
           </section>
 
           <section class="card">
-            <div class="card-head"><h2>Run ingest</h2></div>
-            <p class="muted">
-              Fetches ReliefWeb documents published since the last run and adds them to the search
-              index. The nightly run uses the same path, so only one runs at a time.
-            </p>
+            <div class="card-head">
+              <h2>{{ t('admin.run.title') }}</h2>
+            </div>
+            <p class="muted">{{ t('admin.run.text') }}</p>
             <button class="primary-btn" :disabled="running || triggering" @click="onTrigger">
               <RefreshCw :size="16" :class="{ spin: running }" />
-              {{ running ? 'Ingest in progress…' : 'Run ingest now' }}
+              {{ running ? t('admin.run.inProgress') : t('admin.run.button') }}
             </button>
 
             <div v-if="run.last_error" class="error-box" role="alert">
-              Last run failed: {{ run.last_error }}
+              {{ t('admin.run.lastFailed', { error: run.last_error }) }}
             </div>
 
             <div v-if="lastStatsRows.length" class="run-summary">
-              <h3>Last run</h3>
+              <h3>{{ t('admin.run.lastRun') }}</h3>
               <p class="muted run-meta">
-                {{ run.source }} · started {{ formatDateTime(run.started_at) }}
-                <template v-if="run.finished_at">
-                  · finished {{ formatDateTime(run.finished_at) }}</template
-                >
+                {{
+                  run.finished_at
+                    ? t('admin.run.metaFinished', {
+                        source: run.source,
+                        start: formatDateTime(run.started_at),
+                        end: formatDateTime(run.finished_at),
+                      })
+                    : t('admin.run.meta', {
+                        source: run.source,
+                        start: formatDateTime(run.started_at),
+                      })
+                }}
               </p>
               <table>
                 <thead>
                   <tr>
-                    <th>Endpoint</th>
-                    <th>Total</th>
-                    <th>OK</th>
-                    <th>Failed</th>
-                    <th>Skipped</th>
+                    <th>{{ t('admin.run.endpoint') }}</th>
+                    <th>{{ t('admin.run.total') }}</th>
+                    <th>{{ t('admin.run.ok') }}</th>
+                    <th>{{ t('admin.run.failed') }}</th>
+                    <th>{{ t('admin.run.skipped') }}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -125,39 +139,45 @@
 
           <section class="card">
             <div class="card-head">
-              <h2>Reports</h2>
+              <h2>{{ t('admin.reports.title') }}</h2>
               <span v-if="docComputing" class="state state-on">
-                <span class="dot" aria-hidden="true"></span>Building
+                <span class="dot" aria-hidden="true"></span>{{ t('admin.reports.building') }}
               </span>
             </div>
-            <p class="muted">
-              Indexed reports, newest first. The list updates as each ingest writes new documents.
-            </p>
+            <p class="muted">{{ t('admin.reports.text') }}</p>
 
             <div class="bd-actions">
               <input
                 v-model="docQuery"
                 class="doc-search"
                 type="search"
-                placeholder="Search title, source, country…"
-                aria-label="Search reports"
+                :placeholder="t('admin.reports.placeholder')"
+                :aria-label="t('admin.reports.searchLabel')"
                 @input="onSearchInput"
               />
               <span v-if="docComputedAt" class="bd-meta">
-                {{ formatNumber(docTotal) }} reports · updated {{ formatDateTime(docComputedAt) }}
+                {{
+                  t(
+                    'admin.reports.count',
+                    { n: formatNumber(docTotal), time: formatDateTime(docComputedAt) },
+                    docTotal,
+                  )
+                }}
               </span>
             </div>
 
             <div v-if="docError" class="error-box" role="alert">
-              Last scan failed: {{ docError }}
+              {{ t('admin.reports.scanFailed', { error: docError }) }}
             </div>
 
             <p v-if="docComputing && !docItems.length" class="muted bd-empty">
-              Building the report list… this can take up to a minute.
+              {{ t('admin.reports.buildingList') }}
             </p>
             <p v-else-if="!docItems.length" class="muted bd-empty">
-              <template v-if="docQuery.trim()">No reports match “{{ docQuery }}”.</template>
-              <template v-else>No reports found.</template>
+              <template v-if="docQuery.trim()">{{
+                t('admin.reports.noMatch', { q: docQuery })
+              }}</template>
+              <template v-else>{{ t('admin.reports.none') }}</template>
             </p>
 
             <template v-if="docItems.length">
@@ -165,10 +185,10 @@
                 <table class="doc-table">
                   <thead>
                     <tr>
-                      <th>Date</th>
-                      <th>Title</th>
-                      <th>Source</th>
-                      <th>Country</th>
+                      <th>{{ t('admin.reports.date') }}</th>
+                      <th>{{ t('admin.reports.titleCol') }}</th>
+                      <th>{{ t('admin.reports.source') }}</th>
+                      <th>{{ t('admin.reports.country') }}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -176,9 +196,9 @@
                       <td class="doc-date">{{ formatDate(row.date) }}</td>
                       <td class="doc-title">
                         <a v-if="row.url" :href="row.url" target="_blank" rel="noopener">{{
-                          row.title || '(untitled)'
+                          row.title || t('admin.reports.untitled')
                         }}</a>
-                        <span v-else>{{ row.title || '(untitled)' }}</span>
+                        <span v-else>{{ row.title || t('admin.reports.untitled') }}</span>
                       </td>
                       <td>{{ row.source || '—' }}</td>
                       <td>{{ row.country || '—' }}</td>
@@ -189,11 +209,13 @@
 
               <div v-if="docPageCount > 1" class="doc-pager">
                 <button class="pager-btn" :disabled="docOffset === 0" @click="prevPage">
-                  Prev
+                  {{ t('admin.pager.prev') }}
                 </button>
-                <span class="pager-info">Page {{ docPage }} of {{ docPageCount }}</span>
+                <span class="pager-info">{{
+                  t('admin.pager.page', { page: docPage, total: docPageCount })
+                }}</span>
                 <button class="pager-btn" :disabled="docPage >= docPageCount" @click="nextPage">
-                  Next
+                  {{ t('admin.pager.next') }}
                 </button>
               </div>
             </template>
@@ -208,18 +230,28 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { RefreshCw } from 'lucide-vue-next'
 import AppTopbar from '../components/AppTopbar.vue'
 import AdminUsersPanel from '../components/AdminUsersPanel.vue'
 import { getIngestStatus, triggerIngest, getIngestDocuments } from '../utils/adminApi.js'
 import { isoDate, isoDateTime } from '../utils/isoDate.js'
+import { errorMessage } from '../utils/errorMessage.js'
+
+const { t, n } = useI18n()
 
 const tab = ref('ingestion')
 const status = ref(null)
 const loading = ref(true)
 const triggering = ref(false)
 const forbidden = ref(false)
-const actionError = ref(null)
+// The failed request (and which action it was), translated at render so it follows a
+// language switch.
+const actionProblem = ref(null)
+const actionError = computed(() => {
+  const p = actionProblem.value
+  return p ? errorMessage(p.err, t, p.fallback) : null
+})
 let pollTimer = null
 
 const run = computed(() => status.value?.run || {})
@@ -244,8 +276,8 @@ const docError = computed(() => docState.value?.last_error || null)
 const docPage = computed(() => Math.floor(docOffset.value / docLimit.value) + 1)
 const docPageCount = computed(() => Math.max(1, Math.ceil(docTotal.value / docLimit.value)))
 
-function formatNumber(n) {
-  return typeof n === 'number' ? n.toLocaleString('en-US') : '—'
+function formatNumber(value) {
+  return typeof value === 'number' ? n(value, 'integer') : '—'
 }
 
 const formatDateTime = isoDateTime
@@ -256,7 +288,7 @@ async function fetchStatus() {
   try {
     status.value = await getIngestStatus()
     forbidden.value = false
-    actionError.value = null // a recovered poll clears any earlier transient error
+    actionProblem.value = null // a recovered poll clears any earlier transient error
     // Poll only while a run is active; stop once it goes idle.
     if (running.value) startPolling()
     else stopPolling()
@@ -264,7 +296,7 @@ async function fetchStatus() {
     if (e.status === 403) {
       forbidden.value = true
       stopPolling()
-    } else actionError.value = 'Could not load ingestion status.'
+    } else actionProblem.value = { err: e, fallback: 'admin.errors.status' }
   } finally {
     loading.value = false
   }
@@ -272,17 +304,16 @@ async function fetchStatus() {
 
 async function onTrigger() {
   triggering.value = true
-  actionError.value = null
+  actionProblem.value = null
   try {
     await triggerIngest()
     await fetchStatus()
     startPolling()
   } catch (e) {
-    if (e.status === 409) actionError.value = 'An ingest is already running.'
-    else if (e.status === 403) {
+    if (e.status === 403) {
       forbidden.value = true
       stopPolling()
-    } else actionError.value = 'Could not start the ingest.'
+    } else actionProblem.value = { err: e, fallback: 'admin.errors.start' }
   } finally {
     triggering.value = false
   }
@@ -314,7 +345,7 @@ async function fetchDocuments() {
     if (e.status === 403) {
       forbidden.value = true
       stopDocPolling()
-    } else actionError.value = 'Could not load the reports list.'
+    } else actionProblem.value = { err: e, fallback: 'admin.errors.reports' }
   }
 }
 
@@ -723,5 +754,11 @@ onUnmounted(() => {
   .grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Turkish column headings are longer; let the run table scroll inside its section
+   on a phone instead of widening the page. */
+html[lang='tr'] .run-summary {
+  overflow-x: auto;
 }
 </style>

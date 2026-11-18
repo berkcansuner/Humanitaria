@@ -1,36 +1,53 @@
 <template>
   <div class="settings">
-    <AppTopbar context="Settings" />
+    <AppTopbar :context="t('titles.settings')" />
 
     <main class="content">
       <section class="card">
-        <div class="card-head"><h2>Profile</h2></div>
+        <div class="card-head">
+          <h2>{{ t('settings.profile.title') }}</h2>
+        </div>
         <dl class="grid">
           <div>
-            <dt>Email</dt>
+            <dt>{{ t('settings.profile.email') }}</dt>
             <dd>{{ auth.user?.email }}</dd>
           </div>
           <div>
-            <dt>Sign-in method</dt>
-            <dd>{{ auth.user?.auth_provider === 'google' ? 'Google' : 'Email & password' }}</dd>
+            <dt>{{ t('settings.profile.signIn') }}</dt>
+            <dd>
+              {{
+                auth.user?.auth_provider === 'google'
+                  ? t('settings.profile.providerGoogle')
+                  : t('settings.profile.providerPassword')
+              }}
+            </dd>
           </div>
         </dl>
         <form class="form-row" @submit.prevent="saveName">
           <label class="field">
-            <span>Display name</span>
-            <input v-model="nameInput" type="text" maxlength="100" required />
+            <span>{{ t('settings.profile.name') }}</span>
+            <input
+              v-model="nameInput"
+              type="text"
+              maxlength="100"
+              required
+              :aria-invalid="nameError ? 'true' : undefined"
+              :aria-describedby="nameError ? 'name-error' : undefined"
+            />
           </label>
           <button class="primary-btn" type="submit" :disabled="savingName || !nameDirty">
-            {{ savingName ? 'Saving…' : 'Save' }}
+            {{ savingName ? t('settings.profile.saving') : t('common.save') }}
           </button>
         </form>
-        <p v-if="nameMessage" class="ok-note" role="status">{{ nameMessage }}</p>
-        <p v-if="nameError" class="error-box" role="alert">{{ nameError }}</p>
+        <p v-if="nameSaved" class="ok-note" role="status">{{ t('settings.profile.saved') }}</p>
+        <p v-if="nameError" id="name-error" class="error-box" role="alert">{{ nameError }}</p>
       </section>
 
       <section class="card">
-        <div class="card-head"><h2>Appearance</h2></div>
-        <div class="theme-seg" role="radiogroup" aria-label="Theme">
+        <div class="card-head">
+          <h2>{{ t('settings.appearance.title') }}</h2>
+        </div>
+        <div class="theme-seg" role="radiogroup" :aria-label="t('settings.appearance.theme')">
           <button
             v-for="opt in ['light', 'dark']"
             :key="opt"
@@ -42,54 +59,71 @@
           >
             <Sun v-if="opt === 'light'" :size="15" />
             <Moon v-else :size="15" />
-            {{ opt === 'light' ? 'Light' : 'Dark' }}
+            {{ opt === 'light' ? t('settings.appearance.light') : t('settings.appearance.dark') }}
           </button>
         </div>
       </section>
 
       <section v-if="auth.user?.has_password" class="card">
-        <div class="card-head"><h2>Password</h2></div>
-        <form class="form-col" @submit.prevent="submitPassword">
+        <div class="card-head">
+          <h2>{{ t('settings.password.title') }}</h2>
+        </div>
+        <form class="form-col" novalidate @submit.prevent="submitPassword">
           <label class="field">
-            <span>Current password</span>
-            <input v-model="currentPw" type="password" autocomplete="current-password" required />
+            <span>{{ t('settings.password.current') }}</span>
+            <input
+              ref="currentPwEl"
+              v-model="currentPw"
+              type="password"
+              autocomplete="current-password"
+              required
+              v-bind="pwA11y('current')"
+            />
           </label>
           <label class="field">
-            <span>New password</span>
+            <span>{{ t('settings.password.new') }}</span>
             <input
+              ref="newPwEl"
               v-model="newPw"
               type="password"
               minlength="8"
               maxlength="72"
               autocomplete="new-password"
               required
+              v-bind="pwA11y('new')"
             />
           </label>
           <label class="field">
-            <span>Repeat new password</span>
-            <input v-model="newPw2" type="password" autocomplete="new-password" required />
+            <span>{{ t('settings.password.repeat') }}</span>
+            <input
+              ref="newPw2El"
+              v-model="newPw2"
+              type="password"
+              autocomplete="new-password"
+              required
+              v-bind="pwA11y('repeat')"
+            />
           </label>
           <button class="primary-btn" type="submit" :disabled="changingPw">
-            {{ changingPw ? 'Changing…' : 'Change password' }}
+            {{ changingPw ? t('settings.password.submitting') : t('settings.password.submit') }}
           </button>
         </form>
-        <p v-if="pwMessage" class="ok-note" role="status">{{ pwMessage }}</p>
-        <p v-if="pwError" class="error-box" role="alert">{{ pwError }}</p>
+        <p v-if="pwChanged" class="ok-note" role="status">{{ t('settings.password.changed') }}</p>
+        <p v-if="pwError" id="pw-error" class="error-box" role="alert">{{ pwError }}</p>
       </section>
 
       <section class="card">
-        <div class="card-head"><h2>Delete account</h2></div>
-        <p class="muted">
-          Deleting your account permanently removes your conversations, reports and profile. This
-          cannot be undone.
-        </p>
+        <div class="card-head">
+          <h2>{{ t('settings.delete.title') }}</h2>
+        </div>
+        <p class="muted">{{ t('settings.delete.warning') }}</p>
         <button
           ref="deleteTriggerBtn"
           class="danger-quiet-btn"
           type="button"
           @click="openDeleteModal"
         >
-          Delete my account
+          {{ t('settings.delete.trigger') }}
         </button>
       </section>
 
@@ -98,31 +132,44 @@
           class="modal"
           role="dialog"
           aria-modal="true"
-          aria-label="Confirm account deletion"
+          :aria-label="t('settings.delete.dialogLabel')"
           @keydown="onModalKeydown"
         >
-          <h3>Delete account?</h3>
+          <h3>{{ t('settings.delete.dialogTitle') }}</h3>
           <p class="muted">
-            This permanently deletes your account and all data.
-            <template v-if="auth.user?.has_password"> Enter your password to confirm.</template>
-            <template v-else> Type your email address to confirm.</template>
+            {{
+              auth.user?.has_password
+                ? t('settings.delete.bodyPassword')
+                : t('settings.delete.bodyEmail')
+            }}
           </p>
-          <form class="form-col" @submit.prevent="confirmDelete">
+          <form class="form-col" novalidate @submit.prevent="confirmDelete">
             <label v-if="auth.user?.has_password" class="field">
-              <span>Password</span>
+              <span>{{ t('auth.password') }}</span>
               <input
                 ref="deleteInputEl"
                 v-model="deleteConfirm"
                 type="password"
                 autocomplete="current-password"
                 required
+                :aria-invalid="deleteError ? 'true' : undefined"
+                :aria-describedby="deleteError ? 'delete-error' : undefined"
               />
             </label>
             <label v-else class="field">
-              <span>Email</span>
-              <input ref="deleteInputEl" v-model="deleteConfirm" type="email" required />
+              <span>{{ t('settings.profile.email') }}</span>
+              <input
+                ref="deleteInputEl"
+                v-model="deleteConfirm"
+                type="email"
+                required
+                :aria-invalid="deleteError ? 'true' : undefined"
+                :aria-describedby="deleteError ? 'delete-error' : undefined"
+              />
             </label>
-            <p v-if="deleteError" class="error-box" role="alert">{{ deleteError }}</p>
+            <p v-if="deleteError" id="delete-error" class="error-box" role="alert">
+              {{ deleteError }}
+            </p>
             <div class="modal-actions">
               <button
                 ref="cancelBtnEl"
@@ -131,10 +178,10 @@
                 :disabled="deleting"
                 @click="closeDeleteModal"
               >
-                Cancel
+                {{ t('common.cancel') }}
               </button>
               <button ref="confirmBtnEl" class="danger-btn" type="submit" :disabled="deleting">
-                {{ deleting ? 'Deleting…' : 'Delete forever' }}
+                {{ deleting ? t('settings.delete.deleting') : t('settings.delete.confirm') }}
               </button>
             </div>
           </form>
@@ -147,33 +194,44 @@
 <script setup>
 import { ref, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { Sun, Moon } from 'lucide-vue-next'
 import AppTopbar from '../components/AppTopbar.vue'
 import { auth } from '../utils/authStore.js'
 import { updateProfile, changePassword, deleteAccount } from '../utils/authApi.js'
+import { errorMessage } from '../utils/errorMessage.js'
 import { getInitialTheme, setTheme } from '../utils/theme.js'
 
+const { t } = useI18n()
 const router = useRouter()
+
+// What went wrong stays untranslated: { key } for a form check, { err, fallback } for a
+// failed request. It becomes text at render, so a language switch updates it on screen.
+function problemText(p) {
+  if (!p) return ''
+  return p.key ? t(p.key) : errorMessage(p.err, t, p.fallback)
+}
 
 // --- profile ---
 const nameInput = ref(auth.user?.name || '')
 const savingName = ref(false)
-const nameMessage = ref('')
-const nameError = ref('')
+const nameSaved = ref(false)
+const nameProblem = ref(null)
+const nameError = computed(() => problemText(nameProblem.value))
 const nameDirty = computed(
   () => nameInput.value.trim() && nameInput.value.trim() !== auth.user?.name,
 )
 
 async function saveName() {
   savingName.value = true
-  nameMessage.value = ''
-  nameError.value = ''
+  nameSaved.value = false
+  nameProblem.value = null
   try {
     auth.user = await updateProfile(nameInput.value.trim())
     nameInput.value = auth.user.name
-    nameMessage.value = 'Name updated.'
-  } catch {
-    nameError.value = 'Could not update your name. Please try again.'
+    nameSaved.value = true
+  } catch (e) {
+    nameProblem.value = { err: e, fallback: 'settings.profile.failed' }
   } finally {
     savingName.value = false
   }
@@ -190,26 +248,46 @@ function pickTheme(opt) {
 const currentPw = ref('')
 const newPw = ref('')
 const newPw2 = ref('')
+const currentPwEl = ref(null)
+const newPwEl = ref(null)
+const newPw2El = ref(null)
+const pwEls = { current: currentPwEl, new: newPwEl, repeat: newPw2El }
 const changingPw = ref(false)
-const pwMessage = ref('')
-const pwError = ref('')
+const pwChanged = ref(false)
+const pwProblem = ref(null)
+const pwField = ref(null)
+const pwError = computed(() => problemText(pwProblem.value))
+
+function pwA11y(field) {
+  return pwField.value === field && pwError.value
+    ? { 'aria-invalid': 'true', 'aria-describedby': 'pw-error' }
+    : {}
+}
+
+async function failPassword(problem, field) {
+  pwProblem.value = problem
+  pwField.value = field
+  await nextTick()
+  pwEls[field]?.value?.focus()
+}
 
 async function submitPassword() {
-  pwMessage.value = ''
-  pwError.value = ''
+  pwChanged.value = false
+  pwProblem.value = null
+  pwField.value = null
+  if (!currentPw.value) return failPassword({ key: 'auth.validation.password' }, 'current')
+  if (newPw.value.length < 8) return failPassword({ key: 'errors.weak_password' }, 'new')
   if (newPw.value !== newPw2.value) {
-    pwError.value = 'New passwords do not match.'
-    return
+    return failPassword({ key: 'settings.password.mismatch' }, 'repeat')
   }
   changingPw.value = true
   try {
     await changePassword(currentPw.value, newPw.value)
     currentPw.value = newPw.value = newPw2.value = ''
-    pwMessage.value = 'Password changed. Other sessions were signed out.'
+    pwChanged.value = true
   } catch (e) {
-    if (e?.status === 403) pwError.value = 'Current password is incorrect.'
-    else if (e?.status === 422) pwError.value = 'New password must be at least 8 characters.'
-    else pwError.value = 'Could not change the password. Please try again.'
+    const field = { wrong_password: 'current', weak_password: 'new' }[e?.code] || null
+    await failPassword({ err: e, fallback: 'settings.password.failed' }, field)
   } finally {
     changingPw.value = false
   }
@@ -219,7 +297,8 @@ async function submitPassword() {
 const showDelete = ref(false)
 const deleteConfirm = ref('')
 const deleting = ref(false)
-const deleteError = ref('')
+const deleteProblem = ref(null)
+const deleteError = computed(() => problemText(deleteProblem.value))
 const deleteTriggerBtn = ref(null)
 const deleteInputEl = ref(null)
 const cancelBtnEl = ref(null)
@@ -227,7 +306,7 @@ const confirmBtnEl = ref(null)
 
 function openDeleteModal() {
   deleteConfirm.value = ''
-  deleteError.value = ''
+  deleteProblem.value = null
   showDelete.value = true
   nextTick(() => deleteInputEl.value?.focus())
 }
@@ -236,7 +315,7 @@ function closeDeleteModal() {
   if (deleting.value) return
   showDelete.value = false
   deleteConfirm.value = ''
-  deleteError.value = ''
+  deleteProblem.value = null
   nextTick(() => deleteTriggerBtn.value?.focus())
 }
 
@@ -261,8 +340,16 @@ function onModalKeydown(e) {
 }
 
 async function confirmDelete() {
+  deleteProblem.value = null
+  const empty = auth.user?.has_password ? !deleteConfirm.value : !deleteConfirm.value.trim()
+  if (empty) {
+    deleteProblem.value = {
+      key: auth.user?.has_password ? 'auth.validation.password' : 'auth.validation.email',
+    }
+    deleteInputEl.value?.focus()
+    return
+  }
   deleting.value = true
-  deleteError.value = ''
   const body = auth.user?.has_password
     ? { password: deleteConfirm.value }
     : { confirm_email: deleteConfirm.value }
@@ -271,9 +358,7 @@ async function confirmDelete() {
     auth.user = null
     router.push('/')
   } catch (e) {
-    if (e?.status === 403) deleteError.value = 'Password is incorrect.'
-    else if (e?.status === 400) deleteError.value = 'Email confirmation does not match.'
-    else deleteError.value = 'Could not delete the account. Please try again.'
+    deleteProblem.value = { err: e, fallback: 'settings.delete.failed' }
   } finally {
     deleting.value = false
   }
