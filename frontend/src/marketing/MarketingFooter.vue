@@ -4,23 +4,23 @@
       <div class="foot-grid">
         <div class="foot-brand">
           <router-link class="brand" to="/" style="margin-bottom: 0">
-            <HandMark :size="30" :radius="9" />
+            <HandMark :size="30" :radius="9" solid />
             <span class="name">Humanitaria</span>
           </router-link>
           <p>Answers from the humanitarian record, with the source attached.</p>
         </div>
         <div class="foot-col">
           <h5>Product</h5>
-          <router-link :to="{ path: '/', hash: '#features' }">Features</router-link>
-          <router-link :to="{ path: '/', hash: '#citations' }">Citations</router-link>
-          <router-link :to="{ path: '/', hash: '#sources' }">Sources</router-link>
+          <router-link :to="{ path: '/', hash: '#workflows' }">Chat and reports</router-link>
+          <router-link :to="{ path: '/', hash: '#dashboards' }">Dashboards</router-link>
+          <router-link :to="{ path: '/', hash: '#coverage' }">Coverage</router-link>
         </div>
         <div class="foot-col">
           <h5>Use cases</h5>
-          <router-link :to="{ path: '/', hash: '#uses' }">M&amp;E teams</router-link>
-          <router-link :to="{ path: '/', hash: '#uses' }">Organizations</router-link>
-          <router-link :to="{ path: '/', hash: '#uses' }">Researchers</router-link>
-          <router-link :to="{ path: '/', hash: '#uses' }">Journalists</router-link>
+          <router-link :to="{ path: '/', hash: '#audiences' }">M&amp;E teams</router-link>
+          <router-link :to="{ path: '/', hash: '#audiences' }">Organizations</router-link>
+          <router-link :to="{ path: '/', hash: '#audiences' }">Researchers</router-link>
+          <router-link :to="{ path: '/', hash: '#audiences' }">Journalists</router-link>
         </div>
         <div class="foot-col">
           <h5>Account</h5>

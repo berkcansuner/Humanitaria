@@ -2,7 +2,7 @@
   <header class="nav">
     <div class="wrap nav-in">
       <router-link class="brand" to="/">
-        <HandMark :size="34" :radius="11" />
+        <HandMark :size="34" :radius="11" solid />
         <span class="name">Humanitaria</span>
       </router-link>
       <nav class="nav-links">

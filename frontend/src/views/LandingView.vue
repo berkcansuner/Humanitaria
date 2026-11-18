@@ -65,67 +65,10 @@
       <FlowCards />
       <DashboardPreview />
 
-      <!-- FEATURES -->
-      <section id="features" class="section">
-        <div class="wrap">
-          <div class="section-head">
-            <h2>Built for people who need the source as much as the answer.</h2>
-            <p>
-              There's no query syntax to learn. You ask, and the answer comes back with its sources
-              attached.
-            </p>
-          </div>
-          <dl class="features">
-            <div class="feature">
-              <dt>Ask in plain language</dt>
-              <dd>
-                Ask the way you'd ask a colleague. Humanitaria picks out the country, sector and
-                dates you mean, and if the question is too broad it asks you to narrow it down.
-              </dd>
-            </div>
-            <div class="feature">
-              <dt>Cited, source-grounded answers</dt>
-              <dd>
-                Answers are written only from the reports Humanitaria retrieves, and each statement
-                points to the one it came from. If no report matches, it tells you instead of
-                guessing.
-              </dd>
-            </div>
-            <div class="feature">
-              <dt>Situation reports in one step</dt>
-              <dd>
-                Pick a country, sector, period and language. Humanitaria reads the matching reports
-                and writes a structured M&amp;E brief with the same numbered citations. Briefs are
-                saved to your account, and you can export them as PDF.
-              </dd>
-            </div>
-            <div class="feature">
-              <dt>Updated every day</dt>
-              <dd>
-                The index holds the last twelve months of ReliefWeb and adds new reports daily. Ask
-                about something older and Humanitaria will tell you it's outside that window.
-              </dd>
-            </div>
-          </dl>
-        </div>
-      </section>
-
-      <!-- SOURCES STRIP -->
-      <section id="sources" class="strip">
-        <div class="marquee">
-          <div class="marquee-track">
-            <div class="marquee-group">
-              <span v-for="(s, i) in marqueeSources" :key="'a' + i">{{ s }}</span>
-            </div>
-            <div class="marquee-group" aria-hidden="true">
-              <span v-for="(s, i) in marqueeSources" :key="'b' + i">{{ s }}</span>
-            </div>
-          </div>
-        </div>
-      </section>
+      <CoverageStats />
 
       <!-- USE CASES -->
-      <section id="uses" class="section">
+      <section id="audiences" class="section audiences">
         <div class="wrap">
           <div class="section-head">
             <h2>For people who have to cite what they write.</h2>
@@ -164,7 +107,7 @@
       </section>
 
       <!-- CTA -->
-      <section class="section" style="padding-top: 8px">
+      <section class="section closing">
         <div class="wrap">
           <div class="cta">
             <h2>Spend your time on the evidence.</h2>
@@ -173,7 +116,7 @@
               tracking.
             </p>
             <div class="cta-btns">
-              <router-link class="btn btn-onink" to="/signup">Sign up free</router-link>
+              <router-link class="btn btn-onink" to="/signup">Start free</router-link>
               <router-link class="btn btn-onink ghost" to="/login">Log in</router-link>
             </div>
           </div>
@@ -195,6 +138,7 @@ import MarketingFooter from '../marketing/MarketingFooter.vue'
 import HeroComposite from '../marketing/HeroComposite.vue'
 import FlowCards from '../marketing/FlowCards.vue'
 import DashboardPreview from '../marketing/DashboardPreview.vue'
+import CoverageStats from '../marketing/CoverageStats.vue'
 import coverage from '../marketing/data/coverage.json'
 
 const reportsLabel = coverage.reports.toLocaleString('en-US')
@@ -238,31 +182,4 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => mm?.revert())
-
-const marqueeSources = [
-  'OCHA',
-  'ReliefWeb',
-  'WHO',
-  'UNHCR',
-  'IOM',
-  'WFP',
-  'UNICEF',
-  'IPC',
-  'OCHA',
-  'ReliefWeb',
-  'WHO',
-  'UNHCR',
-  'IOM',
-  'WFP',
-  'UNICEF',
-  'IPC',
-  'OCHA',
-  'ReliefWeb',
-  'WHO',
-  'UNHCR',
-  'IOM',
-  'WFP',
-  'UNICEF',
-  'IPC',
-]
 </script>
