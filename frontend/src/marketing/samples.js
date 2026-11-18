@@ -16,7 +16,7 @@ const REPORTS = { en: reportEn, tr: reportTr }
 // sentence after it, with their own citations ([1] and [2]).
 const PASSAGES = {
   en: ['An estimated 1,803,441', 'reduced or halted'],
-  tr: ["Suriye'de 8 Aralık 2024", 'geri dönüş yapmıştır'],
+  tr: ['Güncel verilere göre', 'geri dönüş yapmıştır'],
 }
 
 export const sampleAnswer = (locale) => ANSWERS[locale] ?? ANSWERS.en

@@ -423,9 +423,21 @@ describe('passageSources', () => {
 })
 
 describe('the workflow chat sample', () => {
+  it('opens the quote at its first words, not at the end of the sentence before', () => {
+    const parts = [
+      { text: 'Earlier sentence' },
+      { cite: 3 },
+      { text: '. \n\nThe figure is 12' },
+      { cite: 1 },
+    ]
+    expect(passage(parts.slice(2), 'The figure', 'is 12')).toEqual([
+      { text: 'The figure is 12' },
+      { cite: 1 },
+    ])
+  })
   it('quotes the Syria answer from its first figure, in each language', () => {
     expect(samplePassage('en')[0].text.startsWith('An estimated 1,803,441')).toBe(true)
-    expect(samplePassage('tr')[0].text.startsWith("Suriye'de 8 Aralık 2024")).toBe(true)
+    expect(samplePassage('tr')[0].text.startsWith('Güncel verilere göre')).toBe(true)
   })
 })
 

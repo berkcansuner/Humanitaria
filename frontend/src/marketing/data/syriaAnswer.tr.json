@@ -2,31 +2,34 @@
  "question": "Aralık 2024'ten bu yana kaç Suriyeli mülteci ve ülke içinde yerinden edilmiş kişi evine döndü ve nerelere dönüyorlar?",
  "parts": [
   {
-   "text": "Suriye'de 8 Aralık 2024'ten bu yana geçen sürede (2026 Ekim ayı itibarıyla) tahmini 1.803.441 Suriyeli mülteci evine geri dönmüştür"
-  },
-  {
-   "cite": 1
-  },
-  {
-   "text": ". Bunun yanı sıra, Kasım 2025 sonu itibarıyla aynı dönemde yaklaşık 1,9 milyon ülke içinde yerinden edilmiş kişi (IDP) menşe bölgelerine veya alternatif destinasyonlara geri dönüş yapmıştır"
+   "text": "Suriye'de Aralık 2024'ten bu yana yaşanan siyasi geçiş ve gelişmelerin ardından milyonlarca mülteci ve yerinden edilmiş kişi evlerine dönmektedir"
   },
   {
    "cite": 2
   },
   {
-   "text": ". \n\nGeri dönüşler Suriye'nin dört bir yanına gerçekleşmekte olup, mültecilerin ve yerinden edilenlerin en çok gitmek istediği ana hedef vilayetler Halep, Rakka, Şam Kırsalı, İdlib, Deyrizor, Dera ve Humus'tur"
+   "cite": 4
+  },
+  {
+   "text": ". \n\nGüncel verilere göre, 8 Aralık 2024'ten bu yana tahmini 1.803.441 Suriyeli ülkesine geri dönmüştür"
+  },
+  {
+   "cite": 1
+  },
+  {
+   "text": ". Mültecilerin yanı sıra, aynı dönemde tahmini 1,9 milyon ülke içinde yerinden edilmiş kişi (IDP) de kendi köken bölgelerine veya alternatif yerleşim yerlerine geri dönüş yapmıştır"
+  },
+  {
+   "cite": 2
+  },
+  {
+   "text": ".\n\nSuriyeliler ülkenin tüm bölgelerine dönüş yapmakta olup, geri dönüşlerde hedef alınan ana valilikler Halep (Aleppo), Rakka (Ar-Raqqa), Şam Kırsalı (Rural Damascus), İdlib (Idleb), Deyrizor (Deir-ez-Zor), Dera (Dar’a) ve Humus'tur"
   },
   {
    "cite": 3
   },
   {
-   "text": ". Ayrıca Birleşmiş Milletler Mülteciler Yüksek Komiserliği (BMMYK) Rakka, El-Haseke, Deyrizor, Dera, Halep ve Tartus'taki geri dönen hanelere yönelik destek çalışmalarını sürdürmektedir"
-  },
-  {
-   "cite": 3
-  },
-  {
-   "text": ". \n\n*(Bu yanıttaki bilgiler, 2024 Aralık ile 2026 Ekim ayları arasındaki dönemi kapsayan belgelere dayanmaktadır.)*"
+   "text": "."
   }
  ],
  "sources": [
@@ -50,6 +53,13 @@
    "meta": "UN High Commissioner for Refugees · Syrian Arab Republic",
    "date": "2026-03-29",
    "url": "https://reliefweb.int/report/syrian-arab-republic/unhcr-syria-flash-update-middle-east-situation-27-march-2026"
+  },
+  {
+   "n": 4,
+   "title": "Coming Home: One Year Into Syria’s Transition",
+   "meta": "UN High Commissioner for Refugees · Syrian Arab Republic",
+   "date": "2025-12-11",
+   "url": "https://reliefweb.int/report/syrian-arab-republic/coming-home-one-year-syrias-transition"
   }
  ],
  "generated": "2026-11-18"

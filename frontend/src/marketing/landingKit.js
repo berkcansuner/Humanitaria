@@ -288,7 +288,8 @@ export function passage(parts, from, to) {
   let end = last + 1
   while (parts[end]?.cite !== undefined) end++
   const out = parts.slice(start, end)
-  out[0] = { ...out[0], text: out[0].text.trimStart() }
+  // The quote opens at `from`, not at the tail of the sentence before it.
+  out[0] = { ...out[0], text: out[0].text.slice(out[0].text.indexOf(from)) }
   return out
 }
 
