@@ -208,3 +208,17 @@ export function passageSources(parts, sources) {
     newest: cited.map((s) => s.date).sort().at(-1),
   }
 }
+
+// A generated sentence's [n] markers as chip parts, in the hero answer's shape:
+// 'Out of service [3].' -> [{ text: 'Out of service' }, { cite: 3 }, { text: '.' }].
+export function citedParts(text) {
+  const parts = []
+  let last = 0
+  for (const m of text.matchAll(/\s*\[(\d+)\]/g)) {
+    if (m.index > last) parts.push({ text: text.slice(last, m.index) })
+    parts.push({ cite: Number(m[1]) })
+    last = m.index + m[0].length
+  }
+  if (last < text.length) parts.push({ text: text.slice(last) })
+  return parts
+}

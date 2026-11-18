@@ -19,6 +19,7 @@ import {
   nearestIndex,
   passage,
   passageSources,
+  citedParts,
 } from './landingKit.js'
 
 afterEach(() => {
@@ -281,5 +282,22 @@ describe('the workflow chat sample', () => {
       publishers: ['OCHA', 'IOM'],
       newest: '2026-11-06',
     })
+  })
+})
+
+describe('citedParts', () => {
+  it('splits [n] markers into chips, dropping the space before each marker', () => {
+    expect(citedParts('Out of service [3], while up to 40 per cent [6][7].')).toEqual([
+      { text: 'Out of service' },
+      { cite: 3 },
+      { text: ', while up to 40 per cent' },
+      { cite: 6 },
+      { cite: 7 },
+      { text: '.' },
+    ])
+  })
+
+  it('keeps text without markers whole', () => {
+    expect(citedParts('No citation here.')).toEqual([{ text: 'No citation here.' }])
   })
 })
