@@ -3,7 +3,14 @@ import { onBeforeUnmount, onMounted, useTemplateRef } from 'vue'
 import { gsap } from 'gsap'
 import coverage from './data/coverage.json'
 import CoverageMap from './CoverageMap.vue'
-import { countUp, dayLabel, mapLabels, onVisible, prefersReducedMotion, project } from './landingKit.js'
+import {
+  countUp,
+  dayLabel,
+  mapLabels,
+  onVisible,
+  prefersReducedMotion,
+  project,
+} from './landingKit.js'
 
 const grouped = (n) => n.toLocaleString('en-US')
 const stats = [
@@ -37,7 +44,11 @@ onMounted(() => {
     root.value.querySelectorAll('[data-count]').forEach((el) => {
       const to = Number(el.dataset.count)
       el.textContent = '0'
-      stops.push(onVisible(el, () => countUp(el, to, { duration: 1.6, format: (v) => grouped(Math.round(v)) })))
+      stops.push(
+        onVisible(el, () =>
+          countUp(el, to, { duration: 1.6, format: (v) => grouped(Math.round(v)) }),
+        ),
+      )
     })
   }, root.value)
 })
@@ -72,9 +83,7 @@ onBeforeUnmount(() => {
               >{{ l.name }} <b>{{ l.reports }}</b></span
             >
           </div>
-          <figcaption>
-            Each dot is a country, sized by its indexed reports.
-          </figcaption>
+          <figcaption>Each dot is a country, sized by its indexed reports.</figcaption>
         </figure>
       </div>
       <p class="stats-src">ReliefWeb · as of {{ asOf }}</p>

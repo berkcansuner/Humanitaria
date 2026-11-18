@@ -328,8 +328,18 @@ onBeforeUnmount(() => mm?.revert())
   margin-top: 10px;
 }
 .hc-answer.is-scrolled {
-  -webkit-mask-image: linear-gradient(transparent, #000 32px, #000 calc(100% - 60px), transparent calc(100% - 12px));
-  mask-image: linear-gradient(transparent, #000 32px, #000 calc(100% - 60px), transparent calc(100% - 12px));
+  -webkit-mask-image: linear-gradient(
+    transparent,
+    #000 32px,
+    #000 calc(100% - 60px),
+    transparent calc(100% - 12px)
+  );
+  mask-image: linear-gradient(
+    transparent,
+    #000 32px,
+    #000 calc(100% - 60px),
+    transparent calc(100% - 12px)
+  );
 }
 
 .hc-answer:focus-visible {

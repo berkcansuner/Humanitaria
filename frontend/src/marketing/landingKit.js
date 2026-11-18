@@ -35,9 +35,7 @@ export function pulseRadius(reports, max) {
 
 // Points the coverage map can draw: finite coordinates and at least one report.
 export function drawablePoints(points) {
-  return points.filter(
-    (p) => Number.isFinite(p.lat) && Number.isFinite(p.lon) && p.reports > 0,
-  )
+  return points.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lon) && p.reports > 0)
 }
 
 // SVG path `d` for [x, y] points; x spans the points' own range over `w`.

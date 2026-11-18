@@ -81,7 +81,8 @@ const summary = computed(
       </template>
     </div>
     <div class="wc-axis" aria-hidden="true">
-      <span>{{ monthLabel(first[0]) }}</span><span>{{ monthLabel(last[0]) }}</span>
+      <span>{{ monthLabel(first[0]) }}</span
+      ><span>{{ monthLabel(last[0]) }}</span>
     </div>
   </figure>
 </template>

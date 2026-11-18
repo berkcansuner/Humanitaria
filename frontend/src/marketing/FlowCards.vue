@@ -5,7 +5,14 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import sudan from './data/sudan.json'
 import meReport from './data/meReport.json'
 import { parts, sources } from './haitiAnswer.js'
-import { citedParts, dayLabel, formatCompact, monthLabel, passage, passageSources } from './landingKit.js'
+import {
+  citedParts,
+  dayLabel,
+  formatCompact,
+  monthLabel,
+  passage,
+  passageSources,
+} from './landingKit.js'
 import { citeLabel, revealSource } from '../utils/sources.js'
 import WindowChart from './WindowChart.vue'
 
@@ -153,12 +160,7 @@ onBeforeUnmount(() => mm?.revert())
               >
             </p>
             <ol class="fu-sources" aria-label="Sources">
-              <li
-                v-for="src in reportSources"
-                :key="src.n"
-                class="source-item"
-                :data-srcid="src.n"
-              >
+              <li v-for="src in reportSources" :key="src.n" class="source-item" :data-srcid="src.n">
                 <span class="fu-src-n">{{ src.n }}</span>
                 <span class="fu-src-body">
                   <a
