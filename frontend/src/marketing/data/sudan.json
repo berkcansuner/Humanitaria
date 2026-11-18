@@ -168,13 +168,13 @@
   "trend_test": {
    "test": "Mann-Kendall trend test, Sen's slope",
    "direction": "decreasing",
-   "slope_per_year": -931171,
-   "p_value": 0.00236,
-   "p_adjusted": 0.0118,
+   "slope_per_year": -1375460,
+   "p_value": 1.3e-09,
+   "p_adjusted": 1.3e-09,
    "significant": true,
-   "n_points": 40,
+   "n_points": 20,
    "period": [
-    "2023-08-31",
+    "2025-01-28",
     "2026-09-30"
    ]
   }

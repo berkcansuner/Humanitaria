@@ -1,4 +1,6 @@
-from scripts.build_landing_snapshot import coverage_points, top_regions, trend_test
+from scripts.build_landing_snapshot import (
+    coverage_points, peak_window_trend, top_regions, trend_test,
+)
 
 
 def _country(iso3, name, lat, lon):
@@ -59,3 +61,16 @@ def test_trend_test_keeps_the_report_trend_result():
         "n_points": 31,
         "period": ["2023-08-31", "2026-09-30"],
     }
+
+
+def test_peak_window_trend_tests_only_the_series_from_its_peak():
+    periods = [f"2024-{m:02d}-28" for m in range(1, 13)] + [f"2025-{m:02d}-28" for m in range(1, 10)]
+    values = [100 + 10 * i for i in range(12)] + [300 - 12 * i for i in range(9)]  # peak 2025-01
+    out = peak_window_trend(periods, values, min_points=4)
+    assert out["period"] == ["2025-01-28", "2025-09-28"]
+    assert out["n_points"] == 9
+    assert out["direction"] == "decreasing"
+    assert out["slope_per_year"] < 0
+    # a single test: the Holm adjustment leaves p as it is
+    assert out["p_adjusted"] == out["p_value"]
+    assert out["significant"] is True

@@ -73,6 +73,25 @@ def trend_test(stat: dict) -> dict:
     }
 
 
+def peak_window_trend(periods: list[str], values: list[float], min_points: int) -> dict:
+    """The technical report's trend test (Sen slope + Mann-Kendall) on the series from
+    its peak to its last point. One test, so the Holm adjustment leaves p unchanged."""
+    from analytics.stat_tests import ALPHA, holm, trend
+    from analytics.technical_report import _years_since_first
+
+    i = max(range(len(values)), key=values.__getitem__)
+    window_periods, window_values = periods[i:], values[i:]
+    tr = trend(window_values, indicator="IDPs", min_points=min_points,
+               times=_years_since_first(window_periods))
+    (p_adjusted,) = holm([tr.p_value])
+    return trend_test({
+        "direction": tr.direction, "slope": tr.slope, "p_value": tr.p_value,
+        "p_adjusted": p_adjusted, "significant": p_adjusted is not None and p_adjusted < ALPHA,
+        "n_points": tr.n_points, "first_period": window_periods[0],
+        "last_period": window_periods[-1],
+    })
+
+
 def _fetch_countries() -> list[dict]:
     """ReliefWeb countries (full profile carries `location`); iso3 upper-cased."""
     import requests
@@ -157,7 +176,8 @@ def _sudan(db_sudan: dict) -> dict:
         "idps": {"series": [[p[:10], round(v)] for p, v in zip(periods, values)],
                  "credit": _credit(ind, periods[-1], "en"),
                  "pct_change": trend["pct_change"],
-                 "trend_test": trend_test(trend)},
+                 "trend_test": peak_window_trend(
+                     periods, values, get_settings().TECHNICAL_REPORT_MIN_POINTS)},
         "regions": top_regions(region["ranking"]),
         "ipc_share": {"value": round(ipc_values[-1], 1), "period": ipc_periods[-1][:10]},
         "funding": [[y, round(v, 2)] for y, v in sorted(funding.items())],

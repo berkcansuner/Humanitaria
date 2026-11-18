@@ -10,11 +10,12 @@ import { citeLabel, revealSource } from '../utils/sources.js'
 
 gsap.registerPlugin(ScrollTrigger)
 
-// The technical report's trend test on the same IDP series the hero card draws.
+// The technical report's trend test on the hero card's IDP series, from its peak on.
 const test = sudan.idps.trend_test
 const slope = `${test.slope_per_year < 0 ? '−' : '+'}${formatCompact(Math.abs(test.slope_per_year))}`
-const testPeriod = `${monthLabel(test.period[0])} – ${monthLabel(test.period[1])}`
-const pAdjusted = test.p_adjusted < 0.001 ? '< 0.001' : `= ${test.p_adjusted}`
+const peakMonth = monthLabel(test.period[0])
+const testPeriod = `${peakMonth} – ${monthLabel(test.period[1])}, from the peak`
+const pValue = test.p_value < 0.001 ? '< 0.001' : String(test.p_value)
 const dtmCredit = `${sudan.idps.credit} · HDX HAPI`
 
 // A passage of the hero's Haiti answer, quoted with its own citations.
@@ -158,9 +159,9 @@ onBeforeUnmount(() => mm?.revert())
             <p class="fu-head">Sudan · Technical monitoring · IDPs</p>
             <p class="fu-meta">{{ testPeriod }}</p>
             <p class="fu-finding">
-              Internally displaced people show a
+              Since their {{ peakMonth }} peak, internally displaced people show a
               {{ test.significant ? 'significant' : 'non-significant' }} {{ test.direction }} trend
-              (Holm-adjusted p {{ pAdjusted }}).
+              (p&nbsp;{{ pValue }}).
             </p>
             <dl class="fu-test">
               <div>
@@ -169,7 +170,7 @@ onBeforeUnmount(() => mm?.revert())
               </div>
               <div>
                 <dt>Mann-Kendall p</dt>
-                <dd>{{ test.p_value }}</dd>
+                <dd>{{ pValue }}</dd>
               </div>
               <div>
                 <dt>Points</dt>
