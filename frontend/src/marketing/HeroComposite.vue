@@ -242,13 +242,23 @@ onBeforeUnmount(() => mm?.revert())
    frame the chat card above and to its right; it fades out before the copy. */
 .hc-map {
   position: absolute;
-  left: -22%;
+  left: 12%;
   width: 160%;
-  top: -15%;
+  top: -4%;
   aspect-ratio: 360 / 140;
   pointer-events: none;
-  -webkit-mask-image: radial-gradient(ellipse 64% 62% at 62% 50%, #000 50%, transparent);
-  mask-image: radial-gradient(ellipse 64% 62% at 62% 50%, #000 50%, transparent);
+  -webkit-mask-image: radial-gradient(ellipse 64% 62% at 60% 50%, #000 50%, transparent);
+  mask-image: radial-gradient(ellipse 64% 62% at 60% 50%, #000 50%, transparent);
+}
+
+/* Narrower desktops: the card covers more of the map, so slide it right to
+   keep Africa and the Middle East peeking out beside the chat card. */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .hc-map {
+    left: 20%;
+    -webkit-mask-image: radial-gradient(ellipse 64% 62% at 50% 50%, #000 50%, transparent);
+    mask-image: radial-gradient(ellipse 64% 62% at 50% 50%, #000 50%, transparent);
+  }
 }
 
 /* The trend card overlaps only the chat card's caption strip, whose text

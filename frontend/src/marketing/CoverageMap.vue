@@ -1,9 +1,11 @@
 <script setup>
 import { onMounted, onBeforeUnmount, ref } from 'vue'
 import coverage from './data/coverage.json'
+import land from './data/land.json'
 import { project, pulseRadius, prefersReducedMotion, drawablePoints } from './landingKit.js'
 
 const BASE = '#C9D3DE'
+const LAND = '#D5DDE7' // quieter than BASE so country points stay the foreground
 const PULSE = '10, 143, 136' // brand-chart #0A8F88
 const PERIOD = 4200 // ms per pulse cycle
 
@@ -18,6 +20,7 @@ const phases = points.map((p) => {
 })
 
 let ctx = null
+let landLayer = null // offscreen canvas: static land dots, redrawn only on resize
 let width = 0
 let height = 0
 let frame = 0
@@ -26,8 +29,29 @@ let resizeObserver = null
 let viewObserver = null
 const reduced = prefersReducedMotion()
 
+function drawLandLayer(dpr) {
+  landLayer ??= document.createElement('canvas')
+  landLayer.width = Math.round(width * dpr)
+  landLayer.height = Math.round(height * dpr)
+  const lctx = landLayer.getContext('2d')
+  if (!lctx) return
+  lctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  lctx.fillStyle = LAND
+  const r = Math.max(0.8, (land.step / 360) * width * 0.3)
+  lctx.beginPath()
+  for (const [lat, lon] of land.cells) {
+    const { x, y } = project(lat, lon, width, height)
+    lctx.moveTo(x + r, y)
+    lctx.arc(x, y, r, 0, Math.PI * 2)
+  }
+  lctx.fill()
+}
+
 function draw(now) {
   ctx.clearRect(0, 0, width, height)
+  if (landLayer?.width) {
+    ctx.drawImage(landLayer, 0, 0, width, height)
+  }
   points.forEach((p, i) => {
     const { x, y } = project(p.lat, p.lon, width, height)
     ctx.fillStyle = BASE
@@ -72,6 +96,7 @@ function resize() {
   el.width = Math.round(width * dpr)
   el.height = Math.round(height * dpr)
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  drawLandLayer(dpr)
   draw(performance.now())
 }
 
@@ -93,6 +118,7 @@ onBeforeUnmount(() => {
   stop()
   resizeObserver?.disconnect()
   viewObserver?.disconnect()
+  landLayer = null
   document.removeEventListener('visibilitychange', sync)
 })
 </script>
