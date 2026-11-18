@@ -46,7 +46,8 @@ _PLACEHOLDER = {
 }
 
 _NUMBER = re.compile(
-    r"(?<![\w.,])(\d+(?:[.,]\d+)*)(?:\s*(milyon|million|milyar|billion|bin|thousand)\b)?",
+    r"(?<![\w.,])(\d+(?:[.,]\d+)*)"
+    r"(?:\s*(milyon|million|milyar|billion|bin|thousand)(?:['’]?[a-zçğıöşüâîû]*)?\b)?",
     re.IGNORECASE)
 _SCALE = {"milyon": 1e6, "million": 1e6, "milyar": 1e9, "billion": 1e9,
           "bin": 1e3, "thousand": 1e3}
@@ -138,7 +139,8 @@ _EN_CHANGE_BEFORE = re.compile(
 _EN_CHANGE_AFTER = re.compile(
     r"^(?:declines?|declined|drops?|dropped|falls?|fell|increases?|increased|rises?|rose|"
     r"reductions?|decreases?|decreased|gains?|growth|jumps?|jumped|cuts?|lower|higher|fewer|more|"
-    r"less|down|up|surges?|surged|changes?|changed)$", re.IGNORECASE)
+    r"less|down|up|surges?|surged|changes?|changed|improvements?|deteriorations?|worsening|"
+    r"loss(?:es)?)$", re.IGNORECASE)
 _EN_CHANGE_OF = re.compile(
     r"\b(?:decline|drop|fall|increase|rise|reduction|decrease|growth|change|jump|cut)s?\s+of\s*$",
     re.IGNORECASE)
@@ -148,11 +150,27 @@ _EN_CHANGE_OF = re.compile(
 _TR_LEVEL_SUFFIX = re.compile(r"^['’](?:y?[ae]|[dt][ae]n?|s[ıi]|[ıiuü])\b", re.IGNORECASE)
 # Whole Turkish change words, by their verb forms: "artık" (any more), "düşük" (low),
 # "büyük" (big), "gerilim" (tension), "azami" (maximum), "insani" (humanitarian) are not.
-_TR_CHANGE = re.compile(
-    r"^(?:azal\w*|art(?:tı|tığı|mış|ar|arak|acak|ış\w*|ma\w*|tır\w*)|"
-    r"düş(?:tü|tüğü|müş|er|erek|ecek|üş\w*|me\w*)|yüksel\w*|gerile\w*|eksil\w*|"
-    r"büyü(?:dü|düğü|müş|r|yerek|yecek|me\w*)|küçül\w*|kaybe[dt]\w*|"
-    r"in(?:di|diği|miş|er|erek|ecek|me\w*))$", re.IGNORECASE)
+# A verb's forms, after its stem: past (arttı, düştüğü), evidential and perfect (artmış,
+# düşmüştür, azalmıştı), progressive (artıyor, büyüyor), aorist (artar, azalır), future
+# (artacak, büyüyecek), converbs (artarak, düşüp), verbal nouns that name the change
+# (artış, düşüş, azalma, gerileme, düşmektedir) and participles (artan, düşen). The
+# adjectives and nouns that share a stem are not among them: artık, artı, düşük, büyük,
+# gerilim, azami, insani, inanç.
+_TR_SUFFIXES = (r"[dt][ıiuü]\w*|m[ıiuü]ş\w*|[ıiuü]?yor\w*|(?:[ae]|[ıiuü])?r(?:l[ae]r|ken|d[ıi]r)?|"
+                r"y?[ae]c[ae][kğ]\w*|y?[ae]r[ae]k|y?[ıiuü]p|m[ae]\w*|y?[ıiuü]ş\w*")
+_TR_PARTICIPLE = r"|y?[ae]n(?:l[ae]r\w*)?"
+
+
+def _tr_verbs(*stems: str, participle: bool = True) -> str:
+    suffixes = _TR_SUFFIXES + (_TR_PARTICIPLE if participle else "")
+    return "|".join(f"{stem}(?:{suffixes})" for stem in stems)
+
+
+# "in-" (to come down) takes no participle: "inan…" is to believe.
+_TR_RISE_VERBS = _tr_verbs("art", "yüksel", "büyü", "çık", "katlan")
+_TR_FALL_VERBS = (_tr_verbs("azal", "düş", "gerile", "eksil", "küçül", "kaybet", "kaybed")
+                  + "|" + _tr_verbs("in", participle=False) + r"|geriliyor\w*")
+_TR_CHANGE = re.compile(rf"^(?:{_TR_RISE_VERBS}|{_TR_FALL_VERBS})$", re.IGNORECASE)
 _TR_FILLER = {"bir", "oranında", "civarında", "kadar", "dolayında", "lik", "lık", "luk", "lük"}
 
 # Multiplicative words, with the factor they claim. Supported for a count when the
@@ -163,7 +181,8 @@ _MULTIPLIERS = [
     (0.5, re.compile(r"\bhalv(?:ed|es|ing|e)\b|\bin half\b|\bby half\b(?!\s+(?:of|the)\b)|"
                      r"\bhalf as\b|\b(?:fell|fallen|dropped|declined|decreased|shrank|shrunk|cut|"
                      r"reduced|down)\s+(?:by|to)\s+(?:(?:about|around|nearly|almost|roughly|some|"
-                     r"just over|just under|more than|less than)\s+)?(?:a\s+)?half\b",
+                     r"just over|just under|more than|less than)\s+)?(?:a\s+)?half\b|"
+                     r"\bhalf\s+(?:of\s+)?what\s+it\s+was\b|\b(?:now|only|just)\s+half\b",
                      re.IGNORECASE)),
     (2.0, re.compile(r"\bdoubl(?:ed|es|ing)\b|\btwo-?fold\b|\btwice as\b|"
                      r"\bikiye\s+katla\w*|\biki\s+kat\w*", re.IGNORECASE)),
@@ -210,8 +229,9 @@ def _is_en_change(sentence: str, start: int, end: int) -> bool:
     if _EN_CHANGE_OF.search(" ".join(before)):
         return True
     after = [w.strip("(),;:.") for w in sentence[end:].split()]
-    if len(after) > 1 and after[0].lower() in ("up", "down") and after[1].lower() == "from":
-        return False        # "32.0% (down from 47.0%)": two levels
+    if len(after) > 1 and after[0].lower() in ("up", "down") and (
+            after[1].lower() == "from" or _readings(after[1].lstrip("+-"))):
+        return False        # "32.0% (down from 47.0%)", "32.0%, down 21.0 points": not this one
     return bool(after) and bool(_EN_CHANGE_AFTER.match(after[0]))
 
 
@@ -254,13 +274,24 @@ _EN_RISE = re.compile(r"\b(?:rose|risen|rises|rising|increased?|increases|increa
 _EN_FALL = re.compile(r"\b(?:fell|fallen|falls|falling|dropped|drops|dropping|declined?|declines|"
                       r"declining|decreased?|decreases|decreasing|shrank|shrunk|reduced|reduction|"
                       r"down|lower|fewer|eased|plunged|slid|lost|cut)\b", re.IGNORECASE)
-_TR_RISE = re.compile(r"^(?:art(?:tı|tığı|mış|ar|arak|acak|ış\w*|ma\w*|tır\w*)|yüksel\w*|"
-                      r"büyü(?:dü|düğü|müş|r|yerek|yecek|me\w*))$", re.IGNORECASE)
-_TR_FALL = re.compile(r"^(?:azal\w*|düş(?:tü|tüğü|müş|er|erek|ecek|üş\w*|me\w*)|gerile\w*|"
-                      r"eksil\w*|küçül\w*|kaybe[dt]\w*|in(?:di|diği|miş|er|erek|ecek|me\w*))$",
-                      re.IGNORECASE)
+_TR_RISE = re.compile(rf"^(?:{_TR_RISE_VERBS})$", re.IGNORECASE)
+_TR_FALL = re.compile(rf"^(?:{_TR_FALL_VERBS})$", re.IGNORECASE)
 _PP_NUMBER = re.compile(r"(?<![\w.,])(\d+(?:[.,]\d+)*)\s*(?:percentage[- ]points?|yüzde\s+puan|puan)",
                         re.IGNORECASE)
+
+
+_SAYS_NOT_COMPARABLE = re.compile(
+    r"not comparable|cannot be compared|can't be compared|karşılaştırılamaz|kıyaslanamaz|"
+    r"karşılaştırılabilir değil", re.IGNORECASE)
+_EN_CHANGE_WORD = re.compile(r"\b(?:changed?|changes|changing)\b", re.IGNORECASE)
+
+
+def _states_change(sentence: str) -> bool:
+    """The sentence says something rose, fell or changed (English or Turkish)."""
+    if _EN_RISE.search(sentence) or _EN_FALL.search(sentence) or _EN_CHANGE_WORD.search(sentence):
+        return True
+    words = [w.strip("(),;:.'’").lower() for w in re.split(r"[\s'’]+", sentence)]
+    return any(_TR_CHANGE.match(w) or w.startswith("değiş") for w in words)
 
 
 def _direction(sentence: str) -> int | None:
@@ -374,11 +405,17 @@ def verify_narrative(text: str, findings, allowed_text: str, language: str) -> N
     profiles = {s.heading: _profile([s.stat_result]) for s in findings.sections}
     whole = _profile([s.stat_result for s in findings.sections])
     whole["share"] = False
+    # Sections whose years are not comparable (different plan lines): a sentence there may
+    # give each year's value, but not a rise, fall or change between them.
+    not_comparable = {s.heading for s in findings.sections if s.stat_result.get("not_comparable")}
 
     def bad(sentence: str, section: str | None) -> bool:
         if not _numbers_ok(sentence, allowed):
             return True
         if not _relative_claim_ok(sentence, profiles.get(section or "", whole)):
+            return True
+        if section in not_comparable and _states_change(sentence) \
+                and not _SAYS_NOT_COMPARABLE.search(sentence):
             return True
         claim = _claim(sentence)
         if claim is None:
