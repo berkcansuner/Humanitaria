@@ -144,3 +144,29 @@ def test_syria_keeps_the_refugees_series(monkeypatch):
     out = snap._syria({"count": 3, "since": "2025-11-18"})
     assert out["refugees"]["series"] == [[p[:10], round(v)] for p, v in zip(periods, values)]
     assert out["trend"]["period"] == ["2021-01-01", "2025-01-01"]
+
+
+def _written_by_main(monkeypatch, *args):
+    """File names main() writes, with every network/DB step stubbed out."""
+    import sys
+
+    import scripts.build_landing_snapshot as script
+    written = []
+    monkeypatch.setattr(script, "_db_figures", lambda: {
+        "counts": {}, "countries": 0, "reports": 0, "publishers": 0, "since": None,
+        "sudan": {}, "syria": {}})
+    monkeypatch.setattr(script, "_fetch_countries", lambda: [])
+    monkeypatch.setattr(script, "_sudan", lambda db: {})
+    monkeypatch.setattr(script, "_syria", lambda db: {})
+    monkeypatch.setattr(script, "_write", lambda name, data: written.append(name))
+    monkeypatch.setattr(sys, "argv", ["build_landing_snapshot.py", *args])
+    script.main()
+    return written
+
+
+def test_default_run_writes_the_files_the_landing_imports(monkeypatch):
+    assert _written_by_main(monkeypatch) == ["coverage.json", "syria.json"]
+
+
+def test_sudan_run_still_available(monkeypatch):
+    assert _written_by_main(monkeypatch, "--country", "SDN") == ["coverage.json", "sudan.json"]

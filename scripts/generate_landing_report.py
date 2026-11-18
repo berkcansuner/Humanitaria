@@ -2,8 +2,8 @@
 
 Runs the report pipeline's own pieces (rag.report_service retrieval, rag.chain's
 report chain, rag.citations) for one situation report and writes an excerpt to
-frontend/src/marketing/data/meReport.json (Sudan · Health · English, the default) or,
-with --language, to meReport.<language>.json: title, type, sector, period, generated
+frontend/src/marketing/data/meReport.<language>.json (by default Syria · Protection and
+Human Rights · English, so meReport.en.json): title, type, sector, period, generated
 date, two Key Findings sentences verbatim with their [n] markers, and the sources
 those sentences cite.
 
@@ -22,10 +22,9 @@ re-excerpts a saved --raw file and costs nothing. Review and commit the file it
 writes. The page's other figures come from scripts/build_landing_snapshot.py instead.
 
 Usage:
-    python scripts/generate_landing_report.py --raw <path.json>          # generate
+    python scripts/generate_landing_report.py --raw <path.json>          # generate (en)
     python scripts/generate_landing_report.py --raw <path.json> --reuse  # re-excerpt only
-    python scripts/generate_landing_report.py --country "Syrian Arab Republic" \\
-        --sector "Protection and Human Rights" --language tr --raw <path.json>
+    python scripts/generate_landing_report.py --language tr --raw <path.json>
 """
 import argparse
 import asyncio
@@ -44,8 +43,8 @@ if str(ROOT) not in sys.path:
 logger = logging.getLogger(__name__)
 
 DATA_DIR = ROOT / "frontend" / "src" / "marketing" / "data"
-OUT = DATA_DIR / "meReport.json"
-COUNTRY, THEME, LANGUAGE, REPORT_TYPE = "Sudan", "Health", "en", "situation"
+COUNTRY, THEME, LANGUAGE = "Syrian Arab Republic", "Protection and Human Rights", "en"
+REPORT_TYPE = "situation"
 MAX_CALLS = 2
 
 _SECTION = re.compile(r"^## +Key Findings\s*$", re.IGNORECASE | re.MULTILINE)
@@ -146,17 +145,16 @@ def main() -> None:
                         help="re-excerpt an existing --raw file without calling the model")
     parser.add_argument("--country", default=COUNTRY, help=f"report country (default {COUNTRY})")
     parser.add_argument("--sector", default=THEME, help=f"report sector/theme (default {THEME})")
-    parser.add_argument("--language", choices=("en", "tr"),
-                        help="report language; writes meReport.<language>.json "
-                             f"(default: {LANGUAGE}, written to meReport.json)")
+    parser.add_argument("--language", choices=("en", "tr"), default=LANGUAGE,
+                        help=f"report language; writes meReport.<language>.json (default {LANGUAGE})")
     parser.add_argument("--max-calls", type=int, choices=(1, 2), default=MAX_CALLS,
                         help="model calls allowed: 2 = one retry if the first call fails")
     parser.add_argument("--dry-run", action="store_true",
                         help="stop after retrieval (no report generated, nothing written)")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
-    language = args.language or LANGUAGE
-    out_path = DATA_DIR / f"meReport.{args.language}.json" if args.language else OUT
+    language = args.language
+    out_path = DATA_DIR / f"meReport.{language}.json"
 
     if args.reuse:
         raw = json.loads(args.raw.read_text(encoding="utf-8"))

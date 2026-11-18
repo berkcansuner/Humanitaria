@@ -2,8 +2,9 @@
 
 Writes the JSON files that the Vue landing imports at build time:
   frontend/src/marketing/data/coverage.json  (indexed reports per country, for the map)
-  frontend/src/marketing/data/sudan.json     (Sudan figures from HDX HAPI, computed in code)
-  frontend/src/marketing/data/syria.json     (Syria figures from HDX HAPI, --country SYR)
+  frontend/src/marketing/data/syria.json     (Syria figures from HDX HAPI, computed in code)
+With --country SDN it writes sudan.json instead of syria.json (the landing no longer
+imports it).
 
 No Gemini calls are made. Database access is SELECT-only: the script opens its own
 read-only connection to DATABASE_URL and never runs rag.db's schema setup (which would
@@ -15,8 +16,8 @@ live one), ReliefWeb and HDX HAPI, so it needs network access and costs no model
 Review and commit the JSON files it writes.
 
 Usage:
-    .venv/Scripts/python scripts/build_landing_snapshot.py                  # coverage + sudan
-    .venv/Scripts/python scripts/build_landing_snapshot.py --country SYR    # syria only
+    .venv/Scripts/python scripts/build_landing_snapshot.py                  # coverage + syria
+    .venv/Scripts/python scripts/build_landing_snapshot.py --country SDN    # coverage + sudan
 """
 import argparse
 import json
@@ -305,20 +306,21 @@ def _write(name: str, data: dict) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--country", choices=(SUDAN, SYRIA), default=SUDAN,
-                        help="SDN (default): coverage.json + sudan.json; SYR: syria.json only")
+    parser.add_argument("--country", choices=(SYRIA, SUDAN), default=SYRIA,
+                        help="SYR (default): coverage.json + syria.json; SDN: coverage.json + "
+                             "sudan.json")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
     db = _db_figures()
-    if args.country == SYRIA:
-        _write("syria.json", _syria(db["syria"]))
-        return
     points = coverage_points(_fetch_countries(), db["counts"])
     coverage = {"generated": date.today().isoformat(), "countries": db["countries"],
                 "reports": db["reports"], "publishers": db["publishers"],
                 "since": db["since"], "points": points}
     _write("coverage.json", coverage)
-    _write("sudan.json", _sudan(db["sudan"]))
+    if args.country == SYRIA:
+        _write("syria.json", _syria(db["syria"]))
+    else:
+        _write("sudan.json", _sudan(db["sudan"]))
 
 
 if __name__ == "__main__":
