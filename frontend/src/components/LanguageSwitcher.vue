@@ -101,7 +101,16 @@ function choose(code) {
   setLocale(code)
   closeList()
   // The locale ref flips synchronously, so this reads in the new language.
-  if (changed) announcement.value = t('lang.changed', { name: current.value.name })
+  if (changed) announce(t('lang.changed', { name: current.value.name }))
+}
+
+// Cleared once read, so a stale sentence never lingers in the live region.
+const ANNOUNCE_MS = 3000
+let clearTimer = null
+function announce(text) {
+  announcement.value = text
+  clearTimeout(clearTimer)
+  clearTimer = setTimeout(() => (announcement.value = ''), ANNOUNCE_MS)
 }
 
 function onListKey(e) {
@@ -140,7 +149,10 @@ function onDocClick(e) {
   if (open.value && rootEl.value && !rootEl.value.contains(e.target)) closeList({ refocus: false })
 }
 onMounted(() => document.addEventListener('click', onDocClick))
-onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
+onBeforeUnmount(() => {
+  document.removeEventListener('click', onDocClick)
+  clearTimeout(clearTimer)
+})
 </script>
 
 <style scoped>

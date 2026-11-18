@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createApp, nextTick } from 'vue'
 import LanguageSwitcher from './LanguageSwitcher.vue'
 import { i18n } from '../i18n/index.js'
@@ -82,6 +82,26 @@ describe('LanguageSwitcher', () => {
     const live = host.querySelector('[aria-live="polite"]')
     expect(live.textContent).toContain('Türkçe')
     expect(live.textContent).not.toContain('Language')
+  })
+
+  it('clears the announcement once it has been read, and later changes stay silent', async () => {
+    vi.useFakeTimers()
+    try {
+      await open()
+      options()[1].click()
+      await nextTick()
+      const live = host.querySelector('[aria-live="polite"]')
+      expect(live.textContent).toContain('Türkçe')
+      vi.advanceTimersByTime(5000)
+      await nextTick()
+      expect(live.textContent).toBe('')
+      // A change made elsewhere (the account, another tab) re-renders but announces nothing.
+      setLocale('en', { explicit: false })
+      await nextTick()
+      expect(live.textContent).toBe('')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('Escape closes and returns focus to the button', async () => {
