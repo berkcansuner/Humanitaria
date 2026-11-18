@@ -93,6 +93,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
 
     for ind in indicators_for(theme):
         name = ind.name(language)
+        sections_before = len(sections)
         try:
             rows = fetch_rows(ind.endpoint, iso3,
                               extra_params=ind.query_params, admin_level=ind.admin_level,
@@ -236,6 +237,10 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
             gaps.append(f"{name}: analiz hatası")
             used[:] = [u for u in used if u["key"] != ind.key]   # not in the report: no source
             continue
+        if len(sections) == sections_before:
+            # Only a gap line ("All sectors" keeps a short series as one): not a source of
+            # anything the report shows.
+            used[:] = [u for u in used if u["key"] != ind.key]
 
     # İndikatörler-arası korelasyon: ortak dönemi olan indikatör çiftleri.
     labels = list(national_by_label.keys())

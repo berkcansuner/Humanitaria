@@ -1104,3 +1104,16 @@ def test_an_indicator_whose_analysis_failed_is_not_a_source():
         f = compute_findings("AFG", "2025-01-01", "2025-12-31", language="en")
     assert any("analiz hatası" in g for g in f.gaps)
     assert [u["key"] for u in f.data_sources] == []
+
+
+def test_all_sectors_lists_only_indicators_shown_in_a_section(monkeypatch):
+    # "People in need" (three yearly points) is only a gap line under All sectors: it is
+    # not a source of anything the report shows.
+    def rows(ep, params):
+        if params.get("sector_code") == "Intersectoral":
+            return _three_year_pin_rows(ep, {"sector_code": "FSC"})
+        return _yearly_ipc_rows(ep)
+    monkeypatch.setattr("analytics.technical_report.fetch_rows", _recording_fetch([], rows))
+    f = compute_findings("AFG", None, None, language="en", theme=None)
+    assert any("People in need" in g for g in f.gaps)
+    assert [u["key"] for u in f.data_sources] == ["food_security"]
