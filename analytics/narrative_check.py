@@ -238,11 +238,38 @@ def _percent_changes(sentence: str) -> list[float]:
     return out
 
 
-def _matches(value: float, computed: list[float]) -> bool:
+def _matches(value: float, computed: list[float], direction: int | None = None) -> bool:
     """*value* as written equals a computed figure rounded to its decimals (or to a
-    whole number)."""
-    return any(abs(value - abs(c)) <= 0.5 + 1e-9 if value == int(value)
-               else abs(value - abs(c)) <= 0.05 + 1e-9 for c in computed)
+    whole number), and, when the sentence says which way it moved (+1 rise, -1 fall),
+    a figure moving that way."""
+    def close(c):
+        return (abs(value - abs(c)) <= 0.5 + 1e-9 if value == int(value)
+                else abs(value - abs(c)) <= 0.05 + 1e-9)
+    return any(close(c) and (direction is None or c == 0 or (c > 0) == (direction > 0))
+               for c in computed)
+
+
+_EN_RISE = re.compile(r"\b(?:rose|risen|rises|rising|increased?|increases|increasing|grew|grown|"
+                      r"grows|growing|climbed|surged|jumped|gained|up|higher)\b", re.IGNORECASE)
+_EN_FALL = re.compile(r"\b(?:fell|fallen|falls|falling|dropped|drops|dropping|declined?|declines|"
+                      r"declining|decreased?|decreases|decreasing|shrank|shrunk|reduced|reduction|"
+                      r"down|lower|fewer|eased|plunged|slid|lost|cut)\b", re.IGNORECASE)
+_TR_RISE = re.compile(r"^(?:art(?:tı|tığı|mış|ar|arak|acak|ış\w*|ma\w*|tır\w*)|yüksel\w*|"
+                      r"büyü(?:dü|düğü|müş|r|yerek|yecek|me\w*))$", re.IGNORECASE)
+_TR_FALL = re.compile(r"^(?:azal\w*|düş(?:tü|tüğü|müş|er|erek|ecek|üş\w*|me\w*)|gerile\w*|"
+                      r"eksil\w*|küçül\w*|kaybe[dt]\w*|in(?:di|diği|miş|er|erek|ecek|me\w*))$",
+                      re.IGNORECASE)
+_PP_NUMBER = re.compile(r"(?<![\w.,])(\d+(?:[.,]\d+)*)\s*(?:percentage[- ]points?|yüzde\s+puan|puan)",
+                        re.IGNORECASE)
+
+
+def _direction(sentence: str) -> int | None:
+    """+1 when the sentence only says something rose, -1 when it only says something
+    fell, None when it says neither or both."""
+    words = [w.strip("(),;:.'’") for w in re.split(r"[\s'’]+", sentence)]
+    rise = bool(_EN_RISE.search(sentence)) or any(_TR_RISE.match(w) for w in words)
+    fall = bool(_EN_FALL.search(sentence)) or any(_TR_FALL.match(w) for w in words)
+    return (1 if rise else -1) if rise != fall else None
 
 
 def _ratio(r: dict) -> float | None:
@@ -264,16 +291,26 @@ def _profile(stat_results: list[dict]) -> dict:
     return {
         "share": bool(shares) and not counts,
         "relative": [r["pct_change"] for r in counts if r.get("pct_change") is not None],
-        "pp": [r["line_change"] for r in shares if r.get("line_change") is not None],
+        "pp": [r["line_change"] for r in shares if r.get("line_change") is not None]
+              + [r["slope"] for r in shares if r.get("slope") is not None],
         "ratios": [x for x in (_ratio(r) for r in counts) if x],
     }
 
 
 def _relative_claim_ok(sentence: str, profile: dict) -> bool:
+    direction = _direction(sentence)
     for value in _percent_changes(sentence):
-        if profile["share"] or not _matches(value, profile["relative"]):
+        if profile["share"] or not _matches(value, profile["relative"], direction):
             # A share's change is in percentage points, and only as computed.
-            if not (_PP.search(sentence) and _matches(value, profile["pp"])):
+            if not (_PP.search(sentence) and _matches(value, profile["pp"], direction)):
+                return False
+    if direction is not None:
+        # A change in percentage points said the wrong way round ("rose by 21.0
+        # percentage points" for a computed -21.0): removed, when it matches only that.
+        for m in _PP_NUMBER.finditer(sentence):
+            values = [v for v, _ in _readings(m.group(1))]
+            if (any(_matches(v, profile["pp"]) for v in values)
+                    and not any(_matches(v, profile["pp"], direction) for v in values)):
                 return False
     for factor, pattern in _MULTIPLIERS:
         if pattern.search(sentence):

@@ -123,6 +123,13 @@ def _type_label(report_type: str | None, language: str = "en") -> str:
     return types.get(report_type or "situation", types["situation"])
 
 
+def _cover_count_label(report_type: str | None, language: str) -> str:
+    """The cover's count label: a technical report lists data sources, not reports, so
+    it says "Sources"; the other report types keep "Source reports"."""
+    labels = _LABELS.get(language, _LABELS["en"])
+    return labels["sources"] if report_type == "technical_monitoring" else labels["source_reports"]
+
+
 def _sector(theme: str | None, language: str) -> str:
     if not theme:
         return _LABELS[language]["all_sectors"]
@@ -230,7 +237,7 @@ def _sources_rows(sources, language: str = "en") -> str:
         if s.get("doctype") == "dataset":
             # A technical report's data source: who publishes it, the period it covers,
             # and when it was read from HDX HAPI.
-            word = "erişim" if language == "tr" else "retrieved"
+            word = "erişim tarihi" if language == "tr" else "retrieved"
             retrieved = f"{word} {s['retrieved']}" if s.get("retrieved") else None
             meta_bits = [b for b in (s.get("source"), s.get("period"), retrieved) if b]
         else:
@@ -307,7 +314,7 @@ def render_report_pdf(report: dict) -> bytes:
 <table class="scopebox" width="100%"><tr>
   <td width="{widths[0]}"><span class="lbl">{labels["period"]}</span><br/>{period}</td>
   <td width="{widths[1]}"><span class="lbl">{labels["sectors"]}</span><br/>{sector}</td>
-  <td width="{widths[2]}"><span class="lbl">{labels["source_reports"]}</span><br/>{source_count}</td>
+  <td width="{widths[2]}"><span class="lbl">{_cover_count_label(report.get("report_type"), language)}</span><br/>{source_count}</td>
   <td width="{widths[3]}"><span class="lbl">{labels["generated"]}</span><br/>{html.escape(generated)}</td>
 </tr></table>
 

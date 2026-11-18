@@ -120,3 +120,14 @@ def test_resource_metadata_is_none_when_hapi_cannot_say(mock_get):
     __import__('analytics.hapi_client', fromlist=['x'])._RESOURCE_CACHE.clear()
     mock_get.side_effect = __import__("requests").exceptions.ConnectionError("down")
     assert resource_metadata("down") is None
+
+
+
+@patch("analytics.hapi_client.requests.get")
+def test_resource_metadata_asks_once_with_a_short_timeout(mock_get):
+    from analytics.hapi_client import resource_metadata, _RESOURCE_CACHE
+    _RESOURCE_CACHE.clear()
+    mock_get.side_effect = __import__("requests").exceptions.Timeout("slow")
+    assert resource_metadata("slow") is None
+    assert mock_get.call_count == 1                       # no retry on a metadata lookup
+    assert mock_get.call_args.kwargs["timeout"] <= 5

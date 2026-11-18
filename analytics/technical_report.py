@@ -234,6 +234,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
         except Exception as exc:
             logger.warning("%s indikatörü analiz hatası (%s): %s", ind.key, iso3, exc)
             gaps.append(f"{name}: analiz hatası")
+            used[:] = [u for u in used if u["key"] != ind.key]   # not in the report: no source
             continue
 
     # İndikatörler-arası korelasyon: ortak dönemi olan indikatör çiftleri.
@@ -348,8 +349,12 @@ def data_sources(findings: Findings, country: str, retrieved: str | None = None)
     dataset page (never a HAPI request, which would carry the app identifier)."""
     retrieved = retrieved or date.today().isoformat()
     out = []
+    looked_up: dict[str, dict | None] = {}    # one lookup per resource, failed or not
     for i, used in enumerate(findings.data_sources, start=1):
-        meta = resource_metadata(used["resource_hdx_id"]) if used.get("resource_hdx_id") else None
+        rid = used.get("resource_hdx_id")
+        if rid and rid not in looked_up:
+            looked_up[rid] = resource_metadata(rid)
+        meta = looked_up.get(rid) if rid else None
         first, last = used["first_period"], used["last_period"]
         entry = {"index": i, "title": used["title"],
                  "url": (f"https://data.humdata.org/dataset/{meta['dataset_hdx_stub']}"

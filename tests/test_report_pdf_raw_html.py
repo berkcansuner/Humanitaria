@@ -56,4 +56,13 @@ def test_a_turkish_pdf_names_the_retrieval_day_in_turkish():
     rows = _sources_rows([{"index": 1, "title": "t", "url": "https://data.humdata.org/dataset/x",
                            "source": "IPC", "doctype": "dataset", "period": "2022-03-01 – 2026-09-01",
                            "retrieved": "2026-11-18"}], "tr")
-    assert "IPC · 2022-03-01 – 2026-09-01 · erişim 2026-11-18" in rows
+    assert "IPC · 2022-03-01 – 2026-09-01 · erişim tarihi 2026-11-18" in rows
+
+
+
+def test_a_technical_pdf_cover_counts_sources_not_source_reports():
+    from rag.report_pdf import _cover_count_label
+    assert _cover_count_label("technical_monitoring", "en") == "Sources"
+    assert _cover_count_label("technical_monitoring", "tr") == "Kaynaklar"
+    assert _cover_count_label("situation", "en") == "Source reports"
+    assert _cover_count_label(None, "tr") == "Kaynak raporlar"

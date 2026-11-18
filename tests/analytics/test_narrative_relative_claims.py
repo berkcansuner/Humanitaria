@@ -285,3 +285,26 @@ def test_level_sentences_survive(section, sentence, language):
 @pytest.mark.parametrize("section,sentence,language", MUST_GO)
 def test_to_half_claims_are_removed(section, sentence, language):
     assert not _kept(sentence, section, language)
+
+
+# --- Review of round 2 (minor): a change's direction must match its computed sign. ---
+
+@pytest.mark.parametrize("section,sentence,language", [
+    (IPC_H, "Along the trend line the share rose by 21.0 percentage points.", "en"),
+    (IPC_H, "The share increased by 4.65 percentage points per year.", "en"),
+    (IPC_H, "Eğilim çizgisi boyunca oran 21,0 yüzde puan arttı.", "tr"),
+])
+def test_a_share_change_in_the_wrong_direction_is_removed(section, sentence, language):
+    assert not _kept(sentence, section, language)
+
+
+def test_a_share_change_in_the_right_direction_stays():
+    assert _kept("Along the trend line the share fell by 21.0 percentage points.", IPC_H)
+    assert _kept("Eğilim çizgisi boyunca oran 21,0 yüzde puan azaldı.", IPC_H, "tr")
+
+
+def test_a_count_change_in_the_wrong_direction_is_removed():
+    assert not _counts_kept("Returnees rose by 48.0% along the trend line.", RET_H)
+    assert not _counts_kept("Refugees fell by 236.8% along the trend line.", None)
+    assert _counts_kept("Returnees fell by 48.0% along the trend line.", RET_H)
+    assert _counts_kept("Refugees rose by 236.8% along the trend line.", None)

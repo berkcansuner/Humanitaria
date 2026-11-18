@@ -1036,3 +1036,29 @@ def test_comparable_years_keep_the_usual_text(monkeypatch):
                         _recording_fetch([], _three_year_pin_rows))
     f = compute_findings("AFG", None, None, language="en", theme="Food and Nutrition")
     assert "not comparable" not in f.sections[0].findings_text
+
+
+
+# --- Review of round 2 (minor). ---
+
+def test_data_sources_do_not_ask_twice_for_a_failed_lookup(monkeypatch):
+    from analytics.technical_report import data_sources
+    calls = []
+    monkeypatch.setattr("analytics.technical_report.resource_metadata",
+                        lambda rid: calls.append(rid) or None)
+    used = {"source": "OCHA HNO", "first_period": "2024-01-01", "last_period": "2026-01-01",
+            "resource_hdx_id": "same"}
+    f = Findings(sections=[], gaps=[], indicators_covered=["a", "b"], data_sources=[
+        {"key": "a", "title": "A", **used}, {"key": "b", "title": "B", **used}])
+    assert len(data_sources(f, "Afghanistan", retrieved="2026-11-18")) == 2
+    assert calls == ["same"]
+
+
+def test_an_indicator_whose_analysis_failed_is_not_a_source():
+    def side(ep, iso3, **k):
+        return _multi_region_rows("idps") if ep.endswith("idps") else []
+    with patch("analytics.technical_report.by_region", side_effect=ValueError("boom")), \
+         patch("analytics.technical_report.fetch_rows", side_effect=side):
+        f = compute_findings("AFG", "2025-01-01", "2025-12-31", language="en")
+    assert any("analiz hatası" in g for g in f.gaps)
+    assert [u["key"] for u in f.data_sources] == []
