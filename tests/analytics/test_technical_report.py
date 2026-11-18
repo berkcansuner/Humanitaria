@@ -1005,8 +1005,9 @@ def test_afghanistan_and_congo_2025_may_be_one_of_the_lines():
         assert sec.heading == "Protection: people in need — Latest Values", iso3
         assert f"Values: 2025-01-01 {figure} people." in sec.findings_text, iso3
         note = next(n for n in f.notes if "separate lines" in n)
-        assert (f"this figure ({full}) may be one of them rather than the overall protection "
-                f"figure; " + _NOT_ADDED) in note, iso3
+        # The figure equals none of the listed lines (AFG 2025: GBV 14,173,291 vs 14,213,777).
+        assert (f"this figure ({full}) may be another of the plan's protection lines (not listed in "
+                f"HDX HAPI) rather than its overall protection figure; " + _NOT_ADDED) in note, iso3
         assert "general" not in note and "higher" not in note, iso3
 
 

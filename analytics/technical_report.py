@@ -317,8 +317,9 @@ def _plan_line(ind, rows: list[dict], periods: list, values: list,
                     f"not the plan's overall {sector} figure; HDX HAPI does not say which of the "
                     f"plan's lines it is")
         else:
-            what = (f"this figure ({figure}) may be one of them rather than the overall {sector} "
-                    f"figure")
+            # It equals none of the listed lines, so it is not said to be one of them.
+            what = (f"this figure ({figure}) may be another of the plan's {sector} lines (not "
+                    f"listed in HDX HAPI) rather than its overall {sector} figure")
         notes.append(f"{name}, {period[:4]}: the plan reports {sector} in separate lines "
                      f"({listed}); {what}; this report does not add the lines up, because people "
                      f"can be counted in more than one.")

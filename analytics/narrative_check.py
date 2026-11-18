@@ -23,6 +23,7 @@ note at the end says how many sentences were removed. The check only deletes: it
 never rewords or adds a claim.
 """
 import logging
+import math
 import re
 from typing import NamedTuple
 
@@ -92,16 +93,40 @@ def _allowed_values(text: str) -> list[float]:
     return out
 
 
+_ROUNDED_FROM = 10_000      # a figure this large may be quoted to 2-4 significant digits
+
+
+def _rounded(value: float) -> list[float]:
+    """*value* rounded to 2, 3 and 4 significant digits (349,999 -> 350,000; 1,611,291 ->
+    1,611,000), as a report quotes the full figures of the data notes."""
+    if abs(value) < _ROUNDED_FROM:
+        return []
+    digits = int(math.floor(math.log10(abs(value))))
+    return [round(value, k - 1 - digits) for k in (2, 3, 4)]
+
+
+def _matches_value(sentence_values: list[tuple[float, float]], allowed: list[float]) -> bool:
+    """A number as written ((value, tolerance) readings) is an allowed value, or a
+    rounding of a large one."""
+    return any(abs(v - a) <= tol + 1e-9 * max(1.0, a) for v, tol in sentence_values for a in allowed) \
+        or any(abs(v - r) <= 1e-6 * max(1.0, r) for v, _ in sentence_values
+               for a in allowed for r in _rounded(a))
+
+
+def _number_readings(m) -> list[tuple[float, float]]:
+    scale = _SCALE.get((m.group(2) or "").lower(), 1.0)
+    # With a scale word the number is tried scaled and as written: a range such as
+    # "9.5 to 35.0 million" carries the word only after its last number.
+    return [(v * s, 0.5 * 10 ** -d * s) for v, d in _readings(m.group(1)) for s in {scale, 1.0}]
+
+
 def _numbers_ok(sentence: str, allowed: list[float]) -> bool:
     for m in _NUMBER.finditer(sentence):
         scale = _SCALE.get((m.group(2) or "").lower(), 1.0)
         readings = _readings(m.group(1))
         if any(d == 0 and scale == 1.0 and v <= _SMALL_COUNT for v, d in readings):
             continue
-        # With a scale word the number is tried scaled and as written: a range such as
-        # "9.5 to 35.0 million" carries the word only after its last number.
-        tries = [(v * s, 0.5 * 10 ** -d * s) for v, d in readings for s in {scale, 1.0}]
-        if not any(abs(v - a) <= tol + 1e-9 * max(1.0, a) for v, tol in tries for a in allowed):
+        if not _matches_value(_number_readings(m), allowed):
             return False
     return True
 
@@ -283,15 +308,65 @@ _PP_NUMBER = re.compile(r"(?<![\w.,])(\d+(?:[.,]\d+)*)\s*(?:percentage[- ]points
 _SAYS_NOT_COMPARABLE = re.compile(
     r"not comparable|cannot be compared|can't be compared|karşılaştırılamaz|kıyaslanamaz|"
     r"karşılaştırılabilir değil", re.IGNORECASE)
-_EN_CHANGE_WORD = re.compile(r"\b(?:changed?|changes|changing)\b", re.IGNORECASE)
+# Words that say a figure moved between years: verbs and nouns of change, multipliers,
+# "went from … to", "stable". Not "higher"/"lower"/"up to" on their own: comparing a year's
+# figure with a sub-line or with the unpublished overall figure is not a change.
+_EN_CROSS_YEAR = re.compile(
+    r"\b(?:rose(?!-)|risen|rises?|rising|increase[ds]?|increasing|grew|grown|grows?|growing|"
+    r"climb(?:ed|s|ing)?|surge[ds]?|jump(?:ed|s)?|gained|fell|fallen|falls?|falling|"
+    r"drop(?:ped|s|ping)?|decline[ds]?|declining|decrease[ds]?|decreasing|shr[ai]nk|shrunk|"
+    r"eas(?:ed|ing)|plunged|slid|halv\w*|doubl\w*|twice|tripl\w*|quadrupl\w*|two-?fold|"
+    r"three-?fold|stable|steady|unchanged|reach(?:ed|es|ing)?|went\s+from|gone\s+from)\b",
+    re.IGNORECASE)
+# "greater/more/fewer/less/higher/lower … than <year or value>" compares two years.
+_EN_COMPARATIVE = re.compile(
+    r"\b(?:greater|more|fewer|less|higher|lower|larger|smaller|bigger)\b.*?\bthan\s+"
+    r"(?:in\s+|those\s+of\s+|that\s+of\s+|the\s+figure\s+(?:for|of)\s+|the\s+)?"
+    r"(?P<what>[\d.,]+(?:\s*(?:million|thousand|billion))?)", re.IGNORECASE)
+_TR_COMPARATIVE = re.compile(
+    r"(?:19|20)\d{2}['’]\w*\s+(?:göre|kıyasla|oranla)\b.*?\bdaha\s+(?:fazla|az|yüksek|düşük|çok)",
+    re.IGNORECASE)
+_TR_MULTIPLE = re.compile(r"\b(?:iki|üç|dört)\s+kat\w*|\byarı\s+yarıya\b|\byarısına\b",
+                          re.IGNORECASE)
+_YEAR = re.compile(r"(?<!\d)((?:19|20)\d{2})(?!\d)")
 
 
-def _states_change(sentence: str) -> bool:
-    """The sentence says something rose, fell or changed (English or Turkish)."""
-    if _EN_RISE.search(sentence) or _EN_FALL.search(sentence) or _EN_CHANGE_WORD.search(sentence):
-        return True
+def _tr_change_word(sentence: str) -> bool:
     words = [w.strip("(),;:.'’").lower() for w in re.split(r"[\s'’]+", sentence)]
-    return any(_TR_CHANGE.match(w) or w.startswith("değiş") for w in words)
+    return any(_TR_CHANGE.match(w) and not (i and words[i - 1] == "ortaya")   # "ortaya çıkan"
+               for i, w in enumerate(words))
+
+
+def _says_change(sentence: str) -> bool:
+    """A word of change between years, in English or Turkish."""
+    return bool(_EN_CROSS_YEAR.search(sentence) or _TR_MULTIPLE.search(sentence)
+                or _tr_change_word(sentence))
+
+
+def _series_values_in(sentence: str, values: list[float]) -> int:
+    """How many different values of a series the sentence quotes (rounded quotes count)."""
+    hit = set()
+    for m in _NUMBER.finditer(sentence):
+        readings = _number_readings(m)
+        for i, v in enumerate(values):
+            if _matches_value(readings, [v]):
+                hit.add(i)
+    return len(hit)
+
+
+def _compares_years(sentence: str, years: set, values: list[float]) -> bool:
+    """A comparison between two years of the series: '… than (in) 2025', '… than 14.2
+    million', "2025'e göre … daha fazla"."""
+    if _TR_COMPARATIVE.search(sentence):
+        return True
+    for m in _EN_COMPARATIVE.finditer(sentence):
+        what = m.group("what").rstrip(".,")
+        if what in years:
+            return True
+        token = _NUMBER.match(what)
+        if token and _series_values_in(what, values):
+            return True
+    return False
 
 
 def _direction(sentence: str) -> int | None:
@@ -407,15 +482,32 @@ def verify_narrative(text: str, findings, allowed_text: str, language: str) -> N
     whole["share"] = False
     # Sections whose years are not comparable (different plan lines): a sentence there may
     # give each year's value, but not a rise, fall or change between them.
-    not_comparable = {s.heading for s in findings.sections if s.stat_result.get("not_comparable")}
+    not_comparable = {s.heading: ({str(p)[:4] for p in s.stat_result.get("periods") or []},
+                                  [float(v) for v in s.stat_result.get("values") or []])
+                      for s in findings.sections if s.stat_result.get("not_comparable")}
+
+    def across_years(sentence: str, section: str | None) -> bool:
+        """The sentence states a change, or a comparison, between two years of a series
+        whose years are not comparable, without saying they are not comparable."""
+        if _SAYS_NOT_COMPARABLE.search(sentence):
+            return False
+        for heading, (years, values) in not_comparable.items():
+            own = section == heading
+            two_years = len(years & set(_YEAR.findall(sentence))) >= 2
+            two_values = _series_values_in(sentence, values) >= 2
+            if own and _says_change(sentence):
+                return True     # in its own section, any change of the figure is across years
+            if (two_values or (own and two_years)) and (
+                    _says_change(sentence) or _compares_years(sentence, years, values)):
+                return True
+        return False
 
     def bad(sentence: str, section: str | None) -> bool:
         if not _numbers_ok(sentence, allowed):
             return True
         if not _relative_claim_ok(sentence, profiles.get(section or "", whole)):
             return True
-        if section in not_comparable and _states_change(sentence) \
-                and not _SAYS_NOT_COMPARABLE.search(sentence):
+        if across_years(sentence, section):
             return True
         claim = _claim(sentence)
         if claim is None:
