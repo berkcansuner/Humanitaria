@@ -133,7 +133,9 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
             tr = trend(t_values, indicator=name, min_points=min_pts, times=times)
             if tr.direction == "insufficient_data":
                 gaps.append(f"{name}: trend için yetersiz veri (n={tr.n_points})")
+            if tr.direction == "insufficient_data" and theme is not None:
                 # The values are still the sector's figures: reported as they are, untested.
+                # ("All sectors" keeps such a series as a gap only, as it always did.)
                 chart, chart_dark = _both_modes(
                     trend_chart, t_periods, t_values, None, None,
                     unit=_axis_unit(ind, language), times=times,
@@ -148,7 +150,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                     chart_dark=chart_dark,
                     findings_text="",
                 ))
-            else:
+            elif tr.direction != "insufficient_data":
                 if look_back:
                     look_backs.append({"indicator": name, **look_back})
                 chart, chart_dark = _both_modes(

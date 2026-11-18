@@ -706,3 +706,14 @@ def test_a_tested_regional_comparison_keeps_its_verdict(_mock):
     region = next(s for s in f.sections if s.stat_result["kind"] == "region")
     assert region.stat_result["tested"] is True
     assert "Kruskal-Wallis H=" in region.findings_text and "(α=0.05)" in region.findings_text
+
+
+def test_all_sectors_reports_keep_short_series_as_gaps_only(monkeypatch):
+    # "All sectors" stays as it was (its output is pinned byte for byte): a series too
+    # short for a trend is a data gap there, not a Latest Values section.
+    monkeypatch.setattr("analytics.technical_report.fetch_rows",
+                        _recording_fetch([], lambda ep, p: _three_year_pin_rows(
+                            ep, {"sector_code": "FSC"}) if p.get("sector_code") == "Intersectoral" else []))
+    f = compute_findings("AFG", None, None, language="en", theme=None)
+    assert f.sections == []
+    assert any("(n=3)" in g for g in f.gaps)
