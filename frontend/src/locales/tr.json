@@ -344,7 +344,7 @@
       "empty": "Henüz kayıtlı rapor yok.",
       "delete": "Raporu sil: {name}, {type}",
       "deleteWithPeriod": "Raporu sil: {name}, {type}, {period}",
-      "tooltip": "{name} · {period}"
+      "language": "Rapor dili: {name}"
     },
     "viewer": {
       "back": "Tüm raporlar",

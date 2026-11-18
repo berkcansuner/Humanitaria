@@ -169,7 +169,18 @@
                 >
                   <span class="saved-name">{{ savedName(e.report) }}</span>
                   <span class="saved-meta">
-                    <span>{{ savedType(e.report) }}</span>
+                    <!-- The report's language as its code, so an English and a Turkish
+                         report with the same settings can be told apart. -->
+                    <span
+                      >{{ savedType(e.report)
+                      }}<span v-if="reportLanguage(e.report)" class="saved-lang"
+                        >{{ ' · '
+                        }}<span class="saved-lang-code" aria-hidden="true">{{
+                          reportLanguage(e.report).toUpperCase()
+                        }}</span
+                        ><span class="sr-only">{{ languageLabel(e.report) }}</span></span
+                      ></span
+                    >
                     <span v-if="savedPeriod(e.report)" class="saved-period">{{
                       savedPeriod(e.report)
                     }}</span>
@@ -207,10 +218,17 @@
                   <span class="saved-series-text">
                     <span class="saved-name">{{ savedName(e.latest) }}</span>
                     <span class="saved-meta"
-                      >{{ savedType(e.latest) }} ·
-                      {{ t('reports.saved.count', { n: e.reports.length }, e.reports.length)
-                      }}{{ ' '
-                      }}<span v-if="e.latest.date_to" class="saved-period"
+                      ><span
+                        >{{ savedType(e.latest) }} ·
+                        {{ t('reports.saved.count', { n: e.reports.length }, e.reports.length)
+                        }}<span v-if="reportLanguage(e.latest)" class="saved-lang"
+                          >{{ ' · '
+                          }}<span class="saved-lang-code" aria-hidden="true">{{
+                            reportLanguage(e.latest).toUpperCase()
+                          }}</span
+                          ><span class="sr-only">{{ languageLabel(e.latest) }}</span></span
+                        >{{ ' ' }}</span
+                      ><span v-if="e.latest.date_to" class="saved-period"
                         >·
                         {{ t('reports.saved.until', { date: shownDay(e.latest.date_to) }) }}</span
                       ></span
@@ -239,9 +257,16 @@
                       :aria-disabled="generating ? 'true' : undefined"
                       @click="openReport(r.id)"
                     >
-                      <span class="saved-name saved-period-name">{{
-                        savedPeriod(r) || t('reports.saved.noPeriod')
-                      }}</span>
+                      <span class="saved-name saved-period-name"
+                        >{{ savedPeriod(r) || t('reports.saved.noPeriod')
+                        }}<span v-if="reportLanguage(r)" class="saved-lang"
+                          >{{ ' · '
+                          }}<span class="saved-lang-code" aria-hidden="true">{{
+                            reportLanguage(r).toUpperCase()
+                          }}</span
+                          ><span class="sr-only">{{ languageLabel(r) }}</span></span
+                        ></span
+                      >
                     </button>
                     <button
                       type="button"
@@ -656,9 +681,30 @@ function savedType(r) {
 // Turkish row is not explained in English.
 function rowTitle(r) {
   if (locale.value === 'en') return r.title
-  const period = savedPeriod(r)
-  const name = savedName(r)
-  return period ? t('reports.saved.tooltip', { name, period }) : name
+  return [savedName(r), savedPeriod(r), languageLabel(r)].filter(Boolean).join(' · ')
+}
+
+// A report's language as stored: a language tag ("en", "tr", "pt-BR"). Reports saved
+// without one (the column is nullable), or with anything that is not a tag, show no
+// language rather than a wrong one.
+const LANGUAGE_TAG = /^[a-z]{2,3}(-[a-z0-9]{2,8})*$/i
+function reportLanguage(r) {
+  const code = typeof r.language === 'string' ? r.language.trim() : ''
+  return LANGUAGE_TAG.test(code) ? code : null
+}
+
+// "Report language: Turkish" / "Rapor dili: Türkçe": the language named in the
+// interface language (Intl.DisplayNames), or by its code where the browser has no name.
+function languageLabel(r) {
+  const code = reportLanguage(r)
+  if (!code) return ''
+  let name = code
+  try {
+    name = new Intl.DisplayNames([locale.value], { type: 'language' }).of(code) || code
+  } catch {
+    // An engine without DisplayNames, or a tag it rejects: the code names it.
+  }
+  return t('reports.saved.language', { name })
 }
 
 // A single day in a list line: ISO in English as before, day.month.year in Turkish.
@@ -1530,6 +1576,15 @@ function onCiteClick(e) {
   font-weight: 600;
 }
 .saved-period {
+  white-space: nowrap;
+}
+/* The report's language code: the meta line's own quiet text, in every row shape
+   (a period row's name is 12px body text; its code steps down to the meta size). */
+.saved-lang {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
   white-space: nowrap;
 }
 /* Type, then the period on its own line, as under the open report's title. */

@@ -183,10 +183,101 @@ describe('ReportsView in two languages', () => {
     expect(tooltip()).toBe(yemen.title)
     setLocale('tr')
     await flush()
-    expect(tooltip()).toBe('Yemen · Barınma ve gıda dışı malzemeler · 01.07.2026 - 30.09.2026')
+    expect(tooltip()).toBe(
+      'Yemen · Barınma ve gıda dışı malzemeler · 01.07.2026 - 30.09.2026 · Rapor dili: İngilizce',
+    )
     setLocale('en')
     await flush()
     expect(tooltip()).toBe(yemen.title)
+  })
+
+  describe("the saved list shows each report's language", () => {
+    const syria = {
+      ...SAVED,
+      report_type: 'technical_monitoring',
+      country: 'Syrian Arab Republic',
+      theme: null,
+      title:
+        'Technical Monitoring Report — Syrian Arab Republic · All sectors · 2023-11-18 – 2026-11-18',
+    }
+    const twins = [
+      { ...syria, id: 'syr-en', language: 'en' },
+      { ...syria, id: 'syr-tr', language: 'tr' },
+    ]
+    // The list keeps the order it was given (newest first).
+    const rowOf = (id) => host.querySelectorAll('.saved-item')[twins.findIndex((r) => r.id === id)]
+    const code = (li) => li.querySelector('.saved-lang-code')?.textContent.trim()
+    const spoken = (li) => li.querySelector('.saved-lang .sr-only')?.textContent.trim()
+
+    it('tells two otherwise identical reports apart by their language code', async () => {
+      vi.mocked(listReports).mockResolvedValue({ reports: twins })
+      await mount()
+      expect(code(rowOf('syr-en'))).toBe('EN')
+      expect(code(rowOf('syr-tr'))).toBe('TR')
+      // The code sits in the meta line, which never truncates, not in the name.
+      expect(rowOf('syr-tr').querySelector('.saved-meta .saved-lang')).toBeTruthy()
+      expect(rowOf('syr-tr').querySelector('.saved-name .saved-lang')).toBeNull()
+    })
+
+    it('names the language in the interface language and follows a switch', async () => {
+      vi.mocked(listReports).mockResolvedValue({ reports: twins })
+      await mount()
+      expect(spoken(rowOf('syr-en'))).toBe('Report language: English')
+      expect(spoken(rowOf('syr-tr'))).toBe('Report language: Turkish')
+      expect(rowOf('syr-tr').querySelector('.saved-lang-code').getAttribute('aria-hidden')).toBe(
+        'true',
+      )
+      setLocale('tr')
+      await flush()
+      expect(spoken(rowOf('syr-en'))).toBe('Rapor dili: İngilizce')
+      expect(spoken(rowOf('syr-tr'))).toBe('Rapor dili: Türkçe')
+      // The code itself is the same in every interface language.
+      expect(code(rowOf('syr-tr'))).toBe('TR')
+    })
+
+    it('shows another language the same way, and nothing when the language is unknown', async () => {
+      vi.mocked(listReports).mockResolvedValue({
+        reports: [
+          { ...syria, id: 'fr', language: 'fr' },
+          { ...syria, id: 'none', country: 'Haiti', language: null },
+          { ...syria, id: 'blank', country: 'Chad', language: '' },
+          { ...syria, id: 'junk', country: 'Mali', language: 'not a code' },
+        ],
+      })
+      await mount()
+      const items = [...host.querySelectorAll('.saved-item')]
+      expect(code(items[0])).toBe('FR')
+      expect(spoken(items[0])).toBe('Report language: French')
+      for (const li of items.slice(1)) expect(li.querySelector('.saved-lang')).toBeNull()
+    })
+
+    it('marks the series row and each of its periods', async () => {
+      const q2 = {
+        ...SAVED,
+        id: 'q2',
+        language: 'tr',
+        date_from: '2026-05-01',
+        date_to: '2026-07-31',
+        title: 'Sudan · Health · 2026-05-01 – 2026-07-31',
+      }
+      vi.mocked(listReports).mockResolvedValue({ reports: [{ ...SAVED, language: 'tr' }, q2] })
+      await mount()
+      expect(host.querySelector('.saved-series-head .saved-lang-code').textContent).toBe('TR')
+      const periods = [...host.querySelectorAll('.saved-periods .saved-item')]
+      expect(periods.map((li) => code(li))).toEqual(['TR', 'TR'])
+    })
+
+    it('puts the language in the Turkish tooltip, and keeps the English one as stored', async () => {
+      vi.mocked(listReports).mockResolvedValue({ reports: twins })
+      await mount()
+      const tip = (id) => rowOf(id).querySelector('.saved-open').getAttribute('title')
+      expect(tip('syr-tr')).toBe(syria.title)
+      setLocale('tr')
+      await flush()
+      expect(tip('syr-tr')).toBe(
+        'Syrian Arab Republic · 18.11.2023 - 18.11.2026 · Rapor dili: Türkçe',
+      )
+    })
   })
 
   it('shows a generation error in the current language and follows a switch', async () => {

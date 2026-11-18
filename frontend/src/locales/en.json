@@ -344,7 +344,7 @@
       "empty": "No saved reports yet.",
       "delete": "Delete report: {name}, {type}",
       "deleteWithPeriod": "Delete report: {name}, {type}, {period}",
-      "tooltip": "{name} · {period}"
+      "language": "Report language: {name}"
     },
     "viewer": {
       "back": "All reports",
