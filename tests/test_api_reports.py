@@ -460,6 +460,63 @@ class TestReportEndpoints:
             full = client.get(f"/reports/{rid}").json()
             assert "Conflict worsened" in full["content"]
 
+    def test_stream_tells_what_is_read_before_the_first_word(self):
+        # One status event after retrieval, before the model: the count and the
+        # sources about to be read (title, publisher, date; no URL, no index).
+        docs = [_doc(i) for i in range(1, 4)]
+        docs[1].metadata["source"] = "OCHA"
+        calls = []
+
+        async def mock_astream(*args, **kwargs):
+            calls.append("model")
+            yield "Needs rose [1]."
+
+        mock_chain = MagicMock()
+        mock_chain.astream = mock_astream
+
+        with patch("api.routes.reports.retrieve_for_report", new=AsyncMock(return_value=docs)), \
+             patch("api.routes.reports.build_report_chain", return_value=mock_chain):
+            resp = _client().post("/reports/stream", json={
+                "country": "Sudan", "date_from": "2026-01-01", "date_to": "2026-06-30", "language": "en",
+            })
+        events = _parse_sse_events(resp.text)
+        kinds = [e["event"] for e in events]
+        # Everything else keeps its order; the status comes first, before any token.
+        assert kinds[0] == "status"
+        assert [k for k in kinds if k != "status"] == ["token", "sources", "saved", "done"]
+        status = events[0]["data"]
+        assert status == {
+            "stage": "reading",
+            "count": 3,
+            "sources": [
+                {"title": "WFP Report 1", "source": "WFP", "date": "2026-05-01"},
+                {"title": "WFP Report 2", "source": "OCHA", "date": "2026-05-01"},
+                {"title": "WFP Report 3", "source": "WFP", "date": "2026-05-01"},
+            ],
+        }
+        assert calls == ["model"]
+
+    def test_stream_status_lists_at_most_a_capped_number_of_sources(self):
+        from api.routes.reports import READING_SOURCES_SHOWN
+
+        async def mock_astream(*args, **kwargs):
+            yield "Text."
+
+        mock_chain = MagicMock()
+        mock_chain.astream = mock_astream
+        docs = [_doc(i) for i in range(1, READING_SOURCES_SHOWN + 6)]
+        with patch("api.routes.reports.retrieve_for_report", new=AsyncMock(return_value=docs)), \
+             patch("api.routes.reports.build_report_chain", return_value=mock_chain):
+            resp = _client().post("/reports/stream", json={"country": "Sudan", "language": "en"})
+        status = _parse_sse_events(resp.text)[0]["data"]
+        assert status["count"] == READING_SOURCES_SHOWN + 5
+        assert len(status["sources"]) == READING_SOURCES_SHOWN
+
+    def test_stream_no_docs_sends_no_status(self):
+        with patch("api.routes.reports.retrieve_for_report", new=AsyncMock(return_value=[])):
+            resp = _client().post("/reports/stream", json={"country": "Atlantis"})
+        assert "status" not in [e["event"] for e in _parse_sse_events(resp.text)]
+
     def test_stream_no_docs(self):
         with patch("api.routes.reports.retrieve_for_report", new=AsyncMock(return_value=[])):
             resp = _client().post("/reports/stream", json={"country": "Atlantis"})

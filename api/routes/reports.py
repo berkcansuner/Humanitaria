@@ -227,6 +227,31 @@ def _previous_in_series(user_id: str, req: ReportRequest) -> dict:
     return previous
 
 
+# The waiting client shows what is being read before the first word arrives; a
+# report reads up to a few dozen documents, so the list is capped (the count is not).
+READING_SOURCES_SHOWN = 12
+
+
+def _reading_event(docs: list, source_dicts: list) -> ServerSentEvent:
+    """Sent after retrieval, before the model is called: how many documents the
+    report reads and the first of them as the client lists sources (no URLs)."""
+    shown = [{"title": s.get("title"), "source": s.get("source"), "date": s.get("date")}
+             for s in source_dicts[:READING_SOURCES_SHOWN]]
+    return ServerSentEvent(event="status", data=json.dumps(
+        {"stage": "reading", "count": len(docs), "sources": shown}, ensure_ascii=False))
+
+
+def _computed_event(findings: technical_report.Findings, req: ReportRequest) -> ServerSentEvent:
+    """Sent after the HAPI statistics are computed, before the narrative is written:
+    the indicators that have data, in analysis order and the report's language,
+    and the period analysed."""
+    names = [ind.name(req.language) for ind in indicators_for(req.theme)
+             if ind.key in findings.indicators_covered]
+    return ServerSentEvent(event="status", data=json.dumps(
+        {"stage": "computed", "indicators": names,
+         "date_from": findings.date_from, "date_to": findings.date_to}, ensure_ascii=False))
+
+
 def _checked_event(removed: int) -> ServerSentEvent:
     """Sent after the check: how many "What changed" sentences it removed."""
     return ServerSentEvent(event="status",
@@ -303,6 +328,7 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                     yield ServerSentEvent(event="done", data="{}")
                     return
 
+                yield _computed_event(findings, req)
                 context = technical_report.findings_to_context(findings)
                 directive = build_report_directive(
                     req.country, req.theme, req.date_from, req.date_to,
@@ -371,6 +397,7 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                 return
 
             context, source_dicts = _build_context_and_sources(docs)
+            yield _reading_event(docs, source_dicts)
             directive = build_report_directive(
                 req.country, req.theme, req.date_from, req.date_to, len(docs), req.language,
                 report_type=req.report_type,

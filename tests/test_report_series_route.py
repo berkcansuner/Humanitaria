@@ -205,6 +205,16 @@ def test_technical_comparative_report_is_checked(verify):
     assert stored.endswith("<!-- checked -->")
 
 
+# The stream's status events also include the "reading" stage before the first
+# word; these tests are about the check of "What changed" only.
+_CHECK_STAGES = ("checking_comparison", "comparison_checked")
+
+
+def _check_positions(events):
+    return [i for i, e in enumerate(events)
+            if e["event"] == "status" and e["data"].get("stage") in _CHECK_STAGES]
+
+
 def test_comparative_stream_says_it_is_checking_before_saving():
     """The streamed text is replaced by the checked text on save; the stream says so
     first, so sentences do not vanish without a word."""
@@ -213,16 +223,16 @@ def test_comparative_stream_says_it_is_checking_before_saving():
     resp = _stream({**_NEXT, "previous_report_id": "r-prev"}, seen)
     events = _parse_sse_events(resp.text)
     kinds = [e["event"] for e in events]
-    status = [e for e in events if e["event"] == "status"]
-    assert status and status[0]["data"] == {"stage": "checking_comparison"}
-    assert kinds.index("status") < kinds.index("saved")
-    assert kinds.index("status") > max(i for i, k in enumerate(kinds) if k == "token")
+    checks = _check_positions(events)
+    assert checks and events[checks[0]]["data"] == {"stage": "checking_comparison"}
+    assert checks[0] < kinds.index("saved")
+    assert checks[0] > max(i for i, k in enumerate(kinds) if k == "token")
 
 
 def test_one_off_stream_has_no_checking_status():
     seen = []
     resp = _stream(_NEXT, seen)
-    assert "status" not in [e["event"] for e in _parse_sse_events(resp.text)]
+    assert _check_positions(_parse_sse_events(resp.text)) == []
 
 
 def test_comparative_stream_reports_how_many_sentences_the_check_removed():
@@ -231,8 +241,7 @@ def test_comparative_stream_reports_how_many_sentences_the_check_removed():
     resp = _stream({**_NEXT, "previous_report_id": "r-prev"}, seen)
     events = _parse_sse_events(resp.text)
     kinds = [e["event"] for e in events]
-    statuses = [e["data"] for e in events if e["event"] == "status"]
-    assert statuses == [{"stage": "checking_comparison"},
-                        {"stage": "comparison_checked", "removed": 2}]
-    last_status = max(i for i, k in enumerate(kinds) if k == "status")
-    assert last_status < kinds.index("saved")
+    checks = _check_positions(events)
+    assert [events[i]["data"] for i in checks] == [{"stage": "checking_comparison"},
+                                                    {"stage": "comparison_checked", "removed": 2}]
+    assert checks[-1] < kinds.index("saved")

@@ -225,3 +225,47 @@ def test_options_name_the_sectors_with_technical_monitoring_series():
     assert "Food and Nutrition" in body["technical_themes"]
     assert "Logistics and Telecommunications" not in body["technical_themes"]
     assert set(body["technical_themes"]) <= set(body["themes"])
+
+
+def test_technical_stream_says_which_indicators_were_computed_before_the_narrative():
+    """After the HAPI statistics, one status event names the indicators that have
+    data (in the report language) and the period analysed, before any token."""
+    from analytics.indicators import indicators_for
+    first, second = indicators_for(None)[:2]
+    findings = _findings_with_sections()
+    findings.indicators_covered = [second.key, first.key]
+    findings.date_from, findings.date_to = "2021-11-18", "2026-11-18"
+
+    async def mock_astream(*a, **k):
+        yield "## Summary\n"
+        yield "Text."
+
+    mock_chain = MagicMock()
+    mock_chain.astream = mock_astream
+    for language in ("en", "tr"):
+        with patch("api.routes.reports.technical_report.compute_findings", return_value=findings), \
+             patch("api.routes.reports.build_report_chain", return_value=mock_chain):
+            resp = _client().post("/reports/stream", json={
+                "country": "Afghanistan", "report_type": "technical_monitoring", "language": language,
+            })
+        events = _parse_sse_events(resp.text)
+        kinds = [e["event"] for e in events]
+        assert kinds[0] == "status"
+        assert [k for k in kinds if k != "status"] == ["token", "token", "saved", "done"]
+        assert events[0]["data"] == {
+            "stage": "computed",
+            # In the order the report analyses them, named in the report language.
+            "indicators": [first.name(language), second.name(language)],
+            "date_from": "2021-11-18",
+            "date_to": "2026-11-18",
+        }
+
+
+def test_technical_stream_without_findings_sends_no_status():
+    from analytics.technical_report import Findings
+    with patch("api.routes.reports.technical_report.compute_findings",
+               return_value=Findings(sections=[], gaps=[], indicators_covered=[])):
+        resp = _client().post("/reports/stream", json={
+            "country": "Afghanistan", "report_type": "technical_monitoring", "language": "en",
+        })
+    assert "status" not in [e["event"] for e in _parse_sse_events(resp.text)]
