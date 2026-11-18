@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from uuid import uuid4
 
+from api.errors import ErrorCode, api_error
 from api.limiter import limiter
 from api.routes.auth import get_current_user
 from config import get_settings
@@ -69,7 +70,7 @@ _LIMIT_DETAIL = "Conversation limit reached; delete old conversations to start a
 async def _require_owner(user_id: str, conv_id: str) -> None:
     """404 unless conv_id exists and belongs to user_id (don't leak existence)."""
     if not await anyio.to_thread.run_sync(store.is_owner, user_id, conv_id):
-        raise HTTPException(status_code=404, detail="Conversation not found")
+        raise api_error(404, ErrorCode.not_found, "Conversation not found")
 
 
 @router.get("", response_model=List[ConversationOut])
@@ -82,7 +83,7 @@ async def list_conversations(user: dict = Depends(get_current_user)):
 async def create_conversation(request: Request, body: CreateConversationIn,
                               user: dict = Depends(get_current_user)):
     if not await anyio.to_thread.run_sync(can_open_conversation, user["id"]):
-        raise HTTPException(status_code=409, detail=_LIMIT_DETAIL)
+        raise api_error(409, ErrorCode.conversation_limit, _LIMIT_DETAIL)
     conv_id = str(uuid4())
     await anyio.to_thread.run_sync(store.create_conversation, user["id"], conv_id, body.title)
     row = await anyio.to_thread.run_sync(store.get_conversation, user["id"], conv_id)
@@ -105,7 +106,7 @@ async def rename_conversation(request: Request, conv_id: str, body: RenameIn,
     await anyio.to_thread.run_sync(store.rename_conversation, conv_id, body.title)
     row = await anyio.to_thread.run_sync(store.get_conversation, user["id"], conv_id)
     if row is None:   # deleted concurrently
-        raise HTTPException(status_code=404, detail="Conversation not found")
+        raise api_error(404, ErrorCode.not_found, "Conversation not found")
     return row
 
 

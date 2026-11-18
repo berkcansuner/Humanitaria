@@ -25,6 +25,7 @@ from rag.chain import answer_language, build_chain, describe_filters
 from rag.report_service import _collapse_near_duplicates
 from rag.history import get_session_history, has_session, populate_history_from_messages
 from rag import conversations as convo_store
+from api.errors import ErrorCode, api_error
 from api.routes.conversations import can_open_conversation, _LIMIT_DETAIL as _CONVO_LIMIT_DETAIL
 from rag.rag_context import (
     _build_context_and_sources,
@@ -338,9 +339,9 @@ async def chat(request: Request, req: ChatRequest, user: dict = Depends(get_curr
     if req.session_id and not await anyio.to_thread.run_sync(
         _verify_session_owner, user["id"], session_id
     ):
-        raise HTTPException(status_code=404, detail="Conversation not found")
+        raise api_error(404, ErrorCode.not_found, "Conversation not found")
     if not await anyio.to_thread.run_sync(_may_open, user["id"], session_id):
-        raise HTTPException(status_code=409, detail=_CONVO_LIMIT_DETAIL)
+        raise api_error(409, ErrorCode.conversation_limit, _CONVO_LIMIT_DETAIL)
 
     if _is_greeting(req.message):
         return ChatResponse(answer=_GREETING_REPLY, sources=[], session_id=session_id)
@@ -385,12 +386,12 @@ async def chat(request: Request, req: ChatRequest, user: dict = Depends(get_curr
         # bug becomes a logged 500 (with stack) instead of being masked as transient.
         if _is_quota_exhausted(e):
             logger.error("Chat upstream quota exhausted: %s", e)
-            raise HTTPException(status_code=503, detail=_QUOTA_MESSAGE)
+            raise api_error(503, ErrorCode.quota_exhausted, _QUOTA_MESSAGE)
         if _is_high_demand(e):
             logger.warning("Chat upstream busy: %s", e)
-            raise HTTPException(status_code=503, detail=_BUSY_MESSAGE)
+            raise api_error(503, ErrorCode.model_busy, _BUSY_MESSAGE)
         logger.exception("Chat error")
-        raise HTTPException(status_code=500, detail=_GENERIC_ERROR_MESSAGE)
+        raise api_error(500, ErrorCode.chat_failed, _GENERIC_ERROR_MESSAGE)
 
 
 @router.post("/chat/stream")
@@ -400,9 +401,9 @@ async def chat_stream(request: Request, req: ChatRequest, user: dict = Depends(g
     if req.session_id and not await anyio.to_thread.run_sync(
         _verify_session_owner, user["id"], session_id
     ):
-        raise HTTPException(status_code=404, detail="Conversation not found")
+        raise api_error(404, ErrorCode.not_found, "Conversation not found")
     if not await anyio.to_thread.run_sync(_may_open, user["id"], session_id):
-        raise HTTPException(status_code=409, detail=_CONVO_LIMIT_DETAIL)
+        raise api_error(409, ErrorCode.conversation_limit, _CONVO_LIMIT_DETAIL)
 
     if _is_greeting(req.message):
         async def greeting_generator():
@@ -512,14 +513,14 @@ async def chat_stream(request: Request, req: ChatRequest, user: dict = Depends(g
         except Exception as e:
             logger.exception("Streaming error: %s", e)
             if _is_quota_exhausted(e):
-                friendly = _QUOTA_MESSAGE
+                code, friendly = ErrorCode.quota_exhausted, _QUOTA_MESSAGE
             elif _is_high_demand(e):
-                friendly = _BUSY_MESSAGE
+                code, friendly = ErrorCode.model_busy, _BUSY_MESSAGE
             else:
-                friendly = _GENERIC_ERROR_MESSAGE
+                code, friendly = ErrorCode.chat_failed, _GENERIC_ERROR_MESSAGE
             yield ServerSentEvent(
                 event="error",
-                data=json.dumps({"message": friendly}, ensure_ascii=False),
+                data=json.dumps({"code": code.value, "message": friendly}, ensure_ascii=False),
             )
             yield ServerSentEvent(event="done", data="{}")
 

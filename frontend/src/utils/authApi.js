@@ -2,6 +2,7 @@
  * Auth endpoints (email/password + httpOnly session cookie). Every call sends
  * `credentials: 'include'` so the session cookie travels with the request.
  */
+import { errorFromResponse } from './errorMessage.js'
 
 async function request(url, options = {}) {
   const res = await fetch(url, {
@@ -10,9 +11,7 @@ async function request(url, options = {}) {
     ...options,
   })
   if (!res.ok) {
-    const err = new Error(`Request failed: ${res.status} ${url}`)
-    err.status = res.status
-    throw err
+    throw await errorFromResponse(res, url)
   }
   if (res.status === 204) return null
   return res.json()

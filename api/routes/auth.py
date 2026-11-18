@@ -20,6 +20,7 @@ from sqlalchemy.exc import IntegrityError
 from config import get_settings
 from rag import users as users_store
 from rag.history import clear_session
+from api.errors import ErrorCode, api_error
 from api.limiter import limiter, _client_ip
 
 logger = logging.getLogger(__name__)
@@ -167,7 +168,7 @@ async def get_current_user(request: Request) -> dict:
     """FastAPI dependency: resolve the session cookie to a user or 401."""
     user = await get_optional_user(request)
     if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
+        raise api_error(401, ErrorCode.not_authenticated, "Not authenticated")
     return user
 
 
@@ -175,7 +176,7 @@ async def get_admin_user(user: dict = Depends(get_current_user)) -> dict:
     """FastAPI dependency: require an allowlisted, Google-verified user, else 403."""
     if not _is_admin(user):
         logger.warning("auth: admin access denied (user=%s)", user.get("id"))
-        raise HTTPException(status_code=403, detail="Admin access required")
+        raise api_error(403, ErrorCode.forbidden, "Admin access required")
     return user
 
 
@@ -186,13 +187,13 @@ async def get_admin_user(user: dict = Depends(get_current_user)) -> dict:
 async def signup(request: Request, body: SignupIn, response: Response):
     # Admin addresses sign in with Google only; same reply as a taken address.
     if _is_admin_email(body.email):
-        raise HTTPException(status_code=409, detail="Email already registered")
+        raise api_error(409, ErrorCode.email_taken, "Email already registered")
     try:
         uid = await anyio.to_thread.run_sync(
             users_store.create_user, body.email, body.name.strip(), body.password
         )
     except IntegrityError:
-        raise HTTPException(status_code=409, detail="Email already registered")
+        raise api_error(409, ErrorCode.email_taken, "Email already registered")
     token = await anyio.to_thread.run_sync(
         users_store.create_session, uid, get_settings().SESSION_TTL_HOURS
     )
@@ -212,7 +213,7 @@ async def login(request: Request, body: LoginIn, response: Response):
     valid = await anyio.to_thread.run_sync(users_store.verify_password, body.password, stored_hash)
     if not user or not valid:
         logger.warning("auth: login failed (ip=%s)", _client_ip(request))
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+        raise api_error(401, ErrorCode.invalid_credentials, "Invalid email or password")
     token = await anyio.to_thread.run_sync(
         users_store.create_session, user["id"], get_settings().SESSION_TTL_HOURS
     )
@@ -264,7 +265,7 @@ async def change_password(request: Request, body: ChangePasswordIn,
     )
     if not valid:
         logger.warning("auth: password change rejected, wrong current password (user=%s)", user["id"])
-        raise HTTPException(status_code=403, detail="Current password is incorrect")
+        raise api_error(403, ErrorCode.wrong_password, "Current password is incorrect")
     await anyio.to_thread.run_sync(users_store.change_password, user["id"], body.new_password)
     # Log out every other session; the one making this request stays valid.
     current_token = request.cookies.get(get_settings().SESSION_COOKIE_NAME)
@@ -278,18 +279,18 @@ async def delete_me(request: Request, body: DeleteAccountIn, response: Response,
                     user: dict = Depends(get_current_user)):
     full = await anyio.to_thread.run_sync(users_store.get_user_by_id, user["id"])
     if not full:
-        raise HTTPException(status_code=401, detail="Not authenticated")
+        raise api_error(401, ErrorCode.not_authenticated, "Not authenticated")
     if full["password_hash"]:
         valid = body.password and await anyio.to_thread.run_sync(
             users_store.verify_password, body.password, full["password_hash"]
         )
         if not valid:
             logger.warning("auth: account deletion rejected, wrong password (user=%s)", user["id"])
-            raise HTTPException(status_code=403, detail="Password is incorrect")
+            raise api_error(403, ErrorCode.wrong_password, "Password is incorrect")
     else:
         confirmed = (body.confirm_email or "").strip().lower() == full["email"]
         if not confirmed:
-            raise HTTPException(status_code=400, detail="Email confirmation does not match")
+            raise api_error(400, ErrorCode.email_mismatch, "Email confirmation does not match")
     conv_ids = await anyio.to_thread.run_sync(users_store.delete_user_account, user["id"])
     for cid in conv_ids:   # best-effort in-memory history cleanup
         clear_session(cid)

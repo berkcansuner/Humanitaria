@@ -11,7 +11,7 @@ import re
 from uuid import uuid4
 
 import anyio
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, Field, field_validator
 from typing import Literal, Optional
@@ -37,6 +37,7 @@ from api.routes.auth import get_current_user
 from api.routes.chat import (
     _BUSY_MESSAGE, _GENERIC_ERROR_MESSAGE, _astream_with_retry, _is_high_demand,
 )
+from api.errors import ErrorCode, api_error
 from api.limiter import limiter
 
 logger = logging.getLogger(__name__)
@@ -190,14 +191,14 @@ def _previous_in_series(user_id: str, req: ReportRequest) -> dict:
     (same answer, so ids of other users' reports are not probeable); 422 when it
     belongs to a different series."""
     if not report_store.is_owner(user_id, req.previous_report_id):
-        raise HTTPException(status_code=404, detail="Previous report not found")
+        raise api_error(404, ErrorCode.not_found, "Previous report not found")
     previous = report_store.get_report(req.previous_report_id)
     if previous is None:
-        raise HTTPException(status_code=404, detail="Previous report not found")
+        raise api_error(404, ErrorCode.not_found, "Previous report not found")
     if _series_key(previous) != _series_key(req.model_dump()):
-        raise HTTPException(
-            status_code=422,
-            detail="The previous report has a different type, country, sector or language.",
+        raise api_error(
+            422, ErrorCode.series_mismatch,
+            "The previous report has a different type, country, sector or language.",
         )
     return previous
 
@@ -234,8 +235,8 @@ async def report_options(user: dict = Depends(get_current_user)):
 @limiter.limit(_rate_limit)
 async def report_stream(request: Request, req: ReportRequest, user: dict = Depends(get_current_user)):
     if await anyio.to_thread.run_sync(report_store.count_reports, user["id"]) >= get_settings().MAX_REPORTS_PER_USER:
-        raise HTTPException(status_code=409,
-                            detail="Report limit reached; delete old reports to generate a new one.")
+        raise api_error(409, ErrorCode.report_limit,
+                        "Report limit reached; delete old reports to generate a new one.")
     previous = None
     if req.previous_report_id:
         previous = await anyio.to_thread.run_sync(_previous_in_series, user["id"], req)
@@ -440,10 +441,13 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
 
         except Exception as e:
             logger.exception("Report stream error: %s", e)
-            friendly = _BUSY_MESSAGE if _is_high_demand(e) else _GENERIC_ERROR_MESSAGE
+            if _is_high_demand(e):
+                code, friendly = ErrorCode.model_busy, _BUSY_MESSAGE
+            else:
+                code, friendly = ErrorCode.report_failed, _GENERIC_ERROR_MESSAGE
             yield ServerSentEvent(
                 event="error",
-                data=json.dumps({"message": friendly}, ensure_ascii=False),
+                data=json.dumps({"code": code.value, "message": friendly}, ensure_ascii=False),
             )
             yield ServerSentEvent(event="done", data="{}")
 
@@ -470,17 +474,17 @@ async def list_reports(user: dict = Depends(get_current_user)):
 @router.get("/reports/{report_id}")
 async def get_report(report_id: str, user: dict = Depends(get_current_user)):
     if not await anyio.to_thread.run_sync(report_store.is_owner, user["id"], report_id):
-        raise HTTPException(status_code=404, detail="Report not found")
+        raise api_error(404, ErrorCode.not_found, "Report not found")
     row = await anyio.to_thread.run_sync(report_store.get_report, report_id)
     if row is None:
-        raise HTTPException(status_code=404, detail="Report not found")
+        raise api_error(404, ErrorCode.not_found, "Report not found")
     return _normalize_report_type(row)
 
 
 @router.delete("/reports/{report_id}")
 async def delete_report(report_id: str, user: dict = Depends(get_current_user)):
     if not await anyio.to_thread.run_sync(report_store.is_owner, user["id"], report_id):
-        raise HTTPException(status_code=404, detail="Report not found")
+        raise api_error(404, ErrorCode.not_found, "Report not found")
     await anyio.to_thread.run_sync(report_store.delete_report, report_id)
     return {"ok": True}
 
@@ -496,10 +500,10 @@ def _pdf_filename(report: dict) -> str:
 @limiter.limit(_rate_limit)
 async def report_pdf(request: Request, report_id: str, user: dict = Depends(get_current_user)):
     if not await anyio.to_thread.run_sync(report_store.is_owner, user["id"], report_id):
-        raise HTTPException(status_code=404, detail="Report not found")
+        raise api_error(404, ErrorCode.not_found, "Report not found")
     report = await anyio.to_thread.run_sync(report_store.get_report, report_id)
     if report is None:
-        raise HTTPException(status_code=404, detail="Report not found")
+        raise api_error(404, ErrorCode.not_found, "Report not found")
     pdf = await anyio.to_thread.run_sync(render_report_pdf, report)
     return Response(
         content=pdf,

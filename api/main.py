@@ -3,7 +3,7 @@ import logging
 import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, Response
@@ -12,10 +12,13 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.staticfiles import NotModifiedResponse
 from starlette.datastructures import MutableHeaders
 from pathlib import Path
-from slowapi import _rate_limit_exceeded_handler
+from fastapi.exceptions import RequestValidationError
 from slowapi.errors import RateLimitExceeded
 
 from api.routes import chat, health, conversations, auth, admin, reports
+from api.errors import (
+    ApiError, ErrorCode, api_error_handler, rate_limit_handler, validation_error_handler,
+)
 from api.limiter import limiter
 from api.observability import configure_logging, init_sentry, request_id_var
 from config import get_settings, DEFAULT_SESSION_SECRET
@@ -70,9 +73,9 @@ class SecurityHeadersMiddleware:
 MAX_BODY_BYTES = 64 * 1024   # every JSON body model here is far smaller (chat message ≤ 4000 chars)
 
 
-class _BodyTooLarge(HTTPException):
+class _BodyTooLarge(ApiError):
     def __init__(self):
-        super().__init__(status_code=413, detail="Request body too large")
+        super().__init__(413, ErrorCode.body_too_large, "Request body too large")
 
 
 class BodySizeLimitMiddleware:
@@ -92,7 +95,10 @@ class BodySizeLimitMiddleware:
             return
         for k, v in scope.get("headers", []):
             if k == b"content-length" and v.isdigit() and int(v) > self.max_bytes:
-                await JSONResponse({"detail": "Request body too large"}, status_code=413)(scope, receive, send)
+                await JSONResponse(
+                    {"detail": "Request body too large", "code": ErrorCode.body_too_large.value},
+                    status_code=413,
+                )(scope, receive, send)
                 return
         seen = 0
 
@@ -209,7 +215,10 @@ app = FastAPI(title="ReliefWeb RAG API", lifespan=lifespan, **_docs_kwargs(setti
 
 # Rate limiting: register the shared limiter and the 429 handler.
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
+# Machine `code` next to the unchanged `detail` (see api/errors.py).
+app.add_exception_handler(ApiError, api_error_handler)
+app.add_exception_handler(RequestValidationError, validation_error_handler)
 
 _cors_origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
 # allow_credentials=True so the browser sends/stores the httpOnly session cookie

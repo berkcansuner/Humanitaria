@@ -5,6 +5,7 @@ import anyio
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 
+from api.errors import ErrorCode, api_error
 from api.routes.auth import _is_admin, get_optional_user
 
 logger = logging.getLogger(__name__)
@@ -45,7 +46,7 @@ async def health(deep: bool = False, user: Optional[dict] = Depends(get_optional
         return {"status": "ok"}
     # The deep probe makes a billed Gemini call: admins only.
     if not (user and _is_admin(user)):
-        raise HTTPException(status_code=403, detail="Admin access required")
+        raise api_error(403, ErrorCode.forbidden, "Admin access required")
 
     checks: dict[str, str] = {}
     probes = (("database", _check_database), ("gemini", _check_gemini))

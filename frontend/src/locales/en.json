@@ -20,5 +20,29 @@
     "buttonLabel": "Language: {name}",
     "listLabel": "Language",
     "changed": "Language set to {name}"
+  },
+  "errors": {
+    "not_authenticated": "Please log in to continue.",
+    "forbidden": "You don't have access to this.",
+    "invalid_credentials": "The email or password is incorrect.",
+    "email_taken": "An account with this email address already exists.",
+    "weak_password": "Choose a password with at least 8 characters.",
+    "wrong_password": "That password is incorrect.",
+    "email_mismatch": "The email address doesn't match your account.",
+    "not_found": "We couldn't find what you were looking for.",
+    "rate_limited": "Too many requests. Wait a moment and try again.",
+    "message_empty": "Write a message first.",
+    "message_too_long": "That message is too long. Keep it to 4,000 characters or fewer.",
+    "conversation_limit": "You've reached the conversation limit. Delete an old conversation to start a new one.",
+    "report_limit": "You've reached the report limit. Delete an old report to create a new one.",
+    "series_mismatch": "The previous report has a different type, country, sector or language.",
+    "model_busy": "The model is busy right now. Try again in a moment.",
+    "quota_exhausted": "The AI service has run out of capacity. Please contact the administrator.",
+    "report_failed": "The report couldn't be created. Please try again.",
+    "chat_failed": "Something went wrong while answering. Please try again.",
+    "body_too_large": "That request is too large to send.",
+    "validation_failed": "Some of the information isn't valid. Check it and try again.",
+    "network": "Can't reach the server. Check your connection and try again.",
+    "generic": "Something went wrong. Please try again."
   }
 }

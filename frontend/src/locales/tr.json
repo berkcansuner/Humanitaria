@@ -20,5 +20,29 @@
     "buttonLabel": "Dil: {name}",
     "listLabel": "Dil",
     "changed": "Dil {name} olarak ayarlandı"
+  },
+  "errors": {
+    "not_authenticated": "Devam etmek için giriş yapın.",
+    "forbidden": "Buna erişim izniniz yok.",
+    "invalid_credentials": "E-posta adresi ya da parola yanlış.",
+    "email_taken": "Bu e-posta adresiyle zaten bir hesap var.",
+    "weak_password": "En az 8 karakterli bir parola seçin.",
+    "wrong_password": "Parola yanlış.",
+    "email_mismatch": "E-posta adresi hesabınızla eşleşmiyor.",
+    "not_found": "Aradığınız içerik bulunamadı.",
+    "rate_limited": "Çok fazla istek gönderildi. Biraz bekleyip yeniden deneyin.",
+    "message_empty": "Önce bir mesaj yazın.",
+    "message_too_long": "Mesaj çok uzun. En fazla 4.000 karakter olmalı.",
+    "conversation_limit": "Sohbet sınırına ulaştınız. Yeni bir sohbet açmak için eskilerinden birini silin.",
+    "report_limit": "Rapor sınırına ulaştınız. Yeni rapor oluşturmak için eskilerinden birini silin.",
+    "series_mismatch": "Önceki raporun türü, ülkesi, sektörü ya da dili farklı.",
+    "model_busy": "Model şu anda yoğun. Biraz sonra yeniden deneyin.",
+    "quota_exhausted": "Yapay zekâ hizmetinin kullanım kotası doldu. Lütfen yöneticiyle iletişime geçin.",
+    "report_failed": "Rapor oluşturulamadı. Lütfen yeniden deneyin.",
+    "chat_failed": "Yanıt hazırlanırken bir sorun oluştu. Lütfen yeniden deneyin.",
+    "body_too_large": "İstek göndermek için çok büyük.",
+    "validation_failed": "Bazı bilgiler geçerli değil. Kontrol edip yeniden deneyin.",
+    "network": "Sunucuya ulaşılamıyor. Bağlantınızı kontrol edip yeniden deneyin.",
+    "generic": "Bir sorun oluştu. Lütfen yeniden deneyin."
   }
 }
