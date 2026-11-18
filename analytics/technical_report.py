@@ -40,6 +40,9 @@ class Findings:
     date_to: str | None = None
     default_years: int | None = None  # set when no period was chosen (the last N years)
     notes: list = field(default_factory=list)   # what was left out of a series, and why
+    # Trends taken over a longer look-back than the chosen period (too few points in it):
+    # {"indicator", "chosen_points", "date_from", "date_to"} — the window the trend covers.
+    look_backs: list = field(default_factory=list)
 
 
 # Section headings are copied verbatim by the model and matched back to their charts,
@@ -74,6 +77,9 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
     if default_years:
         date_from = _years_before(today, default_years).isoformat()
     date_to = min(date_to, today.isoformat()) if date_to else today.isoformat()
+    look_back_from = _years_before(date.fromisoformat(date_to),
+                                   settings.TECHNICAL_REPORT_DEFAULT_YEARS).isoformat()
+    look_backs: list[dict] = []
 
     for ind in indicators_for(theme):
         name = ind.name(language)
@@ -95,31 +101,43 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
         # bölgelerde fırlattığı ValueError) patlarsa tüm rapor değil, yalnızca bu
         # indikatör gap'e düşer — diğer indikatörler işlenmeye devam eder.
         try:
-            rows = _filter_period(rows, date_from, date_to)
-            if ind.complete_periods_only:
-                rows = _completed(rows, today)
-            rows, note = consistent_snapshots(rows)
-            coverage = ipc_coverage_note(rows)
-            notes += [f"{name}: {n}" for n in (note, coverage) if n]
-            periods, values = national_series(rows, ind)
-            if not values:
+            all_rows = rows
+            rows, series_notes, periods, values = _series(all_rows, ind, date_from, date_to, today)
+            # Too few points in the chosen period for a trend: the trend looks back over
+            # the default window ending at the chosen end (most HAPI series are yearly or
+            # half-yearly, so a one-year period held one observation). Only the trend
+            # uses it; the regional ranking and the correlations stay on the chosen period.
+            look_back = None
+            t_periods, t_values = periods, values
+            if len(values) < min_pts and look_back_from < date_from:
+                _, lb_notes, lb_periods, lb_values = _series(
+                    all_rows, ind, look_back_from, date_to, today)
+                if len(lb_values) > len(values):
+                    look_back = {"date_from": look_back_from, "date_to": date_to,
+                                 "chosen_points": len(values)}
+                    t_periods, t_values, series_notes = lb_periods, lb_values, lb_notes
+            notes += [f"{name}: {n}" for n in series_notes]
+            if not t_values:
                 gaps.append(f"{name}: dönem içinde veri yok")
                 continue
             covered.append(ind.key)
-            national_by_label[name] = (periods, values)
+            if look_back is None:
+                national_by_label[name] = (periods, values)
             percent = ind.scale == 100
             percent_by_label[name] = percent
-            source_by_label[name] = _credit(ind, periods[-1], language)
+            source_by_label[name] = _credit(ind, t_periods[-1], language)
             source = _source_line([source_by_label[name]], language)
 
             # Trend (gerçek zaman ekseni: ilk dönemden beri yıl → eğim yıl başına)
-            times = _years_since_first(periods)
-            tr = trend(values, indicator=name, min_points=min_pts, times=times)
+            times = _years_since_first(t_periods)
+            tr = trend(t_values, indicator=name, min_points=min_pts, times=times)
             if tr.direction == "insufficient_data":
                 gaps.append(f"{name}: trend için yetersiz veri (n={tr.n_points})")
             else:
+                if look_back:
+                    look_backs.append({"indicator": name, **look_back})
                 chart, chart_dark = _both_modes(
-                    trend_chart, periods, values, tr.slope, tr.intercept,
+                    trend_chart, t_periods, t_values, tr.slope, tr.intercept,
                     unit=_axis_unit(ind, language), times=times,
                     language=language, percent=percent, source=source)
                 sections.append(ReportSection(
@@ -129,15 +147,18 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                                  "p_value": tr.p_value, "pct_change": tr.pct_change,
                                  "n_points": tr.n_points, "ci_low": tr.ci_low,
                                  "ci_high": tr.ci_high, "tau": tr.tau,
-                                 "first_period": periods[0], "last_period": periods[-1],
-                                 "unit": ind.unit},
+                                 "first_period": t_periods[0], "last_period": t_periods[-1],
+                                 "unit": ind.unit, "look_back": look_back,
+                                 "chosen_from": date_from,
+                                 "latest_value": t_values[-1], "latest_period": t_periods[-1],
+                                 "value_unit": _value_unit(ind)},
                     chart=chart,
                     chart_dark=chart_dark,
                     findings_text="",
                 ))
 
             # Bölgeler-arası (admin-1)
-            reg = regional_series(rows, ind)
+            reg = regional_series(rows, ind) if values else {}
             if len(reg) >= 2:
                 rr = by_region(reg, indicator=name, period=f"{periods[0]}–{periods[-1]}")
                 labels = [r for r, _ in rr.ranking]
@@ -192,7 +213,34 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
     _adjust_and_describe(sections)
     return Findings(sections=sections, gaps=gaps, indicators_covered=covered,
                     date_from=date_from, date_to=date_to, default_years=default_years,
-                    notes=notes)
+                    notes=notes, look_backs=look_backs)
+
+
+def _series(rows: list[dict], ind, date_from: str, date_to: str, today: date):
+    """The indicator's rows and national series for one window, with the notes on
+    what was left out of it: (rows, notes, periods, values)."""
+    rows = _filter_period(rows, date_from, date_to)
+    if ind.complete_periods_only:
+        rows = _completed(rows, today)
+    rows, note = consistent_snapshots(rows)
+    coverage = ipc_coverage_note(rows)
+    periods, values = national_series(rows, ind)
+    return rows, [n for n in (note, coverage) if n], periods, values
+
+
+def _value_unit(ind) -> str:
+    """How a value of the indicator is written in the findings: '%', 'USD' or 'people'."""
+    if ind.scale == 100:
+        return "%"
+    return "USD" if ind.key == "funding" else "people"
+
+
+def _value(value: float, unit: str) -> str:
+    return f"{_plain(value)}%" if unit == "%" else f"{_plain(value)} {unit}"
+
+
+def _observations(n: int) -> str:
+    return "no observation" if n == 0 else f"{n} observation{'' if n == 1 else 's'}"
 
 
 _MONTH_NAMES = {
@@ -325,10 +373,26 @@ def _trend_text(r: dict) -> str:
     ci = ("95% CI: too few points" if r["ci_low"] is None
           else f"95% CI {_plain(r['ci_low'])} to {_plain(r['ci_high'])}")
     unit = f" {r['unit']}" if r.get("unit") else ""
-    return (f"{r['indicator']}: direction={r['direction']}, Sen slope={_plain(r['slope'])}{unit} per year "
+    return (_look_back_text(r) + f"{r['indicator']}: direction={r['direction']}, Sen slope={_plain(r['slope'])}{unit} per year "
             f"({ci}), Kendall tau={r['tau']:.2f}, Mann-Kendall {_verdict(r)}, "
             f"relative change along the trend line {str(r['first_period'])[:10]} → {str(r['last_period'])[:10]}={pct}, "
             f"n={r['n_points']}.")
+
+
+def _look_back_text(r: dict) -> str:
+    """For a trend taken over a longer look-back: which window each number refers to,
+    and the latest value as of the chosen period. Empty for any other trend."""
+    lb = r.get("look_back")
+    if not lb:
+        return ""
+    k = lb["chosen_points"]
+    latest = (f"{_value(r['latest_value'], r['value_unit'])} "
+              f"({str(r['latest_period'])[:10]})")
+    latest = (f"Latest value as of the chosen period: {latest}. " if k
+              else f"Latest value before the chosen period: {latest}. ")
+    return (f"Look-back: the chosen period {r['chosen_from']} to {lb['date_to']} holds "
+            f"{_observations(k)}, too few for a trend test, so the trend is computed over "
+            f"{lb['date_from']} to {lb['date_to']}. {latest}Trend over the look-back — ")
 
 
 def _region_text(r: dict) -> str:
@@ -358,6 +422,14 @@ def findings_to_context(findings: Findings) -> str:
         chosen = (f" (no period was chosen: the last {findings.default_years} years)"
                   if findings.default_years else "")
         lines += [f"PERIOD ANALYSED: {findings.date_from} to {findings.date_to}{chosen}", ""]
+    if findings.look_backs:
+        names = ", ".join(f"{lb['indicator']} ({_observations(lb['chosen_points'])})"
+                          for lb in findings.look_backs)
+        windows = sorted({(lb["date_from"], lb["date_to"]) for lb in findings.look_backs})
+        span = "; ".join(f"{a} to {b}" for a, b in windows)
+        its = "its trend is" if len(findings.look_backs) == 1 else "their trends are"
+        lines += [f"LONGER LOOK-BACK: the chosen period holds too few observations for a trend "
+                  f"for {names}; {its} computed over {span}.", ""]
     for s in findings.sections:
         lines.append(f"## {s.heading}")
         lines.append(s.findings_text)

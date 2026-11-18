@@ -503,3 +503,100 @@ def test_sector_people_in_need_is_one_value_a_year(monkeypatch):
     assert tr.heading == "Food security: people in need — Trend Analysis"
     assert tr.stat_result["n_points"] == 5          # not ten (duplicates) or more (breakdowns)
     assert "(n=" not in "".join(f.gaps)
+
+
+# --- A one-year period starved the statistics (2026-11-18): annual and half-yearly
+# series held one observation, so no trend could be tested. A trend now looks back
+# over the default window ending at the chosen end date, and says so. ---
+
+def _yearly_ipc_rows(ep, years_back=4):
+    # One IPC share a year, 1 January of each of the last five years (rising).
+    if "food-security" not in ep:
+        return []
+    from datetime import date
+    y = date.today().year
+    return [{"reference_period_start": f"{y - k}-01-01", "reference_period_end": f"{y - k}-03-31",
+             "population_in_phase": 1000, "population_fraction_in_phase": 0.40 - 0.02 * k}
+            for k in range(years_back, -1, -1)]
+
+
+def _last_year():
+    from datetime import date
+    today = date.today()
+    return today.replace(year=today.year - 1).isoformat(), today.isoformat()
+
+
+@patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _yearly_ipc_rows(ep))
+def test_a_short_period_takes_its_trend_from_a_longer_look_back(_mock):
+    from datetime import date
+    date_from, date_to = _last_year()
+    today = date.today()
+    f = compute_findings("AFG", date_from, date_to, language="en")
+    tr = next(s for s in f.sections if s.stat_result["kind"] == "trend")
+    look_back_from = today.replace(year=today.year - 5).isoformat()
+    assert tr.stat_result["n_points"] == 5
+    assert tr.stat_result["look_back"] == {"date_from": look_back_from, "date_to": date_to,
+                                          "chosen_points": 1}
+    assert (f"the chosen period {date_from} to {date_to} holds 1 observation, too few for a "
+            f"trend test, so the trend is computed over {look_back_from} to {date_to}"
+            in tr.findings_text)
+    assert f"Latest value as of the chosen period: 40.0% ({today.year}-01-01)" in tr.findings_text
+    assert f.look_backs == [{"indicator": tr.stat_result["indicator"], "chosen_points": 1,
+                             "date_from": look_back_from, "date_to": date_to}]
+    ctx = findings_to_context(f)
+    assert f"PERIOD ANALYSED: {date_from} to {date_to}" in ctx
+    assert (f"LONGER LOOK-BACK: the chosen period holds too few observations for a trend for "
+            f"{tr.stat_result['indicator']} (1 observation); its trend is computed over "
+            f"{look_back_from} to {date_to}.") in ctx
+    assert not [g for g in f.gaps if "trend" in g]
+
+
+@patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _yearly_ipc_rows(ep))
+def test_a_period_with_enough_points_is_not_extended(_mock):
+    from datetime import date
+    y = date.today().year
+    f = compute_findings("AFG", f"{y - 4}-01-01", None, language="en")
+    tr = next(s for s in f.sections if s.stat_result["kind"] == "trend")
+    assert tr.stat_result["look_back"] is None and f.look_backs == []
+    assert "look-back" not in tr.findings_text.lower()
+    assert "LONGER LOOK-BACK" not in findings_to_context(f)
+
+
+@patch("analytics.technical_report.fetch_rows",
+       side_effect=lambda ep, iso3, **k: _yearly_ipc_rows(ep, years_back=2))
+def test_no_chosen_period_is_never_extended(_mock):
+    f = compute_findings("AFG", None, None, language="en")
+    assert f.look_backs == []
+    assert not [s for s in f.sections if s.stat_result["kind"] == "trend"]
+
+
+def _ten_year_idp_rows(ep):
+    # Two regions, one DTM round a year for ten years: the chosen year holds one round.
+    if not ep.endswith("idps"):
+        return []
+    from datetime import date
+    y = date.today().year
+    return [{"population": base + 10 * k, "admin1_name": region, "operation": "Overview",
+             "reference_period_start": f"{y - 9 + k}-01-01"}
+            for k in range(10) for region, base in (("North", 1000), ("South", 500))]
+
+
+@patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _ten_year_idp_rows(ep))
+def test_the_regional_ranking_stays_on_the_chosen_period(_mock):
+    date_from, date_to = _last_year()
+    f = compute_findings("AFG", date_from, date_to, language="en")
+    region = next(s for s in f.sections if s.stat_result["kind"] == "region")
+    assert dict(region.stat_result["ranking"]) == {"North": 1090.0, "South": 590.0}
+
+
+@patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _two_indicator_rows(
+    ep, [f"{y}-{m:02d}-01" for y in range(__import__('datetime').date.today().year - 4,
+                                           __import__('datetime').date.today().year + 1)
+         for m in (1, 2)]))
+def test_look_back_series_are_not_correlated(_mock):
+    # Correlations need eight common periods inside the chosen period; a look-back
+    # extends a trend, it does not widen the report's other tests.
+    date_from, date_to = _last_year()
+    f = compute_findings("AFG", date_from, date_to, language="en")
+    assert f.look_backs
+    assert not [s for s in f.sections if s.stat_result["kind"] == "correlation"]
