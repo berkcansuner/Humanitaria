@@ -587,3 +587,69 @@ class TestCountryWideIsNotADoctype:
     def test_country_profile_next_to_a_nationwide_phrase_keeps_the_doctype(self, _mock):
         f = extract_filters("Suriye ülke profili ve ülke genelinde gıda güvensizliği")
         assert f.get("doctype") == "country"
+
+
+class TestCountryDoctypeOnlyOnProfileRequests:
+    """doctype=country limits retrieval to country-profile records, so it is set only
+    when the message asks for a profile by name; "ülke"/"country" alone says where."""
+
+    NOT_PROFILE = [
+        "Suriyeli mülteciler ülkelerine geri dönüyor mu?",
+        "ülkeden kaçan Suriyeliler",
+        "Suriye ülkesindeki son durum",
+        "returns to the country Syria",
+    ]
+    PROFILE = [
+        "Suriye ülke profili",
+        "ülke bilgileri",
+        "Ülke Profili: Irak",
+        "ulke profilini goster",
+        "Sudan country profile",
+        "country overview for Yemen",
+    ]
+
+    @pytest.mark.parametrize("text", NOT_PROFILE)
+    def test_rule_based_has_no_country_doctype(self, text):
+        assert "doctype" not in _extract_filters_rule_based(text)
+
+    @pytest.mark.parametrize("text", PROFILE)
+    def test_rule_based_profile_request_sets_it(self, text):
+        assert _extract_filters_rule_based(text).get("doctype") == "country"
+
+    @pytest.mark.parametrize("text", NOT_PROFILE)
+    @patch("rag.query_processor._extract_filters_llm")
+    def test_llm_merge_has_no_country_doctype(self, mock_llm, text):
+        for llm_out in ({}, {"doctype": "country"}):
+            _clear_llm_cache()
+            mock_llm.return_value = dict(llm_out)
+            assert "doctype" not in extract_filters(text)
+        _clear_llm_cache()
+
+    @pytest.mark.parametrize("text", PROFILE)
+    @patch("rag.query_processor._extract_filters_llm")
+    def test_llm_merge_keeps_a_profile_request(self, mock_llm, text):
+        for llm_out in ({}, {"doctype": "country"}):
+            _clear_llm_cache()
+            mock_llm.return_value = dict(llm_out)
+            assert extract_filters(text).get("doctype") == "country"
+        _clear_llm_cache()
+
+    @staticmethod
+    def _plan(message, standalone):
+        from langchain_core.messages import AIMessage, HumanMessage
+        from rag.query_processor import QueryPlan, plan_retrieval
+        planner = MagicMock()
+        planner.invoke.return_value = QueryPlan(
+            standalone_query=standalone, country="Syria", doctype="country")
+        history = [HumanMessage(content="Suriye'de durum nedir?"), AIMessage(content="...")]
+        return plan_retrieval(message, history, planner=planner)[1]
+
+    def test_follow_up_is_judged_on_the_users_message(self):
+        # The rewrite may add words the user never wrote; the user's message decides.
+        f = self._plan("ya geri dönenler?", "Suriye ülke profili: ülkelerine geri dönenler")
+        assert "doctype" not in f
+        assert f["country"] == "Syria"
+
+    def test_follow_up_profile_request_keeps_it(self):
+        f = self._plan("ülke profilini göster", "Suriye ülke profili")
+        assert f["doctype"] == "country"

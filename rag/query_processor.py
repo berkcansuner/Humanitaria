@@ -134,7 +134,9 @@ _FILTER_RULES = """Rules:
   Protection and Human Rights (koruma/protection), Education (egitim/education),
   Logistics and Telecommunications (lojistik), Coordination (koordinasyon/coordination).
 - Map document type mentions: rapor/report/raporlar/reports -> report,
-  afet/disaster/afetler/disasters -> disaster, ulke/country/ulkeler/countries -> country.
+  afet/disaster/afetler/disasters -> disaster, an explicit country-profile request
+  (ülke profili/ülke bilgileri/country profile/country overview) -> country. The word
+  ülke/country alone is not a document type ("ülke içinde", "returns to the country").
 - For source organizations, extract the name as-is (e.g., WFP, UNHCR, OCHA, WHO).
 - For format, extract as-is (e.g., Situation Report, Assessment, Map).
 - Convert relative dates to absolute ISO format ONLY when an explicit time unit is given.
@@ -301,19 +303,20 @@ def _match_word(keyword: str, text: str) -> bool:
     return bool(re.search(r"\b" + re.escape(keyword), text))
 
 
-# "ülke içinde (yerinden edilmiş)" = internally (displaced), "ülke içi" = domestic,
-# "ülke genelinde" / "ülke çapında" = nationwide: these say where, not which document
-# type. Read as doctype=country they limited such Turkish questions to country-profile
-# records, and the chat found no documents.
-_IN_COUNTRY = re.compile(r"\b[uü]lke\s+(?:i[çc]i|genel[iı]|[çc]ap[ıi])")
+# doctype=country limits retrieval to ReliefWeb's country-profile records, so it is
+# set only when the message asks for a profile by name. The bare word says where,
+# not which document type: "ülke içinde" (internally), "ülke genelinde / çapında"
+# (nationwide), "ülkelerine dönüyor", "returns to the country".
+_COUNTRY_PROFILE = re.compile(
+    r"\b(?:[uü]lke\s+(?:profil|bilgi|[oö]zet)"
+    r"|country[\s-]+(?:profile|overview|information|info|fact\s*sheet)s?\b)"
+)
 
 
-def _without_misread_doctype(query: str, filters: Dict[str, Any],
-                             rule_filters: Dict[str, Any]) -> Dict[str, Any]:
-    """Drop an LLM doctype=country that only an "ülke içinde / genelinde / çapında" phrase
-    can have prompted (the rule-based extractor, which skips those, found no country doctype)."""
-    if (filters.get("doctype") == "country" and rule_filters.get("doctype") != "country"
-            and _IN_COUNTRY.search(_turkish_lower(query))):
+def _country_doctype_only_on_request(message: str, filters: Dict[str, Any]) -> Dict[str, Any]:
+    """Drop a doctype=country (from the LLM or the rule-based backstop) unless the
+    user's own message asks for a country profile."""
+    if filters.get("doctype") == "country" and not _COUNTRY_PROFILE.search(_turkish_lower(message)):
         return {key: value for key, value in filters.items() if key != "doctype"}
     return filters
 
@@ -335,11 +338,13 @@ def _extract_filters_rule_based(query: str) -> Dict[str, Any]:
         if _match_word(key, query_lower):
             filters["theme"] = val
             break
-    doctype_text = _IN_COUNTRY.sub(" ", query_lower)
     for key, val in _DOCTYPE_MAP.items():
-        if _match_word(key, doctype_text):
+        # "ülke"/"country" alone is not a document type (see _COUNTRY_PROFILE).
+        if val != "country" and _match_word(key, query_lower):
             filters["doctype"] = val
             break
+    if "doctype" not in filters and _COUNTRY_PROFILE.search(query_lower):
+        filters["doctype"] = "country"
 
     # --- Date extraction (ordered by specificity) ---
 
@@ -431,7 +436,7 @@ def extract_filters(query: str) -> Dict[str, Any]:
     # date fields the LLM left empty, while the LLM still wins on any field it set.
     merged = dict(rule_filters)
     merged.update(llm_filters)
-    return _without_misread_doctype(query, merged, rule_filters)
+    return _country_doctype_only_on_request(query, merged)
 
 
 _llm_planner = None
@@ -489,7 +494,8 @@ def plan_retrieval(message: str, chat_history: list, planner=None) -> tuple[str,
         rule_filters = _extract_filters_rule_based(query)
         merged = dict(rule_filters)
         merged.update(_normalize_llm_filters(result))
-        return query, _without_misread_doctype(query, merged, rule_filters)
+        # The user's message decides, not the rewrite (which may add words).
+        return query, _country_doctype_only_on_request(message, merged)
     except Exception as e:
         logger.warning("Combined query planning failed, falling back to filters-only: %s", e)
         return message, extract_filters(message)
