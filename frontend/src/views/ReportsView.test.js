@@ -386,6 +386,52 @@ describe('ReportsView in two languages', () => {
     expect(host.querySelector('.source-item.active').getAttribute('data-srcid')).toBe('2')
   })
 
+  describe('a technical report shows its data sources', () => {
+    const technical = (sources) => ({
+      ...SAVED,
+      report_type: 'technical_monitoring',
+      theme: null,
+      title: 'Technical Monitoring Report — Sudan · All sectors · 2026-08-01 – 2026-10-31',
+      content: '## Executive Summary\n\nNo markers in a technical narrative.',
+      sources,
+    })
+    const DATASET = {
+      index: 1,
+      title: 'Food security: people in need',
+      url: 'https://data.humdata.org/dataset/global-hpc-hno',
+      source: 'OCHA HNO',
+      date: '2026-01-01',
+      doctype: 'dataset',
+      dataset: 'Global Humanitarian Programme Cycle, Humanitarian Needs',
+      period: '2024-01-01 to 2026-01-01',
+      retrieved: '2026-11-18',
+    }
+
+    it('lists the HDX HAPI datasets under the report, with their count', async () => {
+      const report = technical([DATASET])
+      vi.mocked(listReports).mockResolvedValue({ reports: [report] })
+      vi.mocked(getReport).mockResolvedValue(report)
+      await mount('/reports?report=r1')
+      expect(text('.sources-summary')).toMatch(/^1 source/)
+      expect(text('.source-meta')).toBe(
+        'OCHA HNO · Global Humanitarian Programme Cycle, Humanitarian Needs · 2024-01-01 – 2026-01-01 · retrieved 2026-11-18',
+      )
+      setLocale('tr')
+      await flush()
+      expect(text('.sources-summary')).toMatch(/^1 kaynak/)
+      expect(text('.source-link')).toBe('Food security: people in need')
+    })
+
+    it('keeps an older technical report without sources as it was', async () => {
+      const report = technical(null)
+      vi.mocked(listReports).mockResolvedValue({ reports: [report] })
+      vi.mocked(getReport).mockResolvedValue(report)
+      await mount('/reports?report=r1')
+      expect(text('.report-content h2')).toBe('Executive Summary')
+      expect(host.querySelector('.sources')).toBeNull()
+    })
+  })
+
   describe('technical monitoring offers only sectors that have data', () => {
     beforeEach(() => {
       vi.mocked(getReportOptions).mockResolvedValue({

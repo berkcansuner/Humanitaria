@@ -45,6 +45,36 @@ export function ledgerDate(iso, locale = 'en') {
   }).format(date)
 }
 
+/** A technical monitoring report's data source (an HDX HAPI dataset), not a document. */
+export function isDataSource(src) {
+  return !!src && src.doctype === 'dataset'
+}
+
+/** A dataset's reference period ("2024-01-01 to 2026-01-01", or one date) in the
+ * ledger's date format for `locale`, joined with an en dash. */
+export function dataPeriod(period, locale = 'en') {
+  if (!period) return ''
+  return String(period)
+    .split(/\s+to\s+/)
+    .map((day) => ledgerDate(day, locale) || day)
+    .join(' – ')
+}
+
+/**
+ * What names a data source after its title: the publisher exactly as given (for
+ * IOM DTM, its required credit line), the HDX dataset, the period used and the day
+ * the figures were retrieved. `retrieved(date)` words the last part in the wanted
+ * language; empty parts are left out.
+ */
+export function dataSourceParts(src, locale, retrieved) {
+  return [
+    src.source,
+    src.dataset,
+    dataPeriod(src.period, locale),
+    src.retrieved ? retrieved(ledgerDate(src.retrieved, locale) || src.retrieved) : '',
+  ].filter(Boolean)
+}
+
 // The chip that last opened a source, per container, so "Back to text" can
 // return the reader to the exact place they left.
 const lastCite = new WeakMap()

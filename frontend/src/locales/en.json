@@ -254,7 +254,8 @@
       "date": "Date",
       "back": "Back to text",
       "heading": "Sources",
-      "untitled": "Untitled"
+      "untitled": "Untitled",
+      "retrieved": "retrieved {date}"
     },
     "cite": {
       "number": "Source {n}",

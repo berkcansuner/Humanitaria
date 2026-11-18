@@ -151,3 +151,35 @@ describe('copied tables keep their citations', () => {
     expect(buildCopyHtml(table, sources)).toMatch(/<td>3\.1 million \[3\]\[4\]<\/td>/)
   })
 })
+
+describe('data sources in the copied list', () => {
+  const dataset = {
+    index: 1,
+    title: 'Food security: people in need',
+    url: 'https://data.humdata.org/dataset/global-hpc-hno',
+    source: 'OCHA HNO',
+    date: '2026-01-01',
+    doctype: 'dataset',
+    dataset: 'Global Humanitarian Programme Cycle, Humanitarian Needs',
+    period: '2024-01-01 to 2026-01-01',
+    retrieved: '2026-11-18',
+  }
+
+  it('names publisher, dataset, period and retrieval date, in the copy language', () => {
+    expect(referenceLine(dataset, 'en')).toBe(
+      '[1] Food security: people in need. OCHA HNO, Global Humanitarian Programme Cycle, Humanitarian Needs, 2024-01-01 – 2026-01-01, retrieved 2026-11-18. https://data.humdata.org/dataset/global-hpc-hno',
+    )
+    expect(referenceLine(dataset, 'tr')).toBe(
+      '[1] Food security: people in need. OCHA HNO, Global Humanitarian Programme Cycle, Humanitarian Needs, 1 Oca 2024 – 1 Oca 2026, erişim tarihi 18 Kas 2026. https://data.humdata.org/dataset/global-hpc-hno',
+    )
+  })
+
+  it('lists them under Sources in the rich copy too', () => {
+    const html = buildCopyHtml('Narrative without markers.', [dataset], 'en')
+    expect(html).toContain('<li value="1">')
+    expect(html).toContain('retrieved 2026-11-18')
+    expect(buildCopyText('Narrative without markers.', [dataset], 'en')).toContain(
+      '\n\nSources\n[1] ',
+    )
+  })
+})

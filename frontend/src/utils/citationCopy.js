@@ -1,6 +1,6 @@
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
-import { isValidSource, ledgerDate } from './sources.js'
+import { isValidSource, ledgerDate, isDataSource, dataSourceParts } from './sources.js'
 import { expandCitationGroups } from './renderMarkdown.js'
 import { orderCitationRuns } from './citationRuns.js'
 import { safeUrl } from './parseSSE.js'
@@ -17,7 +17,18 @@ import { i18n, t } from '../i18n/index.js'
 
 const LABEL_LANGS = ['en', 'tr']
 const locale = (lang) => (LABEL_LANGS.includes(lang) ? lang : i18n.global.locale.value)
-const label = (key, lang) => t(key, {}, { locale: locale(lang) })
+const label = (key, lang, params = {}) => t(key, params, { locale: locale(lang) })
+
+// After the title: publisher and date for a report; publisher, dataset, period and
+// retrieval date for a data source (technical monitoring).
+function metaParts(src, lang) {
+  if (isDataSource(src)) {
+    return dataSourceParts(src, locale(lang), (date) =>
+      label('chat.sources.retrieved', lang, { date }),
+    )
+  }
+  return [src.source, ledgerDate(src.date, locale(lang))].filter(Boolean)
+}
 
 /** Shown sources that a [n] marker can point to, in citation order. */
 export function referenceEntries(sources) {
@@ -29,8 +40,7 @@ export function referenceEntries(sources) {
 
 /** "[2] Sudan Access Update. OCHA, 2026-10-21. https://…" (missing parts dropped). */
 export function referenceLine(src, lang) {
-  const date = ledgerDate(src.date, locale(lang))
-  const meta = [src.source, date].filter(Boolean).join(', ')
+  const meta = metaParts(src, lang).join(', ')
   const url = safeUrl(src.url)
   return [
     `[${src.index}] ${src.title || label('chat.sources.untitled', lang)}.`,
@@ -72,10 +82,7 @@ export function buildCopyHtml(markdown, sources, lang) {
           const title = esc(s.title || label('chat.sources.untitled', lang))
           const href = safeUrl(s.url)
           const link = href && href !== '#' ? `<a href="${esc(href)}">${title}</a>` : title
-          const meta = [s.source, ledgerDate(s.date, locale(lang))]
-            .filter(Boolean)
-            .map(esc)
-            .join(', ')
+          const meta = metaParts(s, lang).map(esc).join(', ')
           return `<li value="${Number(s.index)}">${link}${meta ? `. ${meta}.` : '.'}</li>`
         })
         .join('') +

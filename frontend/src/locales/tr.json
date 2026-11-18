@@ -254,7 +254,8 @@
       "date": "Tarih",
       "back": "Metne dön",
       "heading": "Kaynaklar",
-      "untitled": "Başlıksız"
+      "untitled": "Başlıksız",
+      "retrieved": "erişim tarihi {date}"
     },
     "cite": {
       "number": "Kaynak {n}",
