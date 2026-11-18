@@ -281,7 +281,8 @@
       "delete": "Sohbet silinemedi. Listeye geri eklendi."
     },
     "topbar": {
-      "home": "Humanitaria ana sayfası",
+      "home": "Humanitaria: sohbete dön",
+      "homePage": "Ana sayfa",
       "nav": "Ana menü"
     },
     "menu": {

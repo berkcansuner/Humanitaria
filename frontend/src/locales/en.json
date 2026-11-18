@@ -281,7 +281,8 @@
       "delete": "Could not delete the conversation. It is back in the list."
     },
     "topbar": {
-      "home": "Humanitaria home page",
+      "home": "Humanitaria: back to chat",
+      "homePage": "Home page",
       "nav": "Main"
     },
     "menu": {
