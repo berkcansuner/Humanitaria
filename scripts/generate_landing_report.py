@@ -146,7 +146,8 @@ def main() -> None:
     parser.add_argument("--country", default=COUNTRY, help=f"report country (default {COUNTRY})")
     parser.add_argument("--sector", default=THEME, help=f"report sector/theme (default {THEME})")
     parser.add_argument("--language", choices=("en", "tr"), default=LANGUAGE,
-                        help=f"report language; writes meReport.<language>.json (default {LANGUAGE})")
+                        help=f"report language; writes meReport.<language>.json (default {LANGUAGE}; "
+                             "with --reuse, the raw file's language)")
     parser.add_argument("--max-calls", type=int, choices=(1, 2), default=MAX_CALLS,
                         help="model calls allowed: 2 = one retry if the first call fails")
     parser.add_argument("--dry-run", action="store_true",
@@ -154,10 +155,11 @@ def main() -> None:
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     language = args.language
-    out_path = DATA_DIR / f"meReport.{language}.json"
 
     if args.reuse:
         raw = json.loads(args.raw.read_text(encoding="utf-8"))
+        # The excerpt is in the raw report's language, so that names the output file.
+        language = raw.get("language", language)
     else:
         today = date.today()
         raw = asyncio.run(_generate(args.country, args.sector, language,
@@ -179,10 +181,11 @@ def main() -> None:
         "title": report_title(country, sector, raw["date_from"], raw["date_to"], REPORT_TYPE),
         "country": country, "sector": sector, "type": "Situation report",
         "report_type": REPORT_TYPE,   # the product's key (the page labels it per language)
-        "language": raw.get("language", language),
+        "language": language,
         "date_from": raw["date_from"], "date_to": raw["date_to"], "generated": raw["generated"],
         **excerpt,
     }
+    out_path = DATA_DIR / f"meReport.{language}.json"
     out_path.write_text(json.dumps(out, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     logger.info("Wrote %s", out_path)
 

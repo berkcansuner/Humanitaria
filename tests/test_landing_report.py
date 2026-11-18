@@ -97,7 +97,7 @@ def test_without_a_new_source_the_next_cited_sentence_is_taken():
     assert key_findings_excerpt(report, SOURCES)["findings"] == ["A 5% rise [1].", "Then a fall [1]."]
 
 
-def _run_main(monkeypatch, tmp_path, *args):
+def _run_main(monkeypatch, tmp_path, *args, **raw_fields):
     """main() with --reuse on a saved raw file: no model call, output in tmp_path."""
     import json
     import sys
@@ -106,7 +106,7 @@ def _run_main(monkeypatch, tmp_path, *args):
     raw = tmp_path / "raw.json"
     raw.write_text(json.dumps({"generated": "2026-11-18", "date_from": "2025-11-18",
                                "date_to": "2026-11-18", "content": PICK_REPORT,
-                               "sources": SOURCES}), encoding="utf-8")
+                               "sources": SOURCES, **raw_fields}), encoding="utf-8")
     monkeypatch.setattr(script, "DATA_DIR", tmp_path)
     monkeypatch.setattr(sys, "argv", ["generate_landing_report.py", "--raw", str(raw),
                                       "--reuse", *args])
@@ -124,3 +124,9 @@ def test_default_run_writes_the_english_syria_sample_the_landing_imports(monkeyp
 
 def test_language_run_writes_its_own_file(monkeypatch, tmp_path):
     assert _run_main(monkeypatch, tmp_path, "--language", "tr") == ["meReport.tr.json"]
+
+
+def test_reuse_writes_the_file_of_the_raw_reports_language(monkeypatch, tmp_path):
+    """Re-excerpting a Turkish raw file without --language must not overwrite the
+    English sample with Turkish text."""
+    assert _run_main(monkeypatch, tmp_path, language="tr") == ["meReport.tr.json"]
