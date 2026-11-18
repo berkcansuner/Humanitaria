@@ -422,6 +422,57 @@ describe('ReportsView in two languages', () => {
       expect(selects()[2].value).toBe('Agriculture')
       expect(sectorOptions().every(([, disabled]) => !disabled)).toBe(true)
     })
+
+    // An older technical report on a sector that has no series now: its next period
+    // would either fail or, with the sector reset, quietly stop being the series.
+    const olderTechnical = (theme) => ({
+      ...SAVED,
+      id: 't-old',
+      report_type: 'technical_monitoring',
+      theme,
+      date_from: '2026-05-01',
+      date_to: '2026-07-31',
+      title: `Technical Monitoring Report — Sudan · ${theme} · 2026-05-01 – 2026-07-31`,
+    })
+    const runNext = () =>
+      [...host.querySelectorAll('.pdf-btn')].find(
+        (b) => b.textContent.trim() === en.reports.viewer.runNext,
+      )
+
+    it('does not run the next period of a series whose sector has no data, and says why', async () => {
+      const old = olderTechnical('Agriculture')
+      vi.mocked(listReports).mockResolvedValue({ reports: [old] })
+      vi.mocked(getReport).mockResolvedValue({ ...old, content: '## Summary\n\nText.' })
+      await mount('/reports?report=t-old')
+      expect(runNext().disabled).toBe(true)
+      expect(text('.next-blocked')).toBe(en.reports.viewer.nextNoData)
+      expect(runNext().getAttribute('aria-describedby')).toBe(
+        host.querySelector('.next-blocked').id,
+      )
+      runNext().click()
+      await flush()
+      // Nothing was set up: no continuation, no sector changed behind the user's back.
+      expect(host.querySelector('.continues')).toBeNull()
+      setLocale('tr')
+      await flush()
+      expect(text('.next-blocked')).toBe(tr.reports.viewer.nextNoData)
+    })
+
+    it('runs the next period of a covered sector, keeping the sector', async () => {
+      const old = olderTechnical('Health')
+      vi.mocked(listReports).mockResolvedValue({ reports: [old] })
+      vi.mocked(getReport).mockResolvedValue({ ...old, content: '## Summary\n\nText.' })
+      await mount('/reports?report=t-old')
+      vi.stubGlobal('matchMedia', () => ({ matches: false }))
+      Element.prototype.scrollIntoView = () => {}
+      expect(runNext().disabled).toBe(false)
+      expect(host.querySelector('.next-blocked')).toBeNull()
+      runNext().click()
+      await flush()
+      delete Element.prototype.scrollIntoView
+      expect(selects()[2].value).toBe('Health')
+      expect(host.querySelector('.continues')).toBeTruthy()
+    })
   })
 
   describe('while a report is being prepared', () => {

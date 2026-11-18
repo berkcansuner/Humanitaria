@@ -390,13 +390,24 @@
                   </button>
                 </template>
               </i18n-t>
+              <!-- A technical series on a sector HDX HAPI has no series for (made
+                   before that was refused): its next period cannot be run as part
+                   of the series, so the button is off and says why. -->
+              <p
+                v-if="nextNoData && nextSuggestion && !nextSuggestion.notStarted"
+                id="next-blocked"
+                class="report-compared next-blocked"
+              >
+                {{ t('reports.viewer.nextNoData') }}
+              </p>
             </div>
             <div v-if="current.id" class="report-actions">
               <button
                 v-if="nextSuggestion && !nextSuggestion.notStarted"
                 type="button"
                 class="pdf-btn"
-                :disabled="generating"
+                :disabled="generating || nextNoData"
+                :aria-describedby="nextNoData ? 'next-blocked' : undefined"
                 @click="runNextPeriod"
               >
                 <CalendarPlus :size="15" />
@@ -1064,10 +1075,23 @@ function openForm() {
   nextTick(() => formTitle.value && formTitle.value.focus())
 }
 
+// The series' sector has no technical monitoring data (technical_themes): its next
+// period would be refused, and resetting the sector would end the series silently.
+const nextNoData = computed(() => {
+  const rep = seriesLatest.value
+  return (
+    !!rep &&
+    rep.report_type === 'technical_monitoring' &&
+    !!rep.theme &&
+    !!technicalThemes.value &&
+    !technicalThemes.value.includes(rep.theme)
+  )
+})
+
 function runNextPeriod() {
   const rep = seriesLatest.value
   const s = nextSuggestion.value
-  if (!rep || !s || s.notStarted || generating.value) return
+  if (!rep || !s || s.notStarted || generating.value || nextNoData.value) return
   formOpen.value = true // stays open if the user then makes it a one-off
   form.value = {
     report_type: rep.report_type || 'situation',

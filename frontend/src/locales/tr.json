@@ -362,6 +362,7 @@
       "continuedBy": "Devamı: {link}",
       "laterReport": "sonraki bir rapor",
       "runNext": "Sonraki dönemi raporla",
+      "nextNoData": "Sonraki dönem raporlanamaz: HDX HAPI'de bu sektör için sayısal veri yok, bu yüzden bu seri teknik izleme raporuyla sürdürülemez.",
       "copy": "Kaynaklarıyla kopyala",
       "copied": "Kopyalandı",
       "pdf": "PDF indir",

@@ -362,6 +362,7 @@
       "continuedBy": "Continued by {link}",
       "laterReport": "a later report",
       "runNext": "Run next period",
+      "nextNoData": "No next period: HDX HAPI has no quantitative data for this sector, so a technical monitoring report cannot continue this series.",
       "copy": "Copy with sources",
       "copied": "Copied",
       "pdf": "Download PDF",
