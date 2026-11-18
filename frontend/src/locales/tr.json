@@ -1,0 +1,19 @@
+{
+  "titles": {
+    "privacy": "Gizlilik politikası",
+    "login": "Giriş yap",
+    "signup": "Kayıt ol",
+    "chat": "Sohbet",
+    "reports": "M&E raporları",
+    "settings": "Ayarlar",
+    "admin": "Yönetim"
+  },
+  "common": {
+    "save": "Kaydet",
+    "cancel": "Vazgeç",
+    "delete": "Sil",
+    "close": "Kapat",
+    "loading": "Yükleniyor…",
+    "tryAgain": "Tekrar dene"
+  }
+}

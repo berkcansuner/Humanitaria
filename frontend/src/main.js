@@ -14,6 +14,7 @@ import '@fontsource-variable/geist-mono' // landing figures and citation chips
 import './style.css'
 import './marketing/marketing.css'
 import { router } from './router/index.js'
+import { i18n } from './i18n/index.js'
 import { getInitialTheme, applyTheme } from './utils/theme.js'
 import { installStaleChunkReload } from './utils/staleChunkReload.js'
 
@@ -24,4 +25,4 @@ installStaleChunkReload(router, { entry: import.meta.url })
 // Apply the theme before mount to avoid a flash of the default (light) palette.
 applyTheme(getInitialTheme())
 
-createApp(App).use(router).mount('#app')
+createApp(App).use(router).use(i18n).mount('#app')

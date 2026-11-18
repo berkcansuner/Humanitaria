@@ -1,0 +1,19 @@
+{
+  "titles": {
+    "privacy": "Privacy policy",
+    "login": "Log in",
+    "signup": "Sign up",
+    "chat": "Chat",
+    "reports": "M&E reports",
+    "settings": "Settings",
+    "admin": "Admin"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "close": "Close",
+    "loading": "Loading…",
+    "tryAgain": "Try again"
+  }
+}
