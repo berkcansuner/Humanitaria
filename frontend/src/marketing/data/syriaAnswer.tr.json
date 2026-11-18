@@ -1,0 +1,56 @@
+{
+ "question": "Aralık 2024'ten bu yana kaç Suriyeli mülteci ve ülke içinde yerinden edilmiş kişi evine döndü ve nerelere dönüyorlar?",
+ "parts": [
+  {
+   "text": "Suriye'de 8 Aralık 2024'ten bu yana geçen sürede (2026 Ekim ayı itibarıyla) tahmini 1.803.441 Suriyeli mülteci evine geri dönmüştür"
+  },
+  {
+   "cite": 1
+  },
+  {
+   "text": ". Bunun yanı sıra, Kasım 2025 sonu itibarıyla aynı dönemde yaklaşık 1,9 milyon ülke içinde yerinden edilmiş kişi (IDP) menşe bölgelerine veya alternatif destinasyonlara geri dönüş yapmıştır"
+  },
+  {
+   "cite": 2
+  },
+  {
+   "text": ". \n\nGeri dönüşler Suriye'nin dört bir yanına gerçekleşmekte olup, mültecilerin ve yerinden edilenlerin en çok gitmek istediği ana hedef vilayetler Halep, Rakka, Şam Kırsalı, İdlib, Deyrizor, Dera ve Humus'tur"
+  },
+  {
+   "cite": 3
+  },
+  {
+   "text": ". Ayrıca Birleşmiş Milletler Mülteciler Yüksek Komiserliği (BMMYK) Rakka, El-Haseke, Deyrizor, Dera, Halep ve Tartus'taki geri dönen hanelere yönelik destek çalışmalarını sürdürmektedir"
+  },
+  {
+   "cite": 3
+  },
+  {
+   "text": ". \n\n*(Bu yanıttaki bilgiler, 2024 Aralık ile 2026 Ekim ayları arasındaki dönemi kapsayan belgelere dayanmaktadır.)*"
+  }
+ ],
+ "sources": [
+  {
+   "n": 1,
+   "title": "Syrian Arab Republic: Comprehensive Overview of Refugee Returns Dashboard (As of 10 September 2026)",
+   "meta": "UN High Commissioner for Refugees · Syrian Arab Republic",
+   "date": "2026-10-07",
+   "url": "https://reliefweb.int/report/syrian-arab-republic/syrian-arab-republic-comprehensive-overview-refugee-returns-dashboard-10-september-2026"
+  },
+  {
+   "n": 2,
+   "title": "Syrian Arab Republic: WHO Health Emergency Appeal 2026",
+   "meta": "World Health Organization · Syrian Arab Republic",
+   "date": "2026-02-04",
+   "url": "https://reliefweb.int/report/syrian-arab-republic/syrian-arab-republic-who-health-emergency-appeal-2026"
+  },
+  {
+   "n": 3,
+   "title": "UNHCR Syria: Flash Update - Middle East Situation (27 March 2026)",
+   "meta": "UN High Commissioner for Refugees · Syrian Arab Republic",
+   "date": "2026-03-29",
+   "url": "https://reliefweb.int/report/syrian-arab-republic/unhcr-syria-flash-update-middle-east-situation-27-march-2026"
+  }
+ ],
+ "generated": "2026-11-18"
+}

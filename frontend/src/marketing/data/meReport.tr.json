@@ -1,0 +1,31 @@
+{
+ "title": "Syrian Arab Republic · Protection and Human Rights · 2025-11-18 – 2026-11-18",
+ "country": "Syrian Arab Republic",
+ "sector": "Protection and Human Rights",
+ "type": "Situation report",
+ "report_type": "situation",
+ "language": "tr",
+ "date_from": "2025-11-18",
+ "date_to": "2026-11-18",
+ "generated": "2026-11-18",
+ "findings": [
+  "Suriye'de koruma hizmetlerine ihtiyaç duyan kişi sayısı 2026 yılı itibarıyla tahmini 14,7 milyona ulaşmıştır [1].",
+  "Koruma Kümesi'nin Nisan-Haziran 2026 döneminde 48 ortak kuruluşun katkısıyla 14 vilayet, 175 alt bölge ve 756 toplulukta yürüttüğü 5.094 kilit kaynak görüşmesi, koruma kaygılarının topluluklar genelinde yaygın kaldığını doğrulamaktadır [2]."
+ ],
+ "sources": [
+  {
+   "n": 1,
+   "publisher": "UN High Commissioner for Refugees",
+   "title": "UNHCR Syria Protection Factsheet Q3 2026",
+   "date": "2026-11-02",
+   "url": "https://reliefweb.int/report/syrian-arab-republic/unhcr-syria-protection-factsheet-q3-2026"
+  },
+  {
+   "n": 2,
+   "publisher": "Protection Cluster",
+   "title": "Syria Protection Sector: Key Findings and Analysis Q2 2026",
+   "date": "2026-09-22",
+   "url": "https://reliefweb.int/report/syrian-arab-republic/syria-protection-sector-key-findings-and-analysis-q2-2026"
+  }
+ ]
+}

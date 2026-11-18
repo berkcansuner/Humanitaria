@@ -1,0 +1,110 @@
+{
+ "question": "How many Syrian refugees and internally displaced people have returned home since December 2024, and where are they returning to?",
+ "parts": [
+  {
+   "text": "Since December 2024, in Syria, significant return movements of both refugees and internally displaced persons (IDPs) have taken place following the political transition and the fall of the Assad government"
+  },
+  {
+   "cite": 4
+  },
+  {
+   "cite": 5
+  },
+  {
+   "text": ". \n\nRegarding the numbers:\n"
+  },
+  {
+   "text": "* ",
+   "list_item": true
+  },
+  {
+   "text": "Refugees:",
+   "strong": true
+  },
+  {
+   "text": " An estimated 1,803,441 Syrians have returned from abroad since 8 December 2024, with the majority crossing back through border points, largely from neighboring countries where support for Syrian refugees has been reduced or halted"
+  },
+  {
+   "cite": 1
+  },
+  {
+   "cite": 2
+  },
+  {
+   "text": ". \n"
+  },
+  {
+   "text": "* ",
+   "list_item": true
+  },
+  {
+   "text": "Internally Displaced Persons (IDPs):",
+   "strong": true
+  },
+  {
+   "text": " Estimates indicate that approximately 1.85 to 1.94 million IDPs have returned since December 2024"
+  },
+  {
+   "cite": 3
+  },
+  {
+   "cite": 4
+  },
+  {
+   "text": ". \n\nAs for where they are returning, individuals are heading back to their homes, areas of origin, or alternative destinations within the country"
+  },
+  {
+   "cite": 2
+  },
+  {
+   "cite": 4
+  },
+  {
+   "text": ". However, returnees face numerous obstacles in these areas, including damaged housing and shelters, a lack of essential services, limited job opportunities, and risks from unexploded munitions"
+  },
+  {
+   "cite": 2
+  },
+  {
+   "text": "."
+  }
+ ],
+ "sources": [
+  {
+   "n": 1,
+   "title": "Syrian Arab Republic: Comprehensive Overview of Refugee Returns Dashboard (As of 10 September 2026)",
+   "meta": "UN High Commissioner for Refugees · Syrian Arab Republic",
+   "date": "2026-10-07",
+   "url": "https://reliefweb.int/report/syrian-arab-republic/syrian-arab-republic-comprehensive-overview-refugee-returns-dashboard-10-september-2026"
+  },
+  {
+   "n": 2,
+   "title": "Syrian Arab Republic: WHO Health Emergency Appeal 2026",
+   "meta": "World Health Organization · Syrian Arab Republic",
+   "date": "2026-02-04",
+   "url": "https://reliefweb.int/report/syrian-arab-republic/syrian-arab-republic-who-health-emergency-appeal-2026"
+  },
+  {
+   "n": 3,
+   "title": "Syrian Arab Republic: Comprehensive Overview of IDPs and IDP Returns Dashboard (As of 12 March 2026)",
+   "meta": "UN High Commissioner for Refugees · Syrian Arab Republic",
+   "date": "2026-03-17",
+   "url": "https://reliefweb.int/report/syrian-arab-republic/syrian-arab-republic-comprehensive-overview-idps-and-idp-returns-dashboard-12-march-2026"
+  },
+  {
+   "n": 4,
+   "title": "Syrian Arab Republic - Communities of Return Index - Round 4 (1 January - 4 February 2026)",
+   "meta": "International Organization for Migration · Syrian Arab Republic",
+   "date": "2026-04-03",
+   "url": "https://reliefweb.int/report/syrian-arab-republic/syrian-arab-republic-communities-return-index-round-4-1-january-4-february-2026"
+  },
+  {
+   "n": 5,
+   "title": "Coming Home: One Year Into Syria’s Transition",
+   "meta": "UN High Commissioner for Refugees · Syrian Arab Republic",
+   "date": "2025-12-11",
+   "url": "https://reliefweb.int/report/syrian-arab-republic/coming-home-one-year-syrias-transition"
+  }
+ ],
+ "generated": "2026-11-18"
+}

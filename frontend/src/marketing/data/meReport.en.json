@@ -1,0 +1,31 @@
+{
+ "title": "Syrian Arab Republic · Protection and Human Rights · 2025-11-18 – 2026-11-18",
+ "country": "Syrian Arab Republic",
+ "sector": "Protection and Human Rights",
+ "type": "Situation report",
+ "report_type": "situation",
+ "language": "en",
+ "date_from": "2025-11-18",
+ "date_to": "2026-11-18",
+ "generated": "2026-11-18",
+ "findings": [
+  "Since December 2024, Syria has experienced a gradual shift from acute displacement toward large-scale returns, with more than 1.8 million refugees and two million internally displaced persons (IDPs) returning to their areas of origin [1].",
+  "During the April to June 2026 monitoring round, which consolidated 5,094 key informant interviews (KIIs) conducted by 48 partners across 756 communities and 175 sub-districts in all 14 governorates, data collection was heavily concentrated in Aleppo (34 per cent of KIIs), Idleb (26 per cent), and Ar-Raqqa (13 per cent) [3]."
+ ],
+ "sources": [
+  {
+   "n": 1,
+   "publisher": "UN High Commissioner for Refugees",
+   "title": "UNHCR Syria Protection Factsheet Q3 2026",
+   "date": "2026-11-02",
+   "url": "https://reliefweb.int/report/syrian-arab-republic/unhcr-syria-protection-factsheet-q3-2026"
+  },
+  {
+   "n": 3,
+   "publisher": "Protection Cluster",
+   "title": "Syria Protection Sector: Key Findings and Analysis Q2 2026",
+   "date": "2026-09-22",
+   "url": "https://reliefweb.int/report/syrian-arab-republic/syria-protection-sector-key-findings-and-analysis-q2-2026"
+  }
+ ]
+}
