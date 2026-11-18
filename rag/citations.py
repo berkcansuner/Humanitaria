@@ -138,8 +138,8 @@ def normalize_citations(content: str, sources, keep_uncited: bool = False):
     markers and the source list to a contiguous 1..N by first appearance.
 
     keep_uncited: also list the valid sources nobody cited, after the cited ones (an
-    indicator report's table has no [n] markers, so the documents its values come
-    from would otherwise vanish from the list).
+    indicator report: a table row the model leaves without its [n] marker keeps the
+    document its value comes from in the list).
 
     Returns ``(content, sources)``. A marker with no valid/cited source is dropped
     (with its leading space) so the reader never sees a dead [n]. Safe on already-clean

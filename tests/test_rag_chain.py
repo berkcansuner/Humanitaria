@@ -312,3 +312,13 @@ def test_technical_prompt_dates_values_from_before_the_period():
     from rag.chain import _REPORT_PROMPTS
     p = _REPORT_PROMPTS["technical_monitoring"]
     assert "'before the chosen period'" in p and "state its date" in p
+
+
+def test_indicator_table_rows_cite_their_source_in_the_value_cell():
+    # Round 2 (owner): "it would be good if the other reports had sources too".
+    from rag.chain import _INDICATOR_SYSTEM_PROMPT
+    p = _INDICATOR_SYSTEM_PROMPT
+    assert "citation-free" not in p
+    assert "End each row's 'Latest value' cell with the [n] marker" in p
+    assert "'| People in need | 21.9 million [3] | 1 January 2026 |'" in p
+    assert "no marker in the 'Indicator' or 'As of' cells" in p

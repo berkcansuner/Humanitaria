@@ -942,7 +942,7 @@ class TestCitationNormalization:
 
 @pytest.mark.parametrize("report_type, kept", [("indicator_monitoring", 2), ("situation", 1)])
 def test_indicator_report_lists_the_sources_its_table_draws_on(report_type, kept):
-    # The indicator table carries no [n]; its documents stay in the saved source list
+    # A table row left without its [n]: its document stays in the saved source list
     # (Yemen 2026-11-16: QRCS, HALO, Amnesty figures had no visible source). Other
     # report types keep only the cited sources.
     async def mock_astream(*a, **k):
