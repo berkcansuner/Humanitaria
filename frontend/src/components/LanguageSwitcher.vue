@@ -203,8 +203,8 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
   }
 }
 
-/* 320px: the code alone (EN/TR) names the control; the globe is decoration. */
-@media (max-width: 360px) {
+/* Phones: the code alone (EN/TR) names the control; the globe is decoration. */
+@media (max-width: 420px) {
   .is-marketing .lang-btn svg {
     display: none;
   }

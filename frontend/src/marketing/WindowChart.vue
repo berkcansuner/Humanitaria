@@ -1,12 +1,19 @@
 <script setup>
 import { computed, shallowRef } from 'vue'
-import { formatCompact, linePath, monthLabel, nearestIndex } from './landingKit.js'
+import { useI18n } from 'vue-i18n'
+import { formatCompact, linePath, nearestIndex, periodLabel } from './landingKit.js'
 
 const props = defineProps({
   // [ISO date, value] pairs, oldest first: the observed series of a tested window.
   series: { type: Array, required: true },
   label: { type: String, required: true },
+  // Calendar-year data: label points by year, not month.
+  annual: { type: Boolean, default: false },
 })
+
+const { t, locale } = useI18n()
+const period = (iso) => periodLabel(iso, locale.value, { annual: props.annual })
+const compact = (n) => formatCompact(n, locale.value)
 
 // Drawing box in SVG units; the SVG stretches to the panel width.
 const W = 300
@@ -48,16 +55,20 @@ function onHover(event) {
 const marker = computed(() => (hovered.value === null ? null : at(hovered.value)))
 const readout = computed(() => {
   if (hovered.value === null) {
-    return `${formatCompact(first.value[1])} → ${formatCompact(last.value[1])}`
+    return `${compact(first.value[1])} → ${compact(last.value[1])}`
   }
   const [d, v] = props.series[hovered.value]
-  return `${monthLabel(d)} · ${formatCompact(v)}`
+  return `${period(d)} · ${compact(v)}`
 })
-const summary = computed(
-  () =>
-    `${props.label}: ${formatCompact(first.value[1])} in ${monthLabel(first.value[0])}, ` +
-    `${formatCompact(last.value[1])} in ${monthLabel(last.value[0])}, ` +
-    `${props.series.length} observations.`,
+const summary = computed(() =>
+  t('landing.window.summary', {
+    label: props.label,
+    first: compact(first.value[1]),
+    firstPeriod: period(first.value[0]),
+    last: compact(last.value[1]),
+    lastPeriod: period(last.value[0]),
+    n: props.series.length,
+  }),
 )
 </script>
 
@@ -81,8 +92,8 @@ const summary = computed(
       </template>
     </div>
     <div class="wc-axis" aria-hidden="true">
-      <span>{{ monthLabel(first[0]) }}</span
-      ><span>{{ monthLabel(last[0]) }}</span>
+      <span>{{ period(first[0]) }}</span
+      ><span>{{ period(last[0]) }}</span>
     </div>
   </figure>
 </template>

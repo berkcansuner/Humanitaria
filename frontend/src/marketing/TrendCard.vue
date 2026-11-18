@@ -1,21 +1,25 @@
 <script setup>
 import { computed, shallowRef } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   formatCompact,
   linePath,
-  monthLabel as monthOf,
   nearestIndex,
   peakChange,
   peakPhrase,
+  periodLabel,
 } from './landingKit.js'
-import { t } from '../i18n/index.js'
 
 const props = defineProps({
   // [ISO date, value] pairs, oldest first.
   series: { type: Array, required: true },
   title: { type: String, required: true },
   credit: { type: String, required: true },
+  // Calendar-year data: label points by year, not month.
+  annual: { type: Boolean, default: false },
 })
+
+const { t, locale } = useI18n()
 
 // Drawing box in SVG units; the SVG stretches to the card width.
 const W = 300
@@ -46,8 +50,8 @@ const xs = computed(() => points.value.map((p) => p[0]))
 function onHover(event) {
   const box = event.currentTarget.getBoundingClientRect()
   const [t0, t1] = [xs.value[0], xs.value[xs.value.length - 1]]
-  const t = t0 + ((event.clientX - box.left) / box.width) * (t1 - t0)
-  hovered.value = nearestIndex(xs.value, t)
+  const at = t0 + ((event.clientX - box.left) / box.width) * (t1 - t0)
+  hovered.value = nearestIndex(xs.value, at)
 }
 const readout = computed(() => (hovered.value === null ? null : props.series[hovered.value]))
 const marker = computed(() => {
@@ -61,13 +65,20 @@ const marker = computed(() => {
   }
 })
 
-const firstMonth = computed(() => monthOf(props.series[0][0]))
-const lastMonth = computed(() => monthOf(latest.value[0]))
-const summary = computed(
-  () =>
-    `${props.title}: ${formatCompact(latest.value[1])} in ${lastMonth.value}, ` +
-    `${peakPhrase(props.series, t)} of ${formatCompact(change.value.peak[1])}. ` +
-    `Series from ${firstMonth.value} to ${lastMonth.value}.`,
+const period = (iso) => periodLabel(iso, locale.value, { annual: props.annual })
+const compact = (n) => formatCompact(n, locale.value)
+const phrase = computed(() => peakPhrase(props.series, t, locale.value, { annual: props.annual }))
+const firstPeriod = computed(() => period(props.series[0][0]))
+const lastPeriod = computed(() => period(latest.value[0]))
+const summary = computed(() =>
+  t('landing.trend.summary', {
+    title: props.title,
+    value: compact(latest.value[1]),
+    last: lastPeriod.value,
+    phrase: phrase.value,
+    peak: compact(change.value.peak[1]),
+    first: firstPeriod.value,
+  }),
 )
 </script>
 
@@ -75,9 +86,9 @@ const summary = computed(
   <figure class="trend-card">
     <figcaption class="tc-title">{{ title }}</figcaption>
     <p class="tc-figure">
-      <span class="tc-value">{{ formatCompact((readout ?? latest)[1]) }}</span>
-      <span v-if="readout" class="tc-change">{{ monthOf(readout[0]) }}</span>
-      <span v-else class="tc-change">{{ peakPhrase(series, t) }}</span>
+      <span class="tc-value">{{ compact((readout ?? latest)[1]) }}</span>
+      <span v-if="readout" class="tc-change">{{ period(readout[0]) }}</span>
+      <span v-else class="tc-change">{{ phrase }}</span>
     </p>
     <div class="tc-chart" @pointermove="onHover" @pointerleave="hovered = null">
       <svg
@@ -97,8 +108,8 @@ const summary = computed(
       </template>
     </div>
     <div class="tc-axis" aria-hidden="true">
-      <span>{{ firstMonth }}</span
-      ><span>{{ lastMonth }}</span>
+      <span>{{ firstPeriod }}</span
+      ><span>{{ lastPeriod }}</span>
     </div>
     <p class="tc-credit">{{ credit }}</p>
   </figure>

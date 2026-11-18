@@ -22,7 +22,12 @@ import {
   passageSources,
   citedParts,
   mapLabels,
+  periodLabel,
+  formatNumber,
+  emphasisParts,
+  answerBlocks,
 } from './landingKit.js'
+import { sampleAnswer, sampleReport, samplePassage } from './samples.js'
 import { i18n } from '../i18n/index.js'
 
 const tIn = (locale) => (key, params) => i18n.global.t(key, params ?? {}, { locale })
@@ -203,6 +208,113 @@ describe('peakPhrase', () => {
       ),
     ).toBe('zirvede')
   })
+  it('names the peak year, not a month, for an annual series', () => {
+    const series = [
+      ['2021-01-01', 6_848_865],
+      ['2025-01-01', 4_865_764],
+    ]
+    expect(peakPhrase(series, tIn('en'), 'en', { annual: true })).toBe('29% below the 2021 peak')
+    expect(peakPhrase(series, tIn('tr'), 'tr', { annual: true })).toBe(
+      '2021 zirvesinin %29 altında',
+    )
+  })
+})
+
+describe('periodLabel', () => {
+  it('is the month for a monthly series and the year for an annual one', () => {
+    expect(periodLabel('2025-02-28', 'en')).toBe('Feb 2025')
+    expect(periodLabel('2025-02-28', 'tr')).toBe('Şub 2025')
+    expect(periodLabel('2021-01-01', 'tr', { annual: true })).toBe('2021')
+  })
+})
+
+describe('formatNumber', () => {
+  it('groups digits the way each language writes them', () => {
+    expect(formatNumber(19_147)).toBe('19,147')
+    expect(formatNumber(19_147, 'tr')).toBe('19.147')
+    expect(formatNumber(679, 'tr')).toBe('679')
+  })
+  it('passes Intl options through', () => {
+    expect(formatNumber(0.0275, 'en', { maximumSignificantDigits: 3 })).toBe('0.0275')
+    expect(formatNumber(0.0275, 'tr', { maximumSignificantDigits: 3 })).toBe('0,0275')
+  })
+})
+
+describe('emphasisParts', () => {
+  it('turns single-asterisk emphasis into em parts and drops the asterisks', () => {
+    expect(emphasisParts([{ text: '. \n\n*(Based on documents.)*' }, { cite: 1 }])).toEqual([
+      { text: '. \n\n' },
+      { text: '(Based on documents.)', em: true },
+      { cite: 1 },
+    ])
+  })
+  it('leaves list markers, bold parts and unpaired asterisks alone', () => {
+    const parts = [
+      { text: '* ', list_item: true },
+      { text: 'Refugees:', strong: true },
+      { text: ' 1,803,441* returned' },
+    ]
+    expect(emphasisParts(parts)).toEqual(parts)
+  })
+})
+
+describe('answerBlocks', () => {
+  it('splits paragraphs on line breaks and gathers list items into one list', () => {
+    const parts = [
+      { text: 'Intro' },
+      { cite: 4 },
+      { text: '. \n\nNumbers:\n' },
+      { text: '* ', list_item: true },
+      { text: 'Refugees:', strong: true },
+      { text: ' many' },
+      { cite: 1 },
+      { text: '. \n' },
+      { text: '* ', list_item: true },
+      { text: 'IDPs', strong: true },
+      { text: '. \n\nWhere' },
+      { cite: 2 },
+      { text: '.' },
+    ]
+    expect(answerBlocks(parts)).toEqual([
+      { parts: [{ text: 'Intro' }, { cite: 4 }, { text: '. ' }] },
+      { parts: [{ text: 'Numbers:' }] },
+      {
+        items: [
+          [{ text: 'Refugees:', strong: true }, { text: ' many' }, { cite: 1 }, { text: '. ' }],
+          [{ text: 'IDPs', strong: true }, { text: '. ' }],
+        ],
+      },
+      { parts: [{ text: 'Where' }, { cite: 2 }, { text: '.' }] },
+    ])
+  })
+  it('keeps a partly typed answer in shape', () => {
+    expect(answerBlocks([{ text: 'Numbers:\n' }, { text: '* ', list_item: true }])).toEqual([
+      { parts: [{ text: 'Numbers:' }] },
+      { items: [[]] },
+    ])
+  })
+})
+
+describe('the Syria samples', () => {
+  it('pick the answer and the report in the active language, English otherwise', () => {
+    expect(sampleAnswer('en').question).toMatch(/^How many Syrian refugees/)
+    expect(sampleAnswer('tr').question).toMatch(/^Aralık 2024/)
+    expect(sampleAnswer('xx')).toBe(sampleAnswer('en'))
+    expect(sampleReport('en').language).toBe('en')
+    expect(sampleReport('tr').language).toBe('tr')
+    expect(sampleReport('xx')).toBe(sampleReport('en'))
+  })
+  it('quote a passage of each answer with two of its sources', () => {
+    for (const locale of ['en', 'tr']) {
+      const { parts, sources } = sampleAnswer(locale)
+      const sample = samplePassage(locale)
+      expect(sample.filter((p) => p.cite).map((p) => p.cite)).toEqual([1, 2])
+      expect(passageSources(sample, sources).map((s) => s.n)).toEqual([1, 2])
+      // Verbatim: every quoted text is a stretch of the generated answer.
+      const answerText = parts.map((p) => p.text ?? '').join('')
+      for (const p of sample) if (p.text) expect(answerText).toContain(p.text)
+    }
+  })
 })
 
 describe('monthLabel and dayLabel', () => {
@@ -311,12 +423,9 @@ describe('passageSources', () => {
 })
 
 describe('the workflow chat sample', () => {
-  it('quotes the Haiti answer with its citations 1, 3 and 4', async () => {
-    const { parts, sources } = await import('./haitiAnswer.js')
-    const sample = passage(parts, 'Nearly 80 percent', 'Grand Sud (39%)')
-    expect(sample.filter((p) => p.cite).map((p) => p.cite)).toEqual([1, 3, 4])
-    expect(sample[0].text.startsWith('Nearly 80 percent')).toBe(true)
-    expect(passageSources(sample, sources).map((s) => s.n)).toEqual([1, 3, 4])
+  it('quotes the Syria answer from its first figure, in each language', () => {
+    expect(samplePassage('en')[0].text.startsWith('An estimated 1,803,441')).toBe(true)
+    expect(samplePassage('tr')[0].text.startsWith("Suriye'de 8 Aralık 2024")).toBe(true)
   })
 })
 

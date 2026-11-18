@@ -1,13 +1,15 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, shallowRef, useTemplateRef } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import sudan from './data/sudan.json'
+import syria from './data/syria.json'
 import {
   axisTicks,
   countUp,
   dayLabel,
   formatCompact,
+  formatNumber,
   linePath,
   monthLabel,
   nearestIndex,
@@ -16,50 +18,65 @@ import {
   signedPct,
   yearChange,
 } from './landingKit.js'
-import { t } from '../i18n/index.js'
 
 gsap.registerPlugin(ScrollTrigger)
 
-const dtmCredit = `${sudan.idps.credit} · HDX HAPI`
-const series = sudan.idps.series
-const latest = peakChange(series).latest
-const funding = yearChange(sudan.funding)
+const { t, locale } = useI18n()
 
-const kpis = [
-  {
-    label: 'Internally displaced people',
-    to: latest[1],
-    format: formatCompact,
-    note: peakPhrase(series, t),
-    source: dtmCredit,
-  },
-  {
-    label: 'IPC Phase 3+ share',
-    to: sudan.ipc_share.value,
-    format: (v) => `${Math.round(v)}%`,
-    note: `of the analysed population, ${monthLabel(sudan.ipc_share.period)}`,
-    source: 'IPC · HDX HAPI',
-  },
-  {
-    label: `Humanitarian funding ${funding.year}`,
-    to: funding.value,
-    format: (v) => `$${formatCompact(v)}`,
-    note: `${signedPct(funding.pct)} vs ${funding.prevYear}`,
-    source: 'OCHA FTS · HDX HAPI',
-  },
-  {
-    label: 'Reports on Sudan',
-    to: sudan.reports.count,
-    format: (v) => String(Math.round(v)),
-    note: `indexed since ${dayLabel(sudan.reports.since)}`,
-    source: 'ReliefWeb',
-  },
-].map((k) => ({ ...k, text: k.format(k.to) }))
+// The chart is the hero card's series: Syrian refugees abroad, annual UNHCR figures.
+const unhcrCredit = `${syria.refugees.credit} · HDX HAPI`
+const series = syria.refugees.series
+const { latest, peak } = peakChange(series)
+const yearOf = (iso) => Number(iso.slice(0, 4))
+const returnees = yearChange(syria.returnees.series.map(([d, v]) => [yearOf(d), v]))
+const funding = yearChange(syria.funding)
 
-// IDP chart: drawing box in SVG units; the SVG stretches to the panel.
+// Labels and formats follow the interface language; `to` (the counted value) does not,
+// so a count-up that is running when the language changes ends on the right text.
+const kpis = computed(() => {
+  const l = locale.value
+  const compact = (v) => formatCompact(v, l)
+  const change = (c) => t('landing.dash.change', { pct: signedPct(c.pct, l), year: c.prevYear })
+  return [
+    {
+      key: 'returnees',
+      label: t('landing.dash.returnees', { year: returnees.year }),
+      to: returnees.value,
+      format: compact,
+      note: change(returnees),
+      source: `${syria.returnees.credit} · HDX HAPI`,
+    },
+    {
+      key: 'refugees',
+      label: t('landing.dash.refugees'),
+      to: syria.refugees.latest,
+      format: compact,
+      note: t('landing.dash.refugeesNote', { year: syria.refugees.period }),
+      source: unhcrCredit,
+    },
+    {
+      key: 'funding',
+      label: t('landing.dash.funding', { year: funding.year }),
+      to: funding.value,
+      format: (v) => t('landing.dash.usd', { amount: compact(v) }),
+      note: change(funding),
+      source: 'OCHA FTS · HDX HAPI',
+    },
+    {
+      key: 'reports',
+      label: t('landing.dash.reports'),
+      to: syria.reports.count,
+      format: (v) => formatNumber(Math.round(v), l),
+      note: t('landing.dash.reportsNote', { date: dayLabel(syria.reports.since, l) }),
+      source: 'ReliefWeb',
+    },
+  ].map((k) => ({ ...k, text: k.format(k.to) }))
+})
+
+// Refugee chart: drawing box in SVG units; the SVG stretches to the panel.
 const W = 600
 const H = 200
-const STEP = 2_000_000
+const STEP = 1_000_000
 const values = series.map((p) => p[1])
 const ticks = axisTicks(Math.min(...values), Math.max(...values), STEP)
 const yMin = ticks[0]
@@ -67,7 +84,7 @@ const yMax = ticks[ticks.length - 1]
 const times = series.map(([d]) => Date.parse(d))
 const t0 = times[0]
 const t1 = times[times.length - 1]
-const xShare = (t) => (t - t0) / (t1 - t0)
+const xShare = (time) => (time - t0) / (t1 - t0)
 const yShare = (v) => (yMax - v) / (yMax - yMin)
 const pct = (share) => `${share * 100}%`
 
@@ -78,17 +95,28 @@ const line = linePath(
   yMin,
   yMax,
 )
-const gridlines = ticks.map((t) => ({ label: formatCompact(t), top: pct(yShare(t)) }))
+const gridlines = computed(() =>
+  ticks.map((v) => ({ value: v, label: formatCompact(v, locale.value), top: pct(yShare(v)) })),
+)
+// Annual points: every other year is labelled, from the first.
+const firstYear = yearOf(series[0][0])
+const lastYear = yearOf(latest[0])
 const years = []
-for (let y = new Date(t0).getUTCFullYear() + 1; Date.UTC(y, 0, 1) < t1; y++) {
+for (let y = firstYear; y <= lastYear; y += 2) {
   years.push({ label: String(y), left: pct(xShare(Date.UTC(y, 0, 1))) })
 }
 const latestDot = { top: pct(yShare(latest[1])) }
-const range = `${monthLabel(series[0][0])} – ${monthLabel(latest[0])}`
-const chartTitle = `Internally displaced people, ${range}`
-const chartSummary =
-  `${chartTitle}: ${formatCompact(latest[1])} in ${monthLabel(latest[0])}, ` +
-  `${peakPhrase(series, t)} of ${formatCompact(peakChange(series).peak[1])}.`
+const range = `${firstYear} – ${lastYear}`
+const chartSummary = computed(() =>
+  t('landing.trend.summary', {
+    title: t('landing.trend.title'),
+    value: formatCompact(latest[1], locale.value),
+    last: lastYear,
+    phrase: peakPhrase(series, t, locale.value, { annual: true }),
+    peak: formatCompact(peak[1], locale.value),
+    first: firstYear,
+  }),
+)
 
 // Hover readout: the nearest observation under the pointer.
 const hovered = shallowRef(null)
@@ -102,7 +130,7 @@ const readout = computed(() => {
   const x = xShare(times[hovered.value])
   const y = yShare(v)
   return {
-    text: `${monthLabel(d)} · ${formatCompact(v)}`,
+    text: `${yearOf(d)} · ${formatCompact(v, locale.value)}`,
     line: { left: pct(x) },
     dot: { left: pct(x), top: pct(y) },
     // Above the point, or below it near the top; kept inside the plot at either edge.
@@ -111,14 +139,30 @@ const readout = computed(() => {
   }
 })
 
-// Each state's value in the latest round (the same round as the national figure).
-const topRegion = sudan.regions.top[0][1]
-const regionsTitle = `Internally displaced people by state, top 5 · ${monthLabel(sudan.regions.period)}`
-const regions = sudan.regions.top.map(([name, value]) => ({
-  name,
-  value: formatCompact(value),
-  width: pct(value / topRegion),
-}))
+// Host countries in the latest year, named in the interface language. HAPI gives
+// English names; a name without a region code here is shown as HAPI writes it.
+const HOST_REGIONS = {
+  Türkiye: 'TR',
+  Germany: 'DE',
+  Lebanon: 'LB',
+  Jordan: 'JO',
+  Iraq: 'IQ',
+  Egypt: 'EG',
+  Sweden: 'SE',
+  Austria: 'AT',
+  Netherlands: 'NL',
+}
+const hosts = syria.refugees.by_host
+const topHost = hosts[0][1]
+const regions = computed(() => {
+  const names = new Intl.DisplayNames([locale.value], { type: 'region' })
+  return hosts.map(([name, value]) => ({
+    key: name,
+    name: HOST_REGIONS[name] ? names.of(HOST_REGIONS[name]) : name,
+    value: formatCompact(value, locale.value),
+    width: pct(value / topHost),
+  }))
+})
 
 const root = useTemplateRef('root')
 
@@ -134,8 +178,13 @@ onMounted(() => {
       // DOM order is the kpis order (template refs in v-for are not ordered).
       const kpiValues = q('.kpi-value')
       ctx.add('count', () => {
+        // The format is read on every frame, so a language switch mid-count
+        // continues in the new language.
         kpiValues.forEach((el, i) =>
-          countUp(el, kpis[i].to, { duration: 1.4, format: kpis[i].format }),
+          countUp(el, kpis.value[i].to, {
+            duration: 1.4,
+            format: (v) => kpis.value[i].format(v),
+          }),
         )
       })
       gsap
@@ -149,7 +198,7 @@ onMounted(() => {
         .from(q('.dp-dot'), { scale: 0, autoAlpha: 0, duration: 0.5, ease: 'back.out(2.4)' }, 2.1)
         .from(q('.dp-bar'), { scaleX: 0, transformOrigin: '0 50%', stagger: 0.08 }, 0.5)
       // Reduced motion switched on mid-count: show the final figures.
-      return () => kpiValues.forEach((el, i) => (el.textContent = kpis[i].text))
+      return () => kpiValues.forEach((el, i) => (el.textContent = kpis.value[i].text))
     },
     root.value,
   )
@@ -162,24 +211,21 @@ onBeforeUnmount(() => mm?.revert())
   <section id="dashboards" ref="root" class="section night">
     <div class="wrap">
       <div class="section-head">
-        <h2>See the indicators behind every report.</h2>
-        <p>
-          A country view built from the same data the technical reports use, with its source on
-          every figure.
-        </p>
+        <h2>{{ t('landing.dash.title') }}</h2>
+        <p>{{ t('landing.dash.lede') }}</p>
       </div>
 
       <div class="dash">
         <div class="dash-head">
-          <h3>Sudan</h3>
-          <time class="dash-month" :datetime="sudan.generated">{{
-            monthLabel(sudan.generated)
+          <h3>{{ t('landing.country') }}</h3>
+          <time class="dash-month" :datetime="syria.generated">{{
+            monthLabel(syria.generated, locale)
           }}</time>
-          <span class="dash-label">Sample dashboard · data: HDX HAPI</span>
+          <span class="dash-label">{{ t('landing.dash.label') }}</span>
         </div>
 
         <dl class="kpis">
-          <div v-for="k in kpis" :key="k.label" class="kpi">
+          <div v-for="k in kpis" :key="k.key" class="kpi">
             <dt>{{ k.label }}</dt>
             <dd class="kpi-value">{{ k.text }}</dd>
             <dd class="kpi-note">{{ k.note }}</dd>
@@ -189,19 +235,21 @@ onBeforeUnmount(() => mm?.revert())
 
         <div class="panels">
           <figure class="panel">
-            <figcaption>
-              Internally displaced people, <span class="dp-range">{{ range }}</span>
-            </figcaption>
+            <i18n-t keypath="landing.dash.chart" tag="figcaption" scope="global">
+              <template #range>
+                <span class="dp-range">{{ range }}</span>
+              </template>
+            </i18n-t>
             <div class="dp-chart">
               <div class="dp-y" aria-hidden="true">
-                <span v-for="g in gridlines" :key="g.label" :style="{ top: g.top }">{{
+                <span v-for="g in gridlines" :key="g.value" :style="{ top: g.top }">{{
                   g.label
                 }}</span>
               </div>
               <div class="dp-plot" @pointermove="onHover" @pointerleave="hovered = null">
                 <span
                   v-for="g in gridlines"
-                  :key="g.label"
+                  :key="g.value"
                   class="dp-grid"
                   :style="{ top: g.top }"
                   aria-hidden="true"
@@ -237,9 +285,9 @@ onBeforeUnmount(() => mm?.revert())
           </figure>
 
           <figure class="panel">
-            <figcaption>{{ regionsTitle }}</figcaption>
+            <figcaption>{{ t('landing.dash.bars', { year: syria.refugees.period }) }}</figcaption>
             <ul class="dp-bars">
-              <li v-for="r in regions" :key="r.name">
+              <li v-for="r in regions" :key="r.key">
                 <span class="dp-name">{{ r.name }}</span>
                 <span class="dp-track"><i class="dp-bar" :style="{ width: r.width }"></i></span>
                 <b>{{ r.value }}</b>
@@ -247,12 +295,9 @@ onBeforeUnmount(() => mm?.revert())
             </ul>
           </figure>
         </div>
-        <p class="dp-src">Source for both charts: {{ dtmCredit }}</p>
+        <p class="dp-src">{{ t('landing.dash.source', { credit: unhcrCredit }) }}</p>
 
-        <p class="dp-foot">
-          Preview built from real HDX HAPI figures for Sudan; the dashboard feature itself is
-          planned.
-        </p>
+        <p class="dp-foot">{{ t('landing.dash.foot') }}</p>
       </div>
     </div>
   </section>
@@ -481,7 +526,7 @@ onBeforeUnmount(() => mm?.revert())
 }
 .dp-bars li {
   display: grid;
-  grid-template-columns: 112px minmax(0, 1fr) 48px;
+  grid-template-columns: 112px minmax(0, 1fr) 56px;
   gap: 10px;
   align-items: center;
   padding: 6px 0;
@@ -500,6 +545,7 @@ onBeforeUnmount(() => mm?.revert())
   background: var(--mkt-teal-d);
 }
 .dp-bars b {
+  white-space: nowrap;
   font-family: var(--font-mono);
   font-size: 12.5px;
   font-weight: 600;
@@ -542,7 +588,7 @@ onBeforeUnmount(() => mm?.revert())
     flex-basis: 100%;
   }
   .dp-bars li {
-    grid-template-columns: 100px minmax(0, 1fr) 44px;
+    grid-template-columns: 100px minmax(0, 1fr) 56px;
   }
 }
 </style>

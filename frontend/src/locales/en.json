@@ -21,7 +21,170 @@
     "listLabel": "Language",
     "changed": "Language set to {name}"
   },
+  "nav": {
+    "chat": "Chat",
+    "reports": "Reports",
+    "dashboards": "Dashboards",
+    "coverage": "Coverage",
+    "openApp": "Open app",
+    "logOut": "Log out",
+    "logIn": "Log in",
+    "startFree": "Start free"
+  },
+  "footer": {
+    "tagline": "Answers from the humanitarian record, with the source attached.",
+    "product": "Product",
+    "chatReports": "Chat and reports",
+    "dashboards": "Dashboards",
+    "coverage": "Coverage",
+    "useCases": "Use cases",
+    "meTeams": "M&E teams",
+    "organizations": "Organizations",
+    "researchers": "Researchers",
+    "journalists": "Journalists",
+    "account": "Account",
+    "openApp": "Open app",
+    "logIn": "Log in",
+    "signUp": "Sign up",
+    "rights": "© 2026 Humanitaria. Content from ReliefWeb.",
+    "privacy": "Privacy policy"
+  },
   "landing": {
+    "skip": "Skip to content",
+    "country": "Syria",
+    "reportTypes": {
+      "situation": "Situation report"
+    },
+    "sectors": {
+      "protection": "Protection and Human Rights"
+    },
+    "chip": "Source {n}: {title}, {publisher}, {date}",
+    "hero": {
+      "titleLead": "The humanitarian record,",
+      "titleAccent": "answered and cited.",
+      "lede": "Ask about any crisis, generate M&E situation and technical reports, and see the indicators behind them. Every claim links to the report it came from.",
+      "askLabel": "Ask about any crisis",
+      "askPlaceholder": "Who is displaced in Sudan?",
+      "ask": "Ask",
+      "startFree": "Start free",
+      "howItWorks": "See how it works",
+      "countries": "countries",
+      "reports": "reports",
+      "months": "months"
+    },
+    "answer": {
+      "label": "Sample answer",
+      "region": "Answer",
+      "sources": "Sources"
+    },
+    "trend": {
+      "title": "Syrian refugees abroad",
+      "summary": "{title}: {value} in {last}, {phrase} of {peak}. Series from {first} to {last}."
+    },
+    "window": {
+      "summary": "{label}: {first} in {firstPeriod}, {last} in {lastPeriod}, {n} observations."
+    },
+    "flows": {
+      "title": "From a quick question to the brief you hand in.",
+      "lede": "Chat for the latest state of a crisis, reports that synthesise many sources at once, and technical monitoring with the statistics done in code.",
+      "chat": {
+        "title": "Cited chat",
+        "lede": "Answers only from retrieved reports, each claim one click from its source.",
+        "panel": "Sample answer passage",
+        "credit": "From the Syria answer above"
+      },
+      "report": {
+        "title": "M&E reports",
+        "lede": "Pick a country, sector, period and language; get a structured, cited brief.",
+        "panel": "Sample report",
+        "findings": "Key findings",
+        "credit": "Sample report · generated {date}"
+      },
+      "tech": {
+        "title": "Technical monitoring",
+        "lede": "Indicator trends and regional comparisons, tested in code, narrated by the model.",
+        "head": "{country} · Technical monitoring · Refugees",
+        "window": "{start} – {end}, from the {start} peak",
+        "trend": {
+          "decreasing": {
+            "significant": "From its {peak} peak to {end}, the number of Syrian refugees abroad shows a significant decreasing trend (p {p}).",
+            "notSignificant": "From its {peak} peak to {end}, the number of Syrian refugees abroad shows a decreasing trend that is not statistically significant (p {p})."
+          },
+          "increasing": {
+            "significant": "From its {peak} peak to {end}, the number of Syrian refugees abroad shows a significant increasing trend (p {p}).",
+            "notSignificant": "From its {peak} peak to {end}, the number of Syrian refugees abroad shows an increasing trend that is not statistically significant (p {p})."
+          },
+          "none": "From its {peak} peak to {end}, the number of Syrian refugees abroad shows no clear trend (p {p})."
+        },
+        "slope": "Sen's slope",
+        "perYear": "/ year",
+        "p": "Mann-Kendall p",
+        "points": "Points"
+      }
+    },
+    "dash": {
+      "title": "See the indicators behind every report.",
+      "lede": "A country view built from the same data the technical reports use, with its source on every figure.",
+      "label": "Sample dashboard · data: HDX HAPI",
+      "returnees": "Refugee returnees, {year}",
+      "refugees": "Syrian refugees abroad",
+      "refugeesNote": "in {year}",
+      "funding": "Funding reported to OCHA FTS, {year}",
+      "change": "{pct} vs {year}",
+      "reports": "Reports on Syria",
+      "reportsNote": "indexed since {date}",
+      "usd": "${amount}",
+      "chart": "Syrian refugees abroad, {range}",
+      "bars": "Syrian refugees by host country, top 5 · {year}",
+      "source": "Source for both charts: {credit}",
+      "foot": "Preview built from real HDX HAPI figures for Syria; the dashboard feature itself is planned."
+    },
+    "coverage": {
+      "title": "Built on the last year of ReliefWeb.",
+      "lede": "Every answer and report draws on the same index, so you can see how much record stands behind it.",
+      "countries": "countries and territories with reports",
+      "reports": "reports indexed, newest added daily",
+      "publishers": "publishing organisations",
+      "caption": "Each dot is a country, sized by its indexed reports.",
+      "asOf": "ReliefWeb · as of {date}",
+      "mapNames": {
+        "AFG": "Afghanistan",
+        "COD": "DR Congo",
+        "LBN": "Lebanon",
+        "PSE": "oPt",
+        "SDN": "Sudan",
+        "SSD": "South Sudan",
+        "SYR": "Syria",
+        "UKR": "Ukraine",
+        "VEN": "Venezuela",
+        "YEM": "Yemen"
+      }
+    },
+    "audiences": {
+      "title": "For people who have to cite what they write.",
+      "me": {
+        "title": "Monitoring & evaluation teams",
+        "body": "Track a country or sector over time, pull the evidence behind each finding, and turn it into a cited situation brief for your next report."
+      },
+      "orgs": {
+        "title": "Humanitarian organizations",
+        "body": "Get a sourced picture of a crisis before the coordination meeting, without opening every PDF first."
+      },
+      "research": {
+        "title": "Researchers & analysts",
+        "body": "Trace trends across countries and time, with citations ready to drop into your own analysis."
+      },
+      "press": {
+        "title": "Journalists",
+        "body": "Check what agencies on the ground actually reported, and open the original report in one click."
+      }
+    },
+    "closing": {
+      "title": "Spend your time on the evidence.",
+      "body": "Ask your first question free, or generate a situation report for the country you're tracking.",
+      "startFree": "Start free",
+      "logIn": "Log in"
+    },
     "peak": {
       "below": "{pct}% below the {month} peak",
       "at": "at its peak"

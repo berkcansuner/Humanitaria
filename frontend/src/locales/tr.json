@@ -21,7 +21,170 @@
     "listLabel": "Dil",
     "changed": "Dil {name} olarak ayarlandı"
   },
+  "nav": {
+    "chat": "Sohbet",
+    "reports": "Raporlar",
+    "dashboards": "Gösterge panelleri",
+    "coverage": "Kapsam",
+    "openApp": "Uygulamayı aç",
+    "logOut": "Çıkış yap",
+    "logIn": "Giriş yap",
+    "startFree": "Ücretsiz başla"
+  },
+  "footer": {
+    "tagline": "İnsani yardım kayıtlarından, kaynağı belli yanıtlar.",
+    "product": "Ürün",
+    "chatReports": "Sohbet ve raporlar",
+    "dashboards": "Gösterge panelleri",
+    "coverage": "Kapsam",
+    "useCases": "Kimler için",
+    "meTeams": "İzleme ve Değerlendirme (M&E) ekipleri",
+    "organizations": "Kuruluşlar",
+    "researchers": "Araştırmacılar",
+    "journalists": "Gazeteciler",
+    "account": "Hesap",
+    "openApp": "Uygulamayı aç",
+    "logIn": "Giriş yap",
+    "signUp": "Kayıt ol",
+    "rights": "© 2026 Humanitaria. İçerik: ReliefWeb.",
+    "privacy": "Gizlilik politikası"
+  },
   "landing": {
+    "skip": "İçeriğe geç",
+    "country": "Suriye",
+    "reportTypes": {
+      "situation": "Durum raporu"
+    },
+    "sectors": {
+      "protection": "Koruma ve insan hakları"
+    },
+    "chip": "Kaynak {n}: {title}, {publisher}, {date}",
+    "hero": {
+      "titleLead": "İnsani yardım kayıtlarına sorun,",
+      "titleAccent": "kaynağıyla yanıt alın.",
+      "lede": "Herhangi bir kriz hakkında soru sorun, İzleme ve Değerlendirme (M&E) için durum ve teknik izleme raporları hazırlayın, dayandıkları göstergeleri görün. Her bilginin yanında geldiği raporun bağlantısı durur.",
+      "askLabel": "Bir kriz hakkında sorun",
+      "askPlaceholder": "Sudan'da kimler yerinden edildi?",
+      "ask": "Sor",
+      "startFree": "Ücretsiz başla",
+      "howItWorks": "Nasıl çalışır",
+      "countries": "ülke",
+      "reports": "rapor",
+      "months": "ay"
+    },
+    "answer": {
+      "label": "Örnek yanıt",
+      "region": "Yanıt",
+      "sources": "Kaynaklar"
+    },
+    "trend": {
+      "title": "Yurt dışındaki Suriyeli mülteciler",
+      "summary": "{title}: {last} itibarıyla {value}; {phrase} (zirve: {peak}). Seri {first} ile {last} arasını kapsar."
+    },
+    "window": {
+      "summary": "{label}. {firstPeriod}: {first}; {lastPeriod}: {last}; {n} gözlem."
+    },
+    "flows": {
+      "title": "Hızlı bir sorudan teslim edeceğiniz rapora kadar.",
+      "lede": "Bir krizin son durumunu sohbetten öğrenin, birçok kaynağı tek bir raporda birleştirin; teknik izlemede istatistikler kodla hesaplanır.",
+      "chat": {
+        "title": "Atıflı sohbet",
+        "lede": "Yanıtlar yalnızca bulunan raporlardan gelir; her bilginin kaynağı bir tık uzakta.",
+        "panel": "Örnek yanıttan bir bölüm",
+        "credit": "Yukarıdaki Suriye yanıtından"
+      },
+      "report": {
+        "title": "M&E raporları",
+        "lede": "Ülke, sektör, dönem ve dil seçin; bölümlere ayrılmış, atıflı bir rapor alın.",
+        "panel": "Örnek rapor",
+        "findings": "Temel bulgular",
+        "credit": "Örnek rapor · {date} tarihinde oluşturuldu"
+      },
+      "tech": {
+        "title": "Teknik izleme",
+        "lede": "Gösterge eğilimleri ve bölge karşılaştırmaları kodla test edilir; model sonuçları yazıya döker.",
+        "head": "{country} · Teknik izleme · Mülteciler",
+        "window": "{start} – {end}, {start} zirvesinden itibaren",
+        "trend": {
+          "decreasing": {
+            "significant": "{peak} zirvesinden {end} yılına kadar yurt dışındaki Suriyeli mülteci sayısında istatistiksel olarak anlamlı bir düşüş var (p {p}).",
+            "notSignificant": "{peak} zirvesinden {end} yılına kadar yurt dışındaki Suriyeli mülteci sayısında bir düşüş var, ancak istatistiksel olarak anlamlı değil (p {p})."
+          },
+          "increasing": {
+            "significant": "{peak} zirvesinden {end} yılına kadar yurt dışındaki Suriyeli mülteci sayısında istatistiksel olarak anlamlı bir artış var (p {p}).",
+            "notSignificant": "{peak} zirvesinden {end} yılına kadar yurt dışındaki Suriyeli mülteci sayısında bir artış var, ancak istatistiksel olarak anlamlı değil (p {p})."
+          },
+          "none": "{peak} zirvesinden {end} yılına kadar yurt dışındaki Suriyeli mülteci sayısında belirgin bir eğilim yok (p {p})."
+        },
+        "slope": "Sen eğimi",
+        "perYear": "/ yıl",
+        "p": "Mann-Kendall p",
+        "points": "Gözlem"
+      }
+    },
+    "dash": {
+      "title": "Her raporun dayandığı göstergeleri görün.",
+      "lede": "Teknik raporların kullandığı verilerle hazırlanmış bir ülke görünümü; her rakamın kaynağı yanında yazar.",
+      "label": "Örnek gösterge paneli · veri: HDX HAPI",
+      "returnees": "Geri dönen mülteciler, {year}",
+      "refugees": "Yurt dışındaki Suriyeli mülteciler",
+      "refugeesNote": "{year} yılında",
+      "funding": "OCHA FTS kayıtlarındaki fonlama, {year}",
+      "change": "{year} yılına göre {pct}",
+      "reports": "Suriye hakkındaki raporlar",
+      "reportsNote": "{date} tarihinden bu yana dizinde",
+      "usd": "{amount} $",
+      "chart": "Yurt dışındaki Suriyeli mülteciler, {range}",
+      "bars": "Ev sahibi ülkelere göre Suriyeli mülteciler, ilk 5 · {year}",
+      "source": "İki grafiğin de kaynağı: {credit}",
+      "foot": "Bu önizleme Suriye için HDX HAPI'deki gerçek verilerle hazırlandı. Gösterge paneli özelliği ise henüz planlama aşamasında."
+    },
+    "coverage": {
+      "title": "ReliefWeb'in son bir yılı üzerine kurulu.",
+      "lede": "Her yanıt ve rapor aynı dizinden beslenir; arkasında ne kadar kayıt olduğunu görebilirsiniz.",
+      "countries": "raporu bulunan ülke ve bölge",
+      "reports": "dizinlenmiş rapor, yenileri her gün ekleniyor",
+      "publishers": "yayıncı kuruluş",
+      "caption": "Her nokta bir ülke; boyutu dizindeki rapor sayısını gösterir.",
+      "asOf": "ReliefWeb · {date} itibarıyla",
+      "mapNames": {
+        "AFG": "Afganistan",
+        "COD": "KDC",
+        "LBN": "Lübnan",
+        "PSE": "Filistin",
+        "SDN": "Sudan",
+        "SSD": "Güney Sudan",
+        "SYR": "Suriye",
+        "UKR": "Ukrayna",
+        "VEN": "Venezuela",
+        "YEM": "Yemen"
+      }
+    },
+    "audiences": {
+      "title": "Yazdıklarına kaynak göstermesi gerekenler için.",
+      "me": {
+        "title": "İzleme ve Değerlendirme ekipleri",
+        "body": "Bir ülkeyi ya da sektörü zaman içinde izleyin, her bulgunun dayanağını toplayın ve bir sonraki raporunuz için atıflı bir durum özetine dönüştürün."
+      },
+      "orgs": {
+        "title": "İnsani yardım kuruluşları",
+        "body": "Koordinasyon toplantısından önce, her PDF'yi tek tek açmadan krizin genel durumunu kaynaklarıyla görün."
+      },
+      "research": {
+        "title": "Araştırmacılar ve analistler",
+        "body": "Ülkeler ve dönemler arasındaki eğilimleri izleyin; atıfları olduğu gibi kendi analizinize taşıyın."
+      },
+      "press": {
+        "title": "Gazeteciler",
+        "body": "Sahadaki kuruluşların gerçekte ne bildirdiğini kontrol edin, özgün rapora tek tıkla ulaşın."
+      }
+    },
+    "closing": {
+      "title": "Zamanınızı kanıtlara ayırın.",
+      "body": "İlk sorunuzu ücretsiz sorun ya da izlediğiniz ülke için bir durum raporu hazırlayın.",
+      "startFree": "Ücretsiz başla",
+      "logIn": "Giriş yap"
+    },
     "peak": {
       "below": "{month} zirvesinin %{pct} altında",
       "at": "zirvede"

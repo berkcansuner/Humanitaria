@@ -553,7 +553,11 @@ html:has(.mkt-scope) {
   .mkt-scope .nav-right .btn-text {
     display: none;
   }
-  /* Keep the language selector and the CTA on one line at phone width. */
+  /* Keep the language selector and the CTA on one line at phone width; the nav
+     takes the hero's 20px gutter. */
+  .mkt-scope .nav .wrap {
+    padding: 0 20px;
+  }
   .mkt-scope .nav-in {
     gap: var(--space-3);
   }
@@ -566,19 +570,30 @@ html:has(.mkt-scope) {
   }
 }
 
-/* 320px reflow: tighten the nav so the brand, language selector and CTA all fit. */
+/* Phones: a smaller wordmark leaves room for a longer CTA ("Ücretsiz başla"). */
+@media (max-width: 420px) {
+  .mkt-scope .nav .brand {
+    gap: 8px;
+  }
+  .mkt-scope .nav .brand .name {
+    font-size: 17px;
+  }
+}
+
+/* 320px reflow: the hand mark alone stands for the brand (the wordmark stays in
+   the link's accessible name), so the language selector and CTA fit in any language. */
 @media (max-width: 360px) {
-  .mkt-scope .nav .wrap {
-    padding: 0 12px;
+  .mkt-scope .nav .brand .name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
   .mkt-scope .nav-in {
     gap: var(--space-2);
-  }
-  .mkt-scope .brand {
-    gap: 8px;
-  }
-  .mkt-scope .brand .name {
-    font-size: 17px;
   }
   .mkt-scope .nav-right {
     gap: 4px;

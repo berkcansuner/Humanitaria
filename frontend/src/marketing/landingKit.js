@@ -136,6 +136,60 @@ export function revealedParts(parts, count) {
   return shown
 }
 
+// Markdown emphasis in generated text ('*(Based on …)*') as em parts, so the answer
+// renders italics instead of stray asterisks. List markers and bold parts are kept;
+// an asterisk without a closing pair stays as written.
+export function emphasisParts(parts) {
+  return parts.flatMap((part) => {
+    if (part.text === undefined || part.list_item || part.strong) return [part]
+    const out = []
+    let last = 0
+    for (const m of part.text.matchAll(/\*(?!\s)([^*\n]+?)\*/g)) {
+      if (m.index > last) out.push({ ...part, text: part.text.slice(last, m.index) })
+      out.push({ ...part, text: m[1], em: true })
+      last = m.index + m[0].length
+    }
+    if (!out.length) return [part]
+    if (last < part.text.length) out.push({ ...part, text: part.text.slice(last) })
+    return out
+  })
+}
+
+// Answer parts laid out as blocks: paragraphs ({ parts }) and bullet lists
+// ({ items: [parts] }). A line break ends the paragraph or item it is in; a
+// list_item part starts an item (its marker text is not shown).
+export function answerBlocks(parts) {
+  const blocks = []
+  let open = null // the parts array being filled, or null at a line start
+  const push = (part) => {
+    if (!open) {
+      open = []
+      blocks.push({ parts: open })
+    }
+    open.push(part)
+  }
+  for (const part of parts) {
+    if (part.list_item) {
+      let list = blocks[blocks.length - 1]
+      if (!list?.items) blocks.push((list = { items: [] }))
+      open = []
+      list.items.push(open)
+      continue
+    }
+    if (part.text === undefined) {
+      push(part)
+      continue
+    }
+    part.text.split('\n').forEach((line, i) => {
+      if (i > 0) open = null
+      // Spaces left at a line start (after a break) are layout, not text.
+      const text = open ? line : line.trimStart()
+      if (text) push({ ...part, text })
+    })
+  }
+  return blocks
+}
+
 // Latest [date, value] against the series peak, as a whole-number percent change.
 export function peakChange(series) {
   const peak = series.reduce((a, b) => (b[1] > a[1] ? b : a))
@@ -169,12 +223,26 @@ export function dayLabel(iso, locale = 'en') {
   return `${new Date(iso).getUTCDate()} ${monthLabel(iso, locale)}`
 }
 
-// The latest value worded against the series peak: '26% below the Jan 2025 peak'.
+// A series point's period: 'Feb 2025' for monthly data, '2021' for annual (calendar-year) data.
+export function periodLabel(iso, locale = 'en', { annual = false } = {}) {
+  return annual ? String(new Date(iso).getUTCFullYear()) : monthLabel(iso, locale)
+}
+
+// The latest value worded against the series peak: '26% below the Jan 2025 peak'
+// ('29% below the 2021 peak' for annual data).
 // `t` is the message translator; the wording lives in landing.peak.*.
-export function peakPhrase(series, t, locale = 'en') {
+export function peakPhrase(series, t, locale = 'en', { annual = false } = {}) {
   const { peak, latest, pct } = peakChange(series)
   if (latest[1] >= peak[1]) return t('landing.peak.at')
-  return t('landing.peak.below', { pct: Math.abs(pct), month: monthLabel(peak[0], locale) })
+  return t('landing.peak.below', {
+    pct: Math.abs(pct),
+    month: periodLabel(peak[0], locale, { annual }),
+  })
+}
+
+// A number with the language's digit grouping and decimal mark ('19,147' / '19.147').
+export function formatNumber(n, locale = 'en', options = {}) {
+  return new Intl.NumberFormat(intlLocale(locale), options).format(n)
 }
 
 // Last [year, value] against the year before, as a whole-number percent change.

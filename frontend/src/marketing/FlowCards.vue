@@ -1,55 +1,93 @@
 <script setup>
-import { onBeforeUnmount, onMounted, useTemplateRef } from 'vue'
+import { computed, onBeforeUnmount, onMounted, useTemplateRef } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import sudan from './data/sudan.json'
-import meReport from './data/meReport.json'
-import { parts, sources } from './haitiAnswer.js'
+import syria from './data/syria.json'
+import { sampleAnswer, samplePassage, sampleReport } from './samples.js'
 import {
   citedParts,
   dayLabel,
   formatCompact,
+  formatNumber,
   monthLabel,
-  passage,
   passageSources,
 } from './landingKit.js'
-import { citeLabel, revealSource } from '../utils/sources.js'
+import { ledgerDate, revealSource } from '../utils/sources.js'
 import WindowChart from './WindowChart.vue'
 
 gsap.registerPlugin(ScrollTrigger)
 
-// The technical report's trend test on the hero card's IDP series, from its peak on.
-const test = sudan.idps.trend_test
-const slope = `${test.slope_per_year < 0 ? '−' : '+'}${formatCompact(Math.abs(test.slope_per_year))}`
-const peakMonth = monthLabel(test.period[0])
-const testPeriod = `${peakMonth} – ${monthLabel(test.period[1])}, from the peak`
-const pValue = test.p_value < 0.001 ? '< 0.001' : String(test.p_value)
-const dtmCredit = `${sudan.idps.credit} · HDX HAPI`
-const testSeries = sudan.idps.series.filter(([d]) => d >= test.period[0] && d <= test.period[1])
+const { t, te, locale } = useI18n()
 
-// A passage of the hero's Haiti answer, quoted with its own citations.
-const sample = passage(parts, 'Nearly 80 percent', 'Grand Sud (39%)')
-const sampleSources = passageSources(sample, sources).map((s) => ({
-  ...s,
-  publisher: s.meta.split(' · ')[0],
-}))
+// Sector names as the UI shows them; the report stores the ReliefWeb theme name.
+const SECTOR_KEYS = { 'Protection and Human Rights': 'protection' }
 
-// One sample report generated for this page (scripts/generate_landing_report.py);
-// its Key Findings sentences are quoted verbatim, chips open their source rows.
-const reportHead = `${meReport.country} · ${meReport.type} · ${meReport.sector}`
-const reportPeriod = `${monthLabel(meReport.date_from)} – ${monthLabel(meReport.date_to)}`
-const reportGenerated = dayLabel(meReport.generated)
-const findings = meReport.findings.map(citedParts)
-const reportSources = meReport.sources
-const reportChip = (n) => {
-  const src = reportSources.find((s) => s.n === n)
-  return citeLabel(n, { title: src.title, source: src.publisher, date: src.date })
+const chipLabel = (sources, n) => {
+  const src = sources.find((s) => s.n === n)
+  return t('landing.chip', {
+    n,
+    title: src.title,
+    publisher: src.publisher,
+    date: ledgerDate(src.date, locale.value),
+  })
 }
 
-const sampleChip = (n) => {
-  const src = sampleSources.find((s) => s.n === n)
-  return citeLabel(n, { title: src.title, source: src.publisher, date: src.date })
-}
+// The technical report's trend test on the hero card's refugee series (annual UNHCR
+// figures), from its 2021 peak to the latest year.
+const test = syria.trend
+const testSeries = syria.refugees.series.filter(([d]) => d >= test.period[0] && d <= test.period[1])
+const peakYear = test.period[0].slice(0, 4)
+const endYear = test.period[1].slice(0, 4)
+const trendCredit = `${syria.refugees.credit} · HDX HAPI`
+const trendKey =
+  test.direction === 'decreasing' || test.direction === 'increasing'
+    ? `${test.direction}.${test.significant ? 'significant' : 'notSignificant'}`
+    : 'none'
+const tech = computed(() => {
+  const l = locale.value
+  const p =
+    test.p_value < 0.001
+      ? `< ${formatNumber(0.001, l)}`
+      : formatNumber(test.p_value, l, { maximumSignificantDigits: 3 })
+  const sign = test.slope_per_year < 0 ? '−' : '+'
+  return {
+    slope: `${sign}${formatCompact(Math.abs(test.slope_per_year), l)}`,
+    p,
+    sentence: t(`landing.flows.tech.trend.${trendKey}`, { peak: peakYear, end: endYear, p }),
+  }
+})
+
+// A passage of the hero's Syria answer, quoted verbatim with its own citations.
+const sample = computed(() => samplePassage(locale.value))
+const sampleSources = computed(() =>
+  passageSources(sample.value, sampleAnswer(locale.value).sources).map((s) => ({
+    ...s,
+    publisher: s.meta.split(' · ')[0],
+  })),
+)
+
+// One sample report generated for this page (scripts/generate_landing_report.py) in
+// the interface language; its Key Findings sentences are quoted verbatim, chips open
+// their source rows.
+const report = computed(() => {
+  const r = sampleReport(locale.value)
+  const l = locale.value
+  const typeKey = `landing.reportTypes.${r.report_type}`
+  const sectorKey = SECTOR_KEYS[r.sector] && `landing.sectors.${SECTOR_KEYS[r.sector]}`
+  return {
+    head: [
+      t('landing.country'),
+      te(typeKey) ? t(typeKey) : r.type,
+      sectorKey ? t(sectorKey) : r.sector,
+    ].join(' · '),
+    period: `${monthLabel(r.date_from, l)} – ${monthLabel(r.date_to, l)}`,
+    generated: r.generated,
+    generatedLabel: dayLabel(r.generated, l),
+    findings: r.findings.map(citedParts),
+    sources: r.sources,
+  }
+})
 
 const root = useTemplateRef('root')
 
@@ -91,18 +129,19 @@ onBeforeUnmount(() => mm?.revert())
   <section id="workflows" ref="root" class="section">
     <div class="wrap">
       <div class="section-head">
-        <h2>From a quick question to the brief you hand in.</h2>
-        <p>
-          Chat for the latest state of a crisis, reports that synthesise many sources at once, and
-          technical monitoring with the statistics done in code.
-        </p>
+        <h2>{{ t('landing.flows.title') }}</h2>
+        <p>{{ t('landing.flows.lede') }}</p>
       </div>
 
       <div class="flows">
         <article class="flow">
-          <h3>Cited chat</h3>
-          <p>Answers only from retrieved reports, each claim one click from its source.</p>
-          <figure class="flow-ui fu-panel" aria-label="Sample answer passage" @click="onCite">
+          <h3>{{ t('landing.flows.chat.title') }}</h3>
+          <p>{{ t('landing.flows.chat.lede') }}</p>
+          <figure
+            class="flow-ui fu-panel"
+            :aria-label="t('landing.flows.chat.panel')"
+            @click="onCite"
+          >
             <p class="fu-answer">
               <template v-for="(part, i) in sample" :key="i"
                 ><button
@@ -110,13 +149,13 @@ onBeforeUnmount(() => mm?.revert())
                   class="cite"
                   type="button"
                   :data-cite="part.cite"
-                  :aria-label="sampleChip(part.cite)"
+                  :aria-label="chipLabel(sampleSources, part.cite)"
                 >
                   {{ part.cite }}</button
                 ><template v-else>{{ part.text }}</template></template
               >.
             </p>
-            <ol class="fu-sources" aria-label="Sources">
+            <ol class="fu-sources" :aria-label="t('landing.answer.sources')">
               <li v-for="src in sampleSources" :key="src.n" class="source-item" :data-srcid="src.n">
                 <span class="fu-src-n">{{ src.n }}</span>
                 <span class="fu-src-body">
@@ -130,37 +169,48 @@ onBeforeUnmount(() => mm?.revert())
                   >
                   <span class="fu-src-meta"
                     >{{ src.publisher }} ·
-                    <time class="fu-date" :datetime="src.date">{{ src.date }}</time></span
+                    <time class="fu-date" :datetime="src.date">{{
+                      ledgerDate(src.date, locale)
+                    }}</time></span
                   >
                 </span>
               </li>
             </ol>
-            <figcaption class="fu-credit">From the Haiti answer above</figcaption>
+            <figcaption class="fu-credit">{{ t('landing.flows.chat.credit') }}</figcaption>
           </figure>
         </article>
 
         <article class="flow">
-          <h3>M&amp;E reports</h3>
-          <p>Pick a country, sector, period and language; get a structured, cited brief.</p>
-          <figure class="flow-ui fu-panel" aria-label="Sample report" @click="onCite">
-            <p class="fu-head">{{ reportHead }}</p>
-            <p class="fu-meta">{{ reportPeriod }}</p>
-            <p class="fu-label">Key findings</p>
-            <p v-for="(finding, f) in findings" :key="f" class="fu-finding">
+          <h3>{{ t('landing.flows.report.title') }}</h3>
+          <p>{{ t('landing.flows.report.lede') }}</p>
+          <figure
+            class="flow-ui fu-panel"
+            :aria-label="t('landing.flows.report.panel')"
+            @click="onCite"
+          >
+            <p class="fu-head">{{ report.head }}</p>
+            <p class="fu-meta">{{ report.period }}</p>
+            <p class="fu-label">{{ t('landing.flows.report.findings') }}</p>
+            <p v-for="(finding, f) in report.findings" :key="f" class="fu-finding">
               <template v-for="(part, i) in finding" :key="i"
                 ><button
                   v-if="part.cite"
                   class="cite"
                   type="button"
                   :data-cite="part.cite"
-                  :aria-label="reportChip(part.cite)"
+                  :aria-label="chipLabel(report.sources, part.cite)"
                 >
                   {{ part.cite }}</button
                 ><template v-else>{{ part.text }}</template></template
               >
             </p>
-            <ol class="fu-sources" aria-label="Sources">
-              <li v-for="src in reportSources" :key="src.n" class="source-item" :data-srcid="src.n">
+            <ol class="fu-sources" :aria-label="t('landing.answer.sources')">
+              <li
+                v-for="src in report.sources"
+                :key="src.n"
+                class="source-item"
+                :data-srcid="src.n"
+              >
                 <span class="fu-src-n">{{ src.n }}</span>
                 <span class="fu-src-body">
                   <a
@@ -173,45 +223,55 @@ onBeforeUnmount(() => mm?.revert())
                   >
                   <span class="fu-src-meta"
                     >{{ src.publisher }} ·
-                    <time class="fu-date" :datetime="src.date">{{ src.date }}</time></span
+                    <time class="fu-date" :datetime="src.date">{{
+                      ledgerDate(src.date, locale)
+                    }}</time></span
                   >
                 </span>
               </li>
             </ol>
-            <figcaption class="fu-credit">
-              Sample report · generated
-              <time :datetime="meReport.generated">{{ reportGenerated }}</time>
-            </figcaption>
+            <i18n-t
+              keypath="landing.flows.report.credit"
+              tag="figcaption"
+              scope="global"
+              class="fu-credit"
+            >
+              <template #date>
+                <time :datetime="report.generated">{{ report.generatedLabel }}</time>
+              </template>
+            </i18n-t>
           </figure>
         </article>
 
         <article class="flow">
-          <h3>Technical monitoring</h3>
-          <p>Indicator trends and regional comparisons, tested in code, narrated by the model.</p>
+          <h3>{{ t('landing.flows.tech.title') }}</h3>
+          <p>{{ t('landing.flows.tech.lede') }}</p>
           <div class="flow-ui">
-            <p class="fu-head">Sudan · Technical monitoring · IDPs</p>
-            <p class="fu-meta">{{ testPeriod }}</p>
-            <p class="fu-finding">
-              Since their {{ peakMonth }} peak, internally displaced people show a
-              {{ test.significant ? 'significant' : 'non-significant' }} {{ test.direction }} trend
-              (p&nbsp;{{ pValue }}).
+            <p class="fu-head">
+              {{ t('landing.flows.tech.head', { country: t('landing.country') }) }}
             </p>
+            <p class="fu-meta">
+              {{ t('landing.flows.tech.window', { start: peakYear, end: endYear }) }}
+            </p>
+            <p class="fu-finding">{{ tech.sentence }}</p>
             <dl class="fu-test">
               <div>
-                <dt>Sen's slope</dt>
-                <dd>{{ slope }}<small> / year</small></dd>
+                <dt>{{ t('landing.flows.tech.slope') }}</dt>
+                <dd>
+                  {{ tech.slope }}<small> {{ t('landing.flows.tech.perYear') }}</small>
+                </dd>
               </div>
               <div>
-                <dt>Mann-Kendall p</dt>
-                <dd>{{ pValue }}</dd>
+                <dt>{{ t('landing.flows.tech.p') }}</dt>
+                <dd>{{ tech.p }}</dd>
               </div>
               <div>
-                <dt>Points</dt>
+                <dt>{{ t('landing.flows.tech.points') }}</dt>
                 <dd>{{ test.n_points }}</dd>
               </div>
             </dl>
-            <WindowChart :series="testSeries" label="Internally displaced people, Sudan" />
-            <p class="fu-credit">{{ dtmCredit }}</p>
+            <WindowChart :series="testSeries" annual :label="t('landing.trend.title')" />
+            <p class="fu-credit">{{ trendCredit }}</p>
           </div>
         </article>
       </div>

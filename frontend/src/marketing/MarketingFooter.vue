@@ -7,36 +7,53 @@
             <HandMark :size="30" :radius="9" solid />
             <span class="name">Humanitaria</span>
           </router-link>
-          <p>Answers from the humanitarian record, with the source attached.</p>
+          <p>{{ t('footer.tagline') }}</p>
         </div>
         <div class="foot-col">
-          <h3>Product</h3>
-          <router-link :to="{ path: '/', hash: '#workflows' }">Chat and reports</router-link>
-          <router-link :to="{ path: '/', hash: '#dashboards' }">Dashboards</router-link>
-          <router-link :to="{ path: '/', hash: '#coverage' }">Coverage</router-link>
+          <h3>{{ t('footer.product') }}</h3>
+          <router-link :to="{ path: '/', hash: '#workflows' }">{{
+            t('footer.chatReports')
+          }}</router-link>
+          <router-link :to="{ path: '/', hash: '#dashboards' }">{{
+            t('footer.dashboards')
+          }}</router-link>
+          <router-link :to="{ path: '/', hash: '#coverage' }">{{
+            t('footer.coverage')
+          }}</router-link>
         </div>
         <div class="foot-col">
-          <h3>Use cases</h3>
-          <router-link :to="{ path: '/', hash: '#audiences' }">M&amp;E teams</router-link>
-          <router-link :to="{ path: '/', hash: '#audiences' }">Organizations</router-link>
-          <router-link :to="{ path: '/', hash: '#audiences' }">Researchers</router-link>
-          <router-link :to="{ path: '/', hash: '#audiences' }">Journalists</router-link>
+          <h3>{{ t('footer.useCases') }}</h3>
+          <router-link :to="{ path: '/', hash: '#audiences' }">{{
+            t('footer.meTeams')
+          }}</router-link>
+          <router-link :to="{ path: '/', hash: '#audiences' }">{{
+            t('footer.organizations')
+          }}</router-link>
+          <router-link :to="{ path: '/', hash: '#audiences' }">{{
+            t('footer.researchers')
+          }}</router-link>
+          <router-link :to="{ path: '/', hash: '#audiences' }">{{
+            t('footer.journalists')
+          }}</router-link>
         </div>
         <div class="foot-col">
-          <h3>Account</h3>
-          <router-link to="/app">Open app</router-link>
-          <router-link to="/login">Log in</router-link>
-          <router-link to="/signup">Sign up</router-link>
+          <h3>{{ t('footer.account') }}</h3>
+          <router-link to="/app">{{ t('footer.openApp') }}</router-link>
+          <router-link to="/login">{{ t('footer.logIn') }}</router-link>
+          <router-link to="/signup">{{ t('footer.signUp') }}</router-link>
         </div>
       </div>
       <div class="foot-base">
-        <span>© 2026 Humanitaria. Content from ReliefWeb.</span>
-        <router-link to="/privacy">Privacy policy</router-link>
+        <span>{{ t('footer.rights') }}</span>
+        <router-link to="/privacy">{{ t('footer.privacy') }}</router-link>
       </div>
     </div>
   </footer>
 </template>
 
 <script setup>
+import { useI18n } from 'vue-i18n'
 import HandMark from './HandMark.vue'
+
+const { t } = useI18n()
 </script>

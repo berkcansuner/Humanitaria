@@ -1,36 +1,45 @@
 <script setup>
-import { onBeforeUnmount, onMounted, useTemplateRef } from 'vue'
+import { computed, onBeforeUnmount, onMounted, useTemplateRef } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { gsap } from 'gsap'
 import coverage from './data/coverage.json'
 import CoverageMap from './CoverageMap.vue'
 import {
   countUp,
   dayLabel,
+  formatNumber,
   mapLabels,
   onVisible,
   prefersReducedMotion,
   project,
 } from './landingKit.js'
 
-const grouped = (n) => n.toLocaleString('en-US')
-const stats = [
-  { key: 'countries', value: coverage.countries, label: 'countries and territories with reports' },
-  { key: 'reports', value: coverage.reports, label: 'reports indexed, newest added daily' },
-  { key: 'publishers', value: coverage.publishers, label: 'publishing organisations' },
-]
-const asOf = dayLabel(coverage.generated)
+const { t, te, locale } = useI18n()
 
-// The highest-volume countries named on the map, placed in percent of its box.
-const SHORT = { PSE: 'oPt', COD: 'DR Congo' }
-const labels = mapLabels(coverage.points, { count: 5 }).map((p) => {
+const grouped = (n) => formatNumber(n, locale.value)
+const STATS = [
+  { key: 'countries', value: coverage.countries },
+  { key: 'reports', value: coverage.reports },
+  { key: 'publishers', value: coverage.publishers },
+]
+
+// The highest-volume countries named on the map, placed in percent of its box. Short
+// names per language live in landing.coverage.mapNames; others keep the data's name.
+const points = mapLabels(coverage.points, { count: 5 }).map((p) => {
   const { x, y } = project(p.lat, p.lon, 100, 100)
-  return {
-    iso3: p.iso3,
-    name: SHORT[p.iso3] ?? p.name.replace(/\s*\(.*\)$/, ''),
-    reports: grouped(p.reports),
-    style: { left: `${x}%`, top: `${y}%` },
-  }
+  return { ...p, style: { left: `${x}%`, top: `${y}%` } }
 })
+const labels = computed(() =>
+  points.map((p) => {
+    const key = `landing.coverage.mapNames.${p.iso3}`
+    return {
+      iso3: p.iso3,
+      name: te(key) ? t(key) : p.name.replace(/\s*\(.*\)$/, ''),
+      reports: grouped(p.reports),
+      style: p.style,
+    }
+  }),
+)
 
 const root = useTemplateRef('root')
 let ctx = null
@@ -49,6 +58,8 @@ onMounted(() => {
           // start text is set here, so a render that never scrolls keeps the finals.
           ctx.add(() => {
             el.textContent = '0'
+            // The grouping is read on every frame, so a language switch mid-count
+            // continues in the new language.
             countUp(el, to, { duration: 1.6, format: (v) => grouped(Math.round(v)) })
           }),
         ),
@@ -67,17 +78,14 @@ onBeforeUnmount(() => {
   <section id="coverage" ref="root" class="section coverage">
     <div class="wrap">
       <div class="section-head">
-        <h2>Built on the last year of ReliefWeb.</h2>
-        <p>
-          Every answer and report draws on the same index, so you can see how much record stands
-          behind it.
-        </p>
+        <h2>{{ t('landing.coverage.title') }}</h2>
+        <p>{{ t('landing.coverage.lede') }}</p>
       </div>
       <div class="cov">
         <dl class="stats">
-          <div v-for="s in stats" :key="s.key" class="stat">
+          <div v-for="s in STATS" :key="s.key" class="stat">
             <dt class="stat-v" :data-count="s.value">{{ grouped(s.value) }}</dt>
-            <dd>{{ s.label }}</dd>
+            <dd>{{ t(`landing.coverage.${s.key}`) }}</dd>
           </div>
         </dl>
         <figure class="cov-map">
@@ -87,10 +95,12 @@ onBeforeUnmount(() => {
               >{{ l.name }} <b>{{ l.reports }}</b></span
             >
           </div>
-          <figcaption>Each dot is a country, sized by its indexed reports.</figcaption>
+          <figcaption>{{ t('landing.coverage.caption') }}</figcaption>
         </figure>
       </div>
-      <p class="stats-src">ReliefWeb · as of {{ asOf }}</p>
+      <p class="stats-src">
+        {{ t('landing.coverage.asOf', { date: dayLabel(coverage.generated, locale) }) }}
+      </p>
     </div>
   </section>
 </template>
