@@ -1,9 +1,9 @@
 /**
- * M&E report type metadata shared between the generation form and the saved
- * list / viewer badge. Values must match the backend's report_type Literal
+ * M&E report type metadata shared between the generation form, the saved list
+ * and the viewer. Values must match the backend's report_type Literal
  * (api/routes/reports.py ReportRequest.report_type). Names are interface text,
- * looked up from the code when rendered (`reports.types.*`, `reports.typesShort.*`),
- * so they follow a language switch; `t` defaults to the app's i18n.
+ * looked up from the code when rendered (`reports.types.*`), so they follow a
+ * language switch; `t` defaults to the app's i18n.
  */
 import { t as appT } from '../i18n/index.js'
 
@@ -19,11 +19,6 @@ const KNOWN = new Set(REPORT_TYPES.map((r) => r.value))
 /** The full type name ("Situation Report"); an unknown type reads as a situation report. */
 export function reportTypeLabel(type, t = appT) {
   return t(`reports.types.${KNOWN.has(type) ? type : 'situation'}`)
-}
-
-/** Short badge text for a report_type, or null for 'situation' (no badge shown). */
-export function reportTypeBadge(type, t = appT) {
-  return KNOWN.has(type) && type !== 'situation' ? t(`reports.typesShort.${type}`) : null
 }
 
 // The form's sectors are ReliefWeb theme names (api/routes/reports.py THEMES); the

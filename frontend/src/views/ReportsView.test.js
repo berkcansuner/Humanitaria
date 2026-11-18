@@ -280,6 +280,86 @@ describe('ReportsView in two languages', () => {
     })
   })
 
+  describe('the saved list names each type in full', () => {
+    const q2 = {
+      ...SAVED,
+      id: 'q2',
+      date_from: '2026-05-01',
+      date_to: '2026-07-31',
+      title: 'Sudan · Health · 2026-05-01 – 2026-07-31',
+    }
+    const yemen = {
+      ...SAVED,
+      id: 'y1',
+      report_type: 'indicator_monitoring',
+      country: 'Yemen',
+      theme: null,
+      title: 'Indicator Monitoring Report — Yemen · All sectors · 2026-08-01 – 2026-10-31',
+    }
+    const somalia = {
+      ...SAVED,
+      id: 's1',
+      report_type: 'needs_assessment',
+      country: 'Somalia',
+      theme: null,
+      title: 'Needs Assessment Brief — Somalia · All sectors · 2026-08-01 – 2026-10-31',
+    }
+    const syria = {
+      ...SAVED,
+      id: 't1',
+      report_type: 'technical_monitoring',
+      country: 'Syrian Arab Republic',
+      theme: null,
+      title:
+        'Technical Monitoring Report — Syrian Arab Republic · All sectors · 2026-08-01 – 2026-10-31',
+    }
+    // The meta line's first row (the type, and for a series its count), without the
+    // screen-reader-only language name; NBSPs read as spaces.
+    const typeLine = (el) => {
+      const row = el.querySelector('.saved-meta > span').cloneNode(true)
+      row.querySelectorAll('.sr-only').forEach((s) => s.remove())
+      return row.textContent.replace(/\s+/g, ' ').trim()
+    }
+
+    it('shows the full type name in single rows and series heads, in both languages', async () => {
+      vi.mocked(listReports).mockResolvedValue({ reports: [SAVED, yemen, q2, somalia, syria] })
+      await mount()
+      const head = host.querySelector('.saved-series-head')
+      const singles = [...host.querySelectorAll('.saved-list > .saved-item')]
+      expect(typeLine(head)).toBe('Situation Report · 2 reports · EN')
+      expect(singles.map(typeLine)).toEqual([
+        'Indicator Monitoring Report · EN',
+        'Needs Assessment Brief · EN',
+        'Technical Monitoring Report · EN',
+      ])
+      setLocale('tr')
+      await flush()
+      expect(typeLine(head)).toBe('Durum raporu · 2 rapor · EN')
+      expect(singles.map(typeLine)).toEqual([
+        'Gösterge izleme raporu · EN',
+        'İhtiyaç değerlendirmesi özeti · EN',
+        'Teknik izleme raporu · EN',
+      ])
+      // The delete button names the type in full too.
+      expect(singles[0].querySelector('.saved-del').getAttribute('aria-label')).toBe(
+        'Raporu sil: Yemen, Gösterge izleme raporu, 01.08.2026 - 31.10.2026',
+      )
+    })
+
+    it('never starts a line of the meta with a separator', async () => {
+      vi.mocked(listReports).mockResolvedValue({ reports: [SAVED, q2, yemen] })
+      await mount()
+      const head = host.querySelector('.saved-series-head')
+      // The period sits on its own line under the type: no leading "·".
+      expect(head.querySelector('.saved-period').textContent.trim()).toBe('to 2026-10-31')
+      // A wrap may only fall after a separator, never just before one: each "·" is
+      // glued to the word in front of it by a no-break space.
+      for (const meta of host.querySelectorAll('.saved-meta')) {
+        expect(meta.textContent).not.toMatch(/[ \n\t]·/)
+      }
+    })
+  })
+
   it('shows a generation error in the current language and follows a switch', async () => {
     vi.stubGlobal(
       'fetch',

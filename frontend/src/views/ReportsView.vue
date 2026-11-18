@@ -170,11 +170,13 @@
                   <span class="saved-name">{{ savedName(e.report) }}</span>
                   <span class="saved-meta">
                     <!-- The report's language as its code, so an English and a Turkish
-                         report with the same settings can be told apart. -->
+                         report with the same settings can be told apart. The "·" is
+                         glued to the type by a no-break space, so a long type name
+                         wraps between its words and no line starts with a separator. -->
                     <span
                       >{{ savedType(e.report)
                       }}<span v-if="reportLanguage(e.report)" class="saved-lang"
-                        >{{ ' · '
+                        >{{ '\u00a0· '
                         }}<span class="saved-lang-code" aria-hidden="true">{{
                           reportLanguage(e.report).toUpperCase()
                         }}</span
@@ -217,21 +219,24 @@
                 >
                   <span class="saved-series-text">
                     <span class="saved-name">{{ savedName(e.latest) }}</span>
+                    <!-- Type, then count and language kept together: the line can
+                         only break after "Type ·". The period has its own line. -->
                     <span class="saved-meta"
                       ><span
-                        >{{ savedType(e.latest) }} ·
-                        {{ t('reports.saved.count', { n: e.reports.length }, e.reports.length)
-                        }}<span v-if="reportLanguage(e.latest)" class="saved-lang"
-                          >{{ ' · '
-                          }}<span class="saved-lang-code" aria-hidden="true">{{
-                            reportLanguage(e.latest).toUpperCase()
-                          }}</span
-                          ><span class="sr-only">{{ languageLabel(e.latest) }}</span></span
-                        >{{ ' ' }}</span
-                      ><span v-if="e.latest.date_to" class="saved-period"
-                        >·
-                        {{ t('reports.saved.until', { date: shownDay(e.latest.date_to) }) }}</span
-                      ></span
+                        >{{ savedType(e.latest) }}{{ '\u00a0· '
+                        }}<span class="saved-count"
+                          >{{ t('reports.saved.count', { n: e.reports.length }, e.reports.length)
+                          }}<span v-if="reportLanguage(e.latest)" class="saved-lang"
+                            >{{ '\u00a0· '
+                            }}<span class="saved-lang-code" aria-hidden="true">{{
+                              reportLanguage(e.latest).toUpperCase()
+                            }}</span
+                            ><span class="sr-only">{{ languageLabel(e.latest) }}</span></span
+                          ></span
+                        ></span
+                      ><span v-if="e.latest.date_to" class="saved-period">{{
+                        t('reports.saved.until', { date: shownDay(e.latest.date_to) })
+                      }}</span></span
                     >
                   </span>
                   <ChevronRight :size="14" class="saved-series-chevron" aria-hidden="true" />
@@ -536,12 +541,7 @@ import { comparisonNote, injectComparisonNote } from '../utils/comparisonNote.js
 import { revealSource, returnToCite } from '../utils/sources.js'
 import { parseSSE } from '../utils/parseSSE.js'
 import { getReportOptions, listReports, getReport, deleteReport } from '../utils/reportsApi.js'
-import {
-  REPORT_TYPES,
-  reportTypeBadge,
-  reportTypeLabel,
-  sectorLabel,
-} from '../utils/reportTypes.js'
+import { REPORT_TYPES, reportTypeLabel, sectorLabel } from '../utils/reportTypes.js'
 import { splitReportTitle, formatPeriod } from '../utils/reportTitle.js'
 import { groupSeries, newerInSeries, olderInSeries, seriesKey } from '../utils/reportSeries.js'
 import { nextPeriod } from '../utils/nextPeriod.js'
@@ -672,8 +672,9 @@ function savedName(r) {
   return name ? `${heading} · ${name}` : heading
 }
 
+// The type in full ("Situation Report"), as under the open report's title.
 function savedType(r) {
-  return reportTypeBadge(r.report_type, t) || t('reports.typesShort.situation')
+  return reportTypeLabel(r.report_type, t)
 }
 
 // A list row's tooltip, the full name of a row that may be cut off: the stored
@@ -1575,7 +1576,8 @@ function onCiteClick(e) {
   color: var(--color-accent);
   font-weight: 600;
 }
-.saved-period {
+.saved-period,
+.saved-count {
   white-space: nowrap;
 }
 /* The report's language code: the meta line's own quiet text, in every row shape

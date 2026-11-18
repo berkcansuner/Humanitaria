@@ -410,12 +410,6 @@
       "needs_assessment": "Needs Assessment Brief",
       "technical_monitoring": "Technical Monitoring Report"
     },
-    "typesShort": {
-      "situation": "Situation",
-      "indicator_monitoring": "Indicator Monitoring",
-      "needs_assessment": "Needs Assessment",
-      "technical_monitoring": "Technical Monitoring"
-    },
     "sectors": {
       "agriculture": "Agriculture",
       "campManagement": "Camp Coordination and Camp Management",

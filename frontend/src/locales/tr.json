@@ -410,12 +410,6 @@
       "needs_assessment": "İhtiyaç değerlendirmesi özeti",
       "technical_monitoring": "Teknik izleme raporu"
     },
-    "typesShort": {
-      "situation": "Durum",
-      "indicator_monitoring": "Gösterge izleme",
-      "needs_assessment": "İhtiyaç değerlendirmesi",
-      "technical_monitoring": "Teknik izleme"
-    },
     "sectors": {
       "agriculture": "Tarım",
       "campManagement": "Kamp koordinasyonu ve kamp yönetimi",
