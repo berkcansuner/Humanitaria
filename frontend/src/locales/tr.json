@@ -219,19 +219,19 @@
       "title": "Tekrar hoş geldiniz",
       "sub": "Humanitaria'ya devam etmek için giriş yapın.",
       "submit": "Giriş yap",
-      "switchPrompt": "Humanitaria'ya yeni misiniz?",
+      "switchPrompt": "Hesabınız yok mu?",
       "switchLink": "Kayıt ol"
     },
     "signup": {
       "title": "Hesabınızı oluşturun",
-      "sub": "İnsani yardım kayıtlarına soru sormaya başlayın; atıf verebileceğiniz yanıtlar alın.",
+      "sub": "İnsani yardım kayıtlarına soru sormaya başlayın; kaynak gösterebileceğiniz yanıtlar alın.",
       "submit": "Hesap oluştur",
       "switchPrompt": "Zaten hesabınız var mı?",
       "switchLink": "Giriş yap"
     },
     "google": "Google ile devam et",
     "or": "ya da",
-    "name": "Ad",
+    "name": "Ad soyad",
     "email": "E-posta",
     "password": "Parola",
     "wait": "Lütfen bekleyin…",
@@ -269,7 +269,7 @@
     },
     "s2": {
       "title": "Google ile giriş",
-      "p1": "Google ile girişi seçerseniz Google adınızı, e-posta adresinizi ve Google hesap kimliğinizi bizimle paylaşır. Bunları yalnızca hesabınızı oluşturmak ve oturumunuzu açmak için kullanırız. Gmail, Drive, kişiler ya da başka herhangi bir Google verinize erişim istemeyiz. Google API'lerinden aldığımız bilgileri kullanırken, Sınırlı Kullanım (Limited Use) gereklilikleri de dâhil olmak üzere {policy} belgesine uyarız.",
+      "p1": "Google ile girişi seçerseniz Google adınızı, e-posta adresinizi ve Google hesap kimliğinizi bizimle paylaşır. Bunları yalnızca hesabınızı oluşturmak ve oturumunuzu açmak için kullanırız. Gmail'inize, Drive'ınıza, kişilerinize ya da diğer Google verilerinize erişim istemeyiz. Google API'lerinden aldığımız bilgileri kullanırken, Sınırlı Kullanım (Limited Use) gereklilikleri de dâhil olmak üzere {policy} belgesine uyarız.",
       "policyLink": "Google API Services User Data Policy"
     },
     "s3": {
@@ -288,22 +288,22 @@
       },
       "l4": {
         "lead": "Pinecone",
-        "text": "getirilen rapor alıntılarını alaka düzeyine göre sıralar. Sorunuz ve bu alıntılar sıralama hizmetine gönderilir; orada hiçbir veri tutmayız."
+        "text": "getirilen rapor alıntılarını alaka düzeyine göre sıralar. Sorunuz ve bu alıntılar Pinecone'un sıralama hizmetine gönderilir; orada hiçbir veri tutmayız."
       },
       "after": "Uygulama ayrıca hataları bulup düzeltmemize yardımcı olması için kısa teknik günlükler (örneğin kullanıcı kimliğinizle birlikte giriş olayları) yazar."
     },
     "s4": {
-      "title": "Verileri ne kadar süre tutuyoruz",
-      "p1": "Verilerinizi siz silene kadar saklarız. Bir sohbeti ya da raporu istediğiniz zaman silebilirsiniz. {path} yolundan hesabınızı silmeniz; hesabınızı, tüm sohbetlerinizi ve tüm raporlarınızı veritabanımızdan hemen kaldırır. Kopyalar, geçerlilik süreleri dolmadan önce sınırlı bir süre boyunca barındırma sağlayıcılarımızın günlüklerinde veya yedeklerinde kalabilir.",
+      "title": "Verileri ne kadar süre saklıyoruz",
+      "p1": "Verilerinizi siz silene kadar saklarız. Bir sohbeti ya da raporu istediğiniz zaman silebilirsiniz. Hesabınızı {path} yolundan silerseniz hesabınız, tüm sohbetleriniz ve tüm raporlarınız veritabanımızdan hemen kaldırılır. Kopyalar, barındırma sağlayıcılarımızın günlüklerinde veya yedeklerinde, saklama süreleri dolana kadar sınırlı bir süre kalabilir.",
       "path": "Ayarlar → Hesabı sil"
     },
     "s5": {
       "title": "Seçenekleriniz",
-      "p1": "Adınızı ve parolanızı Ayarlar'dan değiştirebilir, hesabınızı da oradan silebilirsiniz. Verilerinizle ilgili diğer talepleriniz için, örneğin elimizdeki verilerin bir kopyası için, {email} adresine e-posta gönderin."
+      "p1": "Adınızı ve parolanızı Ayarlar'dan değiştirebilir, hesabınızı da oradan silebilirsiniz. Verilerinizle ilgili başka bir talebiniz varsa (örneğin elimizdeki verilerin bir kopyası) {email} adresine e-posta gönderin."
     },
     "s6": {
       "title": "Çocuklar",
-      "p1": "Humanitaria 16 yaşın altındaki çocuklara yönelik değildir ve bilerek onlara hizmet vermeyiz."
+      "p1": "Humanitaria 16 yaşın altındaki çocuklara yönelik değildir; bu yaş grubuna bilerek hizmet vermeyiz."
     },
     "s7": {
       "title": "Değişiklikler",

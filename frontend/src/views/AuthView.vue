@@ -37,23 +37,46 @@
         <form class="auth-form" novalidate @submit.prevent="submit">
           <label v-if="isSignup" class="auth-label">
             {{ t('auth.name') }}
-            <input v-model="name" type="text" autocomplete="name" class="auth-input" />
+            <input
+              id="auth-name"
+              ref="nameInput"
+              v-model="name"
+              type="text"
+              autocomplete="name"
+              required
+              class="auth-input"
+              v-bind="fieldA11y('name')"
+            />
           </label>
           <label class="auth-label">
             {{ t('auth.email') }}
-            <input v-model="email" type="email" autocomplete="email" class="auth-input" />
+            <input
+              id="auth-email"
+              ref="emailInput"
+              v-model="email"
+              type="email"
+              autocomplete="email"
+              required
+              class="auth-input"
+              v-bind="fieldA11y('email')"
+            />
           </label>
           <label class="auth-label">
             {{ t('auth.password') }}
             <input
+              id="auth-password"
+              ref="passwordInput"
               v-model="password"
               type="password"
               :autocomplete="isSignup ? 'new-password' : 'current-password'"
+              required
+              minlength="8"
               class="auth-input"
+              v-bind="fieldA11y('password')"
             />
           </label>
 
-          <p v-if="error" class="auth-error">{{ error }}</p>
+          <p v-if="error" id="auth-error" class="auth-error" role="alert">{{ error }}</p>
 
           <button type="submit" class="btn btn-solid btn-lg auth-submit" :disabled="loading">
             {{ loading ? t('auth.wait') : t(`auth.${ns}.submit`) }}
@@ -73,7 +96,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
@@ -98,8 +121,25 @@ const ns = computed(() => (isSignup.value ? 'signup' : 'login'))
 const name = ref('')
 const email = ref('')
 const password = ref('')
-const error = ref('')
+const nameInput = ref(null)
+const emailInput = ref(null)
+const passwordInput = ref(null)
+const inputs = { name: nameInput, email: emailInput, password: passwordInput }
+// What went wrong, kept untranslated ({ key } for form checks, { err } for a failed
+// request) so the message follows a language switch while it is on screen.
+const problem = ref(null)
+const invalidField = ref(null)
+const error = computed(() => {
+  if (!problem.value) return ''
+  return problem.value.key ? t(problem.value.key) : errorMessage(problem.value.err, t)
+})
 const loading = ref(false)
+
+function fieldA11y(field) {
+  return invalidField.value === field && error.value
+    ? { 'aria-invalid': 'true', 'aria-describedby': 'auth-error' }
+    : {}
+}
 
 // The login <-> signup switch keeps `redirect`, so the landing question survives it.
 function switchTo(path) {
@@ -109,7 +149,8 @@ function switchTo(path) {
 }
 
 async function submit() {
-  error.value = ''
+  problem.value = null
+  invalidField.value = null
   const invalid = validateAuth({
     isSignup: isSignup.value,
     name: name.value,
@@ -117,7 +158,10 @@ async function submit() {
     password: password.value,
   })
   if (invalid) {
-    error.value = t(invalid)
+    problem.value = { key: invalid.key }
+    invalidField.value = invalid.field
+    await nextTick()
+    inputs[invalid.field].value?.focus()
     return
   }
   loading.value = true
@@ -130,7 +174,7 @@ async function submit() {
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/app'
     router.push(redirect)
   } catch (e) {
-    error.value = errorMessage(e, t)
+    problem.value = { err: e }
   } finally {
     loading.value = false
   }

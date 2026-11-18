@@ -28,6 +28,7 @@
             <strong>{{ t('privacy.s1.l3.lead') }}</strong> {{ t('privacy.s1.l3.text') }}
           </li>
           <li>
+            <!-- i18n-t renders bare text, so the space after the bold lead is explicit -->
             <strong>{{ t('privacy.s1.l4.lead') }}</strong
             >{{ ' ' }}
             <i18n-t keypath="privacy.s1.l4.text" scope="global">

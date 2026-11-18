@@ -102,6 +102,44 @@ describe('AuthView', () => {
     expect(doLogin).not.toHaveBeenCalled()
   })
 
+  it('announces a validation problem and moves focus to the field', async () => {
+    await mount()
+    await fillAndSubmit('a@b.co', '')
+    const input = host.querySelector('input[type="password"]')
+    const alert = host.querySelector('.auth-error')
+    expect(alert.getAttribute('role')).toBe('alert')
+    expect(input.getAttribute('aria-invalid')).toBe('true')
+    expect(input.getAttribute('aria-describedby')).toBe(alert.id)
+    expect(document.activeElement).toBe(input)
+    expect(host.querySelector('input[type="email"]').hasAttribute('aria-invalid')).toBe(false)
+  })
+
+  it('keeps the inputs required for assistive technology', async () => {
+    await mount()
+    expect(host.querySelector('form').hasAttribute('novalidate')).toBe(true)
+    expect(host.querySelector('input[type="email"]').required).toBe(true)
+    const pw = host.querySelector('input[type="password"]')
+    expect(pw.required).toBe(true)
+    expect(pw.getAttribute('minlength')).toBe('8')
+  })
+
+  it('translates a showing error when the language changes', async () => {
+    await mount()
+    await fillAndSubmit('a@b.co', '')
+    expect(errorText()).toBe('Enter your password.')
+    setLocale('tr')
+    await nextTick()
+    expect(errorText()).toBe('Parolanızı yazın.')
+    doLogin.mockRejectedValue(
+      Object.assign(new Error('x'), { status: 401, code: 'invalid_credentials' }),
+    )
+    await fillAndSubmit('a@b.co', 'longenough')
+    expect(errorText()).toBe('E-posta adresi ya da parola yanlış.')
+    setLocale('en')
+    await nextTick()
+    expect(errorText()).toBe('The email or password is incorrect.')
+  })
+
   it('links from log in to sign up', async () => {
     await mount()
     expect(host.querySelector('.auth-switch a').getAttribute('href')).toBe('/signup')
