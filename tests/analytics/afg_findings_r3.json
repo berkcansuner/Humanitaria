@@ -1,0 +1,398 @@
+{
+"food": {
+"context": "COMPUTED STATISTICAL FINDINGS (do not recompute — narrate only):\n\nPERIOD ANALYSED: 18 November 2025 to 18 November 2026\n\nLOOK-BACK: the chosen period holds too few observations for Food security: people in need, Nutrition: people in need, Food insecurity (IPC 3+, % of the analysed population), so their values and trends below cover the longer look-back window 18 November 2021 to 18 November 2026 (marked “look-back window”).\n\n## Food security: people in need — Latest Values\nFood security: people in need (look-back window): latest value 17.4 million people (2026), up from 14.8 million people in 2025; earlier 15.8 million people in 2024. Three observations: too few for a trend test.\n\n## Nutrition: people in need — Latest Values\nNutrition: people in need (look-back window): latest value 7.46 million people (2026), down from 7.80 million people in 2025; earlier 7.40 million people in 2024. Three observations: too few for a trend test.\n\n## Food insecurity (IPC 3+, % of the analysed population) — Trend Analysis\nFood insecurity (IPC 3+, % of the analysed population): latest value 32.0% (September 2026), against 47.0% in March 2022. Trend over the look-back window, March 2022 to September 2026: decreasing, Sen slope -4.65 percentage points per year (95% CI -7.99 percentage points to 0 percentage points), Kendall tau -0.53, Mann-Kendall p=0.059 → NOT SIGNIFICANT (α=0.05); change along the trend line -21.0 percentage points; nine observations.\n\nDATA GAPS:\n- Food security: people in need: too few observations for a trend test (n=3)\n- Nutrition: people in need: too few observations for a trend test (n=3)\n\nDATA NOTES:\n- Food insecurity (IPC 3+, % of the analysed population) (look-back window): IPC analyses covered different parts of the country in different periods (analysed population 41.4 to 49.7 million), so the share of the analysed population is used, not the number of people\n\nMETHOD NOTES:\n- Trend: Mann-Kendall test; the slope is Sen's slope per year on the real dates of the periods; Kendall tau is the effect size.\n- One statistical test was run, so no multiple-comparison correction applies; significance is decided on its p-value at α=0.05.\n- Limitation: the series are short; the tests assume independent observations and serial correlation between consecutive periods is not corrected for, so the results are indicative.",
+"sections": [
+{
+"heading": "Food security: people in need — Latest Values",
+"stat_result": {
+"kind": "snapshot",
+"indicator": "Food security: people in need",
+"p_value": null,
+"periods": [
+"2024-01-01T00:00:00",
+"2025-01-01T00:00:00",
+"2026-01-01T00:00:00"
+],
+"values": [
+15823677.0,
+14764729.0,
+17412653.0
+],
+"value_unit": "people",
+"min_points": 4,
+"look_back": {
+"date_from": "2021-11-18",
+"date_to": "2026-11-18",
+"chosen_points": 1
+},
+"chosen_from": "2025-11-18",
+"not_comparable": null,
+"resolution": "year",
+"family": 1,
+"tested": false,
+"p_adjusted": null,
+"significant": false
+}
+},
+{
+"heading": "Nutrition: people in need — Latest Values",
+"stat_result": {
+"kind": "snapshot",
+"indicator": "Nutrition: people in need",
+"p_value": null,
+"periods": [
+"2024-01-01T00:00:00",
+"2025-01-01T00:00:00",
+"2026-01-01T00:00:00"
+],
+"values": [
+7399632.0,
+7801981.0,
+7464230.0
+],
+"value_unit": "people",
+"min_points": 4,
+"look_back": {
+"date_from": "2021-11-18",
+"date_to": "2026-11-18",
+"chosen_points": 1
+},
+"chosen_from": "2025-11-18",
+"not_comparable": null,
+"resolution": "year",
+"family": 1,
+"tested": false,
+"p_adjusted": null,
+"significant": false
+}
+},
+{
+"heading": "Food insecurity (IPC 3+, % of the analysed population) — Trend Analysis",
+"stat_result": {
+"kind": "trend",
+"indicator": "Food insecurity (IPC 3+, % of the analysed population)",
+"direction": "decreasing",
+"slope": -4.6531795410471855,
+"p_value": 0.059172067825859376,
+"pct_change": -48.34988317757007,
+"n_points": 9,
+"ci_low": -7.99452804377565,
+"ci_high": 0.0,
+"tau": -0.5277777777777778,
+"first_period": "2022-03-01T00:00:00",
+"last_period": "2026-09-01T00:00:00",
+"unit": "percentage points",
+"look_back": {
+"date_from": "2021-11-18",
+"date_to": "2026-11-18",
+"chosen_points": 1
+},
+"chosen_from": "2025-11-18",
+"latest_value": 32.0,
+"latest_period": "2026-09-01T00:00:00",
+"first_value": 47.0,
+"line_change": -20.95682503770738,
+"value_unit": "%",
+"resolution": "month",
+"family": 1,
+"tested": true,
+"p_adjusted": 0.059172067825859376,
+"significant": false
+}
+}
+]
+},
+"protection": {
+"context": "COMPUTED STATISTICAL FINDINGS (do not recompute — narrate only):\n\nPERIOD ANALYSED: 18 November 2025 to 18 November 2026\n\nLOOK-BACK: the chosen period holds too few observations for Protection: people in need, Refugees (people), Returnees (people), Internally displaced people (IDPs), so their values and trends below cover the longer look-back window 18 November 2021 to 18 November 2026 (marked “look-back window”).\n\n## Protection: people in need — Latest Values\nProtection: people in need (look-back window): latest value 15.0 million people (2026); earlier 14.2 million people in 2025, 14.8 million people in 2024. The values are not comparable across years (2024, 2025: possibly one of the plan's separate protection lines rather than its overall figure; 2026: the plan's only protection figure; HDX HAPI does not say which line each year's figure is), so no trend is tested.\n\n## Refugees (people) — Trend Analysis\nRefugees (people): latest value 2.67 million people (2025, before the chosen period), against 5.66 million people in 2022. Trend over the look-back window, 2022 to 2025: decreasing, Sen slope -817,000 people per year (95% CI: too few points), Kendall tau -0.33, Mann-Kendall p=0.734, Holm-adjusted p=0.734 → NOT SIGNIFICANT (α=0.05); relative change along the trend line -38.1%; four observations.\n\n## Returnees (people) — Trend Analysis\nReturnees (people): latest value 1.95 million people (2025, before the chosen period), against 6,510 people in 2022. Trend over the look-back window, 2022 to 2025: increasing, Sen slope 477,000 people per year (95% CI: too few points), Kendall tau 1.00, Mann-Kendall p=0.089, Holm-adjusted p=0.179 → NOT SIGNIFICANT (α=0.05); relative change along the trend line n/a; four observations.\n\n## Internally displaced people (IDPs) — Latest Values\nInternally displaced people (IDPs) (look-back window): latest value 3.06 million people (January 2026), down from 3.11 million people in May 2025; earlier 2.97 million people in January 2025. Three observations: too few for a trend test.\n\n## Internally displaced people (IDPs) — Regional Analysis\nInternally displaced people (IDPs): highest regions as of January 2026: Herat (443,000 people), Balkh (363,000 people), Kabul (310,000 people); a statistical comparison between regions was not possible: one observation per region.\n\nDATA GAPS:\n- Protection: people in need: too few observations for a trend test (n=3)\n- Internally displaced people (IDPs): too few observations for a trend test (n=3)\n\nDATA NOTES:\n- Protection: people in need, 2024: the plan reports protection in separate lines (Child Protection 9,213,752, Gender Based Violence 13,253,951, Housing, Land and Property 6,296,804, Mine Action 4,182,879); this figure (14,809,904) may be another of the plan's protection lines (not listed in HDX HAPI) rather than its overall protection figure; this report does not add the lines up, because people can be counted in more than one.\n- Protection: people in need, 2025: the plan reports protection in separate lines (Child Protection 9,352,775, Gender Based Violence 14,173,291, Housing, Land and Property 3,392,653, Mine Action 4,369,984); this figure (14,213,777) may be another of the plan's protection lines (not listed in HDX HAPI) rather than its overall protection figure; this report does not add the lines up, because people can be counted in more than one.\n- Internally displaced people (IDPs) (look-back window): only the DTM operation 'Climate and mobility in Afghanistan' is used; 1 other operation(s) count displacement differently and are not mixed in\n\nMETHOD NOTES:\n- Trend: Mann-Kendall test; the slope is Sen's slope per year on the real dates of the periods; Kendall tau is the effect size.\n- Multiple comparisons: Holm correction across all two tests in this report; significance is decided on the Holm-adjusted p-value at α=0.05.\n- Limitation: the series are short; the tests assume independent observations and serial correlation between consecutive periods is not corrected for, so the results are indicative.",
+"sections": [
+{
+"heading": "Protection: people in need — Latest Values",
+"stat_result": {
+"kind": "snapshot",
+"indicator": "Protection: people in need",
+"p_value": null,
+"periods": [
+"2024-01-01T00:00:00",
+"2025-01-01T00:00:00",
+"2026-01-01T00:00:00"
+],
+"values": [
+14809904.0,
+14213777.0,
+14988378.0
+],
+"value_unit": "people",
+"min_points": 4,
+"look_back": {
+"date_from": "2021-11-18",
+"date_to": "2026-11-18",
+"chosen_points": 1
+},
+"chosen_from": "2025-11-18",
+"not_comparable": "2024, 2025: possibly one of the plan's separate protection lines rather than its overall figure; 2026: the plan's only protection figure; HDX HAPI does not say which line each year's figure is",
+"resolution": "year",
+"family": 2,
+"tested": false,
+"p_adjusted": null,
+"significant": false
+}
+},
+{
+"heading": "Refugees (people) — Trend Analysis",
+"stat_result": {
+"kind": "trend",
+"indicator": "Refugees (people)",
+"direction": "decreasing",
+"slope": -816742.8224218203,
+"p_value": 0.7340951823194757,
+"pct_change": -38.05261974868894,
+"n_points": 4,
+"ci_low": null,
+"ci_high": null,
+"tau": -0.3333333333333333,
+"first_period": "2022-01-01T00:00:00",
+"last_period": "2025-01-01T00:00:00",
+"unit": "",
+"look_back": {
+"date_from": "2021-11-18",
+"date_to": "2026-11-18",
+"chosen_points": 0
+},
+"chosen_from": "2025-11-18",
+"latest_value": 2671560.0,
+"latest_period": "2025-01-01T00:00:00",
+"first_value": 5661717.0,
+"line_change": null,
+"value_unit": "people",
+"resolution": "year",
+"family": 2,
+"tested": true,
+"p_adjusted": 0.7340951823194757,
+"significant": false
+}
+},
+{
+"heading": "Returnees (people) — Trend Analysis",
+"stat_result": {
+"kind": "trend",
+"indicator": "Returnees (people)",
+"direction": "increasing",
+"slope": 476933.9950795545,
+"p_value": 0.08942935902899363,
+"pct_change": null,
+"n_points": 4,
+"ci_low": null,
+"ci_high": null,
+"tau": 1.0,
+"first_period": "2022-01-01T00:00:00",
+"last_period": "2025-01-01T00:00:00",
+"unit": "",
+"look_back": {
+"date_from": "2021-11-18",
+"date_to": "2026-11-18",
+"chosen_points": 0
+},
+"chosen_from": "2025-11-18",
+"latest_value": 1947183.0,
+"latest_period": "2025-01-01T00:00:00",
+"first_value": 6506.0,
+"line_change": null,
+"value_unit": "people",
+"resolution": "year",
+"family": 2,
+"tested": true,
+"p_adjusted": 0.17885871805798725,
+"significant": false
+}
+},
+{
+"heading": "Internally displaced people (IDPs) — Latest Values",
+"stat_result": {
+"kind": "snapshot",
+"indicator": "Internally displaced people (IDPs)",
+"p_value": null,
+"periods": [
+"2025-01-31T00:00:00",
+"2025-05-31T00:00:00",
+"2026-01-31T00:00:00"
+],
+"values": [
+2971985.0,
+3109221.0,
+3061922.0
+],
+"value_unit": "people",
+"min_points": 4,
+"look_back": {
+"date_from": "2021-11-18",
+"date_to": "2026-11-18",
+"chosen_points": 1
+},
+"chosen_from": "2025-11-18",
+"not_comparable": null,
+"resolution": "month",
+"family": 2,
+"tested": false,
+"p_adjusted": null,
+"significant": false
+}
+},
+{
+"heading": "Internally displaced people (IDPs) — Regional Analysis",
+"stat_result": {
+"kind": "region",
+"indicator": "Internally displaced people (IDPs)",
+"ranking": [
+[
+"Herat",
+443229.0
+],
+[
+"Balkh",
+362925.0
+],
+[
+"Kabul",
+309769.0
+],
+[
+"Nangarhar",
+270944.0
+],
+[
+"Kandahar",
+148985.0
+],
+[
+"Helmand",
+132937.0
+],
+[
+"Baghlan",
+119791.0
+],
+[
+"Takhar",
+112821.0
+],
+[
+"Khost",
+101433.0
+],
+[
+"Faryab",
+99019.0
+],
+[
+"Kunduz",
+85571.0
+],
+[
+"Farah",
+79310.0
+],
+[
+"Ghazni",
+68885.0
+],
+[
+"Zabul",
+62436.0
+],
+[
+"Badakhshan",
+62067.0
+],
+[
+"Ghor",
+62022.0
+],
+[
+"Sar-e-Pul",
+57605.0
+],
+[
+"Kunar",
+51993.0
+],
+[
+"Nimroz",
+49419.0
+],
+[
+"Laghman",
+42261.0
+],
+[
+"Samangan",
+41805.0
+],
+[
+"Paktya",
+39963.0
+],
+[
+"Badghis",
+38059.0
+],
+[
+"Parwan",
+35796.0
+],
+[
+"Logar",
+27851.0
+],
+[
+"Jawzjan",
+27759.0
+],
+[
+"Kapisa",
+26520.0
+],
+[
+"Maidan Wardak",
+25944.0
+],
+[
+"Daykundi",
+19203.0
+],
+[
+"Paktika",
+18834.0
+],
+[
+"Bamyan",
+15385.0
+],
+[
+"Uruzgan",
+10864.0
+],
+[
+"Nuristan",
+7108.0
+],
+[
+"Panjsher",
+3409.0
+]
+],
+"p_value": null,
+"kruskal_h": null,
+"max_obs": 1,
+"first_period": "2026-01-31T00:00:00",
+"last_period": "2026-01-31T00:00:00",
+"value_unit": "people",
+"resolution": "month",
+"family": 2,
+"tested": false,
+"p_adjusted": null,
+"significant": false
+}
+}
+]
+}
+}

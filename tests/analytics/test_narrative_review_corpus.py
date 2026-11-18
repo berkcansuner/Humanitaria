@@ -152,3 +152,56 @@ def test_reviewer_corpus(key, heading, sentence, keep):
     language = "tr" if any(c in sentence for c in "ğışçöüİ") else "en"
     result = verify_narrative(f"## {heading}\n\n{sentence}", findings, context, language)
     assert (result.removed == 0) == keep
+
+
+# --- Round 3: the same corpus on the reader-form context (values "15.0 million people",
+# dates "January 2026", the look-back said once), rebuilt from live HDX HAPI. ---
+
+_DATA_R3 = json.loads((Path(__file__).parent / "afg_findings_r3.json").read_text(encoding="utf-8"))
+
+
+def _findings_r3(key):
+    d = _DATA_R3[key]
+    return Findings(sections=[ReportSection(s["heading"], s["stat_result"], None, "")
+                              for s in d["sections"]], gaps=[], indicators_covered=[]), d["context"]
+
+
+FOOD_R3, FOOD_R3_CTX = _findings_r3("food")
+PROT_R3, PROT_R3_CTX = _findings_r3("protection")
+
+
+@pytest.mark.parametrize("key,heading,sentence,keep", CASES)
+def test_reviewer_corpus_on_the_round3_context(key, heading, sentence, keep):
+    findings, context = (FOOD_R3, FOOD_R3_CTX) if key == "food" else (PROT_R3, PROT_R3_CTX)
+    language = "tr" if any(c in sentence for c in "ğışçöüİ") else "en"
+    result = verify_narrative(f"## {heading}\n\n{sentence}", findings, context, language)
+    assert (result.removed == 0) == keep
+
+
+# Sentences in the reader forms the round-3 context gives (EN and the Turkish the model
+# writes from it): all must survive.
+FOOD_IPC_R3 = next(s.heading for s in FOOD_R3.sections if "IPC" in s.heading)
+FOOD_FSC_R3 = next(s.heading for s in FOOD_R3.sections if s.heading.startswith("Food security"))
+PROT_IDP_R3 = next(s.heading for s in PROT_R3.sections if s.heading.endswith("Latest Values")
+                   and "IDP" in s.heading)
+PROT_REG_R3 = next(s.heading for s in PROT_R3.sections if "Regional" in s.heading)
+READER_FORMS = [
+    ("food", FOOD_FSC_R3, "Food security needs stood at 17.4 million people in 2026, up from 14.8 million in 2025.", "en"),
+    ("food", FOOD_FSC_R3, "In 2026, 17.4 million people needed food security assistance.", "en"),
+    ("food", FOOD_FSC_R3, "Gıda güvenliği alanında 2026 yılında 17,4 milyon kişi yardıma ihtiyaç duyuyordu.", "tr"),
+    ("food", FOOD_FSC_R3, "İhtiyaç 2025'teki 14,8 milyondan 2026'da 17,4 milyon kişiye yükseldi.", "tr"),
+    ("food", FOOD_IPC_R3, "In September 2026, 32.0% of the analysed population was in IPC Phase 3 or above, against 47.0% in March 2022.", "en"),
+    ("food", FOOD_IPC_R3, "Eylül 2026'da analiz edilen nüfusun %32,0'ı IPC Aşama 3 ve üzerindeydi; Mart 2022'de bu oran %47,0'dı.", "tr"),
+    ("food", FOOD_IPC_R3, "Over the look-back window, March 2022 to September 2026, the share fell by 21.0 percentage points along the trend line.", "en"),
+    ("protection", PROT_IDP_R3, "In January 2026, 3.06 million people were internally displaced, down from 3.11 million in May 2025.", "en"),
+    ("protection", PROT_IDP_R3, "Ocak 2026'da 3,06 milyon kişi ülke içinde yerinden edilmiş durumdaydı.", "tr"),
+    ("protection", PROT_REG_R3, "As of January 2026, Herat hosted the most IDPs, with 443,000 people.", "en"),
+    ("protection", PROT_REG_R3, "Ocak 2026 itibarıyla en çok IDP 443.000 kişiyle Herat'taydı.", "tr"),
+    ("protection", PROT_REG_R3, "Herat (443 bin kişi), Balkh (363 bin) ve Kabil (310 bin) en yüksek bölgelerdi.", "tr"),
+]
+
+
+@pytest.mark.parametrize("key,heading,sentence,language", READER_FORMS)
+def test_reader_form_sentences_survive(key, heading, sentence, language):
+    findings, context = (FOOD_R3, FOOD_R3_CTX) if key == "food" else (PROT_R3, PROT_R3_CTX)
+    assert verify_narrative(f"## {heading}\n\n{sentence}", findings, context, language).removed == 0

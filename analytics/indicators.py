@@ -37,6 +37,9 @@ class Indicator:
     credit: str = ""
     # A sector's people in need: the sector in plain English, for the findings' notes.
     sector_en: str = ""
+    # How the series' reference periods are written in the findings: "year" (HNO, UNHCR,
+    # FTS: one figure a year → "2026") or "month" (IPC analyses, DTM rounds → "March 2022").
+    resolution: str = "month"
 
     def name(self, language: str = "tr") -> str:
         """The indicator's name in the report language: Turkish for "tr", else English
@@ -48,7 +51,7 @@ INDICATORS: list[Indicator] = [
     Indicator("humanitarian_needs", "İnsani yardıma ihtiyaç duyan kişiler",
               "affected-people/humanitarian-needs", "population", "sum", 0,
               {"population_status": "INN", "sector_code": "Intersectoral"},
-              label_en="People in need (people)", source="OCHA HNO"),
+              label_en="People in need (people)", source="OCHA HNO", resolution="year"),
     # Share of the analysed population in IPC 3+, not people: an IPC analysis may cover
     # only part of a country (Yemen alternates ~35M nationwide / ~10M government-held
     # areas), so counts from different periods are not comparable; the share is.
@@ -60,12 +63,12 @@ INDICATORS: list[Indicator] = [
               "affected-people/refugees", "population", "sum", 0,
               {"gender": "all", "age_range": "all", "population_group": "REF"},
               location_param="origin_location_code",
-              label_en="Refugees (people)", source="UNHCR"),
+              label_en="Refugees (people)", source="UNHCR", resolution="year"),
     Indicator("returnees", "Geri dönenler (kişi)",
               "affected-people/returnees", "population", "sum", 0,
               {"gender": "all", "age_range": "all", "population_group": "RET"},
               location_param="origin_location_code",
-              label_en="Returnees (people)", source="UNHCR"),
+              label_en="Returnees (people)", source="UNHCR", resolution="year"),
     Indicator("idps", "Ülke içinde yerinden edilmiş kişiler (IDP)",
               "affected-people/idps", "population", "sum", 1,
               {"gender": "all", "age_range": "all"},
@@ -77,7 +80,7 @@ INDICATORS: list[Indicator] = [
     Indicator("funding", "İnsani yardım fonlaması (USD)",
               "coordination-context/funding", "funding_usd", "sum", 0, {},
               complete_periods_only=True,
-              label_en="Humanitarian funding (USD)", source="OCHA FTS"),
+              label_en="Humanitarian funding (USD)", source="OCHA FTS", resolution="year"),
 ]
 
 
@@ -88,7 +91,7 @@ def _sector_pin(key: str, sector_code: str, label_tr: str, label_en: str) -> Ind
                      "affected-people/humanitarian-needs", "population", "sum", 0,
                      {"population_status": "INN", "sector_code": sector_code},
                      label_en=f"{label_en}: people in need", source="OCHA HNO",
-                     sector_en=f"{label_en[0].lower()}{label_en[1:]}")
+                     sector_en=f"{label_en[0].lower()}{label_en[1:]}", resolution="year")
 
 
 # HNO sector codes as HDX HAPI serves them (checked 2026-11-18 for AFG, SDN, SYR, YEM;

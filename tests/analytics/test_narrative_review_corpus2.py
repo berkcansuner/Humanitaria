@@ -200,3 +200,19 @@ def test_final_reviewer_corpus(key, sel, sentence, keep):
     res = verify_narrative(f"## {heading(key, sel)}\n\n{sentence}", SETS[key]["findings"],
                            SETS[key]["context"], lang)
     assert (res.removed == 0) == keep
+
+
+# --- Round 3: the same corpus on the reader-form contexts, rebuilt from live HDX HAPI. ---
+
+_DATA_R3 = json.loads((Path(__file__).parent / "review_sets_r3.json").read_text(encoding="utf-8"))
+SETS_R3 = {k: {"context": v["context"], "findings": Findings(
+    sections=[ReportSection(s["heading"], s["stat_result"], None, "") for s in v["sections"]],
+    gaps=[], indicators_covered=[])} for k, v in _DATA_R3.items()}
+
+
+@pytest.mark.parametrize("key,sel,sentence,keep", CASES)
+def test_final_reviewer_corpus_on_the_round3_context(key, sel, sentence, keep):
+    lang = "tr" if key.endswith("tr") else "en"
+    res = verify_narrative(f"## {heading(key, sel)}\n\n{sentence}", SETS_R3[key]["findings"],
+                           SETS_R3[key]["context"], lang)
+    assert (res.removed == 0) == keep

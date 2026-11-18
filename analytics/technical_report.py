@@ -104,7 +104,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
             # SARMIYOR — gerçek bir ağ kesintisinde ham fırlar. Sarmazsak tüm rapor
             # iptal olur; burada geniş tutup yalnızca bu indikatörü gaps'e düşürüyoruz.
             logger.warning("HAPI %s başarısız (%s): %s", ind.key, iso3, exc)
-            gaps.append(f"{name}: veri çekilemedi")
+            gaps.append(f"{name}: could not be retrieved from HDX HAPI")
             failed.append(ind.key)
             continue
 
@@ -133,15 +133,13 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
             if look_back and lb_notes != series_notes:
                 # Each window's notes, named: the regional ranking stays on the chosen
                 # period, the trend covers the look-back.
-                notes += [f"{name} (chosen period {date_from} to {date_to}): {n}"
-                          for n in series_notes]
-                notes += [f"{name} (trend look-back {look_back_from} to {date_to}): {n}"
-                          for n in lb_notes]
+                notes += [f"{name} (chosen period): {n}" for n in series_notes]
+                notes += [f"{name} (look-back window): {n}" for n in lb_notes]
             else:
                 notes += [f"{name}: {n}" for n in series_notes]
             notes += line_notes
             if not t_values:
-                gaps.append(f"{name}: dönem içinde veri yok")
+                gaps.append(f"{name}: no data in the period")
                 continue
             covered.append(ind.key)
             if look_back is None:
@@ -161,10 +159,10 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
             times = _years_since_first(t_periods)
             tr = trend(t_values, indicator=name, min_points=min_pts, times=times)
             if tr.direction == "insufficient_data":
-                gaps.append(f"{name}: trend için yetersiz veri (n={tr.n_points})")
+                gaps.append(f"{name}: too few observations for a trend test (n={tr.n_points})")
             elif not_comparable:
                 # Years that are different plan lines: no trend is tested across them.
-                gaps.append(f"{name}: yıllar karşılaştırılamaz, trend testi yapılmadı")
+                gaps.append(f"{name}: years not comparable, so no trend was tested")
             if (tr.direction == "insufficient_data" and theme is not None) or not_comparable:
                 # The values are still the sector's figures: reported as they are, untested.
                 # ("All sectors" keeps such a series as a gap only, as it always did.)
@@ -178,7 +176,8 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                                  "periods": t_periods, "values": t_values,
                                  "value_unit": _value_unit(ind), "min_points": min_pts,
                                  "look_back": look_back, "chosen_from": date_from,
-                                 "not_comparable": not_comparable},
+                                 "not_comparable": not_comparable,
+                                 "resolution": ind.resolution},
                     chart=chart,
                     chart_dark=chart_dark,
                     findings_text="",
@@ -206,7 +205,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                                  # never as a relative percent of a percent.
                                  "line_change": (tr.slope * times[-1]
                                                  if ind.unit == "percentage points" else None),
-                                 "value_unit": _value_unit(ind)},
+                                 "value_unit": _value_unit(ind), "resolution": ind.resolution},
                     chart=chart,
                     chart_dark=chart_dark,
                     findings_text="",
@@ -227,14 +226,15 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                                  "ranking": rr.ranking, "p_value": rr.p_value,
                                  "kruskal_h": rr.kruskal_h,
                                  "max_obs": max(len(v) for v in reg.values()),
-                                 "first_period": periods[0], "last_period": periods[-1]},
+                                 "first_period": periods[0], "last_period": periods[-1],
+                                 "value_unit": _value_unit(ind), "resolution": ind.resolution},
                     chart=chart,
                     chart_dark=chart_dark,
                     findings_text="",
                 ))
         except Exception as exc:
             logger.warning("%s indikatörü analiz hatası (%s): %s", ind.key, iso3, exc)
-            gaps.append(f"{name}: analiz hatası")
+            gaps.append(f"{name}: analysis error")
             used[:] = [u for u in used if u["key"] != ind.key]   # not in the report: no source
             continue
         if len(sections) == sections_before:
@@ -546,85 +546,122 @@ def _plain(x: float) -> str:
     return f"{x:.1f}" if abs(x) >= 10 else f"{x:.2f}"
 
 
+_MONTHS_EN = ["January", "February", "March", "April", "May", "June", "July", "August",
+              "September", "October", "November", "December"]
+
+
+def _day(iso: str) -> str:
+    """'2026-11-18' -> '18 November 2026' (a chosen period's ends: the day matters)."""
+    d = date.fromisoformat(str(iso)[:10])
+    return f"{d.day} {_MONTHS_EN[d.month - 1]} {d.year}"
+
+
+def _when(period, resolution: str = "month") -> str:
+    """A reference period at the data's resolution: '2026' (yearly) or 'March 2022'."""
+    d = date.fromisoformat(str(period)[:10])
+    return str(d.year) if resolution == "year" else f"{_MONTHS_EN[d.month - 1]} {d.year}"
+
+
+def _amount(value: float, unit: str) -> str:
+    """A value as a reader reads it and the model repeats it: '17.4 million people',
+    '443,000 people', '6,510 people', '1.16 billion USD', '32.0%'."""
+    if unit == "%":
+        return f"{_plain(value)}%"
+    sign, a = ("-" if value < 0 else ""), abs(value)
+    for scale, word in ((1e9, "billion"), (1e6, "million")):
+        if a >= scale:
+            m = a / scale
+            decimals = max(0, 2 - int(math.floor(math.log10(m))))
+            text = f"{m:.{decimals}f} {word}"
+            break
+    else:
+        whole = int(round(a, 2 - int(math.floor(math.log10(a))))) if a >= 1000 else int(round(a))
+        text = f"{whole:,}"
+    return f"{sign}{text} {unit}"
+
+
+def _rate(value: float, r: dict) -> str:
+    """A slope or interval bound per year, in the indicator's unit."""
+    if r.get("unit") == "percentage points":
+        return f"{_plain(value)} percentage points"
+    return _amount(value, r.get("value_unit") or "people")
+
+
 def _trend_text(r: dict) -> str:
-    first, last = str(r["first_period"])[:10], str(r["last_period"])[:10]
+    """Latest value first, against the first one of the window; then the test."""
+    res = r.get("resolution", "month")
+    first, last = _when(r["first_period"], res), _when(r["last_period"], res)
+    lb = r.get("look_back")
+    before = ", before the chosen period" if lb and not lb["chosen_points"] else ""
+    window = "Trend over the look-back window" if lb else "Trend"
     if r.get("line_change") is not None:
-        change = (f"change along the trend line {first} → {last}="
-                  f"{r['line_change']:+.1f} percentage points")
+        change = f"change along the trend line {r['line_change']:+.1f} percentage points"
     else:
         pct = "n/a" if r["pct_change"] is None else f"{r['pct_change']:+.1f}%"
-        change = f"relative change along the trend line {first} → {last}={pct}"
-    observed = (f"observed first value {_value(r['first_value'], r['value_unit'])} ({first}), "
-                f"latest value {_value(r['latest_value'], r['value_unit'])} ({last})")
+        change = f"relative change along the trend line {pct}"
     ci = ("95% CI: too few points" if r["ci_low"] is None
-          else f"95% CI {_plain(r['ci_low'])} to {_plain(r['ci_high'])}")
-    unit = f" {r['unit']}" if r.get("unit") else ""
-    return (_look_back_text(r) + f"{r['indicator']}: direction={r['direction']}, Sen slope={_plain(r['slope'])}{unit} per year "
-            f"({ci}), Kendall tau={r['tau']:.2f}, Mann-Kendall {_verdict(r)}, "
-            f"{change}, {observed}, n={r['n_points']}.")
-
-
-def _look_back_text(r: dict) -> str:
-    """For a trend taken over a longer look-back: which window each number refers to,
-    and the latest value as of the chosen period. Empty for any other trend."""
-    lb = r.get("look_back")
-    if not lb:
-        return ""
-    k = lb["chosen_points"]
-    latest = (f"{_value(r['latest_value'], r['value_unit'])} "
-              f"({str(r['latest_period'])[:10]})")
-    latest = (f"Latest value as of the chosen period: {latest}. " if k
-              else f"Latest value before the chosen period: {latest}. ")
-    return (f"Look-back: the chosen period {r['chosen_from']} to {lb['date_to']} holds "
-            f"{_observations(k)}, too few for a trend test, so the trend is computed over "
-            f"{lb['date_from']} to {lb['date_to']}. {latest}Trend over the look-back — ")
+          else f"95% CI {_rate(r['ci_low'], r)} to {_rate(r['ci_high'], r)}")
+    return (f"{r['indicator']}: latest value {_amount(r['latest_value'], r['value_unit'])} "
+            f"({last}{before}), against {_amount(r['first_value'], r['value_unit'])} in {first}. "
+            f"{window}, {first} to {last}: {r['direction']}, Sen slope {_rate(r['slope'], r)} per "
+            f"year ({ci}), Kendall tau {r['tau']:.2f}, Mann-Kendall {_verdict(r)}; {change}; "
+            f"{_count(r['n_points'])} observations.")
 
 
 def _region_text(r: dict) -> str:
-    top = ", ".join(f"{name} ({_plain(val)})" for name, val in r["ranking"][:3])
+    unit = r.get("value_unit", "people")
+    top = ", ".join(f"{name} ({_amount(val, unit)})" for name, val in r["ranking"][:3])
+    res = r.get("resolution", "month")
+    first, last = _when(r["first_period"], res), _when(r["last_period"], res)
+    when = f"as of {first}" if first == last else f"mean per region, {first} to {last}"
     if r["p_value"] is None:
         # Not tested: a ranking for the stated date, never a "not significant" result.
-        first, last = str(r["first_period"])[:10], str(r["last_period"])[:10]
-        when = (f"as of {first}" if first == last
-                else f", mean per region over {first} to {last}")
         why = ("one observation per region" if r["max_obs"] <= 1
                else "fewer than two regions have two or more observations")
-        return (f"{r['indicator']}: ranking snapshot{' ' if first == last else ''}{when} — "
-                f"highest regions: {top}; a statistical comparison between regions was not "
-                f"possible: {why}.")
+        return (f"{r['indicator']}: highest regions {when}: {top}; a statistical comparison "
+                f"between regions was not possible: {why}.")
     h = "n/a" if r["kruskal_h"] is None else f"{r['kruskal_h']:.2f}"
-    return (f"{r['indicator']}: highest regions — {top}; difference between regions "
+    return (f"{r['indicator']}: highest regions {when}: {top}; difference between regions "
             f"Kruskal-Wallis H={h}, {_verdict(r)}.")
 
 
 def _correlation_text(r: dict) -> str:
     coef = "n/a" if r["coefficient"] is None else f"{r['coefficient']:.2f}"
     return (f"{r['indicator_x']} ↔ {r['indicator_y']}: {r['method']} r={coef}, "
-            f"{_verdict(r)}, n={r['n_points']}.")
+            f"{_verdict(r)}; {_count(r['n_points'])} common periods.")
 
 
 def _snapshot_text(r: dict) -> str:
-    """A series too short for a trend: its values, with no test and no verdict."""
-    periods = [str(p)[:10] for p in r["periods"]]
-    n, unit = len(periods), r["value_unit"]
+    """A series too short for a trend: its latest value first, the earlier ones after
+    it (compared only when the years are comparable), and in a few words why no test."""
+    res, unit = r.get("resolution", "month"), r["value_unit"]
+    points = list(zip(r["periods"], r["values"]))
+    n = len(points)
     lb = r.get("look_back")
-    window = ""
-    if lb:
-        window = (f"The chosen period {r['chosen_from']} to {lb['date_to']} holds "
-                  f"{_observations(lb['chosen_points'])}, so the values cover the longer "
-                  f"look-back {lb['date_from']} to {lb['date_to']}. ")
-    span = f"({periods[0]})" if n == 1 else f"from {periods[0]} to {periods[-1]}"
-    values = "; ".join(f"{p} {_value(v, unit)}" for p, v in zip(periods, r["values"]))
-    as_of = ("before" if lb and not lb["chosen_points"] else "as of")
+    name = f"{r['indicator']} (look-back window)" if lb else r["indicator"]
+    before = ", before the chosen period" if lb and not lb["chosen_points"] else ""
+    (lp, lv) = points[-1]
+    text = f"{name}: latest value {_amount(lv, unit)} ({_when(lp, res)}{before})"
+    if n > 1:
+        if not r.get("not_comparable"):
+            pp, pv = points[-2]
+            move = "up from" if lv > pv else ("down from" if lv < pv else "the same as")
+            text += f", {move} {_amount(pv, unit)} in {_when(pp, res)}"
+            earlier = points[:-2]
+        else:
+            earlier = points[:-1]
+        if earlier:
+            text += "; earlier " + ", ".join(
+                f"{_amount(v, unit)} in {_when(p, res)}" for p, v in reversed(earlier))
+    text += "."
     if r.get("not_comparable"):
-        why = f"the values are not comparable across years ({r['not_comparable']})"
+        text += (f" The values are not comparable across years ({r['not_comparable']}), "
+                 f"so no trend is tested.")
     elif n >= r["min_points"]:
-        why = "the values do not vary"
+        text += " The values do not vary, so no trend is tested."
     else:
-        why = f"too few for a trend test (at least {r['min_points']} are needed)"
-    return (f"{window}{r['indicator']}: {_observations(n)} {span} — {why}, so no trend or "
-            f"statistical test is reported. Values: {values}. Latest value {as_of} the chosen period: "
-            f"{_value(r['values'][-1], unit)} ({periods[-1]}).")
+        text += f" {_count(n).capitalize()} observation{'' if n == 1 else 's'}: too few for a trend test."
+    return text
 
 
 _TEXT = {"trend": _trend_text, "region": _region_text, "correlation": _correlation_text,
@@ -639,17 +676,18 @@ def findings_to_context(findings: Findings) -> str:
     # bunu değiştirmeden kopyalamasını zorunlu kılar.
     lines = ["COMPUTED STATISTICAL FINDINGS (do not recompute — narrate only):", ""]
     if findings.date_from:
-        chosen = (f" (no period was chosen: the last {findings.default_years} years)"
+        chosen = (f" (no period was chosen: the last {_count(findings.default_years)} years)"
                   if findings.default_years else "")
-        lines += [f"PERIOD ANALYSED: {findings.date_from} to {findings.date_to}{chosen}", ""]
-    if findings.look_backs:
-        names = ", ".join(f"{lb['indicator']} ({_observations(lb['chosen_points'])})"
-                          for lb in findings.look_backs)
-        windows = sorted({(lb["date_from"], lb["date_to"]) for lb in findings.look_backs})
-        span = "; ".join(f"{a} to {b}" for a, b in windows)
-        its = "its trend is" if len(findings.look_backs) == 1 else "their trends are"
-        lines += [f"LONGER LOOK-BACK: the chosen period holds too few observations for a trend "
-                  f"for {names}; {its} computed over {span}.", ""]
+        lines += [f"PERIOD ANALYSED: {_day(findings.date_from)} to {_day(findings.date_to)}"
+                  f"{chosen}", ""]
+    # The look-back, once for the report: the sections only mark "(look-back window)".
+    looked = [s.stat_result for s in findings.sections if s.stat_result.get("look_back")]
+    if looked:
+        names = ", ".join(dict.fromkeys(r["indicator"] for r in looked))
+        lb = looked[0]["look_back"]
+        lines += [f"LOOK-BACK: the chosen period holds too few observations for {names}, so their "
+                  f"values and trends below cover the longer look-back window {_day(lb['date_from'])} "
+                  f"to {_day(lb['date_to'])} (marked “look-back window”).", ""]
     for s in findings.sections:
         lines.append(f"## {s.heading}")
         lines.append(s.findings_text)

@@ -169,9 +169,9 @@ def test_indicator_analysis_error_becomes_gap_not_abort():
             f = compute_findings("AFG", "2025-01-01", "2025-12-31")
 
     assert isinstance(f, Findings)
-    assert any("analiz hatası" in g for g in f.gaps)
+    assert any("analysis error" in g for g in f.gaps)
     # idps hatalı indikatör kapsanmadı olarak sayılmamalı (region aşamasında patladı):
-    idps_gap = [g for g in f.gaps if "analiz hatası" in g]
+    idps_gap = [g for g in f.gaps if "analysis error" in g]
     assert idps_gap
     # Diğer tüm indikatörler (boş veri) yine işlendi → kendi gaps'lerine düştü, rapor
     # tam INDICATORS sayısı kadar gap/section üretti (abort olmadı):
@@ -292,8 +292,10 @@ def test_context_states_the_period_analysed(_mock):
     f = compute_findings("SDN", None, None)
     ctx = findings_to_context(f)
     today = date.today()
-    assert f"PERIOD ANALYSED: {today.replace(year=today.year - 5).isoformat()} to {today.isoformat()}" in ctx
-    assert "last 5 years" in ctx
+    from analytics.technical_report import _day
+    assert (f"PERIOD ANALYSED: {_day(today.replace(year=today.year - 5).isoformat())} to "
+            f"{_day(today.isoformat())}") in ctx
+    assert "last five years" in ctx
 
 
 @patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _funding_rows(ep))
@@ -302,7 +304,8 @@ def test_a_chosen_period_is_kept_but_capped_at_today(_mock):
     y = date.today().year
     f = compute_findings("SDN", f"{y - 10}-01-01", f"{y + 5}-12-31")
     ctx = findings_to_context(f)
-    assert f"PERIOD ANALYSED: {y - 10}-01-01 to {date.today().isoformat()}" in ctx
+    from analytics.technical_report import _day
+    assert f"PERIOD ANALYSED: 1 January {y - 10} to {_day(date.today().isoformat())}" in ctx
     tr = next(s for s in f.sections if s.stat_result["kind"] == "trend")
     assert tr.stat_result["n_points"] == 5                  # the 999 year joins; future/partial do not
 
@@ -339,7 +342,7 @@ def test_idp_series_uses_one_operation_and_says_so(_mock):
 def test_change_is_written_with_the_sign_before_the_number(_mock):
     # The context said "%-24.1" and the Turkish report copied "%-24,1" (should be -%24,1).
     tr = next(s for s in compute_findings("SDN", None, None).sections if s.stat_result["kind"] == "trend")
-    assert "=+" in tr.findings_text and "%, observed first value" in tr.findings_text
+    assert "relative change along the trend line +" in tr.findings_text
     assert "%-" not in tr.findings_text and "=%" not in tr.findings_text
 
 
@@ -417,8 +420,9 @@ def test_trend_text_does_not_quote_slopes_to_the_cent():
         "first_period": "2023-08-31", "last_period": "2026-09-30", "n_points": 40, "unit": "",
         "first_value": 9_100_000.4, "latest_value": 6_800_000.6, "value_unit": "people",
     })
-    assert "Sen slope=-931000 per year" in text
-    assert "95% CI -1150000 to -603000" in text
+    # In reader form, three significant digits (it used to read "-931,170.92").
+    assert "Sen slope -931,000 people per year" in text
+    assert "95% CI -1.15 million people to -603,000 people" in text
     assert ".92" not in text and ".78" not in text
 
 
@@ -541,17 +545,22 @@ def test_a_short_period_takes_its_trend_from_a_longer_look_back(_mock):
     assert tr.stat_result["n_points"] == 5
     assert tr.stat_result["look_back"] == {"date_from": look_back_from, "date_to": date_to,
                                           "chosen_points": 1}
-    assert (f"the chosen period {date_from} to {date_to} holds 1 observation, too few for a "
-            f"trend test, so the trend is computed over {look_back_from} to {date_to}"
-            in tr.findings_text)
-    assert f"Latest value as of the chosen period: 40.0% ({today.year}-01-01)" in tr.findings_text
+    # The section says only which window its trend used; the look-back is explained once.
+    assert tr.findings_text.startswith(
+        f"{tr.stat_result['indicator']}: latest value 40.0% (January {today.year}), against "
+        f"32.0% in January {today.year - 4}. Trend over the look-back window, January "
+        f"{today.year - 4} to January {today.year}: increasing")
+    assert "chosen period" not in tr.findings_text
     assert f.look_backs == [{"indicator": tr.stat_result["indicator"], "chosen_points": 1,
                              "date_from": look_back_from, "date_to": date_to}]
     ctx = findings_to_context(f)
-    assert f"PERIOD ANALYSED: {date_from} to {date_to}" in ctx
-    assert (f"LONGER LOOK-BACK: the chosen period holds too few observations for a trend for "
-            f"{tr.stat_result['indicator']} (1 observation); its trend is computed over "
-            f"{look_back_from} to {date_to}.") in ctx
+    from analytics.technical_report import _day
+    assert f"PERIOD ANALYSED: {_day(date_from)} to {_day(date_to)}" in ctx
+    assert (f"LOOK-BACK: the chosen period holds too few observations for "
+            f"{tr.stat_result['indicator']}, so their values and trends below cover the longer "
+            f"look-back window {_day(look_back_from)} to {_day(date_to)}") in ctx
+    assert ctx.count("LOOK-BACK:") == 1              # said once for the report
+    assert "chosen period" not in tr.findings_text
     assert not [g for g in f.gaps if "trend" in g]
 
 
@@ -631,13 +640,10 @@ def test_a_series_too_short_for_a_trend_is_reported_as_its_values(monkeypatch):
     assert snap.heading == "Food security: people in need — Latest Values"
     assert snap.stat_result["p_value"] is None and snap.chart and snap.chart_dark
     text = snap.findings_text
-    assert "3 observations" in text and "too few for a trend test" in text
-    assert "no trend or statistical test is reported" in text
-    assert (f"Values: {y - 2}-01-01 15800000 people; {y - 1}-01-01 14800000 people; "
-            f"{y}-01-01 17400000 people.") in text
-    assert f"Latest value as of the chosen period: 17400000 people ({y}-01-01)." in text
-    # The chosen year held one of the three values: the window is named.
-    assert "the values cover" in text and date_from in text
+    # Latest value first, how it compares with the year before, then why no test.
+    assert text == (f"Food security: people in need (look-back window): latest value 17.4 million "
+                    f"people ({y}), up from 14.8 million people in {y - 1}; earlier 15.8 million "
+                    f"people in {y - 2}. Three observations: too few for a trend test.")
     assert "SIGNIFICANT" not in text and "p=" not in text
     assert any("(n=3)" in g for g in f.gaps)               # still listed as a data gap
     assert f.indicators_covered == ["pin_food_security"]
@@ -688,8 +694,8 @@ def test_an_untestable_regional_comparison_is_a_ranking_snapshot(_mock):
     region = next(s for s in f.sections if s.stat_result["kind"] == "region")
     text = region.findings_text
     assert text == (
-        f"Internally displaced people (IDPs): ranking snapshot as of {y}-03-31 — highest "
-        "regions: Herat (443000), Balkh (363000), Kabul (310000); a statistical comparison "
+        f"Internally displaced people (IDPs): highest regions as of March {y}: Herat (443,000 "
+        "people), Balkh (363,000 people), Kabul (310,000 people); a statistical comparison "
         "between regions was not possible: one observation per region.")
     assert region.stat_result["tested"] is False and region.stat_result["significant"] is False
     ctx = findings_to_context(f)
@@ -701,10 +707,9 @@ def test_a_partly_testable_regional_comparison_names_why():
     text = _region_text({"indicator": "IDPs", "ranking": [("A", 10.0), ("B", 5.0)],
                          "p_value": None, "kruskal_h": None, "max_obs": 2,
                          "first_period": "2025-01-01", "last_period": "2025-07-01"})
-    assert text == ("IDPs: ranking snapshot, mean per region over 2025-01-01 to 2025-07-01 — "
-                    "highest regions: A (10.0), B (5.00); a statistical comparison between "
-                    "regions was not possible: fewer than two regions have two or more "
-                    "observations.")
+    assert text == ("IDPs: highest regions mean per region, January 2025 to July 2025: A (10 "
+                    "people), B (5 people); a statistical comparison between regions was not "
+                    "possible: fewer than two regions have two or more observations.")
 
 
 @patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _multi_region_rows(
@@ -750,9 +755,11 @@ def test_a_share_trend_changes_in_percentage_points_with_observed_values(_mock):
     span = (__import__("datetime").date(2026, 9, 1) - __import__("datetime").date(2022, 3, 1)).days / 365.25
     assert abs(r["line_change"] - r["slope"] * span) < 1e-9
     text = tr.findings_text
-    assert f"change along the trend line 2022-03-01 → 2026-09-01={r['line_change']:+.1f} percentage points" in text
+    assert f"change along the trend line {r['line_change']:+.1f} percentage points" in text
     assert "relative change" not in text
-    assert "observed first value 47.0% (2022-03-01), latest value 32.0% (2026-09-01)" in text
+    assert text.startswith("Food insecurity (IPC 3+, % of the analysed population): latest value "
+                           "32.0% (September 2026), against 47.0% in March 2022. Trend, March 2022 "
+                           "to September 2026: decreasing")
 
 
 @patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _sudan_like_idp_rows(ep))
@@ -760,8 +767,8 @@ def test_a_count_trend_keeps_its_relative_change_and_gives_observed_values(_mock
     tr = next(s for s in compute_findings("SDN", None, None, language="en").sections
               if s.stat_result["kind"] == "trend")
     assert "relative change along the trend line" in tr.findings_text
-    assert "observed first value 8000 people (" in tr.findings_text
-    assert "latest value 8300 people (" in tr.findings_text
+    assert "latest value 8,300 people (" in tr.findings_text
+    assert ", against 8,000 people in " in tr.findings_text
     assert tr.stat_result["line_change"] is None
 
 
@@ -776,7 +783,7 @@ def test_a_constant_series_says_its_values_do_not_vary(monkeypatch):
     monkeypatch.setattr("analytics.technical_report.fetch_rows", _recording_fetch([], rows))
     f = compute_findings("AFG", "2021-01-01", None, language="en", theme="Food and Nutrition")
     text = next(s for s in f.sections if s.stat_result["kind"] == "snapshot").findings_text
-    assert "5 observations from 2021-01-01 to 2025-01-01 — the values do not vary" in text
+    assert "The values do not vary, so no trend is tested." in text
     assert "too few" not in text
 
 
@@ -824,8 +831,9 @@ def test_look_back_keeps_the_chosen_period_notes_too(_mock):
     f = compute_findings("AFG", date_from, date_to, language="en")
     lb = f.look_backs[0]
     name = "Internally displaced people (IDPs)"
-    chosen = [n for n in f.notes if n.startswith(f"{name} (chosen period {date_from} to {date_to}): ")]
-    looked = [n for n in f.notes if n.startswith(f"{name} (trend look-back {lb['date_from']} to {date_to}): ")]
+    assert lb["date_to"] == date_to
+    chosen = [n for n in f.notes if n.startswith(f"{name} (chosen period): ")]
+    looked = [n for n in f.notes if n.startswith(f"{name} (look-back window): ")]
     assert chosen and "1 other operation(s)" in chosen[0]
     assert looked and "incomplete round(s)" in looked[0]
 
@@ -960,7 +968,8 @@ def test_haiti_2024_the_migrants_line_is_not_called_general():
                              theme="Protection and Human Rights")
     sec = _protection_section(f)
     assert sec.heading == "Protection: people in need — Latest Values"
-    assert "Values: 2024-01-01 250000 people." in sec.findings_text
+    assert sec.findings_text.startswith("Protection: people in need: latest value 250,000 "
+                                        "people (2024).")
     assert [n for n in f.notes if "separate lines" in n] == [
         "Protection: people in need, 2024: the plan reports protection in separate lines "
         "(Child Protection 1,253,982, Gender Based Violence 1,171,183); this figure (250,000) is "
@@ -973,10 +982,11 @@ def test_haiti_2025_prints_466589_and_its_look_back_is_not_comparable():
     f = _real_protection("HTI", with_hti_2024=True)
     sec = _protection_section(f)
     assert sec.heading == "Protection: people in need — Latest Values"
-    assert "Values: 2024-01-01 250000 people; 2025-01-01 467000 people." in sec.findings_text
-    assert ("the values are not comparable across years (2024, 2025: one of the plan's separate "
+    assert sec.findings_text.startswith("Protection: people in need (look-back window): latest "
+                                        "value 467,000 people (2025); earlier 250,000 people in 2024.")
+    assert ("The values are not comparable across years (2024, 2025: one of the plan's separate "
             "protection lines, not its overall figure; HDX HAPI does not say which line each "
-            "year's figure is), so no trend or statistical test is reported") in sec.findings_text
+            "year's figure is), so no trend is tested.") in sec.findings_text
     notes = [n for n in f.notes if "separate lines" in n]
     assert notes[1] == (
         "Protection: people in need, 2025: the plan reports protection in separate lines (Child "
@@ -994,7 +1004,7 @@ def test_sudan_2025_is_not_called_general_and_claims_nothing_about_an_unpublishe
         f = _real_protection("SDN", language=language)
         assert _protection_section(f).heading == heading
     f = _real_protection("SDN")
-    assert "Values: 2025-01-01 11700000 people." in _protection_section(f).findings_text
+    assert "latest value 11.7 million people (2025)" in _protection_section(f).findings_text
     note = next(n for n in f.notes if "separate lines" in n)
     assert ("this figure (11,725,110) is below one of the plan's protection lines, so it is not the "
             "plan's overall protection figure; HDX HAPI does not say which of the plan's lines it "
@@ -1003,11 +1013,11 @@ def test_sudan_2025_is_not_called_general_and_claims_nothing_about_an_unpublishe
 
 
 def test_afghanistan_and_congo_2025_may_be_one_of_the_lines():
-    for iso3, figure, full in (("AFG", "14200000", "14,213,777"), ("COD", "7870000", "7,870,319")):
+    for iso3, figure, full in (("AFG", "14.2 million", "14,213,777"), ("COD", "7.87 million", "7,870,319")):
         f = _real_protection(iso3)
         sec = _protection_section(f)
         assert sec.heading == "Protection: people in need — Latest Values", iso3
-        assert f"Values: 2025-01-01 {figure} people." in sec.findings_text, iso3
+        assert f"latest value {figure} people (2025)" in sec.findings_text, iso3
         note = next(n for n in f.notes if "separate lines" in n)
         # The figure equals none of the listed lines (AFG 2025: GBV 14,173,291 vs 14,213,777).
         assert (f"this figure ({full}) may be another of the plan's protection lines (not listed in "
@@ -1039,11 +1049,13 @@ def test_a_series_mixing_plan_lines_and_single_figures_says_so_in_its_section(mo
     f = compute_findings("AFG", None, None, language="en", theme="Protection and Human Rights")
     sec = f.sections[0]
     assert sec.stat_result["kind"] == "snapshot" and sec.stat_result["p_value"] is None
-    assert ("Protection: people in need: 3 observations from 2024-01-01 to 2026-01-01 — the values "
-            "are not comparable across years (2024, 2025: possibly one of the plan's separate "
-            "protection lines rather than its overall figure; 2026: the plan's only protection "
-            "figure; HDX HAPI does not say which line each year's figure is), so no trend or "
-            "statistical test is reported.") in sec.findings_text
+    assert sec.findings_text == (
+        "Protection: people in need: latest value 15.0 million people (2026); earlier 14.2 million "
+        "people in 2025, 14.8 million people in 2024. The values are not comparable across years "
+        "(2024, 2025: possibly one of the plan's separate protection lines rather than its overall "
+        "figure; 2026: the plan's only protection figure; HDX HAPI does not say which line each "
+        "year's figure is), so no trend is tested.")
+    assert "up from" not in sec.findings_text and "down from" not in sec.findings_text
 
 
 def test_no_trend_is_tested_across_years_that_are_not_comparable(monkeypatch):
@@ -1054,7 +1066,7 @@ def test_no_trend_is_tested_across_years_that_are_not_comparable(monkeypatch):
     monkeypatch.setattr("analytics.technical_report.fetch_rows", _recording_fetch([], rows))
     f = compute_findings("AFG", "2021-01-01", None, language="en", theme="Protection and Human Rights")
     assert [s.stat_result["kind"] for s in f.sections] == ["snapshot"]
-    assert ("the values are not comparable across years (2022, 2023: the plan's only protection "
+    assert ("The values are not comparable across years (2022, 2023: the plan's only protection "
             "figure; 2024, 2025, 2026: one of the plan's separate protection lines, not its overall "
             "figure; HDX HAPI does not say which line each year's figure is)") in f.sections[0].findings_text
     assert "No statistical test was possible" in findings_to_context(f)
@@ -1107,7 +1119,7 @@ def test_an_indicator_whose_analysis_failed_is_not_a_source():
     with patch("analytics.technical_report.by_region", side_effect=ValueError("boom")), \
          patch("analytics.technical_report.fetch_rows", side_effect=side):
         f = compute_findings("AFG", "2025-01-01", "2025-12-31", language="en")
-    assert any("analiz hatası" in g for g in f.gaps)
+    assert any("analysis error" in g for g in f.gaps)
     assert [u["key"] for u in f.data_sources] == []
 
 

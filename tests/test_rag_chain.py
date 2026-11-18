@@ -293,10 +293,20 @@ def test_technical_prompt_gives_untested_findings_no_verdict():
 
 
 def test_technical_prompt_names_the_window_of_a_look_back_trend():
-    # A one-year report's trends may cover five years: the section must say which.
+    # A one-year report's trends may cover five years: the window is named, once.
     from rag.chain import _REPORT_PROMPTS
     p = _REPORT_PROMPTS["technical_monitoring"]
-    assert "longer look-back" in p and "name both windows" in p
+    assert "Explain the LOOK-BACK once" in p and "cover the look-back window" in p
+
+
+def test_technical_prompt_says_no_boilerplate_and_reader_form():
+    # Round 3: three sections of one report repeated the same look-back and no-test text.
+    from rag.chain import _REPORT_PROMPTS
+    p = _REPORT_PROMPTS["technical_monitoring"]
+    assert "Do not repeat boilerplate from section to section" in p
+    assert "'three observations: too few for a trend test'" in p
+    assert "never adds that no verdict of statistical significance applies" in p
+    assert "as the Context writes them" in p
 
 
 def test_technical_prompt_keeps_share_changes_in_percentage_points():
