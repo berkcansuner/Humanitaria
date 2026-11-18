@@ -110,8 +110,10 @@ const readout = computed(() => {
   }
 })
 
-const topRegion = sudan.regions[0][1]
-const regions = sudan.regions.map(([name, value]) => ({
+// Each state's value in the latest round (the same round as the national figure).
+const topRegion = sudan.regions.top[0][1]
+const regionsTitle = `Internally displaced people by state, top 5 · ${monthLabel(sudan.regions.period)}`
+const regions = sudan.regions.top.map(([name, value]) => ({
   name,
   value: formatCompact(value),
   width: pct(value / topRegion),
@@ -234,7 +236,7 @@ onBeforeUnmount(() => mm?.revert())
           </figure>
 
           <figure class="panel">
-            <figcaption>Internally displaced people by state, top 5</figcaption>
+            <figcaption>{{ regionsTitle }}</figcaption>
             <ul class="dp-bars">
               <li v-for="r in regions" :key="r.name">
                 <span class="dp-name">{{ r.name }}</span>

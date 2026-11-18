@@ -179,28 +179,31 @@
    ]
   }
  },
- "regions": [
-  [
-   "South Darfur",
-   1794719
-  ],
-  [
-   "North Darfur",
-   1612799
-  ],
-  [
-   "Central Darfur",
-   929248
-  ],
-  [
-   "East Darfur",
-   784608
-  ],
-  [
-   "River Nile",
-   653411
+ "regions": {
+  "period": "2026-09-30",
+  "top": [
+   [
+    "South Darfur",
+    1755100
+   ],
+   [
+    "North Darfur",
+    1670083
+   ],
+   [
+    "Central Darfur",
+    995212
+   ],
+   [
+    "East Darfur",
+    809660
+   ],
+   [
+    "Khartoum",
+    444037
+   ]
   ]
- ],
+ },
  "ipc_share": {
   "value": 41.0,
   "period": "2026-02-01"

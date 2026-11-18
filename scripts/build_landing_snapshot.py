@@ -55,6 +55,18 @@ def top_regions(ranking: list[tuple[str, float]], n: int = 5) -> list[list]:
     return [[name, round(value)] for name, value in ranking[:n]]
 
 
+def latest_round_regions(rows: list[dict], ind, period: str, n: int = 5) -> list[list]:
+    """Top regions by their value in ONE round (`period`, YYYY-MM-DD), the same round
+    as the national latest. `by_region` ranks period means, which would sit beside the
+    latest national figure as if they were the same kind of number."""
+    from analytics.datasets import regional_series
+
+    in_round = [r for r in rows if str(r.get("reference_period_start"))[:10] == period]
+    ranking = sorted(((region, vals[-1]) for region, vals in regional_series(in_round, ind).items()),
+                     key=lambda kv: kv[1], reverse=True)
+    return top_regions(ranking, n)
+
+
 def _sig3(p):
     return None if p is None else float(f"{p:.3g}")
 
@@ -134,7 +146,8 @@ def _db_figures() -> dict:
 
 
 def _series(key: str, date_from: str, today: date):
-    """The national series of one indicator, through the same steps as the report."""
+    """The national series of one indicator, through the same steps as the report.
+    Returns (indicator, periods, values, rows) with the filtered rows the series came from."""
     from analytics.datasets import consistent_snapshots, national_series
     from analytics.hapi_client import fetch_rows
     from analytics.indicators import by_key
@@ -148,7 +161,7 @@ def _series(key: str, date_from: str, today: date):
         rows = _completed(rows, today)
     rows, _ = consistent_snapshots(rows)
     periods, values = national_series(rows, ind)
-    return ind, periods, values
+    return ind, periods, values, rows
 
 
 def _sudan(db_sudan: dict) -> dict:
@@ -161,12 +174,10 @@ def _sudan(db_sudan: dict) -> dict:
     idp_name = "Internally displaced people (IDPs)"
     trend = next(s.stat_result for s in findings.sections
                  if s.stat_result["kind"] == "trend" and s.stat_result["indicator"] == idp_name)
-    region = next(s.stat_result for s in findings.sections
-                  if s.stat_result["kind"] == "region" and s.stat_result["indicator"] == idp_name)
 
-    ind, periods, values = _series("idps", date_from, today)
-    ipc, ipc_periods, ipc_values = _series("food_security", date_from, today)
-    _, fund_periods, fund_values = _series("funding", date_from, today)
+    ind, periods, values, idp_rows = _series("idps", date_from, today)
+    _, ipc_periods, ipc_values, _ = _series("food_security", date_from, today)
+    _, fund_periods, fund_values, _ = _series("funding", date_from, today)
     funding: dict[int, float] = {}
     for p, v in zip(fund_periods, fund_values):
         funding[int(p[:4])] = funding.get(int(p[:4]), 0.0) + v
@@ -178,7 +189,8 @@ def _sudan(db_sudan: dict) -> dict:
                  "pct_change": trend["pct_change"],
                  "trend_test": peak_window_trend(
                      periods, values, get_settings().TECHNICAL_REPORT_MIN_POINTS)},
-        "regions": top_regions(region["ranking"]),
+        "regions": {"period": periods[-1][:10],
+                    "top": latest_round_regions(idp_rows, ind, periods[-1][:10])},
         "ipc_share": {"value": round(ipc_values[-1], 1), "period": ipc_periods[-1][:10]},
         "funding": [[y, round(v, 2)] for y, v in sorted(funding.items())],
         "reports": db_sudan,

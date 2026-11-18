@@ -74,3 +74,21 @@ def test_peak_window_trend_tests_only_the_series_from_its_peak():
     # a single test: the Holm adjustment leaves p as it is
     assert out["p_adjusted"] == out["p_value"]
     assert out["significant"] is True
+
+
+def test_latest_round_regions_ranks_the_given_round_not_period_means():
+    from analytics.indicators import by_key
+    from scripts.build_landing_snapshot import latest_round_regions
+
+    def row(region, date, pop):
+        return {"admin1_name": region, "reference_period_start": date, "population": pop}
+
+    rows = [
+        # A was huge early, small now; B is the reverse: the mean ranks A first.
+        row("A", "2025-01-31", 900), row("A", "2025-09-30", 100),
+        row("B", "2025-01-31", 100), row("B", "2025-09-30", 500),
+        row("C", "2025-09-30", 300),
+        row("A", "2025-09-30", 50),          # second row, same round: summed (aggregation "sum")
+    ]
+    out = latest_round_regions(rows, by_key("idps"), "2025-09-30", n=2)
+    assert out == [["B", 500], ["C", 300]]
