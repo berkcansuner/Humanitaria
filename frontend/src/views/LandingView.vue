@@ -22,7 +22,7 @@
                 maxlength="4000"
                 autocomplete="off"
                 enterkeyhint="send"
-                placeholder="How many people are displaced in Sudan?"
+                placeholder="Who is displaced in Sudan?"
               />
               <button class="btn btn-solid ask-btn" type="submit">Ask</button>
             </form>

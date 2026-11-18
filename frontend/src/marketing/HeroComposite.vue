@@ -71,7 +71,7 @@ function onCite(event) {
 // Once typed, the answer settles back at its start (the same rest state reduced
 // motion shows), unless the reader scrolled it themselves.
 function settle() {
-  if (follow) answer.value.scrollTo({ top: 0, behavior: 'smooth' })
+  if (follow) answer.value?.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 // The composite's part of the hero timeline; LandingView places it.
@@ -306,26 +306,30 @@ onBeforeUnmount(() => mm?.revert())
   flex: 1;
   min-height: 0;
   margin-top: 16px;
+  /* The bottom fade keeps the rest state from ending on a cut line; the padding
+     under it lets the last line clear the fade once scrolled to the end. */
+  padding-bottom: 56px;
   overflow-y: auto;
   overscroll-behavior: contain;
   font-size: 14.5px;
   line-height: 1.62;
   color: var(--color-text);
-  scrollbar-color: auto;
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 60px), transparent calc(100% - 12px));
+  mask-image: linear-gradient(#000 calc(100% - 60px), transparent calc(100% - 12px));
+  /* Thin and hidden until the reader reaches for it (hover or keyboard focus). */
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.hc-answer:hover,
+.hc-answer:focus-visible {
+  scrollbar-color: var(--color-border-strong) transparent;
 }
 .hc-answer p + p {
   margin-top: 10px;
 }
 .hc-answer.is-scrolled {
-  -webkit-mask-image: linear-gradient(transparent, #000 32px);
-  mask-image: linear-gradient(transparent, #000 32px);
-}
-.hc-answer::-webkit-scrollbar {
-  width: 6px;
-}
-.hc-answer::-webkit-scrollbar-thumb {
-  border-radius: 3px;
-  background: var(--color-border-strong);
+  -webkit-mask-image: linear-gradient(transparent, #000 32px, #000 calc(100% - 60px), transparent calc(100% - 12px));
+  mask-image: linear-gradient(transparent, #000 32px, #000 calc(100% - 60px), transparent calc(100% - 12px));
 }
 
 .hc-answer:focus-visible {
