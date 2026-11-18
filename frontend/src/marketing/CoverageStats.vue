@@ -143,7 +143,6 @@ onBeforeUnmount(() => {
 }
 .stats-src {
   margin-top: 28px;
-  font-family: var(--font-mono);
   font-size: 12px;
   color: var(--color-muted);
 }

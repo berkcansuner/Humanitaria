@@ -284,7 +284,6 @@ onBeforeUnmount(() => mm?.revert())
 }
 .dash-month {
   padding: 3px 9px;
-  font-family: var(--font-mono);
   font-size: 12px;
   border: 1px solid var(--mkt-night-line);
   border-radius: 999px;
