@@ -39,12 +39,17 @@ const reportChip = (n) => {
   return citeLabel(n, { title: src.title, source: src.publisher, date: src.date })
 }
 
-const root = useTemplateRef('root')
-const report = useTemplateRef('report')
+const sampleChip = (n) => {
+  const src = sampleSources.find((s) => s.n === n)
+  return citeLabel(n, { title: src.title, source: src.publisher, date: src.date })
+}
 
-function onReportCite(event) {
+const root = useTemplateRef('root')
+
+// Chip -> its source row inside the same panel, as in the hero.
+function onCite(event) {
   const cite = event.target.closest('.cite')
-  if (cite) revealSource(report.value, cite.dataset.cite, cite, { block: 'nearest' })
+  if (cite) revealSource(event.currentTarget, cite.dataset.cite, cite, { block: 'nearest' })
 }
 
 // Each card rises in as it reaches the viewport; side by side they arrive staggered.
@@ -90,10 +95,17 @@ onBeforeUnmount(() => mm?.revert())
         <article class="flow">
           <h3>Cited chat</h3>
           <p>Answers only from retrieved reports, each claim one click from its source.</p>
-          <div class="flow-ui">
+          <figure class="flow-ui fu-panel" aria-label="Sample answer passage" @click="onCite">
             <p class="fu-answer">
               <template v-for="(part, i) in sample" :key="i"
-                ><span v-if="part.cite" class="cite" aria-hidden="true">{{ part.cite }}</span
+                ><button
+                  v-if="part.cite"
+                  class="cite"
+                  type="button"
+                  :data-cite="part.cite"
+                  :aria-label="sampleChip(part.cite)"
+                >
+                  {{ part.cite }}</button
                 ><template v-else>{{ part.text }}</template></template
               >.
             </p>
@@ -116,14 +128,14 @@ onBeforeUnmount(() => mm?.revert())
                 </span>
               </li>
             </ol>
-            <p class="fu-credit">From the Haiti answer above</p>
-          </div>
+            <figcaption class="fu-credit">From the Haiti answer above</figcaption>
+          </figure>
         </article>
 
         <article class="flow">
           <h3>M&amp;E reports</h3>
           <p>Pick a country, sector, period and language; get a structured, cited brief.</p>
-          <figure ref="report" class="flow-ui fu-report" aria-label="Sample report" @click="onReportCite">
+          <figure class="flow-ui fu-panel" aria-label="Sample report" @click="onCite">
             <p class="fu-head">{{ reportHead }}</p>
             <p class="fu-meta">{{ reportPeriod }}</p>
             <p class="fu-label">Key findings</p>
@@ -244,10 +256,7 @@ onBeforeUnmount(() => mm?.revert())
   line-height: 1.65;
   color: var(--color-text);
 }
-.fu-answer .cite {
-  cursor: default;
-}
-.fu-report {
+.fu-panel {
   margin-bottom: 0;
   margin-inline: 0;
 }
@@ -266,7 +275,7 @@ onBeforeUnmount(() => mm?.revert())
   color: var(--color-text);
   text-wrap: pretty;
 }
-.fu-report .cite {
+.fu-panel .cite {
   line-height: 1;
   vertical-align: 1px;
 }
@@ -287,7 +296,8 @@ onBeforeUnmount(() => mm?.revert())
   transition: background-color 0.25s;
 }
 .fu-sources .source-item.active {
-  background: var(--color-accent-soft);
+  /* Stronger than the hero's tint: these rows sit on the soft panel ground. */
+  background: color-mix(in oklch, var(--mkt-brand-chart) 16%, var(--color-surface-container-low));
   color: var(--color-text);
 }
 .fu-src-n {
