@@ -68,10 +68,18 @@ function onCite(event) {
   revealSource(chat.value, cite.dataset.cite, cite, { block: 'nearest' })
 }
 
+// Once typed, the answer settles back at its start (the same rest state reduced
+// motion shows), unless the reader scrolled it themselves.
+function settle() {
+  if (follow) answer.value.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
 // The composite's part of the hero timeline; LandingView places it.
 function intro() {
   const q = gsap.utils.selector(root.value)
   const stream = { n: 0 }
+  const streamAt = 0.55
+  const streamFor = (total * MS_PER_CHAR) / 1000
   typed.value = 0
   follow = true
   return gsap
@@ -83,14 +91,15 @@ function intro() {
       stream,
       {
         n: total,
-        duration: (total * MS_PER_CHAR) / 1000,
+        duration: streamFor,
         ease: 'none',
         onUpdate: () => {
           typed.value = Math.round(stream.n)
         },
       },
-      0.55,
+      streamAt,
     )
+    .call(settle, null, streamAt + streamFor + 0.9)
     .fromTo(
       q('.tc-svg'),
       { clipPath: 'inset(-4px 100% -4px 0)' },
@@ -103,6 +112,7 @@ function intro() {
 // Snap to the final state (reduced motion switched on mid-intro, or unmount).
 function finish() {
   typed.value = total
+  if (answer.value) answer.value.scrollTop = 0
 }
 
 defineExpose({ intro, finish })
@@ -224,28 +234,29 @@ onBeforeUnmount(() => mm?.revert())
   position: relative;
   display: flex;
   flex-direction: column;
+  padding-top: 40px;
 }
 
-/* The living map sits behind both cards. It is placed so Africa and the
-   Middle East, where report density peaks, surface below the chat card and
-   the rest of the map fades out towards the copy. */
+/* The living map sits behind both cards. Scaled and placed so the densest
+   report regions (West Africa, the Middle East, South and South-East Asia)
+   frame the chat card above and to its right; it fades out before the copy. */
 .hc-map {
   position: absolute;
-  left: -81%;
-  width: 175%;
-  top: 59%;
+  left: -22%;
+  width: 160%;
+  top: -15%;
   aspect-ratio: 360 / 140;
   pointer-events: none;
-  -webkit-mask-image: radial-gradient(ellipse 30% 62% at 61% 48%, #000 40%, transparent);
-  mask-image: radial-gradient(ellipse 30% 62% at 61% 48%, #000 40%, transparent);
+  -webkit-mask-image: radial-gradient(ellipse 64% 62% at 62% 50%, #000 50%, transparent);
+  mask-image: radial-gradient(ellipse 64% 62% at 62% 50%, #000 50%, transparent);
 }
 
 /* The trend card overlaps only the chat card's caption strip, whose text
    sits on the left, so no answer text or source row is ever covered. */
 .hc-chat-slot {
   position: relative;
-  height: 500px;
-  margin-right: 40px;
+  height: 480px;
+  margin-right: 64px;
 }
 .hc-trend-slot {
   position: relative;
@@ -431,10 +442,8 @@ onBeforeUnmount(() => mm?.revert())
    overlapping the chat card's foot. */
 @media (max-width: 1023px) {
   .hc-map {
-    left: -60%;
-    width: 160%;
-    top: auto;
-    bottom: -12%;
+    left: -30%;
+    top: -100px;
   }
   .hc-chat-slot {
     height: auto;
