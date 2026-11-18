@@ -16,6 +16,7 @@
       <router-link to="/reports" class="app-nav-link">Reports</router-link>
     </nav>
     <span class="app-topbar-spacer"></span>
+    <LanguageSwitcher variant="app" />
     <UserMenu />
   </header>
 </template>
@@ -23,6 +24,7 @@
 <script setup>
 import HelpingHandLogo from './HelpingHandLogo.vue'
 import UserMenu from './UserMenu.vue'
+import LanguageSwitcher from './LanguageSwitcher.vue'
 
 defineProps({
   // Small line under the brand naming the screen ("M&E Reports", "Settings").

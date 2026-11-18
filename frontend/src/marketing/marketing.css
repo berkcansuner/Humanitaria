@@ -553,6 +553,14 @@ html:has(.mkt-scope) {
   .mkt-scope .nav-right .btn-text {
     display: none;
   }
+  /* Keep the language selector and the CTA on one line at phone width. */
+  .mkt-scope .nav-in {
+    gap: var(--space-3);
+  }
+  .mkt-scope .nav-right .btn-solid {
+    padding: 10px 14px;
+    white-space: nowrap;
+  }
   .mkt-scope .foot-grid {
     grid-template-columns: 1fr;
   }

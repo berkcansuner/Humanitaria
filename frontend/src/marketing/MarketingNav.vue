@@ -12,6 +12,7 @@
         <router-link :to="{ path: '/', hash: '#coverage' }">Coverage</router-link>
       </nav>
       <div class="nav-right">
+        <LanguageSwitcher variant="marketing" />
         <template v-if="isAuthenticated()">
           <router-link class="btn btn-text" to="/app">Open app</router-link>
           <button class="btn btn-solid" type="button" @click="logout">Log out</button>
@@ -28,6 +29,7 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import HandMark from './HandMark.vue'
+import LanguageSwitcher from '../components/LanguageSwitcher.vue'
 import { isAuthenticated, doLogout } from '../utils/authStore.js'
 
 const router = useRouter()

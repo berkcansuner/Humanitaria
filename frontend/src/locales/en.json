@@ -15,5 +15,10 @@
     "close": "Close",
     "loading": "Loading…",
     "tryAgain": "Try again"
+  },
+  "lang": {
+    "buttonLabel": "Language: {name}",
+    "listLabel": "Language",
+    "changed": "Language set to {name}"
   }
 }

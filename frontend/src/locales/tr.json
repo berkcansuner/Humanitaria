@@ -15,5 +15,10 @@
     "close": "Kapat",
     "loading": "Yükleniyor…",
     "tryAgain": "Tekrar dene"
+  },
+  "lang": {
+    "buttonLabel": "Dil: {name}",
+    "listLabel": "Dil",
+    "changed": "Dil {name} olarak ayarlandı"
   }
 }
