@@ -268,11 +268,60 @@
   color: var(--color-text-secondary);
   text-wrap: pretty;
 }
+.mkt-scope .ask {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 34em;
+  margin-top: 28px;
+  padding: 6px 6px 6px 20px;
+  background: var(--mkt-ground);
+  border: 1px solid var(--mkt-line);
+  border-radius: 999px;
+  transition:
+    border-color 0.18s,
+    box-shadow 0.18s;
+}
+.mkt-scope .ask:focus-within {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 24%, transparent);
+}
+.mkt-scope .ask-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0;
+  font: inherit;
+  font-size: 16px;
+  color: var(--color-text);
+  background: transparent;
+  border: 0;
+  outline: 0;
+}
+.mkt-scope .ask-input:focus-visible {
+  box-shadow: none; /* the pill (.ask:focus-within) draws the ring */
+}
+.mkt-scope .ask-input::placeholder {
+  color: var(--color-muted);
+}
+.mkt-scope .ask-btn {
+  min-height: 44px;
+  padding: 0 22px;
+}
+.mkt-scope .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
 .mkt-scope .hero-cta {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
-  margin-top: 32px;
+  margin-top: 16px;
 }
 .mkt-scope .hero-proof {
   display: flex;

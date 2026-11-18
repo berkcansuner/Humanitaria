@@ -16,6 +16,20 @@
               Ask about any crisis, generate M&amp;E situation and technical reports, and see the
               indicators behind them. Every claim links to the report it came from.
             </p>
+            <form class="ask" role="search" @submit.prevent="ask">
+              <label class="sr-only" for="ask-input">Ask about any crisis</label>
+              <input
+                id="ask-input"
+                v-model="question"
+                class="ask-input"
+                type="text"
+                maxlength="4000"
+                autocomplete="off"
+                enterkeyhint="send"
+                placeholder="How many people are displaced in Sudan?"
+              />
+              <button class="btn btn-solid ask-btn" type="submit">Ask</button>
+            </form>
             <div class="hero-cta">
               <router-link class="btn btn-solid btn-lg" to="/signup"
                 >Start free<svg
@@ -169,7 +183,9 @@
 </template>
 
 <script setup>
-import { onBeforeUnmount, onMounted, useTemplateRef } from 'vue'
+import { onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
+import { useRouter } from 'vue-router'
+import { askTarget } from '../utils/askQuestion.js'
 import { gsap } from 'gsap'
 import MarketingNav from '../marketing/MarketingNav.vue'
 import MarketingFooter from '../marketing/MarketingFooter.vue'
@@ -177,6 +193,14 @@ import HeroComposite from '../marketing/HeroComposite.vue'
 import coverage from '../marketing/data/coverage.json'
 
 const reportsLabel = coverage.reports.toLocaleString('en-US')
+
+const router = useRouter()
+const question = ref('')
+
+function ask() {
+  const target = askTarget(question.value)
+  if (target) router.push(target)
+}
 
 const hero = useTemplateRef('hero')
 const composite = useTemplateRef('composite')

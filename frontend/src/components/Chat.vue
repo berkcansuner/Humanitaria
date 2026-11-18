@@ -144,7 +144,8 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick, defineAsyncComponent } from 'vue'
+import { ref, watch, nextTick, onMounted, defineAsyncComponent } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { Send, AlertCircle, Square, RotateCcw } from 'lucide-vue-next'
 import SourceList from './SourceList.vue'
 import EmptyState from './EmptyState.vue'
@@ -164,6 +165,7 @@ import { decorateCodeBlocks } from '../utils/codeCopy.js'
 import { findLastUserIndex, lastServerIdBefore, planResend } from '../utils/conversationOps.js'
 import { getMessages, truncateConversation } from '../utils/api.js'
 import { handleSessionExpired } from '../utils/authStore.js'
+import { questionFromQuery } from '../utils/askQuestion.js'
 
 // Each failure says what happened; the banner's "Try again" is the recovery.
 // The free-tier server sleeps when idle, so the first request after a pause is
@@ -499,6 +501,25 @@ function autoGrow() {
   el.style.height = 'auto'
   el.style.height = Math.min(el.scrollHeight, 140) + 'px'
 }
+
+// The landing ask field arrives as /app?q=...: fill the composer once, never
+// send, and drop only `q` from the URL so a refresh doesn't refill it.
+const route = useRoute()
+const router = useRouter()
+onMounted(() => {
+  const question = questionFromQuery(route.query.q)
+  if (route.query.q === undefined) return
+  if (question && !input.value) {
+    input.value = question
+    nextTick(() => {
+      autoGrow()
+      chatInput.value?.focus()
+    })
+  }
+  const rest = { ...route.query }
+  delete rest.q
+  router.replace({ query: rest })
+})
 
 function onSuggestionApply(msg, values) {
   msg.clarification.resolved = true
