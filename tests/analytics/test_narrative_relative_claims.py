@@ -184,3 +184,44 @@ def test_the_plan_line_note_survives_in_data_coverage(language, sentence):
                         gaps=[], indicators_covered=["pin_protection"])
     text = f"## Data Coverage & Limitations\n\n{sentence}"
     assert verify_narrative(text, findings, LINE_CONTEXT, language).removed == 0
+
+
+# --- Round 2 decision: fractional changes ("by a third", "üçte bir") get the same rule as
+# halved/doubled. ---
+
+def test_a_fraction_as_a_level_is_not_a_change_claim():
+    assert _kept("About a third of the analysed population faced acute food insecurity in "
+                 "September 2026.", None)
+    assert _kept("Eylül 2026'da analiz edilen nüfusun üçte biri akut gıda güvensizliği "
+                 "yaşıyordu.", None, "tr")
+
+
+@pytest.mark.parametrize("section,sentence,language", [
+    (IPC_H, "Food insecurity fell by a third between 2022 and 2026.", "en"),
+    (IPC_H, "A quarter fewer people were food insecure in 2026.", "en"),
+    (IPC_H, "Gıda güvensizliği 2022'den bu yana üçte bir oranında azaldı.", "tr"),
+    (FS_H, "People in need of food security assistance rose by two-thirds.", "en"),
+    (FS_H, "İhtiyaç duyan kişi sayısı dörtte bir arttı.", "tr"),
+])
+def test_an_unsupported_fractional_change_is_removed(section, sentence, language):
+    assert not _kept(sentence, section, language)
+
+
+def test_a_fractional_change_of_a_count_needs_the_observed_values():
+    # Returnees 2,000,000 -> 1,000,000 (ratio 0.5); refugees 1,000,000 -> 3,100,000.
+    assert _counts_kept("Returnees fell by half between 2022 and 2025.", RET_H)
+    assert not _counts_kept("Returnees fell by a third between 2022 and 2025.", RET_H)
+    assert not _counts_kept("Refugee numbers rose by a quarter.", REF_H)
+
+
+def test_a_supported_fractional_change_of_a_count_is_kept():
+    findings_ctx = (f"## {RET_H}\nReturnees (people): observed first value 3000000 people "
+                    "(2022-01-01), latest value 2000000 people (2025-01-01), n=4.\n")
+    findings = Findings(sections=[ReportSection(RET_H, {
+        "kind": "trend", "p_value": 0.2, "significant": False, "unit": "", "value_unit": "people",
+        "pct_change": None, "line_change": None, "first_value": 3e6, "latest_value": 2e6},
+        None, "")], gaps=[], indicators_covered=["returnees"])
+    for sentence, language in (("Returnees fell by a third between 2022 and 2025.", "en"),
+                               ("Geri dönenlerin sayısı üçte bir oranında azaldı.", "tr")):
+        text = f"## {RET_H}\n\n{sentence}"
+        assert verify_narrative(text, findings, findings_ctx, language).removed == 0

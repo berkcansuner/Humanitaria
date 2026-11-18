@@ -883,7 +883,7 @@ def test_data_sources_are_listed_like_report_sources(monkeypatch):
          "url": "https://data.humdata.org/dataset/global-hpc-hno", "source": "OCHA HNO",
          "date": "2026-01-01", "country": "Afghanistan", "doctype": "dataset",
          "dataset": "Global Humanitarian Programme Cycle, Humanitarian Needs",
-         "period": "2024-01-01 to 2026-01-01", "retrieved": "2026-11-18"},
+         "period": "2024-01-01 – 2026-01-01", "retrieved": "2026-11-18"},
         {"index": 2, "title": "Internally displaced people (IDPs)",
          "url": "https://hapi.humdata.org/",
          "source": "International Organization for Migration (IOM), January 2026, "
@@ -962,3 +962,12 @@ def test_a_sector_without_sub_lines_has_no_plan_line_note(monkeypatch):
     f = compute_findings("AFG", None, None, language="en", theme="Food and Nutrition")
     assert f.sections[0].heading == "Food security: people in need — Latest Values"
     assert not [n for n in f.notes if "separate lines" in n]
+
+
+def test_a_source_period_has_no_english_word_in_a_turkish_report(monkeypatch):
+    from analytics.technical_report import data_sources
+    f = Findings(sections=[], gaps=[], indicators_covered=["food_security"], data_sources=[
+        {"key": "food_security", "title": "Gıda güvensizliği", "source": "IPC",
+         "first_period": "2022-03-01", "last_period": "2026-09-01", "resource_hdx_id": None}])
+    monkeypatch.setattr("analytics.technical_report.resource_metadata", lambda rid: None)
+    assert data_sources(f, "Afganistan", retrieved="2026-11-18")[0]["period"] == "2022-03-01 – 2026-09-01"

@@ -325,7 +325,8 @@ def data_sources(findings: Findings, country: str, retrieved: str | None = None)
                  "doctype": "dataset"}
         if meta and meta.get("dataset_hdx_title"):
             entry["dataset"] = meta["dataset_hdx_title"]
-        entry["period"] = first if first == last else f"{first} to {last}"
+        # No word in it: the same text reads right under a Turkish or an English report.
+        entry["period"] = first if first == last else f"{first} – {last}"
         entry["retrieved"] = retrieved
         out.append(entry)
     return out

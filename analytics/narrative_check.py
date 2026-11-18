@@ -14,7 +14,9 @@ enforce it. After generation this removes, sentence by sentence:
    change, or a share's computed percentage-point change said in percentage points;
    'halved' / 'doubled' / 'yarıya' / 'iki katına' and the like never about a share,
    and about a count only when the observed latest/first ratio is within ±10% of the
-   factor. A level ('to 32%', '%32'ye', '%32 düzeyinde') is checked as a number only.
+   factor; a fractional change ('fell by a third', 'üçte bir oranında azaldı') likewise.
+   A level ('to 32%', '%32'ye', '%32 düzeyinde', 'a third of the population') is checked
+   as a number only.
 
 Headings are kept. A finding section left empty gets a placeholder sentence, and a
 note at the end says how many sentences were removed. The check only deletes: it
@@ -161,6 +163,30 @@ _MULTIPLIERS = [
 ]
 _FACTOR_TOLERANCE = 0.10
 
+# Fractions. Only a fraction used as a change counts ("fell by a third", "a quarter
+# fewer", "üçte bir oranında azaldı"), not a level ("a third of the population",
+# "nüfusun üçte biri"). Supported for a count when the observed latest/first ratio
+# within ±10% of the fraction matches either reading: changed BY it (ratio 1 ± f) or
+# changed TO it (ratio f); never for a share.
+_FRACTIONS = [
+    (1 / 3, r"(?:a|one)[- ]third", r"üçte\s+bir\w*"),
+    (2 / 3, r"two[- ]thirds", r"üçte\s+iki\w*"),
+    (1 / 4, r"(?:a|one)[- ](?:quarter|fourth)", r"dörtte\s+bir\w*"),
+    (3 / 4, r"three[- ]quarters", r"dörtte\s+üç\w*"),
+    (1 / 5, r"(?:a|one)[- ]fifth", r"beşte\s+bir\w*"),
+]
+_EN_FRACTION_CHANGE = [
+    (f, re.compile(rf"\bby\s+(?:(?:about|around|nearly|almost|roughly|some|more than|over|"
+                   rf"under|less than|just)\s+)*{en}\b|\b{en}\s+(?:fewer|lower|less|more|higher|"
+                   rf"smaller|larger|greater)\b|\b(?:fell|dropped|declined|decreased|shrank|"
+                   rf"rose|grew|increased|climbed)\s+(?:to\s+)?(?:about\s+|nearly\s+|almost\s+)?"
+                   rf"{en}\b", re.IGNORECASE))
+    for f, en, _ in _FRACTIONS]
+_TR_FRACTION_CHANGE = [
+    (f, re.compile(rf"\b{tr}(?:\s+(?:oranında|kadar|civarında|dolayında))?\s+"
+                   rf"(?:azal|art|düş|yüksel|geril|eksil|büyü|küçül|in)\w*", re.IGNORECASE))
+    for f, _, tr in _FRACTIONS]
+
 
 def _is_en_change(sentence: str, start: int, end: int) -> bool:
     before = [w.strip("(),;:").lower() for w in sentence[:start].split()]
@@ -238,6 +264,13 @@ def _relative_claim_ok(sentence: str, profile: dict) -> bool:
         if pattern.search(sentence):
             if profile["share"] or not any(
                     abs(x - factor) <= _FACTOR_TOLERANCE * factor for x in profile["ratios"]):
+                return False
+    for fraction, pattern in _EN_FRACTION_CHANGE + _TR_FRACTION_CHANGE:
+        if pattern.search(sentence):
+            near = _FACTOR_TOLERANCE * fraction
+            if profile["share"] or not any(
+                    abs(abs(1 - x) - fraction) <= near or abs(x - fraction) <= near
+                    for x in profile["ratios"]):
                 return False
     return True
 
