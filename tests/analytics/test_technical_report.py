@@ -336,7 +336,7 @@ def test_idp_series_uses_one_operation_and_says_so(_mock):
 def test_change_is_written_with_the_sign_before_the_number(_mock):
     # The context said "%-24.1" and the Turkish report copied "%-24,1" (should be -%24,1).
     tr = next(s for s in compute_findings("SDN", None, None).sections if s.stat_result["kind"] == "trend")
-    assert "=+" in tr.findings_text and "%, n=" in tr.findings_text
+    assert "=+" in tr.findings_text and "%, observed first value" in tr.findings_text
     assert "%-" not in tr.findings_text and "=%" not in tr.findings_text
 
 
@@ -412,6 +412,7 @@ def test_trend_text_does_not_quote_slopes_to_the_cent():
         "ci_low": -1153344.92, "ci_high": -603416.78, "tau": -0.34, "p_value": 0.002,
         "p_adjusted": 0.012, "significant": True, "pct_change": -24.9,
         "first_period": "2023-08-31", "last_period": "2026-09-30", "n_points": 40, "unit": "",
+        "first_value": 9_100_000.4, "latest_value": 6_800_000.6, "value_unit": "people",
     })
     assert "Sen slope=-931000 per year" in text
     assert "95% CI -1150000 to -603000" in text
@@ -733,3 +734,41 @@ def test_competing_totals_reach_the_data_notes(monkeypatch):
     assert "467000 people (2025-01-01)" in snap.findings_text        # not PRO-CPN's 1,611,291
     assert ("Protection: people in need: HDX HAPI publishes two totals for 2025 (349999 and "
             "466589); the larger is used") in f.notes
+
+
+# --- Review 2026-11-18: AFG IPC 3+ read "relative change along the trend line … =-48.3%"
+# beside a latest value of 32.0% (observed 47% → 32%): a relative change of a percentage,
+# measured to the end of a Sen line. Shares now change in percentage points, and every
+# trend gives its observed first and latest values. ---
+
+def _afg_ipc_rows(ep):
+    if "food-security" not in ep:
+        return []
+    shares = [("2022-03-01", .47), ("2022-09-01", .41), ("2023-04-01", .40), ("2023-10-01", .29),
+              ("2024-03-01", .32), ("2024-09-01", .25), ("2025-03-01", .27), ("2025-09-01", .28),
+              ("2026-09-01", .32)]
+    return [{"reference_period_start": p, "reference_period_end": p, "population_in_phase": 1,
+             "population_fraction_in_phase": f} for p, f in shares]
+
+
+@patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _afg_ipc_rows(ep))
+def test_a_share_trend_changes_in_percentage_points_with_observed_values(_mock):
+    f = compute_findings("AFG", "2022-01-01", "2026-11-18", language="en")
+    tr = next(s for s in f.sections if s.stat_result["kind"] == "trend")
+    r = tr.stat_result
+    span = (__import__("datetime").date(2026, 9, 1) - __import__("datetime").date(2022, 3, 1)).days / 365.25
+    assert abs(r["line_change"] - r["slope"] * span) < 1e-9
+    text = tr.findings_text
+    assert f"change along the trend line 2022-03-01 → 2026-09-01={r['line_change']:+.1f} percentage points" in text
+    assert "relative change" not in text
+    assert "observed first value 47.0% (2022-03-01), latest value 32.0% (2026-09-01)" in text
+
+
+@patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _sudan_like_idp_rows(ep))
+def test_a_count_trend_keeps_its_relative_change_and_gives_observed_values(_mock):
+    tr = next(s for s in compute_findings("SDN", None, None, language="en").sections
+              if s.stat_result["kind"] == "trend")
+    assert "relative change along the trend line" in tr.findings_text
+    assert "observed first value 8000 people (" in tr.findings_text
+    assert "latest value 8300 people (" in tr.findings_text
+    assert tr.stat_result["line_change"] is None

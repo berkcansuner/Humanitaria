@@ -297,3 +297,11 @@ def test_technical_prompt_names_the_window_of_a_look_back_trend():
     from rag.chain import _REPORT_PROMPTS
     p = _REPORT_PROMPTS["technical_monitoring"]
     assert "longer look-back" in p and "name both windows" in p
+
+
+def test_technical_prompt_keeps_share_changes_in_percentage_points():
+    # Review 2026-11-18: "-48.3%" for a share that went from 47% to 32%.
+    from rag.chain import _REPORT_PROMPTS
+    p = _REPORT_PROMPTS["technical_monitoring"]
+    assert "percentage points" in p and "'halved'" in p
+    assert "percent change" not in p

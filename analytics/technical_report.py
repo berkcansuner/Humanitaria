@@ -171,6 +171,11 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                                  "unit": ind.unit, "look_back": look_back,
                                  "chosen_from": date_from,
                                  "latest_value": t_values[-1], "latest_period": t_periods[-1],
+                                 "first_value": t_values[0],
+                                 # A share changes in percentage points along the line,
+                                 # never as a relative percent of a percent.
+                                 "line_change": (tr.slope * times[-1]
+                                                 if ind.unit == "percentage points" else None),
                                  "value_unit": _value_unit(ind)},
                     chart=chart,
                     chart_dark=chart_dark,
@@ -394,14 +399,21 @@ def _plain(x: float) -> str:
 
 
 def _trend_text(r: dict) -> str:
-    pct = "n/a" if r["pct_change"] is None else f"{r['pct_change']:+.1f}%"
+    first, last = str(r["first_period"])[:10], str(r["last_period"])[:10]
+    if r.get("line_change") is not None:
+        change = (f"change along the trend line {first} → {last}="
+                  f"{r['line_change']:+.1f} percentage points")
+    else:
+        pct = "n/a" if r["pct_change"] is None else f"{r['pct_change']:+.1f}%"
+        change = f"relative change along the trend line {first} → {last}={pct}"
+    observed = (f"observed first value {_value(r['first_value'], r['value_unit'])} ({first}), "
+                f"latest value {_value(r['latest_value'], r['value_unit'])} ({last})")
     ci = ("95% CI: too few points" if r["ci_low"] is None
           else f"95% CI {_plain(r['ci_low'])} to {_plain(r['ci_high'])}")
     unit = f" {r['unit']}" if r.get("unit") else ""
     return (_look_back_text(r) + f"{r['indicator']}: direction={r['direction']}, Sen slope={_plain(r['slope'])}{unit} per year "
             f"({ci}), Kendall tau={r['tau']:.2f}, Mann-Kendall {_verdict(r)}, "
-            f"relative change along the trend line {str(r['first_period'])[:10]} → {str(r['last_period'])[:10]}={pct}, "
-            f"n={r['n_points']}.")
+            f"{change}, {observed}, n={r['n_points']}.")
 
 
 def _look_back_text(r: dict) -> str:
