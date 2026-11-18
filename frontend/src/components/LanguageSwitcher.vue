@@ -7,7 +7,7 @@
       aria-haspopup="listbox"
       :aria-expanded="open ? 'true' : 'false'"
       :aria-controls="open ? listId : undefined"
-      :aria-label="t('lang.buttonLabel', { name: current.name })"
+      :aria-label="t('lang.buttonLabel', { code: current.code.toUpperCase(), name: current.name })"
       @click="toggle"
       @keydown.down.prevent="openList"
     >

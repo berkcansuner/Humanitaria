@@ -44,7 +44,9 @@ describe('LanguageSwitcher', () => {
     expect(button().textContent).toContain('EN')
     expect(button().getAttribute('aria-haspopup')).toBe('listbox')
     expect(button().getAttribute('aria-expanded')).toBe('false')
-    expect(button().getAttribute('aria-label')).toBe('Language: English')
+    expect(button().getAttribute('aria-label')).toBe('EN – Language: English')
+    // Label in name (WCAG 2.5.3): the visible code starts the accessible name.
+    expect(button().getAttribute('aria-label')).toContain(button().textContent.trim())
   })
 
   it('opens a listbox with two options carrying lang attributes', async () => {
@@ -70,7 +72,7 @@ describe('LanguageSwitcher', () => {
     expect(localStorage.getItem('lang')).toBe('tr')
     expect(listbox()).toBeNull()
     expect(document.activeElement).toBe(button())
-    expect(button().getAttribute('aria-label')).toBe('Dil: Türkçe')
+    expect(button().getAttribute('aria-label')).toBe('TR – Dil: Türkçe')
   })
 
   it('announces the change in the new language', async () => {

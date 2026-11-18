@@ -18,7 +18,7 @@
     "dismiss": "Kapat"
   },
   "lang": {
-    "buttonLabel": "Dil: {name}",
+    "buttonLabel": "{code} – Dil: {name}",
     "listLabel": "Dil",
     "changed": "Dil {name} olarak ayarlandı"
   },
