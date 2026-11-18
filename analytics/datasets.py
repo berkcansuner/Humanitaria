@@ -14,14 +14,34 @@ from analytics.indicators import Indicator
 logger = logging.getLogger(__name__)
 
 
+# Below this share of the 'total' row, an undisaggregated ('') row is a stray sub-line,
+# not the sector total (Nigeria CCCM 2024: 780 vs 2,487,269; Myanmar 2025: 1,957,173 vs
+# 19,902,649 people in need).
+_STRAY_SHARE = 0.5
+
+
+def _published_total(totals: dict) -> tuple[str, float]:
+    """('', value) or ('total', value): the figure the HNO publishes for one period.
+    Checked against the plans' published caseloads (HPC Tools, 2026-11-18): the
+    undisaggregated row is the published figure unless it is far below the 'total' row."""
+    blank, total = totals.get(""), totals.get("total")
+    if blank is None or (total is not None and blank < _STRAY_SHARE * total):
+        return "total", total
+    return "", blank
+
+
 def _dedup_aggregate_rows(df: pd.DataFrame, indicator: Indicator) -> pd.DataFrame:
     if indicator.endpoint == "affected-people/humanitarian-needs" and "category" in df.columns:
         cat = df["category"].fillna("").astype(str).str.strip().str.lower()
-        df = df[cat.isin(["", "total"])]
-        # Dönem başına en büyük (= sektörler-arası toplam) satırı tut: sabitlenmemiş
-        # bir boyuttan sızan alt-küme satırlarına ve '' / 'total' çift kaydına karşı sağlam.
-        df = df.sort_values("_value", ascending=False).drop_duplicates(
-            subset=["reference_period_start"], keep="first")
+        df = df[cat.isin(["", "total"])].assign(_cat=cat)
+        # One row per period: the published total of its '' and 'total' rows (each the
+        # largest of its kind, against sub-set rows leaking from an unpinned dimension).
+        keep = []
+        for _, sub in df.groupby("reference_period_start"):
+            best = sub.sort_values("_value", ascending=False).drop_duplicates("_cat")
+            chosen, _ = _published_total(dict(zip(best["_cat"], best["_value"])))
+            keep.append(best[best["_cat"] == chosen].index[0])
+        df = df.loc[keep].drop(columns="_cat")
     return df
 
 
@@ -88,22 +108,29 @@ _TOTALS_DIFFER = 0.01   # '' and 'total' rows further apart than this share are 
 
 def competing_totals_note(rows: list[dict], indicator: Indicator) -> str | None:
     """HNO rows carry a sector's total twice per year: the undisaggregated row
-    (category '') and the 'total' of its breakdown. They usually agree; when they do
-    not (Haiti protection 2025: 349,999 vs 466,589 — the first matches the IDP group,
-    the second the age/sex breakdown) nothing in the data says which is the published
-    figure, so the larger is kept, as before, and the report says so."""
+    (category '') and the 'total' of its breakdown. They usually agree. When they do
+    not, _published_total picks one, and the note says which, because HDX HAPI does not
+    hold every published sector total: where a plan splits a cluster into sub-lines
+    (Haiti protection 2025: migrants 349,999, general protection 466,589, protection
+    total 2,160,007) HAPI keeps two sub-lines and neither is the sector figure."""
     df = _frame(rows, indicator, dedup=False)
     if df.empty or "category" not in df.columns:
         return None
     cat = df["category"].fillna("").astype(str).str.strip().str.lower()
     years = []
-    for period, sub in df[cat.isin(["", "total"])].groupby("reference_period_start"):
-        values = sorted(set(sub["_value"].tolist()))
-        if len(values) > 1 and values[-1] - values[0] > _TOTALS_DIFFER * values[-1]:
-            years.append(f"{str(period)[:4]} ({int(values[0])} and {int(values[-1])})")
+    for period, sub in df.assign(_cat=cat)[cat.isin(["", "total"])].groupby("reference_period_start"):
+        totals = sub.groupby("_cat")["_value"].max().to_dict()
+        if len(totals) < 2 or abs(totals[""] - totals["total"]) <= _TOTALS_DIFFER * max(totals.values()):
+            continue
+        chosen, _ = _published_total(totals)
+        blank = f"{int(totals[''])} without a breakdown" + (" (used)" if chosen == "" else "")
+        total = f"{int(totals['total'])} as the total of its breakdown" + (
+            " (used)" if chosen == "total" else "")
+        years.append(f"{str(period)[:4]}: {blank} and {total}")
     if not years:
         return None
-    return f"HDX HAPI publishes two totals for {'; '.join(years)}; the larger is used"
+    return (f"HDX HAPI holds two totals for {'; '.join(years)}; the HNO's published sector "
+            f"figure may differ")
 
 
 _COMPLETE_SHARE = 0.8  # a snapshot must cover at least this share of the operation's regions

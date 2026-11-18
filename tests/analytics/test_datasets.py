@@ -196,7 +196,8 @@ def test_two_published_totals_for_a_year_are_noted():
             _pin_row("PRO", 2024, 250_000), _pin_row("PRO", 2024, 250_000, "total"),
             _pin_row("PRO-CPN", 2023, 1, ""), _pin_row("PRO-CPN", 2023, 5, "total")]
     assert competing_totals_note(rows, by_key("pin_protection")) == (
-        "HDX HAPI publishes two totals for 2025 (349999 and 466589); the larger is used")
+        "HDX HAPI holds two totals for 2025: 349999 without a breakdown (used) and 466589 as "
+        "the total of its breakdown; the HNO's published sector figure may differ")
 
 
 def test_totals_that_differ_only_by_rounding_are_not_noted():
@@ -204,3 +205,43 @@ def test_totals_that_differ_only_by_rounding_are_not_noted():
     rows = [_pin_row("FSC", 2024, 19_325_221), _pin_row("FSC", 2024, 19_325_222, "total")]
     assert competing_totals_note(rows, by_key("pin_food_security")) is None
     assert competing_totals_note([{"population": 1}], by_key("idps")) is None
+
+
+
+# --- Round 2: which of the two totals is the published one. Checked against the plans'
+# published caseloads (HPC Tools API, 2026-11-18): the undisaggregated row ('') is the
+# published figure in 9 of 11 cases; in the other two it is a stray sub-line far smaller
+# than the 'total' row (Nigeria CCCM 2024: 780 vs 2,487,269; Myanmar 2025: 1,957,173 vs
+# 19,902,649), and there the 'total' row is the published figure. ---
+
+def _hno(code, year, rows):
+    return [{"sector_code": code, "reference_period_start": f"{year}-01-01", "population": v,
+             "category": c} for c, v in rows]
+
+
+@pytest.mark.parametrize("code,year,rows,published", [
+    # Sudan mine action 2024: published 5,955,027 (HPC plan 1188); 'total' is 6,020,948.
+    ("PRO-MIN", 2024, [("", 5_955_027), ("Hostcommunities", 790_357), ("IDPs", 2_082_052),
+                       ("Non-Displaced", 3_082_618), ("total", 6_020_948)], 5_955_027),
+    # South Sudan health 2025: published 5,657,327 (HPC plan 1223); 'total' is 4,843,460.
+    ("HEA", 2025, [("", 5_657_327), ("total", 4_843_460)], 5_657_327),
+    # Nigeria protection 2024: published 5,093,865 (HPC plan 1190); 'total' is 5,214,884.
+    ("PRO", 2024, [("", 5_093_865), ("total", 5_214_884)], 5_093_865),
+    # Nigeria CCCM 2024: published 2,487,269 ("TOTAL - CCCM", HPC plan 1190); '' is 780.
+    ("CCM", 2024, [("", 780), ("total", 2_487_269)], 2_487_269),
+    # Myanmar 2025 intersectoral: published 19.9 million; '' is 1,957,173.
+    ("Intersectoral", 2025, [("", 1_957_173), ("total", 19_902_649)], 19_902_649),
+])
+def test_the_published_total_is_chosen(code, year, rows, published):
+    ind = next(i for i in __import__("analytics.indicators", fromlist=["x"]).SECTOR_INDICATORS
+               + __import__("analytics.indicators", fromlist=["x"]).INDICATORS
+               if i.query_params.get("sector_code") == code)
+    assert national_series(_hno(code, year, rows), ind)[1] == [published]
+
+
+def test_the_note_names_the_total_used_when_it_is_the_breakdown_total():
+    from analytics.datasets import competing_totals_note
+    rows = _hno("CCM", 2024, [("", 780), ("total", 2_487_269)])
+    assert competing_totals_note(rows, by_key("pin_cccm")) == (
+        "HDX HAPI holds two totals for 2024: 780 without a breakdown and 2487269 as the total "
+        "of its breakdown (used); the HNO's published sector figure may differ")
