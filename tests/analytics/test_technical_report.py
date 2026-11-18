@@ -600,3 +600,61 @@ def test_look_back_series_are_not_correlated(_mock):
     f = compute_findings("AFG", date_from, date_to, language="en")
     assert f.look_backs
     assert not [s for s in f.sections if s.stat_result["kind"] == "correlation"]
+
+
+# --- A series too short for any trend (HNO sector figures start in 2024) is reported
+# as its values, never only as a gap line: the sector's headline figure must reach
+# the report. ---
+
+def _three_year_pin_rows(ep, params):
+    if params.get("sector_code") != "FSC":
+        return []
+    from datetime import date
+    y = date.today().year
+    return [{"population": v, "category": "", "reference_period_start": f"{y - k}-01-01",
+             "reference_period_end": f"{y - k}-12-31"}
+            for k, v in ((2, 15_823_677), (1, 14_764_729), (0, 17_412_653))]
+
+
+def test_a_series_too_short_for_a_trend_is_reported_as_its_values(monkeypatch):
+    from datetime import date
+    y = date.today().year
+    monkeypatch.setattr("analytics.technical_report.fetch_rows",
+                        _recording_fetch([], _three_year_pin_rows))
+    date_from, date_to = _last_year()
+    f = compute_findings("AFG", date_from, date_to, language="en", theme="Food and Nutrition")
+    snap = next(s for s in f.sections if s.stat_result["kind"] == "snapshot")
+    assert snap.heading == "Food security: people in need — Latest Values"
+    assert snap.stat_result["p_value"] is None and snap.chart and snap.chart_dark
+    text = snap.findings_text
+    assert "3 observations" in text and "too few for a trend test" in text
+    assert "no trend or statistical test is reported" in text
+    assert (f"Values: {y - 2}-01-01 15800000 people; {y - 1}-01-01 14800000 people; "
+            f"{y}-01-01 17400000 people.") in text
+    assert f"Latest value as of the chosen period: 17400000 people ({y}-01-01)." in text
+    # The chosen year held one of the three values: the window is named.
+    assert "the values cover" in text and date_from in text
+    assert "SIGNIFICANT" not in text and "p=" not in text
+    assert any("(n=3)" in g for g in f.gaps)               # still listed as a data gap
+    assert f.indicators_covered == ["pin_food_security"]
+
+
+def test_turkish_snapshot_heading(monkeypatch):
+    monkeypatch.setattr("analytics.technical_report.fetch_rows",
+                        _recording_fetch([], _three_year_pin_rows))
+    f = compute_findings("AFG", None, None, language="tr", theme="Food and Nutrition")
+    assert [s.heading for s in f.sections] == [
+        "Gıda güvenliği: insani yardıma ihtiyaç duyan kişiler — Son Değerler"]
+
+
+def test_snapshots_do_not_count_toward_the_holm_family(monkeypatch):
+    def rows(ep, params):
+        return _three_year_pin_rows(ep, params) or _yearly_ipc_rows(ep)
+    monkeypatch.setattr("analytics.technical_report.fetch_rows", _recording_fetch([], rows))
+    f = compute_findings("AFG", None, None, language="en", theme="Food and Nutrition")
+    kinds = sorted(s.stat_result["kind"] for s in f.sections)
+    assert kinds == ["snapshot", "trend"]
+    trend_section = next(s for s in f.sections if s.stat_result["kind"] == "trend")
+    # One test in the family: its Holm-adjusted p is its own p.
+    assert trend_section.stat_result["p_adjusted"] == trend_section.stat_result["p_value"]
+    assert "Holm correction across all 1 tests" in findings_to_context(f)

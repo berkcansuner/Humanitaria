@@ -49,9 +49,9 @@ class Findings:
 # so they are written in the report language here, in code.
 _HEADINGS = {
     "tr": {"trend": "{name} — Eğilim Analizi", "region": "{name} — Bölgesel Analiz",
-           "correlation": "Korelasyon — {x} ↔ {y}"},
+           "correlation": "Korelasyon — {x} ↔ {y}", "snapshot": "{name} — Son Değerler"},
     "en": {"trend": "{name} — Trend Analysis", "region": "{name} — Regional Analysis",
-           "correlation": "Correlation — {x} ↔ {y}"},
+           "correlation": "Correlation — {x} ↔ {y}", "snapshot": "{name} — Latest Values"},
 }
 
 
@@ -133,6 +133,21 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
             tr = trend(t_values, indicator=name, min_points=min_pts, times=times)
             if tr.direction == "insufficient_data":
                 gaps.append(f"{name}: trend için yetersiz veri (n={tr.n_points})")
+                # The values are still the sector's figures: reported as they are, untested.
+                chart, chart_dark = _both_modes(
+                    trend_chart, t_periods, t_values, None, None,
+                    unit=_axis_unit(ind, language), times=times,
+                    language=language, percent=percent, source=source)
+                sections.append(ReportSection(
+                    heading=headings["snapshot"].format(name=name),
+                    stat_result={"kind": "snapshot", "indicator": name, "p_value": None,
+                                 "periods": t_periods, "values": t_values,
+                                 "value_unit": _value_unit(ind), "min_points": min_pts,
+                                 "look_back": look_back, "chosen_from": date_from},
+                    chart=chart,
+                    chart_dark=chart_dark,
+                    findings_text="",
+                ))
             else:
                 if look_back:
                     look_backs.append({"indicator": name, **look_back})
@@ -408,7 +423,27 @@ def _correlation_text(r: dict) -> str:
             f"{_verdict(r)}, n={r['n_points']}.")
 
 
-_TEXT = {"trend": _trend_text, "region": _region_text, "correlation": _correlation_text}
+def _snapshot_text(r: dict) -> str:
+    """A series too short for a trend: its values, with no test and no verdict."""
+    periods = [str(p)[:10] for p in r["periods"]]
+    n, unit = len(periods), r["value_unit"]
+    lb = r.get("look_back")
+    window = ""
+    if lb:
+        window = (f"The chosen period {r['chosen_from']} to {lb['date_to']} holds "
+                  f"{_observations(lb['chosen_points'])}, so the values cover the longer "
+                  f"look-back {lb['date_from']} to {lb['date_to']}. ")
+    span = f"({periods[0]})" if n == 1 else f"from {periods[0]} to {periods[-1]}"
+    values = "; ".join(f"{p} {_value(v, unit)}" for p, v in zip(periods, r["values"]))
+    as_of = ("before" if lb and not lb["chosen_points"] else "as of")
+    return (f"{window}{r['indicator']}: {_observations(n)} {span} — too few for a trend test "
+            f"(at least {r['min_points']} are needed), so no trend or statistical test is "
+            f"reported. Values: {values}. Latest value {as_of} the chosen period: "
+            f"{_value(r['values'][-1], unit)} ({periods[-1]}).")
+
+
+_TEXT = {"trend": _trend_text, "region": _region_text, "correlation": _correlation_text,
+         "snapshot": _snapshot_text}
 
 
 def findings_to_context(findings: Findings) -> str:
