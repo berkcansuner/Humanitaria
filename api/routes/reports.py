@@ -162,6 +162,16 @@ def _no_findings_message(req: ReportRequest) -> str:
     )
 
 
+def _no_iso3_message(req: ReportRequest) -> str:
+    """technical_monitoring for a country HDX HAPI has no ISO3 code for, in the
+    report's language (it used to be Turkish for every report)."""
+    if req.language == "tr":
+        return (f"**{req.country}** için HDX HAPI ülke kodu (ISO3) bulunamadı; teknik rapor "
+                "bu ülke için oluşturulamıyor.")
+    return (f"No HDX HAPI country code (ISO3) was found for **{req.country}**, so a technical "
+            "report cannot be generated for this country.")
+
+
 # ReliefWeb tags global reports with the country "World". They stay in the index for
 # chat, but a country report on "World" makes no sense, so the form leaves it out.
 _NOT_A_COUNTRY = {"World"}
@@ -252,10 +262,7 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                     yield ServerSentEvent(
                         event="token",
                         data=json.dumps(
-                            {"content": (
-                                f"**{req.country}** için HDX HAPI ülke kodu (ISO3) "
-                                "bulunamadı; teknik rapor bu ülke için oluşturulamıyor."
-                            )}, ensure_ascii=False),
+                            {"content": _no_iso3_message(req)}, ensure_ascii=False),
                     )
                     yield ServerSentEvent(event="done", data="{}")
                     return

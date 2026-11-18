@@ -309,6 +309,132 @@
       }
     }
   },
+  "reports": {
+    "topbar": "M&E Reports",
+    "newReport": "New report",
+    "docTitle": "{heading} · {type} · Humanitaria",
+    "form": {
+      "title": "New report",
+      "type": "Report type",
+      "country": "Country",
+      "countryPlaceholder": "Select a country…",
+      "sector": "Sector",
+      "allSectors": "All sectors",
+      "from": "From",
+      "to": "To",
+      "language": "Language",
+      "generate": "Generate report",
+      "stop": "Stop generating",
+      "optionsError": "Could not load options. Try refreshing.",
+      "loadingCountries": "Preparing the country list…",
+      "chooseCountry": "Choose a country to generate a report."
+    },
+    "continues": {
+      "series": "Continues {name}, {period}. The new report opens with what changed since then.",
+      "endClamped": "The period ends today, because it isn't over yet.",
+      "startClamped": "The start moved to {date}: older documents are no longer indexed.",
+      "differs": "These settings differ from {name}, so this report won't be compared with it.",
+      "clear": "Don't compare with the previous report"
+    },
+    "saved": {
+      "title": "Saved reports",
+      "waitWhileGenerating": "Saved reports open when this report finishes, or after you stop it.",
+      "count": "{n} report | {n} reports",
+      "until": "to {date}",
+      "noPeriod": "No period set",
+      "empty": "No saved reports yet.",
+      "delete": "Delete report: {name}, {type}",
+      "deleteWithPeriod": "Delete report: {name}, {type}, {period}"
+    },
+    "viewer": {
+      "back": "All reports",
+      "stopAndBack": "Stop and show all reports",
+      "comparedDeleted": "Compared with an earlier report that has since been deleted.",
+      "comparedWith": "Compared with {link}",
+      "previousReport": "the previous report",
+      "notComparedWith": "Not compared with the report for {link}",
+      "earlierPeriod": "the earlier period",
+      "continuedBy": "Continued by {link}",
+      "laterReport": "a later report",
+      "runNext": "Run next period",
+      "copy": "Copy with sources",
+      "copied": "Copied",
+      "pdf": "Download PDF",
+      "pdfPreparing": "Preparing…",
+      "pdfError": "Could not download the PDF. Please try again.",
+      "reading": "Reading the sources. The first words usually appear within two minutes.",
+      "stopped": "Stopped. This report was not saved.",
+      "imagesCover": "Generating cover illustration…",
+      "imagesSection": "Illustrating “{heading}”…"
+    },
+    "compare": {
+      "checking": "Checking against the previous report…",
+      "checkingPeriod": "Checking against the previous report ({period})…",
+      "none": "Checked against the previous report: nothing removed.",
+      "removed": "Checked against the previous report: {n} statement removed because it presented older or undated information as new. | Checked against the previous report: {n} statements removed because they presented older or undated information as new."
+    },
+    "empty": {
+      "title": "Build an M&E report from the record.",
+      "lede": "Each report draws on many ReliefWeb reports at once and cites every one, so you can check it and quote it.",
+      "pickSeries": "Pick up a series where it left off.",
+      "pickRecent": "Open a recent report.",
+      "seriesLabel": "Your report series",
+      "recentLabel": "Recent reports",
+      "nextStarts": "next period starts {date}",
+      "nextReady": "next period ready, from {date}"
+    },
+    "toast": {
+      "deleted": "Report deleted.",
+      "undo": "Undo"
+    },
+    "notices": {
+      "copy": "Could not copy the report. Your browser blocked clipboard access.",
+      "load": "Could not load your saved reports. Try refreshing the page.",
+      "open": "Could not open the report. Try again.",
+      "delete": "Could not delete the report. It is back in the list."
+    },
+    "errors": {
+      "previousDeleted": "The report this one continues was deleted, so there is nothing to compare against. Generate again without the comparison.",
+      "previousMismatch": "The settings no longer match the report this one continues. Generate again without the comparison.",
+      "generate": "Could not generate the report. Please try again.",
+      "stream": "Something went wrong.",
+      "connection": "Couldn't reach the server. It may be waking up (about 30 seconds); generate again."
+    },
+    "types": {
+      "situation": "Situation Report",
+      "indicator_monitoring": "Indicator Monitoring Report",
+      "needs_assessment": "Needs Assessment Brief",
+      "technical_monitoring": "Technical Monitoring Report"
+    },
+    "typesShort": {
+      "situation": "Situation",
+      "indicator_monitoring": "Indicator Monitoring",
+      "needs_assessment": "Needs Assessment",
+      "technical_monitoring": "Technical Monitoring"
+    },
+    "sectors": {
+      "agriculture": "Agriculture",
+      "campManagement": "Camp Coordination and Camp Management",
+      "climate": "Climate Change and Environment",
+      "contributions": "Contributions",
+      "coordination": "Coordination",
+      "disasterManagement": "Disaster Management",
+      "education": "Education",
+      "foodNutrition": "Food and Nutrition",
+      "gender": "Gender",
+      "health": "Health",
+      "hivAids": "HIV/Aids",
+      "humanitarianFinancing": "Humanitarian Financing",
+      "logistics": "Logistics and Telecommunications",
+      "mineAction": "Mine Action",
+      "peace": "Peacekeeping and Peacebuilding",
+      "protection": "Protection and Human Rights",
+      "recovery": "Recovery and Reconstruction",
+      "safety": "Safety and Security",
+      "shelter": "Shelter and Non-Food Items",
+      "wash": "Water Sanitation Hygiene"
+    }
+  },
   "errors": {
     "not_authenticated": "Please log in to continue.",
     "forbidden": "You don't have access to this.",

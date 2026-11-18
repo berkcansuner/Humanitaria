@@ -127,7 +127,7 @@ def test_network_error_on_one_indicator_becomes_gap_not_abort():
     with patch("analytics.technical_report.fetch_rows", side_effect=_side_effect):
         f = compute_findings("AFG", None, None)
 
-    assert any("idps" in g or "Yerinden edilmiş" in g for g in f.gaps)
+    assert any("idps" in g or "yerinden edilmiş" in g for g in f.gaps)
     assert "idps" not in f.indicators_covered
     # Diğer indikatörler (hepsi boş döner) yine de işlendi → kendi gaps'lerine düştü.
     assert len(f.gaps) == len(__import__("analytics.indicators", fromlist=["INDICATORS"]).INDICATORS)
@@ -377,7 +377,7 @@ def test_english_report_names_sections_in_english(_mock):
     "idps" if ep.endswith("idps") else "other"))
 def test_turkish_report_keeps_turkish_headings(_mock):
     f = compute_findings("AFG", "2025-01-01", "2025-12-31", language="tr")
-    assert "Yerinden edilmiş kişi (IDP) — Trend Analizi" in [s.heading for s in f.sections]
+    assert "Ülke içinde yerinden edilmiş kişiler (IDP) — Trend Analizi" in [s.heading for s in f.sections]
 
 
 def test_every_indicator_has_an_english_name():

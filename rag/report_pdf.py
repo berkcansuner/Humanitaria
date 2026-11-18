@@ -53,9 +53,92 @@ _REPORT_TYPE_LABELS = {
     "technical_monitoring": "Technical Monitoring Report",
 }
 
+# The PDF's fixed labels follow the REPORT's language (not the reader's interface);
+# any language other than Turkish keeps the English labels.
+_LABELS = {
+    "en": {
+        "types": _REPORT_TYPE_LABELS,
+        "all_sectors": "All sectors",
+        "period": "Period", "sectors": "Sectors", "source_reports": "Source reports",
+        "generated": "Generated", "sources": "Sources",
+        "widths": ("32%", "30%", "20%", "18%"),
+        "footer": "Generated from ReliefWeb reports by Humanitaria &middot; {date} &middot; "
+                  "Page <pdf:pagenumber> of <pdf:pagecount>",
+    },
+    "tr": {
+        "types": {
+            "situation": "İzleme ve Değerlendirme (M&E) Durum Raporu",
+            "indicator_monitoring": "İzleme ve Değerlendirme (M&E) Gösterge İzleme Raporu",
+            "needs_assessment": "İzleme ve Değerlendirme (M&E) İhtiyaç Değerlendirmesi Özeti",
+            "technical_monitoring": "Teknik İzleme Raporu",
+        },
+        "all_sectors": "Tüm sektörler",
+        "period": "Dönem", "sectors": "Sektörler", "source_reports": "Kaynak raporlar",
+        "generated": "Oluşturma tarihi", "sources": "Kaynaklar",
+        # "Oluşturma tarihi" is twice "Generated": its column takes the room.
+        "widths": ("31%", "27%", "20%", "22%"),
+        "footer": "Humanitaria tarafından ReliefWeb raporlarından oluşturuldu &middot; {date} "
+                  "&middot; Sayfa <pdf:pagenumber> / <pdf:pagecount>",
+    },
+}
 
-def _type_label(report_type: str | None) -> str:
-    return _REPORT_TYPE_LABELS.get(report_type or "situation", _REPORT_TYPE_LABELS["situation"])
+# The form's sectors (ReliefWeb theme names, api/routes/reports.py THEMES) in Turkish,
+# as the interface names them (frontend/src/locales/tr.json reports.sectors).
+_SECTORS_TR = {
+    "Agriculture": "Tarım",
+    "Camp Coordination and Camp Management": "Kamp koordinasyonu ve kamp yönetimi",
+    "Climate Change and Environment": "İklim değişikliği ve çevre",
+    "Contributions": "Katkılar",
+    "Coordination": "Koordinasyon",
+    "Disaster Management": "Afet yönetimi",
+    "Education": "Eğitim",
+    "Food and Nutrition": "Gıda ve beslenme",
+    "Gender": "Toplumsal cinsiyet",
+    "Health": "Sağlık",
+    "HIV/Aids": "HIV/AIDS",
+    "Humanitarian Financing": "İnsani yardım fonlaması",
+    "Logistics and Telecommunications": "Lojistik ve telekomünikasyon",
+    "Mine Action": "Mayınla mücadele",
+    "Peacekeeping and Peacebuilding": "Barışı koruma ve barış inşası",
+    "Protection and Human Rights": "Koruma ve insan hakları",
+    "Recovery and Reconstruction": "İyileştirme ve yeniden yapılanma",
+    "Safety and Security": "Emniyet ve güvenlik",
+    "Shelter and Non-Food Items": "Barınma ve gıda dışı malzemeler",
+    "Water Sanitation Hygiene": "Su, sanitasyon ve hijyen",
+}
+
+_MONTHS_TR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos",
+              "Eylül", "Ekim", "Kasım", "Aralık"]
+
+
+def _language(report: dict) -> str:
+    lang = str(report.get("language") or "en").strip().lower()
+    return lang if lang in _LABELS else "en"
+
+
+def _type_label(report_type: str | None, language: str = "en") -> str:
+    types = _LABELS[language]["types"]
+    return types.get(report_type or "situation", types["situation"])
+
+
+def _sector(theme: str | None, language: str) -> str:
+    if not theme:
+        return _LABELS[language]["all_sectors"]
+    return _SECTORS_TR.get(theme, theme) if language == "tr" else theme
+
+
+def _day(iso: str, language: str) -> str:
+    """A period end as the report's language writes it: ISO in English (unchanged),
+    day.month.year in Turkish ("2026-11-18" → "18.11.2026")."""
+    m = re.fullmatch(r"(\d{4})-(\d{2})-(\d{2})", iso or "")
+    return f"{m[3]}.{m[2]}.{m[1]}" if m and language == "tr" else iso
+
+
+def _generated_date(now: datetime, language: str) -> str:
+    """'18 Nov 2026' in English (unchanged), '18 Kasım 2026' in Turkish."""
+    if language == "tr":
+        return f"{now.day} {_MONTHS_TR[now.month - 1]} {now.year}"
+    return now.strftime("%d %b %Y")
 
 
 _FONT_DIR = os.path.join(os.path.dirname(reportlab.__file__), "fonts")
@@ -182,16 +265,19 @@ def _body_html(markdown_text: str, section_images=None) -> str:
 
 def render_report_pdf(report: dict) -> bytes:
     """Render a stored report dict (content markdown + sources + metadata) to PDF bytes."""
+    language = _language(report)
+    labels = _LABELS[language]
+    widths = labels["widths"]
     country = html.escape(str(report.get("country") or ""))
-    sector = html.escape(str(report.get("theme") or "All sectors"))
-    date_from = report.get("date_from") or "…"
-    date_to = report.get("date_to") or "…"
+    sector = html.escape(_sector(report.get("theme"), language))
+    date_from = _day(report.get("date_from") or "…", language)
+    date_to = _day(report.get("date_to") or "…", language)
     period = html.escape(f"{date_from} – {date_to}")
     # Cover count = the sources actually listed below, so the cover can never advertise more
     # reports than the reader can see (doc_count is the retrieved set; not all of it gets cited).
     source_count = len(_valid_sources(report.get("sources")))
-    generated = datetime.now(timezone.utc).strftime("%d %b %Y")
-    type_label = _type_label(report.get("report_type"))
+    generated = _generated_date(datetime.now(timezone.utc), language)
+    type_label = _type_label(report.get("report_type"), language)
     cover_image = report.get("cover_image")
     section_images = report.get("section_images")
     cover_html = (
@@ -209,18 +295,18 @@ def render_report_pdf(report: dict) -> bytes:
 <div class="titlerule"></div>
 
 <table class="scopebox" width="100%"><tr>
-  <td width="32%"><span class="lbl">Period</span><br/>{period}</td>
-  <td width="30%"><span class="lbl">Sectors</span><br/>{sector}</td>
-  <td width="20%"><span class="lbl">Source reports</span><br/>{source_count}</td>
-  <td width="18%"><span class="lbl">Generated</span><br/>{html.escape(generated)}</td>
+  <td width="{widths[0]}"><span class="lbl">{labels["period"]}</span><br/>{period}</td>
+  <td width="{widths[1]}"><span class="lbl">{labels["sectors"]}</span><br/>{sector}</td>
+  <td width="{widths[2]}"><span class="lbl">{labels["source_reports"]}</span><br/>{source_count}</td>
+  <td width="{widths[3]}"><span class="lbl">{labels["generated"]}</span><br/>{html.escape(generated)}</td>
 </tr></table>
 
 <div class="body">{_body_html(report.get("content"), section_images)}</div>
 
-<h2 class="sources-h">Sources</h2>
+<h2 class="sources-h">{labels["sources"]}</h2>
 <table class="sources" width="100%">{_sources_rows(report.get("sources"))}</table>
 
-<div id="footerContent">Generated from ReliefWeb reports by Humanitaria &middot; {html.escape(generated)} &middot; Page <pdf:pagenumber> of <pdf:pagecount></div>
+<div id="footerContent">{labels["footer"].format(date=html.escape(generated))}</div>
 </body></html>"""
 
     _register_fonts()

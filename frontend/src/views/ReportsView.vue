@@ -1,6 +1,6 @@
 <template>
   <div class="reports-app">
-    <AppTopbar context="M&amp;E Reports" />
+    <AppTopbar :context="t('reports.topbar')" />
 
     <div :class="['reports-body', { 'has-report': !!(current || openingId) }]">
       <aside class="reports-aside">
@@ -14,39 +14,39 @@
           @click="openForm"
         >
           <Plus :size="16" aria-hidden="true" />
-          New report
+          {{ t('reports.newReport') }}
         </button>
         <form v-else class="report-form" @submit.prevent="generate">
-          <h2 ref="formTitle" class="form-title" tabindex="-1">New report</h2>
+          <h2 ref="formTitle" class="form-title" tabindex="-1">{{ t('reports.form.title') }}</h2>
 
           <label class="field">
-            <span>Report type</span>
+            <span>{{ t('reports.form.type') }}</span>
             <select v-model="form.report_type" :disabled="generating">
-              <option v-for="t in REPORT_TYPES" :key="t.value" :value="t.value">
-                {{ t.label }}
+              <option v-for="rt in REPORT_TYPES" :key="rt.value" :value="rt.value">
+                {{ reportTypeLabel(rt.value, t) }}
               </option>
             </select>
           </label>
 
           <label class="field">
-            <span>Country</span>
+            <span>{{ t('reports.form.country') }}</span>
             <select v-model="form.country" required :disabled="generating">
-              <option value="" disabled>Select a country…</option>
+              <option value="" disabled>{{ t('reports.form.countryPlaceholder') }}</option>
               <option v-for="c in countries" :key="c" :value="c">{{ c }}</option>
             </select>
           </label>
 
           <label class="field">
-            <span>Sector</span>
+            <span>{{ t('reports.form.sector') }}</span>
             <select v-model="form.theme" :disabled="generating">
-              <option value="">All sectors</option>
-              <option v-for="t in themes" :key="t" :value="t">{{ t }}</option>
+              <option value="">{{ t('reports.form.allSectors') }}</option>
+              <option v-for="th in themes" :key="th" :value="th">{{ sectorLabel(th, t) }}</option>
             </select>
           </label>
 
           <div class="field-row">
             <label class="field">
-              <span>From</span>
+              <span>{{ t('reports.form.from') }}</span>
               <input
                 v-model="form.date_from"
                 type="date"
@@ -56,7 +56,7 @@
               />
             </label>
             <label class="field">
-              <span>To</span>
+              <span>{{ t('reports.form.to') }}</span>
               <input
                 v-model="form.date_to"
                 type="date"
@@ -68,10 +68,11 @@
           </div>
 
           <label class="field">
-            <span>Language</span>
+            <span>{{ t('reports.form.language') }}</span>
+            <!-- The report's own language; each option names itself (endonyms). -->
             <select v-model="form.language" :disabled="generating">
-              <option value="en">English</option>
-              <option value="tr">Türkçe</option>
+              <option value="en" lang="en">English</option>
+              <option value="tr" lang="tr">Türkçe</option>
             </select>
           </label>
 
@@ -79,24 +80,28 @@
                with what changed since then. -->
           <div v-if="continuation && !generating" class="continues" role="status">
             <template v-if="continuesSeries">
-              <p>
-                Continues <strong>{{ continuation.name }}</strong
-                >, <span class="continues-period">{{ continuation.period }}</span
-                >. The new report opens with what changed since then.
-              </p>
+              <i18n-t keypath="reports.continues.series" tag="p" scope="global">
+                <template #name>
+                  <strong>{{ savedName(continuation.report) }}</strong>
+                </template>
+                <template #period>
+                  <span class="continues-period">{{ savedPeriod(continuation.report) }}</span>
+                </template>
+              </i18n-t>
               <p v-if="continuationNotes.endClamped" class="form-hint">
-                The period ends today, because it isn't over yet.
+                {{ t('reports.continues.endClamped') }}
               </p>
               <p v-if="continuationNotes.startClamped" class="form-hint">
-                The start moved to {{ minDate }}: older documents are no longer indexed.
+                {{ t('reports.continues.startClamped', { date: shownDay(minDate) }) }}
               </p>
             </template>
-            <p v-else>
-              These settings differ from <strong>{{ continuation.name }}</strong
-              >, so this report won't be compared with it.
-            </p>
+            <i18n-t v-else keypath="reports.continues.differs" tag="p" scope="global">
+              <template #name>
+                <strong>{{ savedName(continuation.report) }}</strong>
+              </template>
+            </i18n-t>
             <button type="button" class="continues-clear" @click="continuation = null">
-              {{ continuesSeries ? "Don't compare with the previous report" : 'Dismiss' }}
+              {{ continuesSeries ? t('reports.continues.clear') : t('common.dismiss') }}
             </button>
           </div>
 
@@ -109,7 +114,7 @@
             @click="stopGeneration"
           >
             <Square :size="14" aria-hidden="true" />
-            Stop generating
+            {{ t('reports.form.stop') }}
           </button>
           <button
             v-else
@@ -119,20 +124,22 @@
             :disabled="!form.country"
           >
             <FileText :size="16" />
-            Generate report
+            {{ t('reports.form.generate') }}
           </button>
 
-          <p v-if="optionsError" class="form-hint">Could not load options. Try refreshing.</p>
-          <p v-else-if="!countries.length" class="form-hint">Preparing the country list…</p>
+          <p v-if="optionsError" class="form-hint">{{ t('reports.form.optionsError') }}</p>
+          <p v-else-if="!countries.length" class="form-hint">
+            {{ t('reports.form.loadingCountries') }}
+          </p>
           <p v-else-if="!form.country && !generating" class="form-hint">
-            Choose a country to generate a report.
+            {{ t('reports.form.chooseCountry') }}
           </p>
         </form>
 
         <div class="saved">
-          <h3 class="saved-title-h">Saved reports</h3>
+          <h3 class="saved-title-h">{{ t('reports.saved.title') }}</h3>
           <p v-if="generating" class="form-hint">
-            Saved reports open when this report finishes, or after you stop it.
+            {{ t('reports.saved.waitWhileGenerating') }}
           </p>
           <template v-if="loadingList && !reports.length">
             <span v-for="n in 4" :key="'sk-' + n" class="skeleton saved-skel"></span>
@@ -200,9 +207,12 @@
                   <span class="saved-series-text">
                     <span class="saved-name">{{ savedName(e.latest) }}</span>
                     <span class="saved-meta"
-                      >{{ savedType(e.latest) }} · {{ e.reports.length }} reports{{ ' '
+                      >{{ savedType(e.latest) }} ·
+                      {{ t('reports.saved.count', { n: e.reports.length }, e.reports.length)
+                      }}{{ ' '
                       }}<span v-if="e.latest.date_to" class="saved-period"
-                        >· to {{ e.latest.date_to }}</span
+                        >·
+                        {{ t('reports.saved.until', { date: shownDay(e.latest.date_to) }) }}</span
                       ></span
                     >
                   </span>
@@ -230,7 +240,7 @@
                       @click="openReport(r.id)"
                     >
                       <span class="saved-name saved-period-name">{{
-                        savedPeriod(r) || 'No period set'
+                        savedPeriod(r) || t('reports.saved.noPeriod')
                       }}</span>
                     </button>
                     <button
@@ -246,7 +256,7 @@
               </li>
             </template>
           </ul>
-          <p v-else class="form-hint">No saved reports yet.</p>
+          <p v-else class="form-hint">{{ t('reports.saved.empty') }}</p>
         </div>
       </aside>
 
@@ -259,7 +269,7 @@
           @click="generating ? stopAndShowList() : closeReport()"
         >
           <ArrowLeft :size="15" aria-hidden="true" />
-          {{ generating ? 'Stop and show all reports' : 'All reports' }}
+          {{ generating ? t('reports.viewer.stopAndBack') : t('reports.viewer.back') }}
         </button>
         <!-- One reading column: every block shares its 70ch measure (set at body size),
              so the Sources line and the header align with the text. -->
@@ -274,52 +284,73 @@
         </div>
         <div v-else-if="current" class="report-column">
           <img v-if="current.cover_image" class="cover-img" :src="current.cover_image" alt="" />
-          <p v-if="current.imagesStatus" class="images-status">{{ current.imagesStatus }}</p>
+          <p v-if="imagesStatusText" class="images-status">{{ imagesStatusText }}</p>
           <header v-if="titleParts.heading || current.id" class="report-head">
             <div class="report-head-text">
               <h2 v-if="titleParts.heading" class="report-title-h">{{ titleParts.heading }}</h2>
               <p v-if="metaParts.length" class="report-meta">
                 <span v-for="(part, i) in metaParts" :key="i" class="meta-part">{{ part }}</span>
               </p>
-              <p v-if="comparedWith" class="report-compared">
-                <template v-if="comparedWith.deleted">
-                  Compared with an earlier report that has since been deleted.
-                </template>
-                <template v-else>
-                  Compared with
+              <template v-if="comparedWith">
+                <p v-if="comparedWith.deleted" class="report-compared">
+                  {{ t('reports.viewer.comparedDeleted') }}
+                </p>
+                <i18n-t
+                  v-else
+                  keypath="reports.viewer.comparedWith"
+                  tag="p"
+                  class="report-compared"
+                  scope="global"
+                >
+                  <template #link>
+                    <button
+                      type="button"
+                      class="report-compared-link"
+                      @click="openReport(comparedWith.id)"
+                    >
+                      {{ comparedWith.period || t('reports.viewer.previousReport') }}
+                    </button>
+                  </template>
+                </i18n-t>
+              </template>
+              <!-- A series is implicit: a report made as a one-off can sit after an
+                   earlier period it was never compared with. Say so. -->
+              <i18n-t
+                v-if="notComparedWith"
+                keypath="reports.viewer.notComparedWith"
+                tag="p"
+                class="report-compared"
+                scope="global"
+              >
+                <template #link>
                   <button
                     type="button"
                     class="report-compared-link"
-                    @click="openReport(comparedWith.id)"
+                    @click="openReport(notComparedWith.id)"
                   >
-                    {{ comparedWith.period || 'the previous report' }}
+                    {{ savedPeriod(notComparedWith) || t('reports.viewer.earlierPeriod') }}
                   </button>
                 </template>
-              </p>
-              <!-- A series is implicit: a report made as a one-off can sit after an
-                   earlier period it was never compared with. Say so. -->
-              <p v-if="notComparedWith" class="report-compared">
-                Not compared with the report for
-                <button
-                  type="button"
-                  class="report-compared-link"
-                  @click="openReport(notComparedWith.id)"
-                >
-                  {{ savedPeriod(notComparedWith) || 'the earlier period' }}
-                </button>
-              </p>
+              </i18n-t>
               <!-- An older period links forward instead of offering "Run next period",
                    which would continue a different (newer) report. -->
-              <p v-if="continuedBy" class="report-compared">
-                Continued by
-                <button
-                  type="button"
-                  class="report-compared-link"
-                  @click="openReport(continuedBy.id)"
-                >
-                  {{ savedPeriod(continuedBy) || 'a later report' }}
-                </button>
-              </p>
+              <i18n-t
+                v-if="continuedBy"
+                keypath="reports.viewer.continuedBy"
+                tag="p"
+                class="report-compared"
+                scope="global"
+              >
+                <template #link>
+                  <button
+                    type="button"
+                    class="report-compared-link"
+                    @click="openReport(continuedBy.id)"
+                  >
+                    {{ savedPeriod(continuedBy) || t('reports.viewer.laterReport') }}
+                  </button>
+                </template>
+              </i18n-t>
             </div>
             <div v-if="current.id" class="report-actions">
               <button
@@ -330,34 +361,36 @@
                 @click="runNextPeriod"
               >
                 <CalendarPlus :size="15" />
-                Run next period
+                {{ t('reports.viewer.runNext') }}
               </button>
               <button type="button" class="pdf-btn" @click="copyReport">
                 <Check v-if="reportCopied" :size="15" />
                 <Copy v-else :size="15" />
-                {{ reportCopied ? 'Copied' : 'Copy with sources' }}
+                {{ reportCopied ? t('reports.viewer.copied') : t('reports.viewer.copy') }}
               </button>
               <button type="button" class="pdf-btn" :disabled="pdfLoading" @click="downloadPdf">
                 <Loader2 v-if="pdfLoading" :size="15" class="spin" />
                 <FileDown v-else :size="15" />
-                {{ pdfLoading ? 'Preparing…' : 'Download PDF' }}
+                {{ pdfLoading ? t('reports.viewer.pdfPreparing') : t('reports.viewer.pdf') }}
               </button>
             </div>
           </header>
-          <p v-if="pdfError" class="pdf-error">{{ pdfError }}</p>
+          <p v-if="pdfError" class="pdf-error">{{ errorText(pdfError) }}</p>
           <div v-if="!current.content && generating" class="report-loading">
             <!-- The report model reads all sources before writing its first word
                  (about a minute and a half), so the wait is named, not silent. -->
             <p class="report-loading-note" role="status">
-              Reading the sources. The first words usually appear within two minutes.
+              {{ t('reports.viewer.reading') }}
             </p>
             <span class="skeleton skel-line"></span>
             <span class="skeleton skel-line"></span>
             <span class="skeleton skel-line short"></span>
           </div>
+          <!-- The report body is in the report's language, whatever the interface's. -->
           <article
             v-else
             class="report-content"
+            :lang="reportLang"
             v-html="
               injectComparisonNote(
                 injectSectionImages(
@@ -373,13 +406,13 @@
             "
           ></article>
           <p v-if="current.stopped" class="stopped-note" role="status">
-            Stopped. This report was not saved.
+            {{ t('reports.viewer.stopped') }}
           </p>
           <!-- Chat's error: hairline border, the alert icon and "Try again" in place;
                the form still holds what was asked for. -->
           <div v-if="genError" class="error-banner">
             <AlertCircle :size="16" class="error-icon" aria-hidden="true" />
-            <span class="error-text">{{ genError }}</span>
+            <span class="error-text">{{ errorText(genError) }}</span>
             <button
               v-if="!generating && form.country"
               type="button"
@@ -387,7 +420,7 @@
               @click="generate"
             >
               <RotateCcw :size="14" aria-hidden="true" />
-              Try again
+              {{ t('common.tryAgain') }}
             </button>
           </div>
           <SourceList v-if="shown.sources" :sources="shown.sources" />
@@ -396,22 +429,23 @@
              hairline rows), with the user's series as the starting points. -->
         <div v-else class="report-empty">
           <div class="empty-inner">
-            <h2 class="empty-title">Build an M&amp;E report from the record.</h2>
-            <p class="empty-lede">
-              Each report draws on many ReliefWeb reports at once and cites every one, so you can
-              check it and quote it.
-            </p>
+            <h2 class="empty-title">{{ t('reports.empty.title') }}</h2>
+            <p class="empty-lede">{{ t('reports.empty.lede') }}</p>
             <template v-if="emptyRows.length">
               <p class="empty-pick">
                 {{
                   emptyRows[0].series
-                    ? 'Pick up a series where it left off.'
-                    : 'Open a recent report.'
+                    ? t('reports.empty.pickSeries')
+                    : t('reports.empty.pickRecent')
                 }}
               </p>
               <ul
                 class="empty-list"
-                :aria-label="emptyRows[0].series ? 'Your report series' : 'Recent reports'"
+                :aria-label="
+                  emptyRows[0].series
+                    ? t('reports.empty.seriesLabel')
+                    : t('reports.empty.recentLabel')
+                "
               >
                 <li v-for="row in emptyRows" :key="row.report.id">
                   <button type="button" class="empty-row" @click="openReport(row.report.id)">
@@ -432,7 +466,7 @@
     <UndoToast
       :message="toastMessage"
       :kind="pendingDelete ? 'undo' : 'error'"
-      :action-label="pendingDelete ? 'Undo' : ''"
+      :action-label="pendingDelete ? t('reports.toast.undo') : ''"
       :focus-action="!!pendingDelete"
       :focus-key="pendingDelete ? pendingDelete.id : null"
       @action="undoDelete"
@@ -444,6 +478,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import {
   FileText,
   Trash2,
@@ -472,13 +507,28 @@ import { comparisonNote, injectComparisonNote } from '../utils/comparisonNote.js
 import { revealSource, returnToCite } from '../utils/sources.js'
 import { parseSSE } from '../utils/parseSSE.js'
 import { getReportOptions, listReports, getReport, deleteReport } from '../utils/reportsApi.js'
-import { REPORT_TYPES, reportTypeBadge } from '../utils/reportTypes.js'
+import {
+  REPORT_TYPES,
+  reportTypeBadge,
+  reportTypeLabel,
+  sectorLabel,
+} from '../utils/reportTypes.js'
 import { splitReportTitle, formatPeriod } from '../utils/reportTitle.js'
 import { groupSeries, newerInSeries, olderInSeries, seriesKey } from '../utils/reportSeries.js'
 import { nextPeriod } from '../utils/nextPeriod.js'
 import { copyWithSources } from '../utils/citationCopy.js'
 import { localIsoDay, minReportDate, maxReportDate } from '../utils/reportDateBounds.js'
 import { handleSessionExpired } from '../utils/authStore.js'
+import { errorFromResponse, errorMessage } from '../utils/errorMessage.js'
+import { normalizeLocale } from '../i18n/locale.js'
+
+// Two languages meet on this page. The interface language (the selector) names
+// everything the app says: labels, buttons, statuses, errors, the type, sector and
+// period lines around a report. The report's own language (its `language`) holds
+// what was generated: the body, its headings and charts, and the copy and PDF taken
+// away. Messages and errors are kept as keys or error objects and translated when
+// rendered, so a language switch reaches all of them.
+const { t, te, locale } = useI18n()
 
 // Prod retains ~1 year of data; clamp the date pickers to [one year ago, today]
 // so a user can't pick a window with no indexed reports (or a future date).
@@ -495,13 +545,14 @@ const openingId = ref(null) // saved report being fetched for the viewer
 const route = useRoute()
 const router = useRouter()
 
+// The report language starts as the interface language (still changeable).
 const form = ref({
   report_type: 'situation',
   country: '',
   theme: '',
   date_from: '',
   date_to: '',
-  language: 'en',
+  language: locale.value,
 })
 
 const current = ref(null) // a saved report as toCurrent() shapes it, or the one streaming
@@ -540,12 +591,33 @@ function toCurrent(rep) {
   }
 }
 const generating = ref(false)
-const genError = ref('')
+// { key } for the view's own messages, { err } for a failed request (its code,
+// status) with `fallback` naming the message when the code has none of its own.
+const genError = ref(null)
 const viewer = ref(null)
 const controller = ref(null)
 
 const pdfLoading = ref(false)
-const pdfError = ref('')
+const pdfError = ref(null)
+
+function errorText(problem) {
+  if (!problem) return ''
+  if (problem.key) return t(problem.key)
+  const { err, fallback } = problem
+  return err && err.code && te(`errors.${err.code}`) ? errorMessage(err, t) : t(fallback)
+}
+
+// While a report's images are drawn: { stage: 'cover' } or { stage: 'section', heading }.
+const imagesStatusText = computed(() => {
+  const s = current.value && current.value.imagesStatus
+  if (!s) return ''
+  return s.stage === 'cover'
+    ? t('reports.viewer.imagesCover')
+    : t('reports.viewer.imagesSection', { heading: s.heading })
+})
+
+// The open report's language, for the body's lang attribute.
+const reportLang = computed(() => (current.value && current.value.language) || undefined)
 
 // Default period: the last three months, in local calendar days (like the bounds).
 function setDefaultDates() {
@@ -557,25 +629,35 @@ function setDefaultDates() {
 }
 
 // Titles carry "[Type —] Country · Sector · period"; the country leads, the rest
-// moves to a small meta line (type as text, not a pill).
-function typeLabel(type) {
-  return (REPORT_TYPES.find((t) => t.value === type) || REPORT_TYPES[0]).label
+// moves to a small meta line (type as text, not a pill). The stored title is data
+// (English labels); the type and sector shown come from the report's codes, in the
+// interface language.
+function shownSector(r, titleSector) {
+  if (!titleSector || titleSector === 'All sectors') return ''
+  return r.theme ? sectorLabel(r.theme, t) : titleSector
 }
 
 function savedName(r) {
   const { heading, sector } = splitReportTitle(r.title)
-  return sector && sector !== 'All sectors' ? `${heading} · ${sector}` : heading
+  const name = shownSector(r, sector)
+  return name ? `${heading} · ${name}` : heading
 }
 
 function savedType(r) {
-  return reportTypeBadge(r.report_type) || 'Situation'
+  return reportTypeBadge(r.report_type, t) || t('reports.typesShort.situation')
+}
+
+// A single day in a list line: ISO in English as before, day.month.year in Turkish.
+function shownDay(iso) {
+  return locale.value === 'tr' ? formatPeriod(iso) : iso
 }
 
 // Each delete button names its report: a list of identical "Delete report"
 // buttons does not say which one a screen-reader user is about to remove.
 function deleteLabel(r) {
   const period = savedPeriod(r)
-  return `Delete report: ${savedName(r)}, ${savedType(r)}${period ? `, ${period}` : ''}`
+  const params = { name: savedName(r), type: savedType(r), period }
+  return period ? t('reports.saved.deleteWithPeriod', params) : t('reports.saved.delete', params)
 }
 
 // Periods read "17.11.2025 - 17.11.2026" wherever a saved report is named.
@@ -588,9 +670,12 @@ const reportCopied = ref(false)
 let copiedTimer = null
 async function copyReport() {
   if (!current.value) return
-  const ok = await copyWithSources(current.value.content, current.value.sources)
+  // What is copied is the report: its Sources label is in the report's language.
+  const ok = await copyWithSources(current.value.content, current.value.sources, {
+    lang: normalizeLocale(current.value.language) || 'en',
+  })
   if (!ok) {
-    showNotice('Could not copy the report. Your browser blocked clipboard access.')
+    showNotice('reports.notices.copy')
     return
   }
   reportCopied.value = true
@@ -606,8 +691,11 @@ const titleParts = computed(() => splitReportTitle(current.value && current.valu
 const metaParts = computed(() => {
   if (!current.value || !current.value.title) return []
   const { sector, period } = titleParts.value
-  const shownSector = sector === 'All sectors' ? '' : sector
-  return [typeLabel(current.value.report_type), shownSector, formatPeriod(period)].filter(Boolean)
+  return [
+    reportTypeLabel(current.value.report_type, t),
+    shownSector(current.value, sector),
+    formatPeriod(period),
+  ].filter(Boolean)
 })
 
 onMounted(async () => {
@@ -637,12 +725,14 @@ watch(
 )
 
 // Tab title names the open report ("Afghanistan · Situation Report · Humanitaria").
+// The locale is a source too: on a language switch the router re-applies the
+// route's own title synchronously, and this watcher runs after it.
 watch(
-  () => [titleParts.value.heading, current.value && current.value.report_type],
+  () => [titleParts.value.heading, current.value && current.value.report_type, locale.value],
   ([heading, type]) => {
     document.title = heading
-      ? `${heading} · ${typeLabel(type)} · Humanitaria`
-      : 'M&E reports · Humanitaria'
+      ? t('reports.docTitle', { heading, type: reportTypeLabel(type, t) })
+      : `${t('titles.reports')} · Humanitaria`
   },
   { immediate: true },
 )
@@ -654,7 +744,7 @@ async function loadList() {
     listLoaded.value = true
   } catch (e) {
     console.error('Failed to load reports:', e)
-    showNotice('Could not load your saved reports. Try refreshing the page.')
+    showNotice('reports.notices.load')
   } finally {
     loadingList.value = false
   }
@@ -705,7 +795,7 @@ async function openReport(id, { fromRoute = false } = {}) {
     })
   } catch (e) {
     console.error('Failed to open report:', e)
-    showNotice('Could not open the report. Try again.')
+    showNotice('reports.notices.open')
     if (!current.value || current.value.id !== id) syncUrl(null)
   } finally {
     if (openingId.value === id) openingId.value = null
@@ -713,11 +803,12 @@ async function openReport(id, { fromRoute = false } = {}) {
 }
 
 // Errors for list actions, shown in the same toast as Undo (they used to reach
-// only the console). Cleared after a few seconds or by the dismiss button.
+// only the console). Cleared after a few seconds or by the dismiss button. Holds
+// a message key, translated when shown.
 const notice = ref('')
 let noticeTimer = null
-function showNotice(message) {
-  notice.value = message
+function showNotice(key) {
+  notice.value = key
   clearTimeout(noticeTimer)
   noticeTimer = setTimeout(() => (notice.value = ''), 6000)
 }
@@ -735,7 +826,7 @@ const {
   onCommitted: loadList,
   onError: (e) => {
     console.error('Failed to delete report:', e)
-    showNotice('Could not delete the report. It is back in the list.')
+    showNotice('reports.notices.delete')
   },
   // Put the report back in the viewer if it was open.
   onUndo: (id, meta) => {
@@ -793,15 +884,19 @@ const emptyRows = computed(() => {
       const next = nextPeriod(e.latest, new Date())
       const when = !next
         ? e.latest.date_to
-          ? `to ${e.latest.date_to}`
+          ? t('reports.saved.until', { date: shownDay(e.latest.date_to) })
           : ''
         : next.notStarted
-          ? `next period starts ${next.startsOn}`
-          : `next period ready, from ${next.date_from}`
+          ? t('reports.empty.nextStarts', { date: shownDay(next.startsOn) })
+          : t('reports.empty.nextReady', { date: shownDay(next.date_from) })
       return {
         series: true,
         report: e.latest,
-        meta: [savedType(e.latest), `${e.reports.length} reports`, when]
+        meta: [
+          savedType(e.latest),
+          t('reports.saved.count', { n: e.reports.length }, e.reports.length),
+          when,
+        ]
           .filter(Boolean)
           .join(' · '),
       }
@@ -863,6 +958,7 @@ const showForm = computed(
 )
 function openForm() {
   formOpen.value = true
+  form.value.language = locale.value
   nextTick(() => formTitle.value && formTitle.value.focus())
 }
 
@@ -879,11 +975,11 @@ function runNextPeriod() {
     date_to: s.date_to,
     language: rep.language || 'en',
   }
+  // The saved report itself, not its name: the name is translated where it is shown.
   continuation.value = {
     id: rep.id,
     key: seriesKey(rep),
-    name: savedName(rep),
-    period: savedPeriod(rep),
+    report: rep,
     date_from: s.date_from,
     date_to: s.date_to,
     endClamped: s.endClamped,
@@ -908,7 +1004,9 @@ const comparedWith = computed(() => {
   return loadingList.value ? null : { deleted: true }
 })
 
-const toastMessage = computed(() => (pendingDelete.value ? 'Report deleted.' : notice.value))
+const toastMessage = computed(() =>
+  pendingDelete.value ? t('reports.toast.deleted') : notice.value ? t(notice.value) : '',
+)
 
 function onDelete(id) {
   const open = current.value && current.value.id === id ? current.value : null
@@ -930,15 +1028,16 @@ onBeforeUnmount(() => {
 async function downloadPdf() {
   if (!current.value || !current.value.id || pdfLoading.value) return
   pdfLoading.value = true
-  pdfError.value = ''
+  pdfError.value = null
   try {
-    const res = await fetch(`/reports/${current.value.id}/pdf`, { credentials: 'include' })
+    const url0 = `/reports/${current.value.id}/pdf`
+    const res = await fetch(url0, { credentials: 'include' })
     if (!res.ok) {
       if (res.status === 401) {
         handleSessionExpired()
         return
       }
-      throw new Error(`HTTP ${res.status}`)
+      throw await errorFromResponse(res, url0)
     }
     const blob = await res.blob()
     const url = URL.createObjectURL(blob)
@@ -955,7 +1054,7 @@ async function downloadPdf() {
     setTimeout(() => URL.revokeObjectURL(url), 1500)
   } catch (e) {
     console.error('PDF download failed:', e)
-    pdfError.value = 'Could not download the PDF. Please try again.'
+    pdfError.value = { err: e, fallback: 'reports.viewer.pdfError' }
   } finally {
     pdfLoading.value = false
   }
@@ -973,7 +1072,7 @@ async function generate() {
   formOpen.value = true // the form stays put when the report is saved
   // Generate is replaced by Stop; keep keyboard focus on the control that is there.
   nextTick(() => stopBtn.value && stopBtn.value.focus())
-  genError.value = ''
+  genError.value = null
   // Clear the open report from the URL BEFORE the request: the route watcher
   // closes the viewer when ?report= disappears and nothing is generating, so a
   // fast error (404/409/422) answered before the navigation settled used to
@@ -985,11 +1084,13 @@ async function generate() {
     content: '',
     sources: null,
     report_type: form.value.report_type,
+    theme: form.value.theme || null,
+    language: form.value.language,
     cover_image: null,
     section_images: null,
     imagesStatus: null,
     // The period this report is compared with, for the note under "What changed".
-    comparedPeriod: continuesSeries.value ? continuation.value.period : null,
+    comparedPeriod: continuesSeries.value ? savedPeriod(continuation.value.report) : null,
   }
   controller.value = new AbortController()
   try {
@@ -1016,15 +1117,19 @@ async function generate() {
       // The report this one continues was deleted, or no longer matches it.
       if (continuesSeries.value && (res.status === 404 || res.status === 422)) {
         continuation.value = null
-        genError.value =
-          res.status === 404
-            ? 'The report this one continues was deleted, so there is nothing to compare against. Generate again without the comparison.'
-            : 'The settings no longer match the report this one continues. Generate again without the comparison.'
+        genError.value = {
+          key:
+            res.status === 404
+              ? 'reports.errors.previousDeleted'
+              : 'reports.errors.previousMismatch',
+        }
         return
       }
-      // 409 = per-user report limit; show the server's reason.
-      const detail = res.status === 409 ? (await res.json().catch(() => ({}))).detail : null
-      genError.value = detail || 'Could not generate the report. Please try again.'
+      // 409 = per-user report limit, 429 = rate limit: named by the error's code.
+      genError.value = {
+        err: await errorFromResponse(res, '/reports/stream'),
+        fallback: 'reports.errors.generate',
+      }
       return
     }
     const reader = res.body.getReader()
@@ -1053,9 +1158,7 @@ async function generate() {
           try {
             const d = JSON.parse(sse.data)
             current.value.imagesStatus =
-              d.stage === 'cover'
-                ? 'Generating cover illustration…'
-                : `Illustrating “${d.heading}”…`
+              d.stage === 'cover' ? { stage: 'cover' } : { stage: 'section', heading: d.heading }
           } catch (e) {}
         } else if (sse.event === 'images') {
           try {
@@ -1099,11 +1202,12 @@ async function generate() {
             } catch (e) {}
           }
         } else if (sse.event === 'error') {
+          // { code, message }: the code names the message in the interface language.
+          let code = null
           try {
-            genError.value = JSON.parse(sse.data).message
-          } catch (e) {
-            genError.value = 'Something went wrong.'
-          }
+            code = JSON.parse(sse.data).code || null
+          } catch (e) {}
+          genError.value = { err: { code }, fallback: 'reports.errors.stream' }
         }
       }
     }
@@ -1112,8 +1216,7 @@ async function generate() {
       if (current.value) current.value.stopped = true
     } else {
       console.error('Report stream error:', e)
-      genError.value =
-        "Couldn't reach the server. It may be waking up (about 30 seconds); generate again."
+      genError.value = { key: 'reports.errors.connection' }
     }
   } finally {
     if (current.value) current.value.checking = false

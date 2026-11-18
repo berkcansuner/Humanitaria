@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { comparisonNote, injectComparisonNote } from './comparisonNote.js'
+import { setLocale } from '../i18n/locale.js'
 
 const HTML =
   '<h2>Executive Summary</h2><p>a</p><h2>What changed since the last report</h2><p>b</p>' +
@@ -26,6 +27,19 @@ describe('comparisonNote', () => {
     expect(comparisonNote({ removed: 0 }).text).toBe(
       'Checked against the previous report: nothing removed.',
     )
+  })
+
+  it('speaks the interface language, read when called', () => {
+    setLocale('tr')
+    try {
+      expect(comparisonNote({ removed: 2 }).text).toBe(
+        'Önceki raporla karşılaştırıldı: Eski ya da tarihsiz bilgiyi yeniymiş gibi sunan 2 ifade çıkarıldı.',
+      )
+      expect(comparisonNote({ checking: true }).text).toBe('Önceki raporla karşılaştırılıyor…')
+    } finally {
+      setLocale('en')
+      localStorage.clear()
+    }
   })
 
   it('has nothing to say for a report that was not checked in this view', () => {

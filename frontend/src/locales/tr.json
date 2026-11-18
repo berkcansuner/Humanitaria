@@ -309,6 +309,132 @@
       }
     }
   },
+  "reports": {
+    "topbar": "M&E raporları",
+    "newReport": "Yeni rapor",
+    "docTitle": "{heading} · {type} · Humanitaria",
+    "form": {
+      "title": "Yeni rapor",
+      "type": "Rapor türü",
+      "country": "Ülke",
+      "countryPlaceholder": "Bir ülke seçin…",
+      "sector": "Sektör",
+      "allSectors": "Tüm sektörler",
+      "from": "Başlangıç",
+      "to": "Bitiş",
+      "language": "Rapor dili",
+      "generate": "Raporu oluştur",
+      "stop": "Oluşturmayı durdur",
+      "optionsError": "Seçenekler yüklenemedi. Sayfayı yenilemeyi deneyin.",
+      "loadingCountries": "Ülke listesi hazırlanıyor…",
+      "chooseCountry": "Rapor oluşturmak için bir ülke seçin."
+    },
+    "continues": {
+      "series": "{name} ({period}) raporunun devamı. Yeni rapor o dönemden bu yana değişenlerle başlar.",
+      "endClamped": "Dönem henüz bitmediği için bitiş tarihi bugün.",
+      "startClamped": "Başlangıç tarihi {date} olarak değiştirildi: Daha eski belgeler artık dizinde değil.",
+      "differs": "Bu ayarlar {name} raporundan farklı; bu yüzden yeni rapor onunla karşılaştırılmayacak.",
+      "clear": "Önceki raporla karşılaştırmayı kaldır"
+    },
+    "saved": {
+      "title": "Kayıtlı raporlar",
+      "waitWhileGenerating": "Kayıtlı raporlar bu rapor tamamlandığında ya da siz durdurduğunuzda açılır.",
+      "count": "{n} rapor | {n} rapor",
+      "until": "{date} tarihine kadar",
+      "noPeriod": "Dönem belirtilmemiş",
+      "empty": "Henüz kayıtlı rapor yok.",
+      "delete": "Raporu sil: {name}, {type}",
+      "deleteWithPeriod": "Raporu sil: {name}, {type}, {period}"
+    },
+    "viewer": {
+      "back": "Tüm raporlar",
+      "stopAndBack": "Durdur ve tüm raporları göster",
+      "comparedDeleted": "Daha sonra silinen önceki bir raporla karşılaştırıldı.",
+      "comparedWith": "Karşılaştırıldığı rapor: {link}",
+      "previousReport": "önceki rapor",
+      "notComparedWith": "Şu dönemin raporuyla karşılaştırılmadı: {link}",
+      "earlierPeriod": "önceki dönem",
+      "continuedBy": "Devamı: {link}",
+      "laterReport": "sonraki bir rapor",
+      "runNext": "Sonraki dönemi raporla",
+      "copy": "Kaynaklarıyla kopyala",
+      "copied": "Kopyalandı",
+      "pdf": "PDF indir",
+      "pdfPreparing": "Hazırlanıyor…",
+      "pdfError": "PDF indirilemedi. Lütfen yeniden deneyin.",
+      "reading": "Kaynaklar okunuyor. İlk sözcükler genellikle iki dakika içinde görünür.",
+      "stopped": "Durduruldu. Bu rapor kaydedilmedi.",
+      "imagesCover": "Kapak görseli hazırlanıyor…",
+      "imagesSection": "“{heading}” bölümünün görseli hazırlanıyor…"
+    },
+    "compare": {
+      "checking": "Önceki raporla karşılaştırılıyor…",
+      "checkingPeriod": "Önceki raporla karşılaştırılıyor ({period})…",
+      "none": "Önceki raporla karşılaştırıldı: Hiçbir ifade çıkarılmadı.",
+      "removed": "Önceki raporla karşılaştırıldı: Eski ya da tarihsiz bilgiyi yeniymiş gibi sunan {n} ifade çıkarıldı. | Önceki raporla karşılaştırıldı: Eski ya da tarihsiz bilgiyi yeniymiş gibi sunan {n} ifade çıkarıldı."
+    },
+    "empty": {
+      "title": "İnsani yardım kayıtlarından bir İzleme ve Değerlendirme (M&E) raporu hazırlayın.",
+      "lede": "Her rapor aynı anda birçok ReliefWeb raporundan yararlanır ve hepsini kaynak olarak gösterir; böylece raporu doğrulayabilir ve alıntılayabilirsiniz.",
+      "pickSeries": "Bir rapor serisine kaldığı yerden devam edin.",
+      "pickRecent": "Son raporlarınızdan birini açın.",
+      "seriesLabel": "Rapor serileriniz",
+      "recentLabel": "Son raporlar",
+      "nextStarts": "sonraki dönem {date} tarihinde başlıyor",
+      "nextReady": "sonraki dönem hazır, {date} tarihinden itibaren"
+    },
+    "toast": {
+      "deleted": "Rapor silindi.",
+      "undo": "Geri al"
+    },
+    "notices": {
+      "copy": "Rapor kopyalanamadı. Tarayıcınız panoya erişimi engelledi.",
+      "load": "Kayıtlı raporlarınız yüklenemedi. Sayfayı yenilemeyi deneyin.",
+      "open": "Rapor açılamadı. Yeniden deneyin.",
+      "delete": "Rapor silinemedi. Listeye geri eklendi."
+    },
+    "errors": {
+      "previousDeleted": "Bu raporun devamı olduğu rapor silinmiş, karşılaştırma yapılamıyor. Raporu karşılaştırma olmadan yeniden oluşturun.",
+      "previousMismatch": "Ayarlar, bu raporun devamı olduğu raporla artık eşleşmiyor. Raporu karşılaştırma olmadan yeniden oluşturun.",
+      "generate": "Rapor oluşturulamadı. Lütfen yeniden deneyin.",
+      "stream": "Bir sorun oluştu.",
+      "connection": "Sunucuya ulaşılamadı. Sunucu uyku modundan çıkıyor olabilir (yaklaşık 30 saniye); raporu yeniden oluşturun."
+    },
+    "types": {
+      "situation": "Durum raporu",
+      "indicator_monitoring": "Gösterge izleme raporu",
+      "needs_assessment": "İhtiyaç değerlendirmesi özeti",
+      "technical_monitoring": "Teknik izleme raporu"
+    },
+    "typesShort": {
+      "situation": "Durum",
+      "indicator_monitoring": "Gösterge izleme",
+      "needs_assessment": "İhtiyaç değerlendirmesi",
+      "technical_monitoring": "Teknik izleme"
+    },
+    "sectors": {
+      "agriculture": "Tarım",
+      "campManagement": "Kamp koordinasyonu ve kamp yönetimi",
+      "climate": "İklim değişikliği ve çevre",
+      "contributions": "Katkılar",
+      "coordination": "Koordinasyon",
+      "disasterManagement": "Afet yönetimi",
+      "education": "Eğitim",
+      "foodNutrition": "Gıda ve beslenme",
+      "gender": "Toplumsal cinsiyet",
+      "health": "Sağlık",
+      "hivAids": "HIV/AIDS",
+      "humanitarianFinancing": "İnsani yardım fonlaması",
+      "logistics": "Lojistik ve telekomünikasyon",
+      "mineAction": "Mayınla mücadele",
+      "peace": "Barışı koruma ve barış inşası",
+      "protection": "Koruma ve insan hakları",
+      "recovery": "İyileştirme ve yeniden yapılanma",
+      "safety": "Emniyet ve güvenlik",
+      "shelter": "Barınma ve gıda dışı malzemeler",
+      "wash": "Su, sanitasyon ve hijyen"
+    }
+  },
   "errors": {
     "not_authenticated": "Devam etmek için giriş yapın.",
     "forbidden": "Buna erişim izniniz yok.",

@@ -63,6 +63,14 @@ describe('buildCopyText', () => {
     expect(buildCopyText('Hello', null)).toBe('Hello')
   })
 
+  it("labels a copied report in the report's language when one is given", () => {
+    // English interface, Turkish report: the list reads as part of the Turkish report.
+    expect(buildCopyText('Gereksinim yüksek [1].', sources, 'tr')).toContain('\n\nKaynaklar\n')
+    expect(buildCopyText('Gereksinim yüksek [1].', sources, 'tr')).toContain('WFP, 3 Kas 2026.')
+    expect(buildCopyHtml('Metin [1].', sources, 'tr')).toContain('<strong>Kaynaklar</strong>')
+    expect(buildCopyText('Needs [1].', sources, 'en')).toContain('\n\nSources\n')
+  })
+
   describe('in Turkish', () => {
     afterEach(() => {
       setLocale('en')

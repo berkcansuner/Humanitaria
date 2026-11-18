@@ -6,7 +6,12 @@
  * The note sits on the section itself: "Checking against the previous report (…)"
  * while the check runs, then how many statements it removed. It belongs to this
  * view of a just-generated report only; a reopened report shows no note.
+ *
+ * The note is the app's status message to the reader, not part of the report, so
+ * it is in the interface language (`t` defaults to the app's i18n) even under a
+ * heading in another report language.
  */
+import { t as appT } from '../i18n/index.js'
 
 // The section heading as the report prompt writes it (rag/report_service.py
 // COMPARISON_HEADINGS), in each report language.
@@ -21,23 +26,19 @@ function escapeHtml(text) {
 }
 
 /** { checking, text } for the current state, or null when there is nothing to say. */
-export function comparisonNote(state) {
+export function comparisonNote(state, t = appT) {
   if (!state) return null
   if (state.checking) {
-    const period = state.period ? ` (${state.period})` : ''
-    return { checking: true, text: `Checking against the previous report${period}…` }
+    const text = state.period
+      ? t('reports.compare.checkingPeriod', { period: state.period })
+      : t('reports.compare.checking')
+    return { checking: true, text }
   }
   if (typeof state.removed !== 'number') return null
-  if (state.removed === 0) {
-    return { checking: false, text: 'Checked against the previous report: nothing removed.' }
-  }
-  const what =
-    state.removed === 1
-      ? '1 statement removed because it'
-      : `${state.removed} statements removed because they`
+  if (state.removed === 0) return { checking: false, text: t('reports.compare.none') }
   return {
     checking: false,
-    text: `Checked against the previous report: ${what} presented older or undated information as new.`,
+    text: t('reports.compare.removed', { n: state.removed }, state.removed),
   }
 }
 
