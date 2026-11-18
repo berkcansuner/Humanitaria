@@ -27,3 +27,9 @@ def test_font_face_in_content_does_not_touch_global_font_mapping():
                + base64.b64encode(ttf).decode() + "); }</style>\n\nHello")
     render_report_pdf({"country": "Sudan", "content": payload, "sources": None})
     assert tt2ps("vera", 0, 0) == "Vera"
+
+
+def test_old_saved_reports_print_adjacent_citations_in_order():
+    out = _body_html("Lean season [5][2]. Assistance [3][1].")
+    assert '<span class="cite">[2]</span><span class="cite">[5]</span>' in out
+    assert '<span class="cite">[1]</span><span class="cite">[3]</span>' in out

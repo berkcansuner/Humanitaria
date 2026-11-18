@@ -67,6 +67,18 @@ def _cap_citation_runs(text: str) -> str:
     return _RUN_RE.sub(_trim, text)
 
 
+def sort_citation_runs(text: str) -> str:
+    """Each run of adjacent markers in ascending order, duplicates in the run dropped
+    ('[5][2]' -> '[2][5]', '[3][1][3]' -> '[1][3]'). The numbers themselves and
+    everything else are left as they are."""
+    if not text:
+        return text
+    return _RUN_RE.sub(
+        lambda m: "".join(f"[{n}]" for n in sorted({int(n) for n in re.findall(r"\d+", m.group(0))})),
+        text,
+    )
+
+
 def _looks_like_delimiter(line: str) -> bool:
     """True if *line* is a GFM table delimiter row: only pipes, dashes, colons and
     whitespace, with at least one dash. A bare '---' thematic break also matches, but
@@ -149,6 +161,7 @@ def normalize_citations(content: str, sources, keep_uncited: bool = False):
                    if int(m.group(2)) in remap else ""),
         content,
     )
+    new_content = sort_citation_runs(new_content)
     new_sources = [{**valid[old], "index": remap[old]} for old in order]
     if keep_uncited:
         rest = [s for idx, s in valid.items() if idx not in remap]

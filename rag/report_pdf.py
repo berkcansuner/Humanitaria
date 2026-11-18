@@ -18,6 +18,8 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from xhtml2pdf import pisa
 
+from rag.citations import sort_citation_runs
+
 logger = logging.getLogger(__name__)
 
 
@@ -246,7 +248,8 @@ def _body_html(markdown_text: str, section_images=None) -> str:
     md = _markdown.Markdown(extensions=["extra", "sane_lists"])
     md.preprocessors.deregister("html_block")
     md.inlinePatterns.deregister("html")
-    html_body = md.convert(markdown_text or "")
+    # Reports saved before runs were sorted at save time print in order too.
+    html_body = md.convert(sort_citation_runs(markdown_text or ""))
     html_body = re.sub(r"\[(\d+)\]", r'<span class="cite">[\1]</span>', html_body)
     for item in (section_images or []):
         # quote=False: Python-Markdown's renderer only escapes & < > in heading text

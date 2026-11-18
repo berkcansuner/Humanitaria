@@ -128,3 +128,27 @@ class TestNormalizeTableDelimiters:
     def test_wellformed_plain_delimiter_unchanged(self):
         content = "| A | B |\n| --- | --- |\n| 1 | 2 |"
         assert normalize_table_delimiters(content) == content
+
+
+class TestSortCitationRuns:
+    """2026-11-18: an indicator report read "lean season [5][2]"; a run of adjacent
+    markers reads in ascending order, without changing the numbering."""
+
+    def test_sorts_a_run_ascending(self):
+        from rag.citations import sort_citation_runs
+        assert sort_citation_runs("lean season [5][2].") == "lean season [2][5]."
+        assert sort_citation_runs("assistance [3][1] and [10][9][2]") == "assistance [1][3] and [2][9][10]"
+
+    def test_drops_duplicates_within_a_run(self):
+        from rag.citations import sort_citation_runs
+        assert sort_citation_runs("a [3][1][3] b") == "a [1][3] b"
+
+    def test_leaves_everything_else_alone(self):
+        from rag.citations import sort_citation_runs
+        for text in ("a [5] b [2]", "a [5] [2]", "a [2][5]", "no markers", "", "[1, 3]"):
+            assert sort_citation_runs(text) == text
+
+    def test_saved_reports_store_runs_in_order(self):
+        sources = [{"index": i, "url": f"http://{i}", "title": str(i)} for i in (1, 2, 5)]
+        content, _ = normalize_citations("A [2]. B [5][2].", sources)
+        assert content == "A [1]. B [1][2]."
