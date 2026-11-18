@@ -140,6 +140,7 @@ async function submit() {
 .auth-main {
   min-height: calc(100vh - 70px);
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   place-items: center;
   padding: 48px 28px;
 }
