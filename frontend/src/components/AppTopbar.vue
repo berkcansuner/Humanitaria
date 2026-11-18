@@ -1,9 +1,15 @@
 <template>
-  <!-- One top bar for every signed-in screen: brand (back to chat), the Chat ↔
-       Reports switch, and the account menu always in the same place. -->
+  <!-- One top bar for every signed-in screen: brand (the landing page, reachable
+       while signed in), the Chat ↔ Reports switch, and the account menu always in
+       the same place. -->
   <header class="app-topbar">
     <slot name="start" />
-    <router-link class="brand" to="/app" :title="t('chat.topbar.home')">
+    <router-link
+      class="brand"
+      to="/"
+      :aria-label="t('chat.topbar.home')"
+      :title="t('chat.topbar.home')"
+    >
       <HelpingHandLogo :size="28" :radius="8" />
       <div class="brand-text">
         <h1 class="brand-title">Humanitaria</h1>

@@ -29,9 +29,11 @@
                 {{ t('landing.hero.ask') }}
               </button>
             </form>
+            <!-- A signed-in visitor (back on the landing from the app) is sent into the
+                 app, not to sign-up. -->
             <div class="hero-cta">
-              <router-link class="btn btn-solid btn-lg" to="/signup"
-                >{{ t('landing.hero.startFree')
+              <router-link class="btn btn-solid btn-lg" :to="signedIn ? '/app' : '/signup'"
+                >{{ signedIn ? t('nav.openApp') : t('landing.hero.startFree')
                 }}<svg
                   class="btn-arrow"
                   width="16"
@@ -106,12 +108,17 @@
             <h2>{{ t('landing.closing.title') }}</h2>
             <p>{{ t('landing.closing.body') }}</p>
             <div class="cta-btns">
-              <router-link class="btn btn-onink" to="/signup">{{
-                t('landing.closing.startFree')
+              <router-link v-if="signedIn" class="btn btn-onink" to="/app">{{
+                t('nav.openApp')
               }}</router-link>
-              <router-link class="btn btn-onink ghost" to="/login">{{
-                t('landing.closing.logIn')
-              }}</router-link>
+              <template v-else>
+                <router-link class="btn btn-onink" to="/signup">{{
+                  t('landing.closing.startFree')
+                }}</router-link>
+                <router-link class="btn btn-onink ghost" to="/login">{{
+                  t('landing.closing.logIn')
+                }}</router-link>
+              </template>
             </div>
           </div>
         </div>
@@ -123,10 +130,11 @@
 </template>
 
 <script setup>
-import { onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { askTarget, stashQuestion } from '../utils/askQuestion.js'
+import { isAuthenticated } from '../utils/authStore.js'
 import { gsap } from 'gsap'
 import MarketingNav from '../marketing/MarketingNav.vue'
 import MarketingFooter from '../marketing/MarketingFooter.vue'
@@ -143,6 +151,7 @@ const monthsLabel = monthsSpan(coverage.since, coverage.generated)
 
 const router = useRouter()
 const question = ref('')
+const signedIn = computed(() => isAuthenticated())
 
 function ask() {
   const target = askTarget(question.value)

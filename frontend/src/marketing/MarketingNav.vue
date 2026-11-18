@@ -15,11 +15,14 @@
       </nav>
       <div class="nav-right">
         <LanguageSwitcher variant="marketing" />
+        <!-- Signed in: the app is the primary action, in Start free's place; Log out
+             takes Log in's quiet slot (hidden on phones, as Log in is; the app's
+             account menu has it too). -->
         <template v-if="isAuthenticated()">
-          <router-link class="btn btn-text" to="/app">{{ t('nav.openApp') }}</router-link>
-          <button class="btn btn-solid" type="button" @click="logout">
+          <button class="btn btn-text" type="button" @click="logout">
             {{ t('nav.logOut') }}
           </button>
+          <router-link class="btn btn-solid" to="/app">{{ t('nav.openApp') }}</router-link>
         </template>
         <template v-else>
           <router-link class="btn btn-text" to="/login">{{ t('nav.logIn') }}</router-link>
