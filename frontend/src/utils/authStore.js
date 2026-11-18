@@ -38,9 +38,10 @@ function syncLanguage(user) {
 }
 
 // A language picked while signed in goes to the account; applying the account's
-// own value is non-explicit and is not echoed back. Subscribed once at load.
-onLocaleChange((lang, { explicit }) => {
-  if (explicit && auth.user) saveLanguage(lang)
+// own value is non-explicit and is not echoed back, and a choice followed from
+// another tab is saved by that tab. Subscribed once at load.
+onLocaleChange((lang, { explicit, fromOtherTab }) => {
+  if (explicit && !fromOtherTab && auth.user) saveLanguage(lang)
 })
 
 /** Probe the session once on startup / before a guarded navigation. */

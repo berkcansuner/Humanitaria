@@ -133,6 +133,31 @@ describe('authStore', () => {
       warn.mockRestore()
     })
 
+    it('keeps a choice made before login when storage is unavailable', async () => {
+      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new Error('denied')
+      })
+      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new Error('denied')
+      })
+      setLocale('tr')
+      login.mockResolvedValue({ id: '1', ui_language: 'en' })
+      await doLogin('a@b.com', 'pw')
+      expect(document.documentElement.lang).toBe('tr')
+      expect(updateLanguage).toHaveBeenCalledWith('tr')
+      vi.restoreAllMocks()
+      setLocale('en') // stored again: the page-view memory is no longer needed
+    })
+
+    it('follows another tab without writing the account again', async () => {
+      me.mockResolvedValue({ id: '1', ui_language: 'en' })
+      await refresh()
+      localStorage.setItem('lang', 'tr')
+      window.dispatchEvent(new StorageEvent('storage', { key: 'lang', newValue: 'tr' }))
+      expect(document.documentElement.lang).toBe('tr')
+      expect(updateLanguage).not.toHaveBeenCalled()
+    })
+
     it('leaves the on-screen language alone on logout', async () => {
       setLocale('tr')
       logout.mockResolvedValue(null)

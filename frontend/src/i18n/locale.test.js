@@ -76,4 +76,40 @@ describe('locale', () => {
     setLocale('en')
     expect(cb).toHaveBeenCalledTimes(2)
   })
+
+  it('remembers an explicit choice for this page view when storage is unavailable', () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('denied')
+    })
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('denied')
+    })
+    expect(hasExplicitChoice()).toBe(false)
+    setLocale('tr')
+    expect(hasExplicitChoice()).toBe(true)
+    vi.restoreAllMocks()
+    // Once the choice can be stored, storage answers again.
+    setLocale('en')
+    localStorage.clear()
+    expect(hasExplicitChoice()).toBe(false)
+  })
+
+  it('follows a language chosen in another tab without storing it again', () => {
+    localStorage.setItem('lang', 'tr') // what the other tab wrote
+    const cb = vi.fn()
+    const off = onLocaleChange(cb)
+    const store = vi.spyOn(Storage.prototype, 'setItem')
+    window.dispatchEvent(new StorageEvent('storage', { key: 'lang', newValue: 'tr' }))
+    expect(document.documentElement.lang).toBe('tr')
+    expect(cb).toHaveBeenCalledWith('tr', { explicit: true, fromOtherTab: true })
+    expect(store).not.toHaveBeenCalled()
+    expect(hasExplicitChoice()).toBe(true)
+    // Other keys, unsupported values, a cleared key and the language already shown are ignored.
+    window.dispatchEvent(new StorageEvent('storage', { key: 'other', newValue: 'en' }))
+    window.dispatchEvent(new StorageEvent('storage', { key: 'lang', newValue: 'de' }))
+    window.dispatchEvent(new StorageEvent('storage', { key: 'lang', newValue: null }))
+    window.dispatchEvent(new StorageEvent('storage', { key: 'lang', newValue: 'tr' }))
+    expect(cb).toHaveBeenCalledTimes(1)
+    off()
+  })
 })
