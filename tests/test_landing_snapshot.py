@@ -128,3 +128,19 @@ def test_pct_change_is_first_to_last():
 
     assert pct_change([200.0, 150.0]) == -25.0
     assert pct_change([5.0]) is None
+
+
+def test_syria_keeps_the_refugees_series(monkeypatch):
+    import scripts.build_landing_snapshot as snap
+    from analytics.indicators import by_key
+
+    periods = [f"{y}-01-01T00:00:00" for y in range(2017, 2026)]
+    values = [100.0, 200.0, 300.0, 400.0, 900.0, 800.0, 700.0, 650.0, 600.0]  # peak 2021
+
+    def fake_series(key, date_from, today, iso3=snap.SUDAN):
+        return by_key(key), periods, values, []
+
+    monkeypatch.setattr(snap, "_series", fake_series)
+    out = snap._syria({"count": 3, "since": "2025-11-18"})
+    assert out["refugees"]["series"] == [[p[:10], round(v)] for p, v in zip(periods, values)]
+    assert out["trend"]["period"] == ["2021-01-01", "2025-01-01"]
