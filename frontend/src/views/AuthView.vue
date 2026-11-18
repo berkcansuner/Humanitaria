@@ -67,11 +67,11 @@
         <p class="auth-switch">
           <template v-if="isSignup">
             Already have an account?
-            <router-link to="/login">Log in</router-link>
+            <router-link :to="switchTo('/login')">Log in</router-link>
           </template>
           <template v-else>
             New to Humanitaria?
-            <router-link to="/signup">Sign up</router-link>
+            <router-link :to="switchTo('/signup')">Sign up</router-link>
           </template>
         </p>
       </div>
@@ -108,6 +108,13 @@ function messageFor(status) {
   if (status === 401) return 'Invalid email or password.'
   if (status === 422) return 'Please check your details — password must be at least 8 characters.'
   return 'Something went wrong. Please try again.'
+}
+
+// The login <-> signup switch keeps `redirect`, so the landing question survives it.
+function switchTo(path) {
+  return typeof route.query.redirect === 'string'
+    ? { path, query: { redirect: route.query.redirect } }
+    : path
 }
 
 async function submit() {

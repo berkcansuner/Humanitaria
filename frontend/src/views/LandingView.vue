@@ -130,7 +130,7 @@
 <script setup>
 import { onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
 import { useRouter } from 'vue-router'
-import { askTarget } from '../utils/askQuestion.js'
+import { askTarget, stashQuestion } from '../utils/askQuestion.js'
 import { gsap } from 'gsap'
 import MarketingNav from '../marketing/MarketingNav.vue'
 import MarketingFooter from '../marketing/MarketingFooter.vue'
@@ -147,7 +147,9 @@ const question = ref('')
 
 function ask() {
   const target = askTarget(question.value)
-  if (target) router.push(target)
+  if (!target) return
+  stashQuestion(question.value)
+  router.push(target)
 }
 
 // The router owns the URL, so the skip link moves focus itself.

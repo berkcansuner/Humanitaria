@@ -165,7 +165,7 @@ import { decorateCodeBlocks } from '../utils/codeCopy.js'
 import { findLastUserIndex, lastServerIdBefore, planResend } from '../utils/conversationOps.js'
 import { getMessages, truncateConversation } from '../utils/api.js'
 import { handleSessionExpired } from '../utils/authStore.js'
-import { questionFromQuery } from '../utils/askQuestion.js'
+import { prefillFor, takeStashedQuestion } from '../utils/askQuestion.js'
 
 // Each failure says what happened; the banner's "Try again" is the recovery.
 // The free-tier server sleeps when idle, so the first request after a pause is
@@ -502,20 +502,23 @@ function autoGrow() {
   el.style.height = Math.min(el.scrollHeight, 140) + 'px'
 }
 
-// The landing ask field arrives as /app?q=...: fill the composer once, never
-// send, and drop only `q` from the URL so a refresh doesn't refill it.
+// The landing ask field arrives as /app?q=... (or a sessionStorage copy): fill
+// the composer once, never send, and drop only `q` from the URL so a refresh
+// doesn't refill it.
 const route = useRoute()
 const router = useRouter()
 onMounted(() => {
-  const question = questionFromQuery(route.query.q)
-  if (route.query.q === undefined) return
-  if (question && !input.value) {
+  // Signup and Google sign-in drop `q`, so the landing ask also leaves a
+  // sessionStorage copy; it is consumed here whether or not it is used.
+  const question = prefillFor(input.value, route.query.q, takeStashedQuestion())
+  if (question) {
     input.value = question
     nextTick(() => {
       autoGrow()
       chatInput.value?.focus()
     })
   }
+  if (route.query.q === undefined) return
   const rest = { ...route.query }
   delete rest.q
   router.replace({ query: rest })
