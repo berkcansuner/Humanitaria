@@ -360,6 +360,162 @@ describe('ReportsView in two languages', () => {
     })
   })
 
+  describe('while a report is being prepared', () => {
+    // A stream the test feeds by hand: push() delivers one SSE event.
+    function stubStream() {
+      const queue = []
+      let wake = null
+      const enc = new TextEncoder()
+      const reader = {
+        read: () =>
+          new Promise((resolve) => {
+            const next = () => (queue.length ? resolve(queue.shift()) : (wake = next))
+            next()
+          }),
+      }
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({ ok: true, status: 200, body: { getReader: () => reader } }),
+      )
+      const deliver = (item) => {
+        queue.push(item)
+        if (wake) {
+          const w = wake
+          wake = null
+          w()
+        }
+      }
+      return {
+        push: (event, data) =>
+          deliver({
+            done: false,
+            value: enc.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
+          }),
+      }
+    }
+    async function start({ type = 'situation', theme = 'Health' } = {}) {
+      const [typeSel, country, sector] = host.querySelectorAll('.report-form select')
+      typeSel.value = type
+      typeSel.dispatchEvent(new Event('change'))
+      country.value = 'Sudan'
+      country.dispatchEvent(new Event('change'))
+      sector.value = theme
+      sector.dispatchEvent(new Event('change'))
+      await flush()
+      host.querySelector('.report-form').dispatchEvent(new Event('submit'))
+      await flush()
+    }
+    const seconds = async (s) => {
+      vi.advanceTimersByTime(s * 1000)
+      await flush()
+    }
+    // The request line glues each "·" to the part before it with a no-break space.
+    const request = () => text('.progress-request')?.replace(/\s+/g, ' ')
+    const stage = () => text('.report-progress [role="status"]')
+    const outline = () =>
+      [...host.querySelectorAll('.progress-outline li')].map((li) => li.textContent.trim())
+
+    beforeEach(() => {
+      // The elapsed counter runs on setInterval and Date; flush() keeps real setTimeout.
+      vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] })
+    })
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('shows the request, the stage and the time waited, then hands over to the text', async () => {
+      const stream = stubStream()
+      vi.mocked(getReport).mockResolvedValue({ ...SAVED, content: '## Summary\n\nText.' })
+      await mount()
+      await start()
+      expect(request()).toMatch(/^Situation Report · Sudan · Health · .+ · English$/)
+      expect(stage()).toBe(en.reports.viewer.reading)
+      expect(outline()).toEqual(['Executive Summary', 'Key Findings', 'Outlook'])
+      expect(text('.progress-elapsed')).toBe('0:00 elapsed')
+      // Focus stays on Stop; nothing in the waiting state takes it.
+      expect(document.activeElement.classList.contains('stop-gen')).toBe(true)
+
+      await seconds(45)
+      expect(text('.progress-elapsed')).toBe('0:45 elapsed')
+      // The live region names the stage, never the time.
+      expect(stage()).toBe(en.reports.viewer.reading)
+      await seconds(75)
+      expect(stage()).toBe(en.reports.progress.slow)
+
+      stream.push('token', { content: '## Executive Summary\n\nNeeds rose [12].' })
+      await flush()
+      // The outline gives way to the text; the request line above it stays put.
+      expect(host.querySelector('.progress-outline')).toBeNull()
+      expect(text('.report-content h2')).toBe('Executive Summary')
+      expect(request()).toMatch(/^Situation Report · Sudan/)
+      expect(stage()).toBe(en.reports.progress.writing)
+
+      stream.push('saved', { report_id: 'r1', title: SAVED.title })
+      await flush()
+      expect(host.querySelector('.report-progress')).toBeNull()
+      expect(text('.report-title-h')).toBe('Sudan')
+    })
+
+    it('follows a language switch mid-wait without losing the time waited', async () => {
+      stubStream()
+      await mount()
+      await start()
+      await seconds(30)
+      setLocale('tr')
+      await flush()
+      expect(request()).toMatch(/^Durum raporu · Sudan · Sağlık · .+ · İngilizce$/)
+      expect(stage()).toBe(tr.reports.viewer.reading)
+      expect(outline()).toEqual(['Yönetici özeti', 'Temel bulgular', 'Beklentiler'])
+      expect(text('.progress-elapsed')).toBe('0:30 geçti')
+      await seconds(5)
+      expect(text('.progress-elapsed')).toBe('0:35 geçti')
+    })
+
+    it('words the technical monitoring pipeline as it runs', async () => {
+      stubStream()
+      await mount()
+      await start({ type: 'technical_monitoring', theme: '' })
+      expect(request()).toMatch(/^Technical Monitoring Report · Sudan · All sectors/)
+      expect(stage()).toBe(en.reports.progress.computing)
+      expect(outline()).toEqual([
+        'Executive Summary',
+        en.reports.outline.findings,
+        'Data Coverage & Limitations',
+        'Methods',
+      ])
+    })
+
+    it('outlines "What changed" for the next period of a series', async () => {
+      const q2 = {
+        ...SAVED,
+        id: 'q2',
+        date_from: '2026-05-01',
+        date_to: '2026-07-31',
+        title: 'Sudan · Health · 2026-05-01 – 2026-07-31',
+      }
+      vi.mocked(listReports).mockResolvedValue({ reports: [q2] })
+      vi.mocked(getReport).mockResolvedValue({ ...q2, content: '## Summary\n\nText.' })
+      stubStream()
+      await mount('/reports?report=q2')
+      vi.stubGlobal('matchMedia', () => ({ matches: false }))
+      Element.prototype.scrollIntoView = () => {}
+      ;[...host.querySelectorAll('.pdf-btn')]
+        .find((b) => b.textContent.trim() === en.reports.viewer.runNext)
+        .click()
+      await flush()
+      delete Element.prototype.scrollIntoView
+      host.querySelector('.report-form').dispatchEvent(new Event('submit'))
+      await flush()
+      expect(outline()).toEqual([
+        'Executive Summary',
+        'What changed since the last report',
+        'Key Findings',
+        'Outlook',
+      ])
+      expect(request()).toContain('compared with 01.05.2026 - 31.07.2026')
+    })
+  })
+
   it('shows a generation error in the current language and follows a switch', async () => {
     vi.stubGlobal(
       'fetch',

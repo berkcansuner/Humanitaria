@@ -371,6 +371,34 @@
       "imagesCover": "Kapak görseli hazırlanıyor…",
       "imagesSection": "“{heading}” bölümünün görseli hazırlanıyor…"
     },
+    "progress": {
+      "elapsed": "{time} geçti",
+      "outline": "Bu raporda şu bölümler yer alacak",
+      "compared": "{period} ile karşılaştırmalı",
+      "computing": "İstatistikler HDX HAPI verilerinden hesaplanıyor, ardından anlatım yazılacak. İlk sözcükler genellikle iki dakika içinde görünür.",
+      "slow": "Bu, her zamankinden uzun sürüyor. Rapor hâlâ hazırlanıyor; beklemeyi sürdürebilir ya da durdurabilirsiniz.",
+      "writing": "Rapor yazılıyor.",
+      "writingTechnical": "Anlatım, hesaplanan istatistiklerden yazılıyor.",
+      "checking": "Değişenler önceki raporla karşılaştırılarak denetleniyor."
+    },
+    "outline": {
+      "executiveSummary": "Yönetici özeti",
+      "keyFindings": "Temel bulgular",
+      "outlook": "Beklentiler",
+      "overview": "Genel bakış",
+      "indicatorTable": "Gösterge tablosu",
+      "dataGaps": "Veri boşlukları",
+      "recentDevelopments": "Son gelişmeler",
+      "context": "Bağlam",
+      "priorityNeeds": "Sektörlere göre öncelikli ihtiyaçlar",
+      "affectedGroups": "Etkilenen gruplar",
+      "gapsConstraints": "Boşluklar ve kısıtlar",
+      "recommendations": "Öneriler",
+      "findings": "İncelenen her gösterge için bir bölüm",
+      "dataCoverage": "Veri kapsamı ve sınırlılıklar",
+      "methods": "Yöntem",
+      "whatChanged": "Son rapordan bu yana neler değişti"
+    },
     "compare": {
       "checking": "Önceki raporla karşılaştırılıyor…",
       "checkingPeriod": "Önceki raporla karşılaştırılıyor ({period})…",

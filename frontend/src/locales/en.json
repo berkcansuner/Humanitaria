@@ -371,6 +371,34 @@
       "imagesCover": "Generating cover illustration…",
       "imagesSection": "Illustrating “{heading}”…"
     },
+    "progress": {
+      "elapsed": "{time} elapsed",
+      "outline": "This report will have these sections",
+      "compared": "compared with {period}",
+      "computing": "Computing the statistics from HDX HAPI data, then writing the narrative. The first words usually appear within two minutes.",
+      "slow": "This is taking longer than usual. The report is still being prepared; you can keep waiting or stop it.",
+      "writing": "Writing the report.",
+      "writingTechnical": "Writing the narrative from the computed statistics.",
+      "checking": "Checking what changed against the previous report."
+    },
+    "outline": {
+      "executiveSummary": "Executive Summary",
+      "keyFindings": "Key Findings",
+      "outlook": "Outlook",
+      "overview": "Overview",
+      "indicatorTable": "Indicator Table",
+      "dataGaps": "Data Gaps",
+      "recentDevelopments": "Recent Developments",
+      "context": "Context",
+      "priorityNeeds": "Priority Needs by Sector",
+      "affectedGroups": "Affected Groups",
+      "gapsConstraints": "Gaps & Constraints",
+      "recommendations": "Recommendations",
+      "findings": "One section for each indicator analysed",
+      "dataCoverage": "Data Coverage & Limitations",
+      "methods": "Methods",
+      "whatChanged": "What changed since the last report"
+    },
     "compare": {
       "checking": "Checking against the previous report…",
       "checkingPeriod": "Checking against the previous report ({period})…",

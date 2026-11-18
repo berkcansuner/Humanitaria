@@ -406,19 +406,23 @@
             </div>
           </header>
           <p v-if="pdfError" class="pdf-error">{{ errorText(pdfError) }}</p>
-          <div v-if="!current.content && generating" class="report-loading">
-            <!-- The report model reads all sources before writing its first word
-                 (about a minute and a half), so the wait is named, not silent. -->
-            <p class="report-loading-note" role="status">
-              {{ t('reports.viewer.reading') }}
-            </p>
-            <span class="skeleton skel-line"></span>
-            <span class="skeleton skel-line"></span>
-            <span class="skeleton skel-line short"></span>
-          </div>
+          <!-- The report model reads all sources before writing its first word (40 to
+               110 seconds), so the wait says what is happening. Its request and stage
+               line stay above the text as it streams, until the report is saved. -->
+          <ReportProgress
+            v-if="generating && !current.id"
+            :type="current.report_type"
+            :country="current.country"
+            :theme="current.theme || ''"
+            :date-from="current.date_from || ''"
+            :date-to="current.date_to || ''"
+            :language="current.language"
+            :compared-period="current.comparedPeriod || ''"
+            :started="!!current.content"
+            :checking="!!current.checking"
+          />
           <!-- The report body is in the report's language, whatever the interface's. -->
           <article
-            v-else
             class="report-content"
             :lang="reportLang"
             v-html="
@@ -533,6 +537,7 @@ import AppTopbar from '../components/AppTopbar.vue'
 import SourceList from '../components/SourceList.vue'
 import UndoToast from '../components/UndoToast.vue'
 import CitePreview from '../components/CitePreview.vue'
+import ReportProgress from '../components/ReportProgress.vue'
 import { useUndoableDelete } from '../utils/undoableDelete.js'
 import { renderMarkdown } from '../utils/renderMarkdown.js'
 import { renumberCitations, numberByFirstAppearance } from '../utils/renumberCitations.js'
@@ -1145,7 +1150,10 @@ async function generate() {
     content: '',
     sources: null,
     report_type: form.value.report_type,
+    country: form.value.country,
     theme: form.value.theme || null,
+    date_from: form.value.date_from || null,
+    date_to: form.value.date_to || null,
     language: form.value.language,
     cover_image: null,
     section_images: null,
@@ -1902,11 +1910,6 @@ function onCiteClick(e) {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-}
-.report-loading-note {
-  margin: 0 0 var(--space-1);
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
 }
 .skel-line {
   display: block;
