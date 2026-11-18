@@ -9,6 +9,11 @@ const LAND = '#D5DDE7' // quieter than BASE so country points stay the foregroun
 const PULSE = '10, 143, 136' // brand-chart #0A8F88
 const PERIOD = 4200 // ms per pulse cycle
 
+// `figure`: the map is the subject (Coverage section), not a backdrop (hero): each
+// country also gets a solid dot sized by its report volume, and wider rings.
+const props = defineProps({ figure: { type: Boolean, default: false } })
+const RING_SCALE = 2.2
+
 const canvas = ref(null)
 const points = drawablePoints(coverage.points)
 const maxReports = Math.max(1, ...points.map((p) => p.reports))
@@ -54,18 +59,21 @@ function draw(now) {
   }
   points.forEach((p, i) => {
     const { x, y } = project(p.lat, p.lon, width, height)
-    ctx.fillStyle = BASE
+    // As a figure, marks shrink with the map below 760px so a phone stays legible.
+    const size = pulseRadius(p.reports, maxReports) * (props.figure ? Math.min(1, width / 760) : 1)
+    const core = props.figure ? size * 0.7 : 1.2
+    ctx.fillStyle = props.figure ? `rgba(${PULSE}, 0.7)` : BASE
     ctx.beginPath()
-    ctx.arc(x, y, 1.2, 0, Math.PI * 2)
+    ctx.arc(x, y, core, 0, Math.PI * 2)
     ctx.fill()
 
-    const max = pulseRadius(p.reports, maxReports)
+    const max = props.figure ? size * RING_SCALE : size
     // Static frame (reduced motion): hold each ring at a mid-cycle phase.
     const t = reduced ? 0.5 : (now / PERIOD + phases[i]) % 1
     ctx.strokeStyle = `rgba(${PULSE}, ${0.35 * (1 - t)})`
     ctx.lineWidth = 1
     ctx.beginPath()
-    ctx.arc(x, y, 1.2 + (max - 1.2) * t, 0, Math.PI * 2)
+    ctx.arc(x, y, core + (max - core) * t, 0, Math.PI * 2)
     ctx.stroke()
   })
 }

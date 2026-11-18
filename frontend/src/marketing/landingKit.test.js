@@ -20,6 +20,7 @@ import {
   passage,
   passageSources,
   citedParts,
+  mapLabels,
 } from './landingKit.js'
 
 afterEach(() => {
@@ -299,5 +300,25 @@ describe('citedParts', () => {
 
   it('keeps text without markers whole', () => {
     expect(citedParts('No citation here.')).toEqual([{ text: 'No citation here.' }])
+  })
+})
+
+describe('mapLabels', () => {
+  const pt = (iso3, reports, lat, lon) => ({ iso3, name: iso3, reports, lat, lon })
+
+  it('labels the highest-volume points, skipping any that would crowd a stronger label', () => {
+    const points = [
+      pt('LBN', 750, 33.9, 35.9),
+      pt('PSE', 842, 31.9, 35.2),
+      pt('SDN', 780, 15, 30),
+      pt('YEM', 619, 15.9, 47.6),
+      pt('COD', 695, -4, 21.8),
+    ]
+    expect(mapLabels(points, { count: 3 }).map((p) => p.iso3)).toEqual(['PSE', 'SDN', 'COD'])
+  })
+
+  it('never labels a point the map cannot draw', () => {
+    const points = [pt('AAA', 900, null, 10), pt('BBB', 0, 5, 5), pt('CCC', 10, 5, 5)]
+    expect(mapLabels(points, { count: 3 }).map((p) => p.iso3)).toEqual(['CCC'])
   })
 })

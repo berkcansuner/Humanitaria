@@ -222,3 +222,17 @@ export function citedParts(text) {
   if (last < text.length) parts.push({ text: text.slice(last) })
   return parts
 }
+
+// The `count` highest-volume drawable points to name on the map, skipping a point
+// whose label would crowd a stronger one (within `minLat` and `minLon` degrees).
+export function mapLabels(points, { count, minLat = 8, minLon = 30 }) {
+  const picked = []
+  for (const p of [...drawablePoints(points)].sort((a, b) => b.reports - a.reports)) {
+    if (picked.length === count) break
+    const crowded = picked.some(
+      (q) => Math.abs(q.lat - p.lat) < minLat && Math.abs(q.lon - p.lon) < minLon,
+    )
+    if (!crowded) picked.push(p)
+  }
+  return picked
+}
