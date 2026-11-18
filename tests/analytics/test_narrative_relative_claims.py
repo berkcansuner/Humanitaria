@@ -159,22 +159,23 @@ LINE_CONTEXT = (
     "a trend test (at least 4 are needed), so no trend or statistical test is reported. Values: "
     "2025-01-01 467000 people. Latest value as of the chosen period: 467000 people (2025-01-01).\n\n"
     "DATA NOTES:\n- Protection: people in need, 2025: the plan reports protection in separate "
-    "lines (Child Protection 1610000, Gender Based Violence 1540000); the figure here (467000) is "
-    "below one of the plan's protection lines, so it is not the plan's overall protection figure, "
-    "which is higher; this report does not add the lines up, because people can be counted in "
-    "more than one.\n"
+    "lines (Child Protection 1,611,291, Gender Based Violence 1,535,819); this figure (466,589) is "
+    "below one of the plan's protection lines, so it is not the plan's overall protection figure; "
+    "HDX HAPI does not say which of the plan's lines it is; this report does not add the lines "
+    "up, because people can be counted in more than one.\n"
 )
 
 
 @pytest.mark.parametrize("language,sentence", [
     ("en", "The plan reports protection in separate lines: child protection (1.61 million people) "
            "and gender-based violence (1.54 million people)."),
-    ("en", "The 467,000 figure is not the plan's overall protection figure, which is higher, and "
-           "the lines are not added up because people can be counted in more than one."),
+    ("en", "The 466,589 figure is not the plan's overall protection figure, and HDX HAPI does not "
+           "say which of the plan's lines it is; the lines are not added up because people can "
+           "be counted in more than one."),
     ("tr", "Plan korumayı ayrı satırlarda raporluyor: çocuk koruma 1,61 milyon ve toplumsal "
            "cinsiyete dayalı şiddet 1,54 milyon kişi."),
-    ("tr", "467 bin rakamı planın genel koruma toplamı değildir; toplam daha yüksektir ve aynı "
-           "kişi birden fazla satırda sayılabildiği için satırlar toplanmadı."),
+    ("tr", "466.589 rakamı planın genel koruma toplamı değildir; aynı kişi birden fazla satırda "
+           "sayılabildiği için satırlar toplanmadı."),
 ])
 def test_the_plan_line_note_survives_in_data_coverage(language, sentence):
     findings = Findings(sections=[ReportSection(GEN_H, {"kind": "snapshot", "p_value": None,

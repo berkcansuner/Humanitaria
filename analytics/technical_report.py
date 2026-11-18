@@ -15,7 +15,7 @@ import requests
 from analytics.charts import comparison_chart, correlation_chart, trend_chart
 from analytics.datasets import (
     competing_totals_note, consistent_snapshots, ipc_coverage_note, national_series,
-    regional_series, sub_sector_lines, two_totals_periods,
+    regional_series, sub_sector_lines,
 )
 from analytics.hapi_client import HapiError, fetch_rows, resource_metadata
 from analytics.indicators import indicators_for
@@ -273,69 +273,70 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                     notes=notes, look_backs=look_backs, failed=failed, data_sources=used)
 
 
+def _full(value: float) -> str:
+    """A figure in full with thousands separators (14,173,291): two plan lines must never
+    print as the same rounded number."""
+    return f"{int(round(value)):,}"
+
+
 def _plan_line(ind, rows: list[dict], periods: list, values: list,
                language: str) -> tuple[str, list[str], str | None]:
     """The indicator's name, a note for every period whose plan reports the sector in
     separate lines (HAPI returns the sub-sectors beside it: PRO-CPN, PRO-GBV …), and,
-    when the series mixes what its years are (a line that is not the overall figure, a
-    line that may be, the plan's only figure), why its years are not comparable.
+    when the series' years are not all the plan's only figure, why they are not
+    comparable.
 
-    HAPI's figure for the parent code is then one plan line. Only what HAPI's rows show
-    is said: a figure below one of its sub-lines is not the overall figure (Haiti 2025:
-    466,589 beside child protection's 1,611,291), and it is likely the general line,
-    and so named, only when the period's undisaggregated and 'total' rows agree (Sudan
-    2025: 11,725,110 both) in every year of the series. Haiti's two rows disagree (349,999 is the migrants line) so
-    its name stays. A figure at least every sub-line may be either: the general line in
-    Afghanistan 2025 (14.2 million; overall 22.3 million), the overall figure in Congo
-    2025 (7,870,319). The lines are never added up."""
+    HAPI's figure for the parent code is then one of the plan's lines, and HAPI's rows
+    cannot say which: Haiti 2024's 250,000 is the migrants line, Haiti 2025's 466,589 the
+    general line, Congo 2025's 7,870,319 the overall figure. So only what the rows show is
+    said: below one of its sub-lines, the figure is not the overall figure; otherwise it
+    may be one of the lines. The figure is never called the general line, nothing is said
+    about an overall figure the data does not hold, and the lines are never added up."""
     name = ind.name(language)
     lines = sub_sector_lines(rows, ind)
     by_period = {str(p)[:10]: v for p, v in zip(periods, values)}
     lines = {p: subs for p, subs in lines.items() if p in by_period}
     if not lines:
         return name, [], None
-    disputed = two_totals_periods(rows, ind)
 
     def below(period):
         return any(v > by_period[period] for _, v in lines.get(period, []))
 
-    # One heading covers the whole series: it says "general" only when every year is shown
-    # to be the general line (Sudan 2024's figure is the overall one, 2025's the general).
-    if all(p in lines and below(p) and p not in disputed for p in by_period):
-        name = ind.general_name(language)
     sector = ind.sector_en or "the sector"
     notes = []
     for period, subs in lines.items():
-        listed = ", ".join(f"{n} {_plain(v)}" for n, v in subs)
+        listed = ", ".join(f"{n} {_full(v)}" for n, v in subs)
+        figure = _full(by_period[period])
         if below(period):
-            what = (f"is below one of the plan's {sector} lines, so it is not the plan's overall "
-                    f"{sector} figure, which is higher")
-            if period not in disputed:
-                what += f"; it is likely the plan's general {sector} line"
+            what = (f"this figure ({figure}) is below one of the plan's {sector} lines, so it is "
+                    f"not the plan's overall {sector} figure; HDX HAPI does not say which of the "
+                    f"plan's lines it is")
         else:
-            what = (f"may be the plan's general {sector} line rather than its overall {sector} "
-                    f"figure, which may be higher")
+            what = (f"this figure ({figure}) may be one of them rather than the overall {sector} "
+                    f"figure")
         notes.append(f"{name}, {period[:4]}: the plan reports {sector} in separate lines "
-                     f"({listed}); the figure here ({_plain(by_period[period])}) {what}; this "
-                     f"report does not add the lines up, because people can be counted in more "
-                     f"than one.")
+                     f"({listed}); {what}; this report does not add the lines up, because people "
+                     f"can be counted in more than one.")
     return name, notes, _not_comparable(by_period, lines, below, sector)
 
 
 def _not_comparable(by_period: dict, lines: dict, below, sector: str) -> str | None:
-    """Why a series' years are not comparable, or None when they are all of one kind."""
+    """Why a series' years are not comparable, or None. Only years whose plan reports
+    the sector as one figure compare with each other: any year that is one of several
+    plan lines may be a different line from the next."""
+    if len(by_period) < 2 or not lines:
+        return None
     kinds = {
         "below": f"one of the plan's separate {sector} lines, not its overall figure",
-        "line": f"one of the plan's separate {sector} lines, possibly its overall figure",
+        "line": f"possibly one of the plan's separate {sector} lines rather than its overall figure",
         "single": f"the plan's only {sector} figure",
     }
     years: dict[str, list[str]] = {}
     for period in sorted(by_period):
         kind = "single" if period not in lines else ("below" if below(period) else "line")
         years.setdefault(kind, []).append(period[:4])
-    if len(years) < 2:
-        return None
-    return "; ".join(f"{', '.join(ys)}: {kinds[k]}" for k, ys in years.items())
+    parts = [f"{', '.join(ys)}: {kinds[k]}" for k, ys in years.items()]
+    return "; ".join(parts) + "; HDX HAPI does not say which line each year's figure is"
 
 
 # Where a reader can open HDX HAPI when HAPI cannot name the dataset behind a series.
@@ -379,7 +380,7 @@ def _series(rows: list[dict], ind, date_from: str, date_to: str, today: date):
     rows, note = consistent_snapshots(rows)
     coverage = ipc_coverage_note(rows)
     periods, values = national_series(rows, ind)
-    totals = competing_totals_note(rows, ind, fmt=_plain)
+    totals = competing_totals_note(rows, ind, fmt=_full)
     return rows, [n for n in (note, coverage, totals) if n], periods, values
 
 

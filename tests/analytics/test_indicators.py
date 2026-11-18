@@ -126,8 +126,6 @@ def test_sector_indicators_are_named_in_both_languages():
         "Gıda güvenliği: insani yardıma ihtiyaç duyan kişiler")
 
 
-def test_a_sector_has_a_general_line_name_in_both_languages():
-    pro = by_key("pin_protection")
-    assert pro.general_name("en") == "General protection: people in need"
-    assert pro.general_name("tr") == "Genel koruma: insani yardıma ihtiyaç duyan kişiler"
-    assert pro.sector_en == "protection"
+def test_a_sector_names_itself_in_plain_english_for_the_notes():
+    assert by_key("pin_protection").sector_en == "protection"
+    assert not hasattr(by_key("pin_protection"), "general_name")

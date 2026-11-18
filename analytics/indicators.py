@@ -35,23 +35,13 @@ class Indicator:
     # The publisher's required credit line, when it has one; {month_year} is the month of
     # the latest data shown. Printed instead of `source`.
     credit: str = ""
-    # A sector's people in need: its name when HAPI's figure is the plan's general line
-    # (the plan reports sub-lines such as child protection separately), and the sector
-    # in plain English for the findings' notes.
-    general_label: str = ""
-    general_label_en: str = ""
+    # A sector's people in need: the sector in plain English, for the findings' notes.
     sector_en: str = ""
 
     def name(self, language: str = "tr") -> str:
         """The indicator's name in the report language: Turkish for "tr", else English
         (as the section headings are)."""
         return self.label if language == "tr" or not self.label_en else self.label_en
-
-    def general_name(self, language: str = "tr") -> str:
-        """The name of the sector's general line, in the report language."""
-        if not self.general_label:
-            return self.name(language)
-        return self.general_label if language == "tr" else self.general_label_en
 
 
 INDICATORS: list[Indicator] = [
@@ -98,9 +88,6 @@ def _sector_pin(key: str, sector_code: str, label_tr: str, label_en: str) -> Ind
                      "affected-people/humanitarian-needs", "population", "sum", 0,
                      {"population_status": "INN", "sector_code": sector_code},
                      label_en=f"{label_en}: people in need", source="OCHA HNO",
-                     general_label=f"Genel {label_tr[0].lower()}{label_tr[1:]}: insani yardıma "
-                                   f"ihtiyaç duyan kişiler",
-                     general_label_en=f"General {label_en[0].lower()}{label_en[1:]}: people in need",
                      sector_en=f"{label_en[0].lower()}{label_en[1:]}")
 
 

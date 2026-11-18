@@ -389,7 +389,7 @@ _TECHNICAL_SYSTEM_PROMPT = (
     "names a sector (not 'all sectors'), the report is about that sector: frame the Executive "
     "Summary around that sector and its findings, and never bring in or speculate about "
     "indicators that are not in the Context. Use every indicator's name exactly as the Context gives it "
-    "(e.g. 'General protection: people in need' is never shortened to 'protection'), and when a DATA "
+    "(e.g. 'Protection: people in need', never shortened or reworded), and when a DATA "
     "NOTE says the plan reports a sector in separate lines, restate it in Data Coverage & Limitations "
     "and never present the figure as the sector's overall figure or add the lines up. When a "
     "finding says its values are not comparable across years, say so in its section and never "

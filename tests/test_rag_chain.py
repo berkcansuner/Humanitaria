@@ -325,8 +325,8 @@ def test_indicator_table_rows_cite_their_source_in_the_value_cell():
 
 
 def test_technical_prompt_keeps_indicator_names_and_plan_line_notes():
-    # Round 2 decision: "General protection: people in need" must not become "protection",
-    # and the note on the plan's separate lines must reach Data Coverage & Limitations.
+    # Round 2: an indicator's name is kept as given, and the note on the plan's separate
+    # lines must reach Data Coverage & Limitations.
     from rag.chain import _REPORT_PROMPTS
     p = _REPORT_PROMPTS["technical_monitoring"]
     assert "Use every indicator's name exactly as the Context gives it" in p
