@@ -273,3 +273,11 @@ def test_needs_assessment_citation_rule_has_the_examples():
     p = _REPORT_PROMPTS["needs_assessment"]
     assert "WRONG:" in p and "RIGHT:" in p
     assert "right after the fact it supports" in p
+
+
+def test_technical_prompt_keeps_a_sector_report_on_its_sector():
+    # 2026-11-18: an Afghanistan "Food and Nutrition" technical report led with IDPs.
+    from rag.chain import _REPORT_PROMPTS
+    p = _REPORT_PROMPTS["technical_monitoring"]
+    assert "frame the Executive Summary around that sector" in p
+    assert "indicators that are not in the Context" in p

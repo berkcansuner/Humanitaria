@@ -1,7 +1,7 @@
 """HAPI satırlarını istatistik motorunun beklediği seri yapılarına dönüştürür.
 
 Sunucu-tarafı query_params agregat satırları getirdiğinden client-tarafı filtre
-gerekmez; tek istisna humanitarian_needs'in Intersectoral+INN içindeki `category`
+gerekmez; tek istisna humanitarian-needs endpoint'inin (her sektör, INN) `category`
 kırılımıdır — dönem-agregat satırı (boş/None/'total' kategorisi) dedup edilir,
 aksi hâlde demografik alt-kırılımlar toplanıp şişik değer üretir.
 """
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def _dedup_aggregate_rows(df: pd.DataFrame, indicator: Indicator) -> pd.DataFrame:
-    if indicator.key == "humanitarian_needs" and "category" in df.columns:
+    if indicator.endpoint == "affected-people/humanitarian-needs" and "category" in df.columns:
         cat = df["category"].fillna("").astype(str).str.strip().str.lower()
         df = df[cat.isin(["", "total"])]
         # Dönem başına en büyük (= sektörler-arası toplam) satırı tut: sabitlenmemiş

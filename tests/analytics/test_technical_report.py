@@ -436,3 +436,70 @@ def test_dtm_charts_carry_iom_required_credit_line():
 def test_indicators_are_named_in_turkish_only_for_turkish_reports():
     # A report in another language takes the English names, like its English headings.
     assert all(ind.name("fr") == ind.name("en") for ind in INDICATORS)
+
+
+# --- Sector reports (2026-11-18, Afghanistan "Food and Nutrition": the report analysed
+# IDPs by region; the sector never reached the indicator selection). ---
+
+def _recording_fetch(calls, rows_for=lambda ep, params: []):
+    def fake_fetch(endpoint, iso3, extra_params=None, admin_level=None, location_param="location_code"):
+        calls.append((endpoint, dict(extra_params or {})))
+        return rows_for(endpoint, extra_params or {})
+    return fake_fetch
+
+
+def test_all_sectors_fetches_the_six_overview_indicators(monkeypatch):
+    calls = []
+    monkeypatch.setattr("analytics.technical_report.fetch_rows", _recording_fetch(calls))
+    compute_findings("AFG", None, None, language="en", theme=None)
+    assert len(calls) == len(INDICATORS)
+    assert ("affected-people/humanitarian-needs",
+            {"population_status": "INN", "sector_code": "Intersectoral"}) in calls
+
+
+def test_food_and_nutrition_fetches_only_its_indicators(monkeypatch):
+    calls = []
+    monkeypatch.setattr("analytics.technical_report.fetch_rows", _recording_fetch(calls))
+    compute_findings("AFG", None, None, language="en", theme="Food and Nutrition")
+    assert [(ep, p.get("sector_code") or p.get("ipc_phase")) for ep, p in calls] == [
+        ("affected-people/humanitarian-needs", "FSC"),
+        ("affected-people/humanitarian-needs", "NUT"),
+        ("food/food-security", "3+"),
+    ]
+
+
+def test_a_sector_without_series_fetches_nothing(monkeypatch):
+    calls = []
+    monkeypatch.setattr("analytics.technical_report.fetch_rows", _recording_fetch(calls))
+    f = compute_findings("AFG", None, None, language="en", theme="Logistics and Telecommunications")
+    assert calls == [] and f.sections == [] and f.indicators_covered == []
+
+
+def _sector_pin_rows(endpoint, params):
+    # HNO rows as HAPI returns them: each year twice (category '' and 'total'), plus
+    # a demographic breakdown that must not be added in.
+    if params.get("sector_code") != "FSC":
+        return []
+    rows = []
+    for year, value in [(2022, 14_000_000), (2023, 15_000_000), (2024, 15_800_000),
+                        (2025, 14_800_000), (2026, 17_400_000)]:
+        for category in ("", "total"):
+            rows.append({"population": value, "category": category,
+                         "reference_period_start": f"{year}-01-01",
+                         "reference_period_end": f"{year}-12-31"})
+        rows.append({"population": value // 2, "category": "Children",
+                     "reference_period_start": f"{year}-01-01",
+                     "reference_period_end": f"{year}-12-31"})
+    return rows
+
+
+def test_sector_people_in_need_is_one_value_a_year(monkeypatch):
+    monkeypatch.setattr("analytics.technical_report.fetch_rows",
+                        _recording_fetch([], _sector_pin_rows))
+    f = compute_findings("AFG", "2021-01-01", "2026-11-18", language="en",
+                         theme="Food and Nutrition")
+    assert f.indicators_covered == ["pin_food_security"]
+    tr = next(s for s in f.sections if s.stat_result["kind"] == "trend")
+    assert tr.heading == "Food security: people in need — Trend Analysis"
+    assert tr.stat_result["n_points"] == 5          # not ten (duplicates) or more (breakdowns)
+    assert "(n=" not in "".join(f.gaps)

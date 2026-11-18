@@ -165,3 +165,63 @@ def test_technical_report_is_saved_after_the_narrative_check():
     assert "p=0.010" in content
     assert "4,812" not in content
     assert "1 sentence(s) that could not be verified" in content
+
+
+# --- Sector reports (2026-11-18): the chosen sector reaches the analysis, and a sector
+# without HDX HAPI series is answered with a clear error, never with unrelated figures. ---
+
+def test_the_chosen_sector_reaches_compute_findings():
+    seen = {}
+
+    def fake_compute(iso3, date_from, date_to, language="tr", theme=None):
+        seen["theme"] = theme
+        return _findings_with_sections()
+
+    async def mock_astream(*a, **k):
+        yield "## Executive Summary\n\nText."
+
+    chain = MagicMock()
+    chain.astream = mock_astream
+    with patch("api.routes.reports.technical_report.compute_findings", side_effect=fake_compute), \
+         patch("api.routes.reports.build_report_chain", return_value=chain):
+        _client().post("/reports/stream", json={
+            "country": "Afghanistan", "report_type": "technical_monitoring", "language": "en",
+            "theme": "Food and Nutrition",
+        })
+    assert seen["theme"] == "Food and Nutrition"
+
+
+def test_a_sector_without_series_is_a_clear_error_before_any_hapi_call():
+    with patch("api.routes.reports.technical_report.compute_findings",
+               side_effect=AssertionError("no HAPI call for an unmapped sector")):
+        resp = _client().post("/reports/stream", json={
+            "country": "Afghanistan", "report_type": "technical_monitoring", "language": "en",
+            "theme": "Logistics and Telecommunications",
+        })
+    events = _parse_sse_events(resp.text)
+    error = next(e for e in events if e["event"] == "error")
+    assert error["data"]["code"] == "no_sector_data"
+    assert "All sectors" in error["data"]["message"]
+    assert "saved" not in [e["event"] for e in events] and events[-1]["event"] == "done"
+
+
+def test_a_sector_whose_series_are_empty_for_the_country_is_the_same_error():
+    from analytics.technical_report import Findings
+    empty = Findings(sections=[], gaps=["Food security: people in need: dönem içinde veri yok"],
+                     indicators_covered=[])
+    with patch("api.routes.reports.technical_report.compute_findings", return_value=empty):
+        resp = _client().post("/reports/stream", json={
+            "country": "Afghanistan", "report_type": "technical_monitoring", "language": "tr",
+            "theme": "Food and Nutrition",
+        })
+    events = _parse_sse_events(resp.text)
+    assert next(e for e in events if e["event"] == "error")["data"]["code"] == "no_sector_data"
+    assert "token" not in [e["event"] for e in events]
+
+
+def test_options_name_the_sectors_with_technical_monitoring_series():
+    with patch("ingestion.analytics.distinct_countries", return_value=["Sudan"]):
+        body = _client().get("/reports/options").json()
+    assert "Food and Nutrition" in body["technical_themes"]
+    assert "Logistics and Telecommunications" not in body["technical_themes"]
+    assert set(body["technical_themes"]) <= set(body["themes"])

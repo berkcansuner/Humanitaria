@@ -15,7 +15,7 @@ import requests
 from analytics.charts import comparison_chart, correlation_chart, trend_chart
 from analytics.datasets import consistent_snapshots, ipc_coverage_note, national_series, regional_series
 from analytics.hapi_client import HapiError, fetch_rows
-from analytics.indicators import INDICATORS
+from analytics.indicators import indicators_for
 from analytics.stat_tests import ALPHA, CORRELATION_MIN_POINTS, by_region, correlate, holm, trend
 from config import get_settings
 
@@ -53,9 +53,10 @@ _HEADINGS = {
 
 
 def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
-                     language: str = "tr") -> Findings:
+                     language: str = "tr", theme: str | None = None) -> Findings:
     """*language* ("tr" or "en") names the indicators, section headings and chart
-    text; the statistics do not depend on it."""
+    text; the statistics do not depend on it. *theme*: the report's sector — only its
+    indicators are analysed (None = all sectors, the six overview indicators)."""
     settings = get_settings()
     headings = _HEADINGS.get(language, _HEADINGS["en"])
     min_pts = settings.TECHNICAL_REPORT_MIN_POINTS
@@ -74,7 +75,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
         date_from = _years_before(today, default_years).isoformat()
     date_to = min(date_to, today.isoformat()) if date_to else today.isoformat()
 
-    for ind in INDICATORS:
+    for ind in indicators_for(theme):
         name = ind.name(language)
         try:
             rows = fetch_rows(ind.endpoint, iso3,

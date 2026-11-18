@@ -19,6 +19,7 @@ from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 
 from analytics import technical_report
 from analytics.countries import iso3_for
+from analytics.indicators import indicators_for
 from analytics.narrative_check import verify_narrative
 from config import get_settings
 from ingestion import analytics
@@ -162,6 +163,19 @@ def _no_findings_message(req: ReportRequest) -> str:
     )
 
 
+# A technical report on a sector HDX HAPI has no series for (or none for this country):
+# the interface names it by the code, in its own language.
+_NO_SECTOR_DATA_MESSAGE = (
+    "HDX HAPI has no quantitative series for this sector in this country, so a technical "
+    "monitoring report can't be made for it. Choose \"All sectors\" or another report type."
+)
+
+
+def _no_sector_data_event() -> ServerSentEvent:
+    return ServerSentEvent(event="error", data=json.dumps(
+        {"code": ErrorCode.no_sector_data.value, "message": _NO_SECTOR_DATA_MESSAGE}))
+
+
 def _no_iso3_message(req: ReportRequest) -> str:
     """technical_monitoring for a country HDX HAPI has no ISO3 code for, in the
     report's language (it used to be Turkish for every report)."""
@@ -238,7 +252,9 @@ async def _checked(full: str, req: ReportRequest) -> Checked:
 @router.get("/reports/options")
 async def report_options(user: dict = Depends(get_current_user)):
     countries = await anyio.to_thread.run_sync(_countries)
-    return {"countries": countries, "themes": THEMES}
+    # technical_themes: the sectors a technical monitoring report can analyse.
+    return {"countries": countries, "themes": THEMES,
+            "technical_themes": [t for t in THEMES if indicators_for(t)]}
 
 
 @router.post("/reports/stream")
@@ -266,11 +282,19 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                     )
                     yield ServerSentEvent(event="done", data="{}")
                     return
+                if req.theme and not indicators_for(req.theme):
+                    yield _no_sector_data_event()
+                    yield ServerSentEvent(event="done", data="{}")
+                    return
 
                 findings = await anyio.to_thread.run_sync(
                     technical_report.compute_findings, iso3, req.date_from, req.date_to,
-                    req.language
+                    req.language, req.theme
                 )
+                if not findings.sections and req.theme:
+                    yield _no_sector_data_event()
+                    yield ServerSentEvent(event="done", data="{}")
+                    return
                 if not findings.sections:
                     yield ServerSentEvent(
                         event="token",
