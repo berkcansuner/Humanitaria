@@ -12,7 +12,6 @@
     "save": "Kaydet",
     "cancel": "Vazgeç",
     "delete": "Sil",
-    "close": "Kapat",
     "loading": "Yükleniyor…",
     "tryAgain": "Yeniden dene",
     "dismiss": "Kapat"
@@ -353,8 +352,8 @@
       "comparedDeleted": "Daha sonra silinen önceki bir raporla karşılaştırıldı.",
       "comparedWith": "Karşılaştırıldığı rapor: {link}",
       "previousReport": "önceki rapor",
-      "notComparedWith": "Şu dönemin raporuyla karşılaştırılmadı: {link}",
-      "earlierPeriod": "önceki dönem",
+      "notComparedWith": "{link} raporuyla karşılaştırılmadı",
+      "earlierPeriod": "Önceki dönem",
       "continuedBy": "Devamı: {link}",
       "laterReport": "sonraki bir rapor",
       "runNext": "Sonraki dönemi raporla",

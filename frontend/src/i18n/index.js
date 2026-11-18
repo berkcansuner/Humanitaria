@@ -11,12 +11,8 @@ export const i18n = createI18n({
   fallbackLocale: 'en',
   messages: { en, tr },
   numberFormats: {
-    en: { percent: { style: 'percent' }, integer: { maximumFractionDigits: 0 } },
-    tr: { percent: { style: 'percent' }, integer: { maximumFractionDigits: 0 } },
-  },
-  datetimeFormats: {
-    en: { short: { dateStyle: 'medium' }, long: { dateStyle: 'long' } },
-    tr: { short: { dateStyle: 'medium' }, long: { dateStyle: 'long' } },
+    en: { integer: { maximumFractionDigits: 0 } },
+    tr: { integer: { maximumFractionDigits: 0 } },
   },
 })
 
