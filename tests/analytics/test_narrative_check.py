@@ -197,3 +197,34 @@ def test_an_untested_finding_said_to_be_untested_is_kept():
 def test_an_untested_finding_is_never_called_significant_either():
     text = f"## {SNAPSHOT_H}\n\nHerat stands out significantly from the other regions."
     assert _untested_check(text).removed == 1
+
+
+
+# --- Round 3: a Methods sentence naming a test the METHOD NOTES do not list is removed. ---
+
+ONE_TEST_CONTEXT = (CONTEXT + "\nMETHOD NOTES:\n- Trend: Mann-Kendall test; the slope is Sen's slope "
+                    "per year on the real dates of the periods; Kendall tau is the effect size.\n"
+                    "- One statistical test was run, so no multiple-comparison correction applies; "
+                    "significance is decided on its p-value at α=0.05.\n")
+
+
+def _methods(sentence, language="en", heading="Methods"):
+    return verify_narrative(f"## {heading}\n\n{sentence}", _findings(), ONE_TEST_CONTEXT, language)
+
+
+def test_a_methods_sentence_naming_an_unused_test_is_removed():
+    for sentence, language, heading in (
+            ("Regional differences were assessed with the Kruskal-Wallis test.", "en", "Methods"),
+            ("Correlations were measured with Pearson's coefficient.", "en", "Methods"),
+            ("The Holm correction was applied across all tests.", "en", "Methods"),
+            ("Bölgesel farklar Kruskal-Wallis testiyle değerlendirildi.", "tr", "Yöntemler"),
+            ("Çoklu karşılaştırmalar için Holm düzeltmesi uygulandı.", "tr", "Yöntem")):
+        assert _methods(sentence, language, heading).removed == 1, sentence
+
+
+def test_a_methods_sentence_naming_a_used_test_stays():
+    for sentence, language, heading in (
+            ("The trend was tested with the Mann-Kendall test and Sen's slope.", "en", "Methods"),
+            ("A single test was run, so no multiple-comparison correction applies.", "en", "Methods"),
+            ("Eğilim Mann-Kendall testiyle ve Sen eğimiyle sınandı.", "tr", "Yöntemler")):
+        assert _methods(sentence, language, heading).removed == 0, sentence

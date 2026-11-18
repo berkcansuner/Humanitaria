@@ -245,7 +245,8 @@ def test_context_carries_method_notes_and_no_half_split_test(_mock):
     f = compute_findings("AFG", None, None)
     assert not [s for s in f.sections if "Dönem Karşılaştırması" in s.heading]
     ctx = findings_to_context(f)
-    assert "METHOD NOTES:" in ctx and "Holm correction" in ctx
+    # One trend test ran: its method, no correction, no regions or correlation.
+    assert "METHOD NOTES:" in ctx and "Mann-Kendall" in ctx and "Holm" not in ctx
     assert "serial correlation" in ctx
 
 
@@ -660,7 +661,10 @@ def test_snapshots_do_not_count_toward_the_holm_family(monkeypatch):
     trend_section = next(s for s in f.sections if s.stat_result["kind"] == "trend")
     # One test in the family: its Holm-adjusted p is its own p.
     assert trend_section.stat_result["p_adjusted"] == trend_section.stat_result["p_value"]
-    assert "Holm correction across all 1 tests" in findings_to_context(f)
+    ctx = findings_to_context(f)
+    assert ("- One statistical test was run, so no multiple-comparison correction applies; "
+            "significance is decided on its p-value at α=0.05.") in ctx
+    assert "Holm" not in ctx and "Kruskal" not in ctx and "Pearson" not in ctx
 
 
 # --- Untestable comparisons are snapshots, not negative results (2026-11-18: "H of n/a,
@@ -1118,3 +1122,37 @@ def test_all_sectors_lists_only_indicators_shown_in_a_section(monkeypatch):
     f = compute_findings("AFG", None, None, language="en", theme=None)
     assert any("People in need" in g for g in f.gaps)
     assert [u["key"] for u in f.data_sources] == ["food_security"]
+
+
+
+# --- Round 3: the methods a report names are the ones it used. ---
+
+def _method_notes(ctx):
+    return ctx.split("METHOD NOTES:", 1)[1]
+
+
+@patch("analytics.technical_report.fetch_rows",
+       side_effect=lambda ep, iso3, **k: _two_indicator_rows(ep))
+def test_method_notes_list_trends_correlation_and_holm_when_they_ran(_mock):
+    f = compute_findings("AFG", None, None)
+    notes = _method_notes(findings_to_context(f))
+    assert "Mann-Kendall" in notes and "Pearson" in notes
+    assert "Kruskal" not in notes                       # no regional test ran
+    assert "Holm correction across all three tests in this report" in notes
+
+
+@patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _multi_region_rows(
+    "idps" if ep.endswith("idps") else "other"))
+def test_method_notes_list_the_regional_test_when_it_ran(_mock):
+    f = compute_findings("AFG", "2025-01-01", "2025-12-31")
+    notes = _method_notes(findings_to_context(f))
+    assert "Kruskal-Wallis" in notes and "Mann-Kendall" in notes and "Pearson" not in notes
+    assert "Holm correction across all two tests" in notes
+
+
+def test_a_single_test_is_reported_without_a_holm_adjustment(monkeypatch):
+    monkeypatch.setattr("analytics.technical_report.fetch_rows",
+                        _recording_fetch([], lambda ep, p: _yearly_ipc_rows(ep)))
+    f = compute_findings("AFG", None, None, language="en", theme="Food and Nutrition")
+    tr = next(s for s in f.sections if s.stat_result["kind"] == "trend")
+    assert "Holm" not in tr.findings_text and "p=0.027 → SIGNIFICANT (α=0.05)" in tr.findings_text

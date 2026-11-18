@@ -466,6 +466,29 @@ def _heading_text(line: str) -> str:
     return line.lstrip("#").strip().strip("*").strip()
 
 
+# The tests a Methods section may name, by family; English and Turkish spellings.
+_METHODS = {
+    "trend": re.compile(r"mann[- ]kendall|\bkendall|\bsen(?:'s|['’]in)?\s+(?:slope|eğim)", re.IGNORECASE),
+    "region": re.compile(r"kruskal", re.IGNORECASE),
+    "correlation": re.compile(r"pearson", re.IGNORECASE),
+    "holm": re.compile(r"\bholm\b|bonferroni", re.IGNORECASE),
+}
+_METHODS_HEADING = re.compile(r"^(?:methods?|methodology|yöntem\w*)$", re.IGNORECASE)
+
+
+def _listed_methods(allowed_text: str) -> set | None:
+    """The test families the context's METHOD NOTES list (None: the context has none)."""
+    if "METHOD NOTES:" not in allowed_text:
+        return None
+    notes = allowed_text.split("METHOD NOTES:", 1)[1]
+    return {family for family, pattern in _METHODS.items() if pattern.search(notes)}
+
+
+def _names_unlisted_method(sentence: str, listed: set) -> bool:
+    return any(pattern.search(sentence) for family, pattern in _METHODS.items()
+               if family not in listed)
+
+
 def verify_narrative(text: str, findings, allowed_text: str, language: str) -> NarrativeCheck:
     """*allowed_text*: the context and directive the model was given (its numbers are
     the only numbers the narrative may use)."""
@@ -502,9 +525,14 @@ def verify_narrative(text: str, findings, allowed_text: str, language: str) -> N
                 return True
         return False
 
+    listed_methods = _listed_methods(allowed_text)
+
     def bad(sentence: str, section: str | None) -> bool:
         if not _numbers_ok(sentence, allowed):
             return True
+        if listed_methods is not None and section and _METHODS_HEADING.match(section) and \
+                _names_unlisted_method(sentence, listed_methods):
+            return True     # the Methods section names a test this report did not run
         if not _relative_claim_ok(sentence, profiles.get(section or "", whole)):
             return True
         if across_years(sentence, section):

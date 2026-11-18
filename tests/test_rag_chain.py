@@ -338,3 +338,10 @@ def test_technical_prompt_forbids_a_rise_or_fall_across_non_comparable_years():
     p = _REPORT_PROMPTS["technical_monitoring"]
     assert "not comparable across years" in p
     assert "never describe a rise or fall between those years" in p
+
+
+
+def test_technical_prompt_methods_come_from_the_notes_only():
+    from rag.chain import _REPORT_PROMPTS
+    p = _REPORT_PROMPTS["technical_monitoring"]
+    assert "do not describe a method the notes do not list" in p

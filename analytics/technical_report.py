@@ -468,7 +468,9 @@ def _adjust_and_describe(sections: list) -> None:
     significance in code from the adjusted p, and write each section's findings
     text — the model narrates the verdict, it never decides it."""
     adjusted = holm([s.stat_result.get("p_value") for s in sections])
+    family = sum(1 for p in adjusted if p is not None)
     for s, p_adj in zip(sections, adjusted):
+        s.stat_result["family"] = family
         # Untested (no p-value): outside the Holm family, and no verdict to narrate.
         s.stat_result["tested"] = s.stat_result.get("p_value") is not None
         s.stat_result["p_adjusted"] = p_adj
@@ -517,8 +519,20 @@ def _fmt_p(p: float | None) -> str:
 
 
 def _verdict(r: dict) -> str:
-    return (f"{_fmt_p(r['p_value'])}, Holm-adjusted {_fmt_p(r['p_adjusted'])} → "
-            f"{'SIGNIFICANT' if r['significant'] else 'NOT SIGNIFICANT'} (α=0.05)")
+    """The test's p-value and the code's verdict; the Holm-adjusted p only when the report
+    ran two or more tests (with one there is no correction to report)."""
+    verdict = f"{'SIGNIFICANT' if r['significant'] else 'NOT SIGNIFICANT'} (α=0.05)"
+    if r.get("family", 2) < 2:
+        return f"{_fmt_p(r['p_value'])} → {verdict}"
+    return f"{_fmt_p(r['p_value'])}, Holm-adjusted {_fmt_p(r['p_adjusted'])} → {verdict}"
+
+
+_NUMBER_WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+                 "ten", "eleven", "twelve"]
+
+
+def _count(n: int) -> str:
+    return _NUMBER_WORDS[n] if 0 <= n < len(_NUMBER_WORDS) else str(n)
 
 
 def _plain(x: float) -> str:
@@ -649,7 +663,9 @@ def findings_to_context(findings: Findings) -> str:
         lines.append("DATA NOTES:")
         lines += [f"- {n}" for n in findings.notes]
         lines.append("")
-    tested = sum(1 for s in findings.sections if s.stat_result.get("p_value") is not None)
+    tested_kinds = [s.stat_result["kind"] for s in findings.sections
+                    if s.stat_result.get("p_value") is not None]
+    tested = len(tested_kinds)
     if not tested:
         # Nothing was tested: no test methods to restate, no Holm family.
         lines += [
@@ -658,19 +674,27 @@ def findings_to_context(findings: Findings) -> str:
             "- Limitation: the series are short, so the values are descriptive.",
         ]
         return "\n".join(lines)
-    lines += [
-        "METHOD NOTES:",
-        "- Trend: Mann-Kendall test; the slope is Sen's slope per year on the real dates of "
-        "the periods; Kendall tau is the effect size.",
-        "- Regions: Kruskal-Wallis test across admin-1 regions.",
-        f"- Correlation: Pearson, only for indicator pairs with at least "
-        f"{CORRELATION_MIN_POINTS} common periods.",
-        f"- Multiple comparisons: Holm correction across all {tested} tests in this report; "
-        "significance is decided on the Holm-adjusted p-value at α=0.05.",
-        "- Limitation: the series are short; the tests assume independent observations and "
-        "serial correlation between consecutive periods is not corrected for, so the results "
-        "are indicative.",
-    ]
+    # Only the methods this report used (a report with one trend test used to list the
+    # regional and correlation tests and "Holm correction across all 1 tests").
+    lines.append("METHOD NOTES:")
+    if "trend" in tested_kinds:
+        lines.append("- Trend: Mann-Kendall test; the slope is Sen's slope per year on the real "
+                     "dates of the periods; Kendall tau is the effect size.")
+    if "region" in tested_kinds:
+        lines.append("- Regions: Kruskal-Wallis test across admin-1 regions.")
+    if "correlation" in tested_kinds:
+        lines.append(f"- Correlation: Pearson, for indicator pairs with at least "
+                     f"{CORRELATION_MIN_POINTS} common periods.")
+    if tested >= 2:
+        lines.append(f"- Multiple comparisons: Holm correction across all {_count(tested)} tests "
+                     f"in this report; significance is decided on the Holm-adjusted p-value at "
+                     f"α=0.05.")
+    else:
+        lines.append("- One statistical test was run, so no multiple-comparison correction "
+                     "applies; significance is decided on its p-value at α=0.05.")
+    lines.append("- Limitation: the series are short; the tests assume independent observations "
+                 "and serial correlation between consecutive periods is not corrected for, so the "
+                 "results are indicative.")
     return "\n".join(lines)
 
 
