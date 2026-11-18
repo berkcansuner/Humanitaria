@@ -245,3 +245,43 @@ def test_the_not_comparable_statement_survives():
              "planın tek koruma rakamı olduğundan değerler yıllar arasında karşılaştırılamaz.", "tr")):
         text = f"## {heading}\n\n{sentence}"
         assert verify_narrative(text, findings, context, language).removed == 0
+
+
+# --- Review of round 2: level sentences the check deleted, and "to half" it missed. ---
+
+MUST_SURVIVE = [
+    (None, "Analiz edilen nüfusun üçte biri insani yardıma ihtiyaç duyuyordu.", "tr"),
+    (IPC_H, "Nüfusun yarısına yakını Eylül 2026'da IPC Aşama 3 ve üzerindeydi.", "tr"),
+    (IPC_H, "Nüfusun yarıya yakın bir kısmı 2022'de IPC Aşama 3 ve üzerindeydi.", "tr"),
+    (IPC_H, "Gıda güvensizliği artık %32 düzeyinde.", "tr"),
+    (IPC_H, "Oran Eylül 2026'da %32 ile düşük düzeyde kaldı.", "tr"),
+    (IPC_H, "Eylül 2026'da %32 büyük bir paydı.", "tr"),
+    (IPC_H, "Azami oran Mart 2022'de %47,0 oldu.", "tr"),
+    (IPC_H, "Eylül 2026'da %32 gerilim bölgelerinde yaşıyordu.", "tr"),
+    (IPC_H, "Food insecurity stood at 32.0% (down from 47.0% in March 2022).", "en"),
+    (IPC_H, "The share was 32.0% in September 2026, down from 47.0% in March 2022.", "en"),
+    (IPC_H, "A fellow analysis put the share at 32.0% in September 2026.", "en"),
+    (IPC_H, "The 32% cutoff marks IPC Phase 3 or above in September 2026.", "en"),
+    (IPC_H, "The 32.0% figure arose from the September 2026 analysis, as the prose says.", "en"),
+    (IPC_H, "About 32% uptake of IPC Phase 3 classification was reported in September 2026.", "en"),
+    (None, "Humanitarian access was supported by half of the partners in 2026.", "en"),
+]
+MUST_GO = [
+    (IPC_H, "Food insecurity dropped to half its 2022 level.", "en"),
+    (IPC_H, "Food insecurity fell to roughly half its 2022 level.", "en"),
+    (IPC_H, "Food insecurity was cut by half.", "en"),
+    (IPC_H, "Gıda güvensizliği 2022'den bu yana yarısına indi.", "tr"),
+    (IPC_H, "Gıda güvensizliği yarısına geriledi.", "tr"),
+    (IPC_H, "Gıda güvensizliği yarıya düştü.", "tr"),
+    (IPC_H, "Gıda güvensizliği %32 oranında indi.", "tr"),
+]
+
+
+@pytest.mark.parametrize("section,sentence,language", MUST_SURVIVE)
+def test_level_sentences_survive(section, sentence, language):
+    assert _kept(sentence, section, language)
+
+
+@pytest.mark.parametrize("section,sentence,language", MUST_GO)
+def test_to_half_claims_are_removed(section, sentence, language):
+    assert not _kept(sentence, section, language)

@@ -134,9 +134,11 @@ _EN_CHANGE_BEFORE = re.compile(
     r"grows?|growing|fell|fallen|falls?|falling|dropped|drops?|dropping|declined?|declines|"
     r"declining|decreased?|decreases|decreasing|shrank|shrunk|climbed|surged|jumped|plunged|"
     r"slid|eased|gained|lost|cut|reduced|changed)$", re.IGNORECASE)
+# Whole words only: "cutoff", "uptake", "upon", "moreover" are not change words.
 _EN_CHANGE_AFTER = re.compile(
-    r"^(?:decline|drop|fall|increase|rise|reduction|decrease|gain|growth|jump|cut|lower|higher|"
-    r"fewer|more|less|down|up|surge|change)\w*", re.IGNORECASE)
+    r"^(?:declines?|declined|drops?|dropped|falls?|fell|increases?|increased|rises?|rose|"
+    r"reductions?|decreases?|decreased|gains?|growth|jumps?|jumped|cuts?|lower|higher|fewer|more|"
+    r"less|down|up|surges?|surged|changes?|changed)$", re.IGNORECASE)
 _EN_CHANGE_OF = re.compile(
     r"\b(?:decline|drop|fall|increase|rise|reduction|decrease|growth|change|jump|cut)s?\s+of\s*$",
     re.IGNORECASE)
@@ -144,16 +146,25 @@ _EN_CHANGE_OF = re.compile(
 # "%32 düzeyinde"); a change is followed by a change word ("%32 azaldı", "yüzde 32'lik
 # bir düşüş", "%32 oranında arttı").
 _TR_LEVEL_SUFFIX = re.compile(r"^['’](?:y?[ae]|[dt][ae]n?|s[ıi]|[ıiuü])\b", re.IGNORECASE)
-_TR_CHANGE = re.compile(r"^(?:azal|art|düş|yüksel|geril|eksil|büyü|küçül|kayb|gerile)",
-                        re.IGNORECASE)
+# Whole Turkish change words, by their verb forms: "artık" (any more), "düşük" (low),
+# "büyük" (big), "gerilim" (tension), "azami" (maximum), "insani" (humanitarian) are not.
+_TR_CHANGE = re.compile(
+    r"^(?:azal\w*|art(?:tı|tığı|mış|ar|arak|acak|ış\w*|ma\w*|tır\w*)|"
+    r"düş(?:tü|tüğü|müş|er|erek|ecek|üş\w*|me\w*)|yüksel\w*|gerile\w*|eksil\w*|"
+    r"büyü(?:dü|düğü|müş|r|yerek|yecek|me\w*)|küçül\w*|kaybe[dt]\w*|"
+    r"in(?:di|diği|miş|er|erek|ecek|me\w*))$", re.IGNORECASE)
 _TR_FILLER = {"bir", "oranında", "civarında", "kadar", "dolayında", "lik", "lık", "luk", "lük"}
 
 # Multiplicative words, with the factor they claim. Supported for a count when the
 # observed latest/first ratio is within ±10% of the factor (halved: 0.45–0.55,
 # doubled: 1.8–2.2, tripled: 2.7–3.3, quadrupled: 3.6–4.4); never for a share.
 _MULTIPLIERS = [
-    (0.5, re.compile(r"\bhalv(?:ed|es|ing|e)\b|\b(?:by|in) half\b|\bhalf as\b|"
-                     r"yar[ıi]\s+yar[ıi]ya|\byar[ıi]ya\b|\byar[ıi]s[ıi]na\b", re.IGNORECASE)),
+    # "by half of the partners" is a level; "to (about) half" needs a fall verb before it.
+    (0.5, re.compile(r"\bhalv(?:ed|es|ing|e)\b|\bin half\b|\bby half\b(?!\s+(?:of|the)\b)|"
+                     r"\bhalf as\b|\b(?:fell|fallen|dropped|declined|decreased|shrank|shrunk|cut|"
+                     r"reduced|down)\s+(?:by|to)\s+(?:(?:about|around|nearly|almost|roughly|some|"
+                     r"just over|just under|more than|less than)\s+)?(?:a\s+)?half\b",
+                     re.IGNORECASE)),
     (2.0, re.compile(r"\bdoubl(?:ed|es|ing)\b|\btwo-?fold\b|\btwice as\b|"
                      r"\bikiye\s+katla\w*|\biki\s+kat\w*", re.IGNORECASE)),
     (3.0, re.compile(r"\btripl(?:ed|es|ing)\b|\bthree-?fold\b|\bthree times\b|\büç\s+kat\w*",
@@ -182,10 +193,12 @@ _EN_FRACTION_CHANGE = [
                    rf"rose|grew|increased|climbed)\s+(?:to\s+)?(?:about\s+|nearly\s+|almost\s+)?"
                    rf"{en}\b", re.IGNORECASE))
     for f, en, _ in _FRACTIONS]
+# Turkish fractions and halves count only when a change word follows: "üçte bir
+# oranında azaldı", "yarısına indi"; not "nüfusun üçte biri", "yarısına yakını".
 _TR_FRACTION_CHANGE = [
-    (f, re.compile(rf"\b{tr}(?:\s+(?:oranında|kadar|civarında|dolayında))?\s+"
-                   rf"(?:azal|art|düş|yüksel|geril|eksil|büyü|küçül|in)\w*", re.IGNORECASE))
-    for f, _, tr in _FRACTIONS]
+    (f, re.compile(rf"\b{tr}(?:\s+(?:oranında|kadar|civarında|dolayında))?\s+(\w+)",
+                   re.IGNORECASE))
+    for f, _, tr in _FRACTIONS + [(0.5, "", r"(?:yar[ıi]\s+yar[ıi]ya|yar[ıi]ya|yar[ıi]s[ıi]na)")]]
 
 
 def _is_en_change(sentence: str, start: int, end: int) -> bool:
@@ -196,8 +209,10 @@ def _is_en_change(sentence: str, start: int, end: int) -> bool:
         return True
     if _EN_CHANGE_OF.search(" ".join(before)):
         return True
-    after = sentence[end:].split()
-    return bool(after) and bool(_EN_CHANGE_AFTER.match(after[0].strip("(),;:.")))
+    after = [w.strip("(),;:.") for w in sentence[end:].split()]
+    if len(after) > 1 and after[0].lower() in ("up", "down") and after[1].lower() == "from":
+        return False        # "32.0% (down from 47.0%)": two levels
+    return bool(after) and bool(_EN_CHANGE_AFTER.match(after[0]))
 
 
 def _is_tr_change(sentence: str, end: int) -> bool:
@@ -265,13 +280,15 @@ def _relative_claim_ok(sentence: str, profile: dict) -> bool:
             if profile["share"] or not any(
                     abs(x - factor) <= _FACTOR_TOLERANCE * factor for x in profile["ratios"]):
                 return False
-    for fraction, pattern in _EN_FRACTION_CHANGE + _TR_FRACTION_CHANGE:
-        if pattern.search(sentence):
-            near = _FACTOR_TOLERANCE * fraction
-            if profile["share"] or not any(
-                    abs(abs(1 - x) - fraction) <= near or abs(x - fraction) <= near
-                    for x in profile["ratios"]):
-                return False
+    claims = [f for f, pattern in _EN_FRACTION_CHANGE if pattern.search(sentence)]
+    claims += [f for f, pattern in _TR_FRACTION_CHANGE
+               if any(_TR_CHANGE.match(m.group(1)) for m in pattern.finditer(sentence))]
+    for fraction in claims:
+        near = _FACTOR_TOLERANCE * fraction
+        if profile["share"] or not any(
+                abs(abs(1 - x) - fraction) <= near or abs(x - fraction) <= near
+                for x in profile["ratios"]):
+            return False
     return True
 
 
