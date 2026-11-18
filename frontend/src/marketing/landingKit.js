@@ -14,7 +14,7 @@ const plainSpaces = (s) => s.replace(/[\u00a0\u202f]/g, ' ')
 
 export function formatCompact(n, locale = 'en') {
   if (locale === 'tr') {
-    const digits = Math.abs(n) >= 1e6 ? 1 : 0
+    const digits = Math.abs(n) >= 1e9 ? 2 : Math.abs(n) >= 1e6 ? 1 : 0
     return plainSpaces(
       new Intl.NumberFormat('tr-TR', { notation: 'compact', maximumFractionDigits: digits }).format(
         n,

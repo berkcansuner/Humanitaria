@@ -32,13 +32,14 @@ export function summarizePublishers(sources, max = 3) {
 export function ledgerDate(iso, locale = 'en') {
   const m = /^(\d{4}-\d{2}-\d{2})/.exec(iso || '')
   if (!m) return ''
-  if (locale !== 'tr') return m[1]
+  const date = new Date(m[1])
+  if (locale !== 'tr' || isNaN(date)) return m[1]
   return new Intl.DateTimeFormat('tr-TR', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
     timeZone: 'UTC',
-  }).format(new Date(m[1]))
+  }).format(date)
 }
 
 // The chip that last opened a source, per container, so "Back to text" can

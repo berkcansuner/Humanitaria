@@ -42,7 +42,7 @@ describe('formatCompact', () => {
   })
   it('uses Turkish suffixes and a decimal comma for tr', () => {
     expect(formatCompact(8_585_611, 'tr')).toBe('8,6 Mn')
-    expect(formatCompact(1_782_902_647, 'tr')).toBe('1,8 Mr')
+    expect(formatCompact(1_782_902_647, 'tr')).toBe('1,78 Mr')
     expect(formatCompact(929_250, 'tr')).toBe('929 B')
     expect(formatCompact(780, 'tr')).toBe('780')
   })
