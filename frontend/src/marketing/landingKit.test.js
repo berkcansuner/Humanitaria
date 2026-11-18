@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { formatCompact, project, pulseRadius, linePath, countUp, onVisible } from './landingKit.js'
+import { formatCompact, project, pulseRadius, linePath, countUp, onVisible, drawablePoints } from './landingKit.js'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -81,5 +81,14 @@ describe('onVisible', () => {
     expect(observe).toHaveBeenCalledWith(el)
     stop()
     expect(disconnect).toHaveBeenCalled()
+  })
+})
+
+describe('drawablePoints', () => {
+  it('keeps only points with finite lat/lon and reports above zero', () => {
+    const ok = { iso3: 'SDN', lat: 15, lon: 30, reports: 10 }
+    const noLat = { iso3: 'XXX', lon: 30, reports: 10 }
+    const noReports = { iso3: 'YYY', lat: 1, lon: 2, reports: 0 }
+    expect(drawablePoints([noLat, noReports, ok])).toEqual([ok])
   })
 })
