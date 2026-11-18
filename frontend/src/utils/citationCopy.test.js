@@ -139,3 +139,15 @@ describe('copyWithSources', () => {
     await expect(copyWithSources('Text', sources)).resolves.toBe(false)
   })
 })
+
+describe('copied tables keep their citations', () => {
+  const sources = [3, 4].map((n) => ({ index: n, url: `https://r.int/${n}`, title: `S${n}` }))
+
+  it('copies an Indicator Table row with its markers, a run in order', () => {
+    const table = '| Indicator | Latest value |\n| --- | --- |\n| IDPs | 3.1 million [4] [3] |'
+    const text = buildCopyText(table, sources)
+    expect(text).toContain('| IDPs | 3.1 million [3][4] |')
+    expect(text).toContain('[3] S3.')
+    expect(buildCopyHtml(table, sources)).toMatch(/<td>3\.1 million \[3\]\[4\]<\/td>/)
+  })
+})

@@ -172,3 +172,85 @@ describe('renderMarkdown orders adjacent citation chips', () => {
     expect(chips(renderMarkdown(next)).map((c) => c[0])).toEqual(['1', '2'])
   })
 })
+
+// Indicator monitoring reports cite each Indicator Table row in its value cell.
+describe('citation chips in table cells', () => {
+  const sources = [1, 2, 3, 4].map((n) => ({ index: n, url: `https://r.int/${n}`, title: `S${n}` }))
+  const TABLE = [
+    'Needs rose sharply [2].',
+    '',
+    '| Indicator | Latest value | As of |',
+    '| --- | --- | --- |',
+    '| People in need | 21.9 million [1] | 1 January 2026 |',
+    '| Internally displaced people | 3.1 million [4] [3] | 31 January 2026 |',
+  ].join('\n')
+  const cellChips = (html) => {
+    const div = document.createElement('div')
+    div.innerHTML = html
+    return [...div.querySelectorAll('td')].map((td) =>
+      [...td.querySelectorAll('a.cite')].map((a) => [a.textContent, a.getAttribute('href')]),
+    )
+  }
+
+  it('renders markers in a cell as the same chips as in prose, ordered within a run', () => {
+    const html = renderMarkdown(TABLE, sources)
+    expect(cellChips(html)).toEqual([
+      [],
+      [['1', '#src-1']],
+      [],
+      [],
+      [
+        ['3', '#src-3'],
+        ['4', '#src-4'],
+      ],
+      [],
+    ])
+    // Named like any chip, so a keyboard or screen-reader user gets the source.
+    const div = document.createElement('div')
+    div.innerHTML = html
+    expect(div.querySelector('td a.cite').getAttribute('aria-label')).toBe('Source 1: S1')
+  })
+
+  it('numbers table citations by first appearance with the prose, while streaming', () => {
+    const raw = TABLE.replace('[2]', '[12]').replace('[1]', '[15]').replace('[4] [3]', '[12] [17]')
+    expect(numberByFirstAppearance(raw)).toContain('| 21.9 million [2] |')
+    expect(numberByFirstAppearance(raw)).toContain('| 3.1 million [1] [3] |')
+    expect(cellChips(renderMarkdown(numberByFirstAppearance(raw)))[4].map((c) => c[0])).toEqual([
+      '1',
+      '3',
+    ])
+  })
+})
+
+describe('a run of chips stays together', () => {
+  const sources = [1, 2, 3, 4].map((n) => ({ index: n, url: `https://r.int/${n}`, title: `S${n}` }))
+  const parse = (html) => {
+    const div = document.createElement('div')
+    div.innerHTML = html
+    return div
+  }
+
+  it('holds the chips of one run in a single unbreakable group', () => {
+    const div = parse(
+      renderMarkdown('| A | B |\n| --- | --- |\n| x | 3.1 million [4] [3] |', sources),
+    )
+    const runs = [...div.querySelectorAll('.cite-run')]
+    expect(runs).toHaveLength(1)
+    expect([...runs[0].querySelectorAll('a.cite')].map((a) => a.textContent)).toEqual(['3', '4'])
+  })
+
+  it('leaves a single chip, and chips with words between them, ungrouped', () => {
+    const div = parse(renderMarkdown('One [1], two [2] and [3].', sources))
+    expect(div.querySelectorAll('.cite-run')).toHaveLength(0)
+    expect(div.querySelectorAll('a.cite')).toHaveLength(3)
+  })
+
+  it('groups across a dropped marker and keeps one-space runs as written', () => {
+    const div = parse(renderMarkdown('Text [1] [2][9].', sources))
+    expect([...div.querySelectorAll('.cite-run a.cite')].map((a) => a.textContent)).toEqual([
+      '1',
+      '2',
+    ])
+    expect(div.querySelector('.cite-run').textContent).toBe('1 2')
+  })
+})

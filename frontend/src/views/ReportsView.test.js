@@ -360,6 +360,32 @@ describe('ReportsView in two languages', () => {
     })
   })
 
+  it('opens the source a chip in an Indicator Table cell points to', async () => {
+    const report = {
+      ...SAVED,
+      report_type: 'indicator_monitoring',
+      content:
+        '## Indicator Table\n\n| Indicator | Latest value | As of |\n| --- | --- | --- |\n| IDPs | 3.1 million [2] | 31 January 2026 |',
+      sources: [1, 2].map((n) => ({
+        index: n,
+        title: `Source ${n}`,
+        url: `https://reliefweb.int/report/${n}`,
+        source: 'OCHA',
+        date: '2026-01-31',
+      })),
+    }
+    vi.mocked(listReports).mockResolvedValue({ reports: [report] })
+    vi.mocked(getReport).mockResolvedValue(report)
+    await mount('/reports?report=r1')
+    Element.prototype.scrollIntoView = () => {}
+    const chip = host.querySelector('.report-content td a.cite')
+    expect(chip.textContent).toBe('2')
+    chip.click()
+    await flush()
+    delete Element.prototype.scrollIntoView
+    expect(host.querySelector('.source-item.active').getAttribute('data-srcid')).toBe('2')
+  })
+
   describe('technical monitoring offers only sectors that have data', () => {
     beforeEach(() => {
       vi.mocked(getReportOptions).mockResolvedValue({

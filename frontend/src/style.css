@@ -304,6 +304,11 @@ select:focus-visible {
     color 0.15s;
 }
 
+/* A run of chips ("[3][4]") is one citation: it never breaks between its chips. */
+.cite-run {
+  white-space: nowrap;
+}
+
 .cite:hover,
 .cite:focus-visible {
   background-color: var(--color-accent);

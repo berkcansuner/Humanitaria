@@ -47,8 +47,13 @@ export function renderMarkdown(text, sources = null) {
     if (!/\[\d+\]/.test(text)) continue
     const parts = document.createDocumentFragment()
     let last = 0
+    let prevChip = null // the chip just appended, while nothing but chips follows it
     for (const m of text.matchAll(/( ?)\[(\d+)\]/g)) {
-      parts.append(text.slice(last, m.index))
+      const between = text.slice(last, m.index)
+      if (between) {
+        parts.append(between)
+        prevChip = null
+      }
       last = m.index + m[0].length
       // A citation with no displayed source is dropped (with a leading space) rather
       // than left as a dead [n] the reader can't click. During streaming (no sources
@@ -61,7 +66,21 @@ export function renderMarkdown(text, sources = null) {
       a.textContent = m[2]
       // Name the source, not just the number ("link, 1" told a screen reader nothing).
       a.setAttribute('aria-label', citeLabel(m[2], byIndex.get(Number(m[2]))))
-      parts.append(m[1], a)
+      if (prevChip) {
+        // A run of chips ("[3][4]") stays on one line, as one citation: in a narrow
+        // table cell it used to break between its chips.
+        let run = prevChip.parentNode
+        if (!run.classList || !run.classList.contains('cite-run')) {
+          run = document.createElement('span')
+          run.className = 'cite-run'
+          prevChip.replaceWith(run)
+          run.append(prevChip)
+        }
+        run.append(m[1], a)
+      } else {
+        parts.append(m[1], a)
+      }
+      prevChip = a
     }
     parts.append(text.slice(last))
     node.replaceWith(parts)
