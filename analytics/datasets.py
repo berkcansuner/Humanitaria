@@ -25,17 +25,26 @@ def _dedup_aggregate_rows(df: pd.DataFrame, indicator: Indicator) -> pd.DataFram
     return df
 
 
-def _frame(rows: list[dict], indicator: Indicator) -> pd.DataFrame:
+def _exact(df: pd.DataFrame, indicator: Indicator) -> pd.DataFrame:
+    """Rows whose server-side filter columns equal the requested values exactly. HAPI
+    matches some filters by prefix: sector_code=PRO also returns PRO-CPN, PRO-GBV,
+    PRO-HLP and PRO-MIN, whose larger figures then passed for the protection total."""
+    for col, wanted in indicator.query_params.items():
+        if col in df.columns:
+            df = df[df[col].astype(str) == str(wanted)]
+    return df
+
+
+def _frame(rows: list[dict], indicator: Indicator, dedup: bool = True) -> pd.DataFrame:
     if not rows:
         return pd.DataFrame()
     df = pd.DataFrame(rows)
     if indicator.value_field not in df.columns or "reference_period_start" not in df.columns:
         return pd.DataFrame()
-    df = df.copy()
+    df = _exact(df, indicator).copy()
     df["_value"] = pd.to_numeric(df[indicator.value_field], errors="coerce") * indicator.scale
     df = df.dropna(subset=["_value", "reference_period_start"])
-    df = _dedup_aggregate_rows(df, indicator)
-    return df
+    return _dedup_aggregate_rows(df, indicator) if dedup else df
 
 
 def _agg(series: pd.Series, how: str) -> float:
@@ -74,7 +83,30 @@ def regional_series(rows: list[dict], indicator: Indicator) -> dict[str, list[fl
     return out
 
 
-_COMPLETE_SHARE = 0.8   # a snapshot must cover at least this share of the operation's regions
+_TOTALS_DIFFER = 0.01   # '' and 'total' rows further apart than this share are noted
+
+
+def competing_totals_note(rows: list[dict], indicator: Indicator) -> str | None:
+    """HNO rows carry a sector's total twice per year: the undisaggregated row
+    (category '') and the 'total' of its breakdown. They usually agree; when they do
+    not (Haiti protection 2025: 349,999 vs 466,589 — the first matches the IDP group,
+    the second the age/sex breakdown) nothing in the data says which is the published
+    figure, so the larger is kept, as before, and the report says so."""
+    df = _frame(rows, indicator, dedup=False)
+    if df.empty or "category" not in df.columns:
+        return None
+    cat = df["category"].fillna("").astype(str).str.strip().str.lower()
+    years = []
+    for period, sub in df[cat.isin(["", "total"])].groupby("reference_period_start"):
+        values = sorted(set(sub["_value"].tolist()))
+        if len(values) > 1 and values[-1] - values[0] > _TOTALS_DIFFER * values[-1]:
+            years.append(f"{str(period)[:4]} ({int(values[0])} and {int(values[-1])})")
+    if not years:
+        return None
+    return f"HDX HAPI publishes two totals for {'; '.join(years)}; the larger is used"
+
+
+_COMPLETE_SHARE = 0.8  # a snapshot must cover at least this share of the operation's regions
 
 
 def consistent_snapshots(rows: list[dict]) -> tuple[list[dict], str | None]:

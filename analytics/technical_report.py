@@ -13,7 +13,10 @@ from datetime import date
 import requests
 
 from analytics.charts import comparison_chart, correlation_chart, trend_chart
-from analytics.datasets import consistent_snapshots, ipc_coverage_note, national_series, regional_series
+from analytics.datasets import (
+    competing_totals_note, consistent_snapshots, ipc_coverage_note, national_series,
+    regional_series,
+)
 from analytics.hapi_client import HapiError, fetch_rows
 from analytics.indicators import indicators_for
 from analytics.stat_tests import ALPHA, CORRELATION_MIN_POINTS, by_region, correlate, holm, trend
@@ -244,7 +247,8 @@ def _series(rows: list[dict], ind, date_from: str, date_to: str, today: date):
     rows, note = consistent_snapshots(rows)
     coverage = ipc_coverage_note(rows)
     periods, values = national_series(rows, ind)
-    return rows, [n for n in (note, coverage) if n], periods, values
+    totals = competing_totals_note(rows, ind)
+    return rows, [n for n in (note, coverage, totals) if n], periods, values
 
 
 def _value_unit(ind) -> str:

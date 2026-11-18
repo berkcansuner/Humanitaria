@@ -164,3 +164,43 @@ def test_no_coverage_note_when_the_analysed_population_is_stable():
     stable = [("2024-01-01", 10_000_000, 0.20), ("2025-01-01", 11_000_000, 0.21)]
     assert ipc_coverage_note(_ipc_rows(stable)) is None
     assert ipc_coverage_note([{"reference_period_start": "2024-01-01", "population": 5}]) is None
+
+
+# --- Review 2026-11-18 (Critical): HAPI matches sector_code by prefix, so sector_code=PRO
+# also returns PRO-CPN, PRO-GBV, PRO-HLP and PRO-MIN rows, and the largest row per year
+# won: Sudan 2025 "Protection: people in need" printed PRO-MIN's 12,998,744. ---
+
+def _pin_row(code, year, value, category=""):
+    return {"sector_code": code, "reference_period_start": f"{year}-01-01",
+            "population": value, "category": category}
+
+
+def test_a_sector_people_in_need_keeps_only_its_own_sector_code():
+    rows = [_pin_row("PRO", 2025, 11_725_110), _pin_row("PRO", 2025, 11_725_110, "total"),
+            _pin_row("PRO-MIN", 2025, 12_998_744), _pin_row("PRO-CPN", 2025, 11_252_673),
+            _pin_row("PRO", 2024, 7_740_348), _pin_row("PRO-GBV", 2024, 9_000_000)]
+    periods, values = national_series(rows, by_key("pin_protection"))
+    assert periods == ["2024-01-01", "2025-01-01"]
+    assert values == [7_740_348, 11_725_110]
+
+
+def test_every_query_param_column_is_matched_exactly():
+    # The same guard for any other server-side filter HAPI might match loosely.
+    rows = [_pin_row("Intersectoral", 2025, 20), _pin_row("Intersectoral-X", 2025, 99)]
+    assert national_series(rows, by_key("humanitarian_needs")) == (["2025-01-01"], [20])
+
+
+def test_two_published_totals_for_a_year_are_noted():
+    from analytics.datasets import competing_totals_note
+    rows = [_pin_row("PRO", 2025, 349_999), _pin_row("PRO", 2025, 466_589, "total"),
+            _pin_row("PRO", 2024, 250_000), _pin_row("PRO", 2024, 250_000, "total"),
+            _pin_row("PRO-CPN", 2023, 1, ""), _pin_row("PRO-CPN", 2023, 5, "total")]
+    assert competing_totals_note(rows, by_key("pin_protection")) == (
+        "HDX HAPI publishes two totals for 2025 (349999 and 466589); the larger is used")
+
+
+def test_totals_that_differ_only_by_rounding_are_not_noted():
+    from analytics.datasets import competing_totals_note
+    rows = [_pin_row("FSC", 2024, 19_325_221), _pin_row("FSC", 2024, 19_325_222, "total")]
+    assert competing_totals_note(rows, by_key("pin_food_security")) is None
+    assert competing_totals_note([{"population": 1}], by_key("idps")) is None

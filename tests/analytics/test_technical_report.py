@@ -717,3 +717,19 @@ def test_all_sectors_reports_keep_short_series_as_gaps_only(monkeypatch):
     f = compute_findings("AFG", None, None, language="en", theme=None)
     assert f.sections == []
     assert any("(n=3)" in g for g in f.gaps)
+
+
+def test_competing_totals_reach_the_data_notes(monkeypatch):
+    def rows(ep, params):
+        if params.get("sector_code") != "PRO":
+            return []
+        return [{"sector_code": code, "population": v, "category": cat,
+                 "reference_period_start": "2025-01-01", "reference_period_end": "2025-12-31"}
+                for code, v, cat in (("PRO", 349_999, ""), ("PRO", 466_589, "total"),
+                                     ("PRO-CPN", 1_611_291, ""))]
+    monkeypatch.setattr("analytics.technical_report.fetch_rows", _recording_fetch([], rows))
+    f = compute_findings("HTI", None, None, language="en", theme="Protection and Human Rights")
+    snap = next(s for s in f.sections if s.stat_result["kind"] == "snapshot")
+    assert "467000 people (2025-01-01)" in snap.findings_text        # not PRO-CPN's 1,611,291
+    assert ("Protection: people in need: HDX HAPI publishes two totals for 2025 (349999 and "
+            "466589); the larger is used") in f.notes
