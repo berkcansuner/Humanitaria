@@ -49,11 +49,20 @@ describe('LanguageSwitcher', () => {
     expect(button().getAttribute('aria-label')).toContain(button().textContent.trim())
   })
 
-  it('opens a listbox with two options carrying lang attributes', async () => {
+  it('opens a listbox naming both languages in the interface language', async () => {
     await open()
     expect(button().getAttribute('aria-expanded')).toBe('true')
-    expect(options().map((o) => o.getAttribute('lang'))).toEqual(['en', 'tr'])
-    expect(options().map((o) => o.textContent.trim())).toEqual(['English', 'Türkçe'])
+    expect(options().map((o) => o.textContent.trim())).toEqual(['English', 'Turkish'])
+    // The names are interface text now, so no option claims another language.
+    expect(options().map((o) => o.getAttribute('lang'))).toEqual([null, null])
+  })
+
+  it('names both languages in Turkish under the Turkish interface', async () => {
+    setLocale('tr')
+    await nextTick()
+    await open()
+    expect(options().map((o) => o.textContent.trim())).toEqual(['İngilizce', 'Türkçe'])
+    expect(button().getAttribute('aria-label')).toBe('TR – Dil: Türkçe')
   })
 
   it('marks the current option with aria-selected', async () => {
@@ -61,7 +70,7 @@ describe('LanguageSwitcher', () => {
     expect(options().map((o) => o.getAttribute('aria-selected'))).toEqual(['true', 'false'])
   })
 
-  it('ArrowDown then Enter selects Türkçe', async () => {
+  it('ArrowDown then Enter selects Turkish', async () => {
     await open()
     key(listbox(), 'ArrowDown')
     await nextTick()

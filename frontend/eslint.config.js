@@ -67,13 +67,10 @@ export default [
             '←',
             '…',
             '/[0-9]/',
-            // Never translated: the product name, a cookie name, language endonyms
-            // (each language is named in itself), and a contact e-mail address (its dots
-            // are already stripped by '.' above when this pattern runs).
+            // Never translated: the product name, a cookie name, and a contact e-mail
+            // address (its dots are already stripped by '.' above when this pattern runs).
             'Humanitaria',
             'rw_session',
-            'English',
-            'Türkçe',
             '/[\\w.+-]+@[\\w.-]+/',
           ],
           attributes: {

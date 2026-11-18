@@ -19,7 +19,11 @@
   "lang": {
     "buttonLabel": "{code} – Language: {name}",
     "listLabel": "Language",
-    "changed": "Language set to {name}"
+    "changed": "Language set to {name}",
+    "names": {
+      "en": "English",
+      "tr": "Turkish"
+    }
   },
   "nav": {
     "chat": "Chat",

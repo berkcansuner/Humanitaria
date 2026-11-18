@@ -19,7 +19,11 @@
   "lang": {
     "buttonLabel": "{code} – Dil: {name}",
     "listLabel": "Dil",
-    "changed": "Dil {name} olarak ayarlandı"
+    "changed": "Dil {name} olarak ayarlandı",
+    "names": {
+      "en": "İngilizce",
+      "tr": "Türkçe"
+    }
   },
   "nav": {
     "chat": "Sohbet",

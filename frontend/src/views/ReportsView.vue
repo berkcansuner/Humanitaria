@@ -69,10 +69,10 @@
 
           <label class="field">
             <span>{{ t('reports.form.language') }}</span>
-            <!-- The report's own language; each option names itself (endonyms). -->
+            <!-- The report's own language, named in the interface language. -->
             <select v-model="form.language" :disabled="generating">
-              <option value="en" lang="en">English</option>
-              <option value="tr" lang="tr">Türkçe</option>
+              <option value="en">{{ t('lang.names.en') }}</option>
+              <option value="tr">{{ t('lang.names.tr') }}</option>
             </select>
           </label>
 

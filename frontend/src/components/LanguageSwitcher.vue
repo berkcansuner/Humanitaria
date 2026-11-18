@@ -7,12 +7,12 @@
       aria-haspopup="listbox"
       :aria-expanded="open ? 'true' : 'false'"
       :aria-controls="open ? listId : undefined"
-      :aria-label="t('lang.buttonLabel', { code: current.code.toUpperCase(), name: current.name })"
+      :aria-label="t('lang.buttonLabel', { code: current.toUpperCase(), name: nameOf(current) })"
       @click="toggle"
       @keydown.down.prevent="openList"
     >
       <Globe :size="16" aria-hidden="true" />
-      <span class="lang-code" aria-hidden="true">{{ current.code.toUpperCase() }}</span>
+      <span class="lang-code" aria-hidden="true">{{ current.toUpperCase() }}</span>
     </button>
     <ul
       v-if="open"
@@ -26,19 +26,18 @@
       @keydown="onListKey"
     >
       <li
-        v-for="(l, i) in LANGUAGES"
+        v-for="(code, i) in LANGUAGES"
         :id="optionId(i)"
-        :key="l.code"
+        :key="code"
         class="lang-option"
         :class="{ 'is-active': i === active }"
         role="option"
-        :lang="l.code"
-        :aria-selected="l.code === locale ? 'true' : 'false'"
-        @click="choose(l.code)"
+        :aria-selected="code === locale ? 'true' : 'false'"
+        @click="choose(code)"
         @mousemove="active = i"
       >
-        <span>{{ l.name }}</span>
-        <Check v-if="l.code === locale" :size="15" aria-hidden="true" />
+        <span>{{ nameOf(code) }}</span>
+        <Check v-if="code === locale" :size="15" aria-hidden="true" />
       </li>
     </ul>
     <span class="lang-live" role="status" aria-live="polite">{{ announcement }}</span>
@@ -55,11 +54,10 @@ defineProps({
   variant: { type: String, default: 'app', validator: (v) => ['marketing', 'app'].includes(v) },
 })
 
-// Endonyms: each language is always named in itself, never translated.
-const LANGUAGES = [
-  { code: 'en', name: 'English' },
-  { code: 'tr', name: 'Türkçe' },
-]
+// Each language is named in the interface language: English / Turkish in
+// English, İngilizce / Türkçe in Turkish.
+const LANGUAGES = ['en', 'tr']
+const nameOf = (code) => t(`lang.names.${code}`)
 
 const { locale, setLocale } = useLocale()
 const uid = useId()
@@ -73,14 +71,11 @@ const rootEl = ref(null)
 const buttonEl = ref(null)
 const listEl = ref(null)
 
-const current = computed(() => LANGUAGES.find((l) => l.code === locale.value) ?? LANGUAGES[0])
+const current = computed(() => (LANGUAGES.includes(locale.value) ? locale.value : LANGUAGES[0]))
 
 async function openList() {
   if (open.value) return
-  active.value = Math.max(
-    0,
-    LANGUAGES.findIndex((l) => l.code === locale.value),
-  )
+  active.value = Math.max(0, LANGUAGES.indexOf(locale.value))
   open.value = true
   await nextTick()
   listEl.value?.focus()
@@ -101,7 +96,7 @@ function choose(code) {
   setLocale(code)
   closeList()
   // The locale ref flips synchronously, so this reads in the new language.
-  if (changed) announce(t('lang.changed', { name: current.value.name }))
+  if (changed) announce(t('lang.changed', { name: nameOf(current.value) }))
 }
 
 // Cleared once read, so a stale sentence never lingers in the live region.
@@ -130,7 +125,7 @@ function onListKey(e) {
       break
     case 'Enter':
     case ' ':
-      choose(LANGUAGES[active.value].code)
+      choose(LANGUAGES[active.value])
       break
     case 'Escape':
       closeList()
