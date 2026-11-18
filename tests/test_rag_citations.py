@@ -145,10 +145,19 @@ class TestSortCitationRuns:
 
     def test_leaves_everything_else_alone(self):
         from rag.citations import sort_citation_runs
-        for text in ("a [5] b [2]", "a [5] [2]", "a [2][5]", "no markers", "", "[1, 3]"):
+        for text in ("a [5] b [2]", "a [5]  [2]", "a [5], [2]", "a [5]\n[2]", "a [2][5]",
+                     "a [2] [5]", "no markers", "", "[1, 3]"):
             assert sort_citation_runs(text) == text
 
     def test_saved_reports_store_runs_in_order(self):
         sources = [{"index": i, "url": f"http://{i}", "title": str(i)} for i in (1, 2, 5)]
         content, _ = normalize_citations("A [2]. B [5][2].", sources)
         assert content == "A [1]. B [1][2]."
+
+
+    def test_markers_one_space_apart_are_one_run(self):
+        # Review 2026-11-18: chips render "[5] [2]" side by side, so it is one run too.
+        from rag.citations import sort_citation_runs
+        assert sort_citation_runs("lean season [5] [2].") == "lean season [2] [5]."
+        assert sort_citation_runs("a [5][3] [2] b") == "a [2][3] [5] b"
+        assert sort_citation_runs("a [3] [1] [3] b") == "a [1] [3] b"

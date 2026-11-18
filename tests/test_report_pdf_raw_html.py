@@ -33,3 +33,8 @@ def test_old_saved_reports_print_adjacent_citations_in_order():
     out = _body_html("Lean season [5][2]. Assistance [3][1].")
     assert '<span class="cite">[2]</span><span class="cite">[5]</span>' in out
     assert '<span class="cite">[1]</span><span class="cite">[3]</span>' in out
+
+
+def test_citations_one_space_apart_print_in_order():
+    out = _body_html("Lean season [5] [2].")
+    assert '<span class="cite">[2]</span> <span class="cite">[5]</span>' in out

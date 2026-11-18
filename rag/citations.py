@@ -67,16 +67,24 @@ def _cap_citation_runs(text: str) -> str:
     return _RUN_RE.sub(_trim, text)
 
 
+# Markers side by side or one space apart: the interface shows both as adjacent chips.
+_SPACED_RUN_RE = re.compile(r"\[\d+\](?: ?\[\d+\])+")
+
+
 def sort_citation_runs(text: str) -> str:
-    """Each run of adjacent markers in ascending order, duplicates in the run dropped
-    ('[5][2]' -> '[2][5]', '[3][1][3]' -> '[1][3]'). The numbers themselves and
-    everything else are left as they are."""
+    """Each run of markers that touch or stand one space apart in ascending order,
+    duplicates in the run dropped ('[5][2]' -> '[2][5]', '[5] [2]' -> '[2] [5]',
+    '[3][1][3]' -> '[1][3]'). The gaps between markers keep their places; the numbers
+    themselves and everything else are left as they are."""
     if not text:
         return text
-    return _RUN_RE.sub(
-        lambda m: "".join(f"[{n}]" for n in sorted({int(n) for n in re.findall(r"\d+", m.group(0))})),
-        text,
-    )
+
+    def _sort(m):
+        numbers = sorted({int(n) for n in re.findall(r"\d+", m.group(0))})
+        gaps = re.findall(r"\]( ?)\[", m.group(0))
+        return f"[{numbers[0]}]" + "".join(f"{gap}[{n}]" for gap, n in zip(gaps, numbers[1:]))
+
+    return _SPACED_RUN_RE.sub(_sort, text)
 
 
 def _looks_like_delimiter(line: str) -> bool:
