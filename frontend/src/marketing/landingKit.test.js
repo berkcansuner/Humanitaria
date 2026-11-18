@@ -17,6 +17,8 @@ import {
   signedPct,
   axisTicks,
   nearestIndex,
+  passage,
+  passageSources,
 } from './landingKit.js'
 
 afterEach(() => {
@@ -222,5 +224,62 @@ describe('nearestIndex', () => {
     expect(nearestIndex([0, 10, 30], 18)).toBe(1)
     expect(nearestIndex([0, 10, 30], 25)).toBe(2)
     expect(nearestIndex([0, 10, 30], -5)).toBe(0)
+  })
+})
+
+describe('passage', () => {
+  const answer = [
+    { text: 'Intro ' },
+    { cite: 1 },
+    { text: '. ' },
+    { text: 'Head:', strong: true },
+    { text: ' First claim' },
+    { cite: 1 },
+    { cite: 3 },
+    { text: '. Second claim' },
+    { cite: 4 },
+    { text: '. Later' },
+    { cite: 5 },
+  ]
+  it('takes the text parts from the first match to the last, with the chips after it', () => {
+    expect(passage(answer, 'First claim', 'Second claim')).toEqual([
+      { text: 'First claim' },
+      { cite: 1 },
+      { cite: 3 },
+      { text: '. Second claim' },
+      { cite: 4 },
+    ])
+  })
+  it('throws when the answer no longer contains the passage', () => {
+    expect(() => passage(answer, 'Missing', 'Second claim')).toThrow()
+  })
+})
+
+describe('passageSources', () => {
+  const sources = [
+    { n: 1, meta: 'OCHA · Haiti', date: '2026-11-06' },
+    { n: 3, meta: 'IOM · Haiti', date: '2026-09-25' },
+    { n: 4, meta: 'IOM · Haiti', date: '2026-09-21' },
+    { n: 5, meta: 'UN Security Council · Haiti', date: '2026-10-20' },
+  ]
+  it('names each cited publisher once and the newest cited date', () => {
+    const parts = [{ text: 'a' }, { cite: 3 }, { cite: 1 }, { text: 'b' }, { cite: 4 }]
+    expect(passageSources(parts, sources)).toEqual({
+      publishers: ['IOM', 'OCHA'],
+      newest: '2026-11-06',
+    })
+  })
+})
+
+describe('the workflow chat sample', () => {
+  it('quotes the Haiti answer with its citations 1, 3 and 4', async () => {
+    const { parts, sources } = await import('./haitiAnswer.js')
+    const sample = passage(parts, 'Nearly 80 percent', 'Grand Sud (39%)')
+    expect(sample.filter((p) => p.cite).map((p) => p.cite)).toEqual([1, 3, 4])
+    expect(sample[0].text.startsWith('Nearly 80 percent')).toBe(true)
+    expect(passageSources(sample, sources)).toEqual({
+      publishers: ['OCHA', 'IOM'],
+      newest: '2026-11-06',
+    })
   })
 })

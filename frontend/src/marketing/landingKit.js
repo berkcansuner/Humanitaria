@@ -182,3 +182,29 @@ export function nearestIndex(xs, x) {
   })
   return best
 }
+
+// The answer parts from the text part containing `from` through the one
+// containing `to`, plus the citation chips that close it. Throws if the answer
+// no longer contains the passage, so a quoted excerpt cannot drift silently.
+export function passage(parts, from, to) {
+  const start = parts.findIndex((p) => p.text?.includes(from))
+  const last = parts.findIndex((p, i) => i >= start && p.text?.includes(to))
+  if (start < 0 || last < 0) throw new Error(`passage not found: ${from} … ${to}`)
+  let end = last + 1
+  while (parts[end]?.cite !== undefined) end++
+  const out = parts.slice(start, end)
+  out[0] = { ...out[0], text: out[0].text.trimStart() }
+  return out
+}
+
+// Publishers (from `meta`, 'OCHA · Haiti') of the sources a passage cites, each
+// once in citation order, and the newest cited date.
+export function passageSources(parts, sources) {
+  const cited = sources.filter((s) => parts.some((p) => p.cite === s.n))
+  const order = parts.filter((p) => p.cite !== undefined).map((p) => p.cite)
+  cited.sort((a, b) => order.indexOf(a.n) - order.indexOf(b.n))
+  return {
+    publishers: [...new Set(cited.map((s) => s.meta.split(' · ')[0]))],
+    newest: cited.map((s) => s.date).sort().at(-1),
+  }
+}

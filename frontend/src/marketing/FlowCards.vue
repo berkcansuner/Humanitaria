@@ -3,7 +3,8 @@ import { onBeforeUnmount, onMounted, useTemplateRef } from 'vue'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import sudan from './data/sudan.json'
-import { formatCompact } from './landingKit.js'
+import { parts, sources } from './haitiAnswer.js'
+import { dayLabel, formatCompact, passage, passageSources } from './landingKit.js'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -14,6 +15,12 @@ const regions = sudan.regions.map(([name, value]) => ({
   width: `${(value / top) * 100}%`,
 }))
 const dtmCredit = `${sudan.idps.credit} · HDX HAPI`
+
+// A passage of the hero's Haiti answer, quoted with its own citations.
+const sample = passage(parts, 'Nearly 80 percent', 'Grand Sud (39%)')
+const cited = passageSources(sample, sources)
+const sampleCredit = `From the Haiti answer above · ${cited.publishers.join(', ')} · `
+const sampleDate = dayLabel(cited.newest)
 
 const root = useTemplateRef('root')
 
@@ -58,15 +65,17 @@ onBeforeUnmount(() => mm?.revert())
         <article class="flow">
           <h3>Cited chat</h3>
           <p>Answers only from retrieved reports, each claim one click from its source.</p>
-          <div class="flow-ui" aria-hidden="true">
+          <div class="flow-ui">
             <p class="fu-answer">
-              Nearly <b>80%</b> of the displaced now live outside Port-au-Prince<span class="cite"
-                >1</span
-              ><span class="cite">3</span>, with Grand Sud at
-              <span class="fu-nowrap">39%<span class="cite">4</span>.</span>
+              <template v-for="(part, i) in sample" :key="i"
+                ><span v-if="part.cite" class="cite" aria-hidden="true">{{ part.cite }}</span
+                ><template v-else>{{ part.text }}</template></template
+              >.
             </p>
-            <span class="fu-line" style="width: 90%"></span>
-            <span class="fu-line" style="width: 70%"></span>
+            <p class="fu-credit">
+              {{ sampleCredit
+              }}<time class="fu-date" :datetime="cited.newest">{{ sampleDate }}</time>
+            </p>
           </div>
         </article>
 
@@ -144,9 +153,6 @@ onBeforeUnmount(() => mm?.revert())
   line-height: 1.65;
   color: var(--color-text);
 }
-.fu-nowrap {
-  white-space: nowrap;
-}
 .fu-answer .cite {
   cursor: default;
 }
@@ -196,6 +202,9 @@ onBeforeUnmount(() => mm?.revert())
   font-variant-numeric: tabular-nums;
   text-align: right;
   color: var(--color-text);
+}
+.fu-date {
+  white-space: nowrap;
 }
 .fu-credit {
   margin-top: auto;
