@@ -290,3 +290,10 @@ def test_technical_prompt_gives_untested_findings_no_verdict():
     p = _REPORT_PROMPTS["technical_monitoring"]
     assert "no statistical test was possible" in p
     assert "never call it significant or not significant" in p
+
+
+def test_technical_prompt_names_the_window_of_a_look_back_trend():
+    # A one-year report's trends may cover five years: the section must say which.
+    from rag.chain import _REPORT_PROMPTS
+    p = _REPORT_PROMPTS["technical_monitoring"]
+    assert "longer look-back" in p and "name both windows" in p
