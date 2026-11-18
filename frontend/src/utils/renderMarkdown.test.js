@@ -92,8 +92,16 @@ describe('orderCitationRuns', () => {
     expect(orderCitationRuns('x [2][2]')).toBe('x [2]')
   })
 
-  it('leaves single markers, ordered runs and separated markers as they are', () => {
-    const text = 'one [3] two [1][2] three [5] [2] four [4], [1]'
+  it('reads markers one space apart as one run, since their chips sit side by side', () => {
+    expect(orderCitationRuns('lean season [5] [2].')).toBe('lean season [2][5].')
+    expect(orderCitationRuns('x [4] [2][4] y')).toBe('x [2][4] y')
+    // Two spaces, a line break or any other character still separates citations.
+    const apart = 'a [5]  [2] b [5]\n[2] c [5] and [2]'
+    expect(orderCitationRuns(apart)).toBe(apart)
+  })
+
+  it('leaves single markers, ordered runs and markers split by other text as they are', () => {
+    const text = 'one [3] two [1][2] three [1] [2] four [4], [1] five [5]; [2]'
     expect(orderCitationRuns(text)).toBe(text)
     expect(orderCitationRuns('')).toBe('')
     expect(orderCitationRuns(null)).toBe(null)
@@ -118,6 +126,13 @@ describe('renderMarkdown orders adjacent citation chips', () => {
 
   it('shows [5][2] as chips 2, 5, each still pointing at its own source', () => {
     expect(chips(renderMarkdown('Needs rose [5][2].', sources))).toEqual([
+      ['2', '#src-2'],
+      ['5', '#src-5'],
+    ])
+  })
+
+  it('orders chips written one space apart too ("[5] [2]" read as "5 2")', () => {
+    expect(chips(renderMarkdown('Needs rose [5] [2].', sources))).toEqual([
       ['2', '#src-2'],
       ['5', '#src-5'],
     ])
