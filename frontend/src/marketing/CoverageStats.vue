@@ -43,10 +43,14 @@ onMounted(() => {
   ctx = gsap.context(() => {
     root.value.querySelectorAll('[data-count]').forEach((el) => {
       const to = Number(el.dataset.count)
-      el.textContent = '0'
       stops.push(
         onVisible(el, () =>
-          countUp(el, to, { duration: 1.6, format: (v) => grouped(Math.round(v)) }),
+          // ctx.add records the late tween, so revert() kills it on unmount. The
+          // start text is set here, so a render that never scrolls keeps the finals.
+          ctx.add(() => {
+            el.textContent = '0'
+            countUp(el, to, { duration: 1.6, format: (v) => grouped(Math.round(v)) })
+          }),
         ),
       )
     })
