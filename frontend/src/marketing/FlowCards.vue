@@ -258,7 +258,7 @@ onBeforeUnmount(() => mm?.revert())
               <div>
                 <dt>{{ t('landing.flows.tech.slope') }}</dt>
                 <dd>
-                  {{ tech.slope }}<small> {{ t('landing.flows.tech.perYear') }}</small>
+                  {{ tech.slope }} <small>{{ t('landing.flows.tech.perYear') }}</small>
                 </dd>
               </div>
               <div>
