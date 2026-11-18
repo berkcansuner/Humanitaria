@@ -21,6 +21,11 @@ describe('errorMessage', () => {
     expect(errorMessage({ status: 500 }, t)).toBe(tr.errors.generic)
   })
 
+  it('treats an unknown code without a status (an SSE error event) as generic, not network', () => {
+    expect(errorMessage({ code: 'future_code' }, tFor('en'))).toBe(en.errors.generic)
+    expect(errorMessage({ code: 'future_code' }, tFor('tr'))).toBe(tr.errors.generic)
+  })
+
   it('does not treat the reserved network/generic keys as server codes', () => {
     expect(errorMessage({ code: 'network', status: 400 }, tFor('en'))).toBe(en.errors.generic)
   })

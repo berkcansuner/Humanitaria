@@ -5,18 +5,18 @@
       class="avatar-btn"
       :aria-expanded="open ? 'true' : 'false'"
       aria-haspopup="menu"
-      aria-label="Account menu"
+      :aria-label="t('chat.menu.label')"
       @click="open = !open"
     >
       {{ initials }}
     </button>
     <div v-if="open" class="menu" role="menu">
       <div class="menu-head">
-        <div class="menu-name">{{ auth.user?.name || 'Account' }}</div>
+        <div class="menu-name">{{ auth.user?.name || t('chat.menu.account') }}</div>
         <div class="menu-email">{{ auth.user?.email }}</div>
       </div>
       <router-link class="menu-item" role="menuitem" to="/settings" @click="open = false">
-        <Settings :size="15" /> Settings
+        <Settings :size="15" /> {{ t('chat.menu.settings') }}
       </router-link>
       <router-link
         v-if="auth.user?.is_admin"
@@ -25,10 +25,10 @@
         to="/admin/ingestion"
         @click="open = false"
       >
-        <Shield :size="15" /> Admin panel
+        <Shield :size="15" /> {{ t('chat.menu.admin') }}
       </router-link>
       <button type="button" class="menu-item" role="menuitem" @click="logout">
-        <LogOut :size="15" /> Log out
+        <LogOut :size="15" /> {{ t('nav.logOut') }}
       </button>
     </div>
   </div>
@@ -37,10 +37,12 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { Settings, Shield, LogOut } from 'lucide-vue-next'
 import { auth, doLogout } from '../utils/authStore.js'
 import { userInitials } from '../utils/userDisplay.js'
 
+const { t } = useI18n()
 const open = ref(false)
 const rootEl = ref(null)
 const initials = computed(() => userInitials(auth.user))

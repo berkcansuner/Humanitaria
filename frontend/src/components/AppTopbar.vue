@@ -3,17 +3,17 @@
        Reports switch, and the account menu always in the same place. -->
   <header class="app-topbar">
     <slot name="start" />
-    <router-link class="brand" to="/app" title="Humanitaria: back to chat">
+    <router-link class="brand" to="/app" :title="t('chat.topbar.home')">
       <HelpingHandLogo :size="28" :radius="8" />
       <div class="brand-text">
         <h1 class="brand-title">Humanitaria</h1>
         <span v-if="context" class="brand-sub">{{ context }}</span>
       </div>
     </router-link>
-    <nav class="app-nav" aria-label="Main">
+    <nav class="app-nav" :aria-label="t('chat.topbar.nav')">
       <!-- router-link marks the exact match with aria-current="page". -->
-      <router-link to="/app" class="app-nav-link">Chat</router-link>
-      <router-link to="/reports" class="app-nav-link">Reports</router-link>
+      <router-link to="/app" class="app-nav-link">{{ t('nav.chat') }}</router-link>
+      <router-link to="/reports" class="app-nav-link">{{ t('nav.reports') }}</router-link>
     </nav>
     <span class="app-topbar-spacer"></span>
     <LanguageSwitcher variant="app" />
@@ -22,6 +22,7 @@
 </template>
 
 <script setup>
+import { useI18n } from 'vue-i18n'
 import HelpingHandLogo from './HelpingHandLogo.vue'
 import UserMenu from './UserMenu.vue'
 import LanguageSwitcher from './LanguageSwitcher.vue'
@@ -30,6 +31,8 @@ defineProps({
   // Small line under the brand naming the screen ("M&E Reports", "Settings").
   context: { type: String, default: '' },
 })
+
+const { t } = useI18n()
 </script>
 
 <style scoped>

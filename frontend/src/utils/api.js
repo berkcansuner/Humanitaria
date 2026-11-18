@@ -4,6 +4,7 @@
  */
 import { handleSessionExpired } from './authStore.js'
 import { errorFromResponse } from './errorMessage.js'
+import { t } from '../i18n/index.js'
 
 export async function request(url, options = {}) {
   const res = await fetch(url, {
@@ -29,7 +30,9 @@ export function getMessages(id) {
   return request(`/conversations/${id}/messages`, { method: 'GET' })
 }
 
-export function createConversation(title = 'New chat') {
+// The default title is stored on the server as data, so it is translated here,
+// once, in the language active when the conversation is created.
+export function createConversation(title = t('chat.newChat')) {
   return request('/conversations', { method: 'POST', body: JSON.stringify({ title }) })
 }
 

@@ -3,13 +3,13 @@
     <div class="sidebar-header">
       <button type="button" class="new-chat-btn" @click="$emit('new-chat')">
         <Plus :size="16" />
-        New chat
+        {{ t('chat.newChat') }}
       </button>
     </div>
 
     <div class="conv-search">
       <Search :size="15" />
-      <input v-model="query" type="text" placeholder="Search conversations" />
+      <input v-model="query" type="text" :placeholder="t('chat.search')" />
     </div>
 
     <ConversationList
@@ -26,6 +26,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Plus, Search } from 'lucide-vue-next'
 import ConversationList from './ConversationList.vue'
 import { filterConversations, groupConversationsByDate } from '../utils/conversationOps.js'
@@ -38,6 +39,8 @@ const props = defineProps({
 })
 
 defineEmits(['select', 'new-chat', 'rename', 'delete'])
+
+const { t } = useI18n()
 
 const query = ref('')
 const hasQuery = computed(() => query.value.trim().length > 0)

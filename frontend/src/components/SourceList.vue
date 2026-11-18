@@ -10,15 +10,17 @@
         <span class="sources-publishers">{{ publishers }}</span>
       </template>
       <span aria-hidden="true">·</span>
-      <span class="sources-toggle">{{ open ? 'Hide' : 'Show' }}</span>
+      <span class="sources-toggle">{{
+        open ? t('chat.sources.hide') : t('chat.sources.show')
+      }}</span>
     </summary>
     <div class="ledger">
       <table class="ledger-table">
         <thead>
           <tr>
             <th scope="col" class="col-index">#</th>
-            <th scope="col">Source</th>
-            <th scope="col" class="col-date">Date</th>
+            <th scope="col">{{ t('chat.sources.source') }}</th>
+            <th scope="col" class="col-date">{{ t('chat.sources.date') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -47,12 +49,12 @@
                    returns the reader to that citation (returnToCite). -->
               <button type="button" class="back-to-text">
                 <CornerUpLeft :size="12" aria-hidden="true" />
-                Back to text
+                {{ t('chat.sources.back') }}
               </button>
             </td>
             <td class="col-date">
               <time v-if="ledgerDate(src.date)" :datetime="ledgerDate(src.date)">{{
-                ledgerDate(src.date)
+                ledgerDate(src.date, locale)
               }}</time>
             </td>
           </tr>
@@ -64,6 +66,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ExternalLink, CornerUpLeft } from 'lucide-vue-next'
 import { safeUrl } from '../utils/parseSSE.js'
 import { isValidSource, summarizePublishers, ledgerDate } from '../utils/sources.js'
@@ -75,15 +78,14 @@ const props = defineProps({
   },
 })
 
+const { t, locale } = useI18n()
+
 // Mirrors the <details> element's state for the Show/Hide label only; the element
 // itself stays the source of truth (a citation chip may open it directly).
 const open = ref(false)
 
 const validSources = computed(() => (props.sources || []).filter(isValidSource))
-const countLabel = computed(() => {
-  const n = validSources.value.length
-  return `${n} ${n === 1 ? 'source' : 'sources'}`
-})
+const countLabel = computed(() => t('chat.sources.count', validSources.value.length))
 const publishers = computed(() => summarizePublishers(validSources.value))
 
 function metaLine(src) {

@@ -14,7 +14,8 @@
     "delete": "Sil",
     "close": "Kapat",
     "loading": "Yükleniyor…",
-    "tryAgain": "Tekrar dene"
+    "tryAgain": "Tekrar dene",
+    "dismiss": "Kapat"
   },
   "lang": {
     "buttonLabel": "Dil: {name}",
@@ -188,6 +189,119 @@
     "peak": {
       "below": "{month} zirvesinin %{pct} altında",
       "at": "zirvede"
+    }
+  },
+  "chat": {
+    "log": "Sohbet",
+    "yourMessage": "Mesajınız",
+    "assistantMessage": "Asistanın yanıtı",
+    "generating": "Yanıt hazırlanıyor…",
+    "edit": {
+      "label": "Mesajınızı düzenleyin",
+      "save": "Kaydet ve gönder"
+    },
+    "composer": {
+      "label": "Sohbet mesajı",
+      "send": "Mesajı gönder",
+      "stop": "Yanıtı durdur"
+    },
+    "errors": {
+      "connection": "Sunucuya ulaşılamadı. Uyku modundan çıkıyor olabilir; bu yaklaşık 30 saniye sürebilir.",
+      "streamInterrupted": "Yanıt yarıda kesildi. Bazı bölümler eksik olabilir.",
+      "emptyResponse": "Yanıt gelmedi.",
+      "sseParse": "Yanıt hazırlanırken bir sorun oluştu."
+    },
+    "announce": {
+      "stopped": "Yanıt durduruldu.",
+      "failed": "Yanıt alınamadı. {error}",
+      "clarification": "Asistan sorunuzu netleştirmenizi istiyor.",
+      "ready": "Yanıt hazır.",
+      "readyWithSources": "Yanıt hazır, {n} kaynak. | Yanıt hazır, {n} kaynak."
+    },
+    "actions": {
+      "copyWithSources": "Yanıtı kaynaklarıyla kopyala",
+      "copyMessage": "Mesajı kopyala",
+      "copied": "Kopyalandı",
+      "regenerate": "Yanıtı yeniden oluştur",
+      "edit": "Mesajı düzenle"
+    },
+    "newChat": "Yeni sohbet",
+    "search": "Sohbetlerde ara",
+    "toggleMenu": "Menüyü aç veya kapat",
+    "list": {
+      "rename": "Yeniden adlandır",
+      "noResults": "Sonuç bulunamadı",
+      "empty": "Henüz sohbet yok. Sorularınız ve yanıtlarınız burada saklanır."
+    },
+    "groups": {
+      "today": "Bugün",
+      "week": "Bu hafta",
+      "older": "Daha eski"
+    },
+    "sources": {
+      "count": "{n} kaynak | {n} kaynak",
+      "show": "Göster",
+      "hide": "Gizle",
+      "source": "Kaynak",
+      "date": "Tarih",
+      "back": "Metne dön",
+      "heading": "Kaynaklar",
+      "untitled": "Başlıksız"
+    },
+    "cite": {
+      "number": "Kaynak {n}",
+      "details": "Kaynak {n}: {details}"
+    },
+    "empty": {
+      "title": "İnsani yardım kayıtlarına sorun.",
+      "lede": "Her yanıt dayandığı ReliefWeb raporlarını kaynak olarak gösterir; böylece yanıtı doğrulayabilir ve alıntılayabilirsiniz.",
+      "examples": "Örnek sorular",
+      "prompts": {
+        "p1": "Sudan için en güncel IPC gıda güvensizliği rakamları neler?",
+        "p2": "Haiti'de ülke içinde yerinden edilmiş kişilerin sayısı kaç ve bu kişiler nerede bulunuyor?",
+        "p3": "İnsani yardım ortakları Myanmar'da hangi erişim kısıtlamalarını bildiriyor?",
+        "p4": "Son raporlar Yemen'deki kolera salgını hakkında ne diyor?"
+      }
+    },
+    "toast": {
+      "deleted": "Sohbet silindi.",
+      "undo": "Geri al"
+    },
+    "actionErrors": {
+      "load": "Sohbetleriniz yüklenemedi. Lütfen yeniden deneyin.",
+      "rename": "Sohbetin adı değiştirilemedi.",
+      "delete": "Sohbet silinemedi ve listeye geri eklendi."
+    },
+    "topbar": {
+      "home": "Humanitaria: sohbete dön",
+      "nav": "Ana menü"
+    },
+    "menu": {
+      "label": "Hesap menüsü",
+      "account": "Hesap",
+      "settings": "Ayarlar",
+      "admin": "Yönetim paneli"
+    },
+    "suggest": {
+      "card": "Sorunuzu daraltmak için öneriler",
+      "prev": "Önceki adım",
+      "next": "Sonraki adım",
+      "close": "Önerileri kapat",
+      "use": "Bu değeri kullan",
+      "finish": "Bitir",
+      "skip": "Atla",
+      "country": {
+        "title": "Hangi ülke hakkında bilgi almak istiyorsunuz?",
+        "placeholder": "Bir ülke yazın…"
+      },
+      "date": {
+        "title": "Hangi dönem?",
+        "placeholder": "Bir dönem yazın…"
+      },
+      "theme": {
+        "title": "Hangi konu?",
+        "placeholder": "ya da bir konu yazın…"
+      }
     }
   },
   "errors": {

@@ -3,12 +3,12 @@
        M&E-shaped starting points, not a generic prompt grid. -->
   <div class="empty-state">
     <div class="empty-inner">
-      <h2 class="empty-title">Ask the humanitarian record.</h2>
+      <h2 class="empty-title">{{ t('chat.empty.title') }}</h2>
       <p class="empty-lede">
-        Every answer cites the ReliefWeb reports it draws on, so you can check it and quote it.
+        {{ t('chat.empty.lede') }}
       </p>
 
-      <ul class="prompt-list" aria-label="Example questions">
+      <ul class="prompt-list" :aria-label="t('chat.empty.examples')">
         <li v-for="p in prompts" :key="p">
           <button type="button" class="prompt-row" @click="$emit('select', p)">
             <span>{{ p }}</span>
@@ -21,18 +21,18 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ArrowRight } from 'lucide-vue-next'
 
 defineEmits(['select'])
 
+const { t } = useI18n()
+
 // The questions M&E staff and analysts actually bring: figures, displacement,
 // access, outbreaks. The index covers every country for the last 12 months.
-const prompts = [
-  'What are the latest IPC food insecurity figures for Sudan?',
-  'How many people are internally displaced in Haiti, and where?',
-  'What access constraints are humanitarian partners reporting in Myanmar?',
-  'What do recent reports say about the cholera outbreak in Yemen?',
-]
+// Sent as written, so a Turkish prompt gets a Turkish answer.
+const prompts = computed(() => ['p1', 'p2', 'p3', 'p4'].map((k) => t(`chat.empty.prompts.${k}`)))
 </script>
 
 <style scoped>

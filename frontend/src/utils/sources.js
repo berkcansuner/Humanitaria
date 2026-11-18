@@ -1,3 +1,5 @@
+import { i18n, t } from '../i18n/index.js'
+
 /**
  * Whether a retrieved source should be shown to the user as a citable source.
  *
@@ -79,9 +81,15 @@ export function returnToCite(container) {
   return true
 }
 
-/** Accessible name for a citation chip: "Source 2: Title, Publisher, 2026-10-21". */
+/**
+ * Accessible name for a citation chip in the interface language: "Source 2:
+ * Title, Publisher, 2026-10-21" ("Kaynak 2: …, 21 Eki 2026"). Title and publisher
+ * are never translated. Read at render, so the label follows a language switch.
+ */
 export function citeLabel(id, src) {
-  if (!src) return `Source ${id}`
-  const parts = [src.title, src.source, ledgerDate(src.date)].filter(Boolean)
-  return parts.length ? `Source ${id}: ${parts.join(', ')}` : `Source ${id}`
+  const locale = i18n.global.locale.value
+  const parts = src ? [src.title, src.source, ledgerDate(src.date, locale)].filter(Boolean) : []
+  return parts.length
+    ? t('chat.cite.details', { n: id, details: parts.join(', ') })
+    : t('chat.cite.number', { n: id })
 }

@@ -3,6 +3,7 @@ import { createApp, nextTick } from 'vue'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import Chat from './Chat.vue'
 import { ASK_STORAGE_KEY, prefillFor } from '../utils/askQuestion.js'
+import { i18n } from '../i18n/index.js'
 
 async function mountChat(url) {
   const router = createRouter({
@@ -14,7 +15,7 @@ async function mountChat(url) {
   const host = document.createElement('div')
   document.body.appendChild(host)
   const app = createApp(Chat, { conversationId: null })
-  app.use(router)
+  app.use(router).use(i18n)
   app.mount(host)
   await nextTick()
   await nextTick()

@@ -7,7 +7,7 @@
     </template>
     <template v-else-if="groups.length">
       <template v-for="group in groups" :key="group.key">
-        <li class="conv-section-label">{{ group.label }}</li>
+        <li class="conv-section-label">{{ t(group.labelKey) }}</li>
         <li
           v-for="c in group.items"
           :key="c.id"
@@ -36,7 +36,7 @@
               <button
                 type="button"
                 class="conv-action"
-                aria-label="Rename"
+                :aria-label="t('chat.list.rename')"
                 @click.stop="startRename(c)"
               >
                 <Pencil :size="13" />
@@ -44,7 +44,7 @@
               <button
                 type="button"
                 class="conv-action"
-                aria-label="Delete"
+                :aria-label="t('common.delete')"
                 @click.stop="$emit('delete', c.id)"
               >
                 <Trash2 :size="13" />
@@ -54,19 +54,22 @@
         </li>
       </template>
     </template>
-    <li v-else-if="hasQuery" class="conv-section-label conv-empty">No results</li>
+    <li v-else-if="hasQuery" class="conv-section-label conv-empty">
+      {{ t('chat.list.noResults') }}
+    </li>
     <li v-else-if="!loading" class="conv-none">
-      No conversations yet. Your questions and answers will be kept here.
+      {{ t('chat.list.empty') }}
     </li>
   </ul>
 </template>
 
 <script setup>
 import { ref, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Pencil, Trash2 } from 'lucide-vue-next'
 
 defineProps({
-  // [{ key, label, items: [{ id, title, ... }] }] — pre-filtered & grouped by the Sidebar.
+  // [{ key, labelKey, items: [{ id, title, ... }] }] — pre-filtered & grouped by the Sidebar.
   groups: { type: Array, default: () => [] },
   activeId: { type: String, default: null },
   hasQuery: { type: Boolean, default: false },
@@ -74,6 +77,8 @@ defineProps({
 })
 
 const emit = defineEmits(['select', 'rename', 'delete'])
+
+const { t } = useI18n()
 
 const editingId = ref(null)
 const editTitle = ref('')

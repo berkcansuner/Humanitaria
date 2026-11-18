@@ -18,7 +18,7 @@
         v-else
         type="button"
         class="toast-dismiss"
-        aria-label="Dismiss"
+        :aria-label="t('common.dismiss')"
         @click="$emit('dismiss')"
       >
         <X :size="15" aria-hidden="true" />
@@ -29,6 +29,7 @@
 
 <script setup>
 import { ref, watch, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { AlertCircle, X } from 'lucide-vue-next'
 
 const props = defineProps({
@@ -44,6 +45,8 @@ const props = defineProps({
   focusKey: { type: [String, Number], default: null },
 })
 defineEmits(['action', 'dismiss'])
+
+const { t } = useI18n()
 
 const actionBtn = ref(null)
 watch(

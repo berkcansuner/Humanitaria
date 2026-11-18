@@ -4,7 +4,11 @@
          Chat · Reports switch stay put when moving between screens. -->
     <AppTopbar>
       <template #start>
-        <button class="hamburger" aria-label="Toggle menu" @click="sidebarOpen = !sidebarOpen">
+        <button
+          class="hamburger"
+          :aria-label="t('chat.toggleMenu')"
+          @click="sidebarOpen = !sidebarOpen"
+        >
           <Menu :size="20" />
         </button>
       </template>
@@ -24,8 +28,12 @@
 
       <div class="main">
         <div v-if="actionError" class="action-error" role="alert">
-          <span>{{ actionError }}</span>
-          <button class="action-error-dismiss" aria-label="Dismiss" @click="actionError = null">
+          <span>{{ t(actionError) }}</span>
+          <button
+            class="action-error-dismiss"
+            :aria-label="t('common.dismiss')"
+            @click="actionError = null"
+          >
             <X :size="16" aria-hidden="true" />
           </button>
         </div>
@@ -35,8 +43,8 @@
       </div>
     </div>
     <UndoToast
-      :message="pendingDelete ? 'Conversation deleted.' : ''"
-      action-label="Undo"
+      :message="pendingDelete ? t('chat.toast.deleted') : ''"
+      :action-label="t('chat.toast.undo')"
       focus-action
       :focus-key="pendingDelete ? pendingDelete.id : null"
       @action="undoDelete"
@@ -46,6 +54,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Menu, X } from 'lucide-vue-next'
 import Chat from '../components/Chat.vue'
 import Sidebar from '../components/Sidebar.vue'
@@ -54,17 +63,19 @@ import UndoToast from '../components/UndoToast.vue'
 import { listConversations, renameConversation, deleteConversation } from '../utils/api.js'
 import { useUndoableDelete } from '../utils/undoableDelete.js'
 
+const { t } = useI18n()
 const conversations = ref([])
 const activeId = ref(null)
 const sidebarOpen = ref(false)
-const actionError = ref(null)
+const actionError = ref(null) // a message key, translated on render
 const isLoadingConversations = ref(false)
 let errorTimer = null
 
 // Surface a transient, dismissible error for sidebar actions that previously
-// failed silently (the old behaviour only logged to the console).
-function showActionError(message) {
-  actionError.value = message
+// failed silently (the old behaviour only logged to the console). Takes a message
+// key, so a visible error follows a language switch.
+function showActionError(key) {
+  actionError.value = key
   if (errorTimer) clearTimeout(errorTimer)
   errorTimer = setTimeout(() => {
     actionError.value = null
@@ -77,7 +88,7 @@ async function loadConversations() {
     conversations.value = await listConversations()
   } catch (e) {
     console.error('Failed to load conversations:', e)
-    showActionError('Could not load your conversations. Please try again.')
+    showActionError('chat.actionErrors.load')
   } finally {
     isLoadingConversations.value = false
   }
@@ -106,7 +117,7 @@ async function onRename(id, title) {
     await loadConversations()
   } catch (e) {
     console.error('Rename failed:', e)
-    showActionError('Could not rename the conversation.')
+    showActionError('chat.actionErrors.rename')
   }
 }
 
@@ -123,7 +134,7 @@ const {
   onCommitted: loadConversations,
   onError: (e) => {
     console.error('Delete failed:', e)
-    showActionError('Could not delete the conversation. It is back in the list.')
+    showActionError('chat.actionErrors.delete')
   },
   // Reopen it if it was the open conversation.
   onUndo: (id, meta) => {

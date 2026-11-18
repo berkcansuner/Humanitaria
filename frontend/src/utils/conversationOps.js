@@ -39,7 +39,8 @@ export function lastServerIdBefore(messages, index) {
  *
  * - success → truncate the message list locally and signal a re-send.
  * - failure → keep every message (so the client never diverges from the server),
- *   mark only the target message with `errorMessage`, and do NOT re-send. This
+ *   mark only the target message with `errorMessage` (stored as given, e.g. an
+ *   untranslated `{ key }`), and do NOT re-send. This
  *   prevents a swallowed truncate error from producing duplicate/stale turns.
  *
  * Pure: returns a new array and never mutates the input.
@@ -83,23 +84,20 @@ function _dateGroupKey(updatedAt, now) {
   return 'older'
 }
 
-const _DATE_GROUPS = [
-  ['today', 'Today'],
-  ['week', 'This week'],
-  ['older', 'Older'],
-]
+const _DATE_GROUPS = ['today', 'week', 'older']
 
 /**
  * Group conversations by `updated_at` into Today / This week / Older sections.
- * Returns [{ key, label, items }] for non-empty groups, in fixed order. Item order
+ * Returns [{ key, labelKey, items }] for non-empty groups, in fixed order; the
+ * label is a message key, translated where it renders. Item order
  * within a group is preserved (the server already returns updated_at desc). `now`
  * is injected for testability (defaults to the current time).
  */
 export function groupConversationsByDate(conversations, now = new Date()) {
   return _DATE_GROUPS
-    .map(([key, label]) => ({
+    .map((key) => ({
       key,
-      label,
+      labelKey: `chat.groups.${key}`,
       items: conversations.filter((c) => _dateGroupKey(c.updated_at, now) === key),
     }))
     .filter((g) => g.items.length)

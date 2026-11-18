@@ -3,12 +3,17 @@ import DOMPurify from 'dompurify'
 import { isValidSource, ledgerDate } from './sources.js'
 import { expandCitationGroups } from './renderMarkdown.js'
 import { safeUrl } from './parseSSE.js'
+import { i18n, t } from '../i18n/index.js'
 
 /**
  * "Copy" keeps an answer's evidence: the copied text ends with a numbered
  * reference list, so the [n] markers still point somewhere once pasted into a
  * brief or report (PRODUCT: every claim is sourced, also outside the app).
+ * The fixed labels ("Sources", "Untitled") and the date follow the interface
+ * language at copy time; source titles and publishers are copied as they are.
  */
+
+const locale = () => i18n.global.locale.value
 
 /** Shown sources that a [n] marker can point to, in citation order. */
 export function referenceEntries(sources) {
@@ -20,11 +25,11 @@ export function referenceEntries(sources) {
 
 /** "[2] Sudan Access Update. OCHA, 2026-10-21. https://…" (missing parts dropped). */
 export function referenceLine(src) {
-  const date = ledgerDate(src.date)
+  const date = ledgerDate(src.date, locale())
   const meta = [src.source, date].filter(Boolean).join(', ')
   const url = safeUrl(src.url)
   return [
-    `[${src.index}] ${src.title || 'Untitled'}.`,
+    `[${src.index}] ${src.title || t('chat.sources.untitled')}.`,
     meta ? `${meta}.` : '',
     url !== '#' ? url : '',
   ]
@@ -37,7 +42,7 @@ export function buildCopyText(markdown, sources) {
   const body = expandCitationGroups(String(markdown || '')).trim()
   const refs = referenceEntries(sources)
   if (!refs.length) return body
-  return `${body}\n\nSources\n${refs.map(referenceLine).join('\n')}`
+  return `${body}\n\n${t('chat.sources.heading')}\n${refs.map(referenceLine).join('\n')}`
 }
 
 function esc(text) {
@@ -56,13 +61,13 @@ export function buildCopyHtml(markdown, sources) {
   })
   const refs = referenceEntries(sources)
   const list = refs.length
-    ? '<p><strong>Sources</strong></p><ol>' +
+    ? `<p><strong>${esc(t('chat.sources.heading'))}</strong></p><ol>` +
       refs
         .map((s) => {
-          const title = esc(s.title || 'Untitled')
+          const title = esc(s.title || t('chat.sources.untitled'))
           const href = safeUrl(s.url)
           const link = href && href !== '#' ? `<a href="${esc(href)}">${title}</a>` : title
-          const meta = [s.source, ledgerDate(s.date)].filter(Boolean).map(esc).join(', ')
+          const meta = [s.source, ledgerDate(s.date, locale())].filter(Boolean).map(esc).join(', ')
           return `<li value="${Number(s.index)}">${link}${meta ? `. ${meta}.` : '.'}</li>`
         })
         .join('') +

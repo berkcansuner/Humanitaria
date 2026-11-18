@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { i18n } from '../i18n/index.js'
 import {
   findLastUserIndex,
   truncateAt,
@@ -152,7 +153,10 @@ describe('groupConversationsByDate', () => {
   it('groups by updated_at into Bugün / Bu hafta / Daha eski in order', () => {
     const groups = groupConversationsByDate(convs, now)
     expect(groups.map((g) => g.key)).toEqual(['today', 'week', 'older'])
-    expect(groups.map((g) => g.label)).toEqual(['Today', 'This week', 'Older'])
+    // Labels are message keys, translated where they render (they follow a language switch).
+    const label = (locale) => groups.map((g) => i18n.global.t(g.labelKey, {}, { locale }))
+    expect(label('en')).toEqual(['Today', 'This week', 'Older'])
+    expect(label('tr')).toEqual(['Bugün', 'Bu hafta', 'Daha eski'])
     expect(groups[0].items.map((c) => c.id)).toEqual(['t'])
     expect(groups[1].items.map((c) => c.id)).toEqual(['w'])
     expect(groups[2].items.map((c) => c.id)).toEqual(['o'])

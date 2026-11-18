@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
+import { setLocale } from '../i18n/locale.js'
 import {
   referenceEntries,
   referenceLine,
@@ -60,6 +61,28 @@ describe('buildCopyText', () => {
 
   it('returns the answer alone when there are no sources', () => {
     expect(buildCopyText('Hello', null)).toBe('Hello')
+  })
+
+  describe('in Turkish', () => {
+    afterEach(() => {
+      setLocale('en')
+      localStorage.clear()
+    })
+
+    it('labels the list in the interface language and keeps source titles as they are', () => {
+      setLocale('tr')
+      expect(buildCopyText('Needs are high [1].', sources)).toBe(
+        'Needs are high [1].\n\nKaynaklar\n' +
+          '[1] Food Security Snapshot. WFP, 3 Kas 2026. https://reliefweb.int/report/a\n' +
+          '[2] Sudan Access Update. OCHA, 21 Eki 2026. https://reliefweb.int/report/b',
+      )
+      expect(referenceLine({ index: 4, url: 'https://x.test/4' })).toBe(
+        '[4] Başlıksız. https://x.test/4',
+      )
+      const html = buildCopyHtml('Text [1].', sources)
+      expect(html).toContain('<p><strong>Kaynaklar</strong></p>')
+      expect(html).toContain('WFP, 3 Kas 2026.')
+    })
   })
 })
 

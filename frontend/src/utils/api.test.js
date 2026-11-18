@@ -7,6 +7,7 @@ import {
   deleteConversation,
   truncateConversation,
 } from './api.js'
+import { setLocale } from '../i18n/locale.js'
 
 vi.mock('./authStore.js', () => ({ handleSessionExpired: vi.fn() }))
 
@@ -50,6 +51,20 @@ describe('conversation api client', () => {
       }),
     )
     expect(result).toEqual(conv)
+  })
+
+  it('createConversation defaults the title to "New chat" in the interface language', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) }))
+    await createConversation()
+    expect(fetch.mock.calls[0][1].body).toBe(JSON.stringify({ title: 'New chat' }))
+    setLocale('tr')
+    try {
+      await createConversation()
+      expect(fetch.mock.calls[1][1].body).toBe(JSON.stringify({ title: 'Yeni sohbet' }))
+    } finally {
+      setLocale('en')
+      localStorage.clear()
+    }
   })
 
   it('renameConversation PATCHes the title', async () => {

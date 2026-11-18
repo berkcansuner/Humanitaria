@@ -1,4 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { setLocale } from '../i18n/locale.js'
 import {
   isValidSource,
   summarizePublishers,
@@ -165,5 +166,20 @@ describe('citeLabel', () => {
   it('falls back to the number', () => {
     expect(citeLabel('4', null)).toBe('Source 4')
     expect(citeLabel('5', {})).toBe('Source 5')
+  })
+
+  describe('in Turkish', () => {
+    afterEach(() => {
+      setLocale('en')
+      localStorage.clear()
+    })
+
+    it('names the source in the interface language; title and publisher stay as they are', () => {
+      setLocale('tr')
+      expect(
+        citeLabel('3', { title: 'Bulletin', source: 'WHO', date: '2026-10-09T00:00:00Z' }),
+      ).toBe('Kaynak 3: Bulletin, WHO, 9 Eki 2026')
+      expect(citeLabel('4', null)).toBe('Kaynak 4')
+    })
   })
 })

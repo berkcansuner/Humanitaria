@@ -14,7 +14,8 @@
     "delete": "Delete",
     "close": "Close",
     "loading": "Loading…",
-    "tryAgain": "Try again"
+    "tryAgain": "Try again",
+    "dismiss": "Dismiss"
   },
   "lang": {
     "buttonLabel": "Language: {name}",
@@ -188,6 +189,119 @@
     "peak": {
       "below": "{pct}% below the {month} peak",
       "at": "at its peak"
+    }
+  },
+  "chat": {
+    "log": "Conversation",
+    "yourMessage": "Your message",
+    "assistantMessage": "Assistant message",
+    "generating": "Generating response…",
+    "edit": {
+      "label": "Edit your message",
+      "save": "Save & send"
+    },
+    "composer": {
+      "label": "Chat message input",
+      "send": "Send message",
+      "stop": "Stop generating"
+    },
+    "errors": {
+      "connection": "Couldn't reach the server. It may be waking up, which can take about 30 seconds.",
+      "streamInterrupted": "The answer was cut off. Some content may be missing.",
+      "emptyResponse": "No answer came back.",
+      "sseParse": "Something went wrong while answering."
+    },
+    "announce": {
+      "stopped": "Answer stopped.",
+      "failed": "Answer failed. {error}",
+      "clarification": "The assistant needs a clarification.",
+      "ready": "Answer ready.",
+      "readyWithSources": "Answer ready, {n} source. | Answer ready, {n} sources."
+    },
+    "actions": {
+      "copyWithSources": "Copy answer with sources",
+      "copyMessage": "Copy message",
+      "copied": "Copied",
+      "regenerate": "Regenerate response",
+      "edit": "Edit message"
+    },
+    "newChat": "New chat",
+    "search": "Search conversations",
+    "toggleMenu": "Toggle menu",
+    "list": {
+      "rename": "Rename",
+      "noResults": "No results",
+      "empty": "No conversations yet. Your questions and answers will be kept here."
+    },
+    "groups": {
+      "today": "Today",
+      "week": "This week",
+      "older": "Older"
+    },
+    "sources": {
+      "count": "{n} source | {n} sources",
+      "show": "Show",
+      "hide": "Hide",
+      "source": "Source",
+      "date": "Date",
+      "back": "Back to text",
+      "heading": "Sources",
+      "untitled": "Untitled"
+    },
+    "cite": {
+      "number": "Source {n}",
+      "details": "Source {n}: {details}"
+    },
+    "empty": {
+      "title": "Ask the humanitarian record.",
+      "lede": "Every answer cites the ReliefWeb reports it draws on, so you can check it and quote it.",
+      "examples": "Example questions",
+      "prompts": {
+        "p1": "What are the latest IPC food insecurity figures for Sudan?",
+        "p2": "How many people are internally displaced in Haiti, and where?",
+        "p3": "What access constraints are humanitarian partners reporting in Myanmar?",
+        "p4": "What do recent reports say about the cholera outbreak in Yemen?"
+      }
+    },
+    "toast": {
+      "deleted": "Conversation deleted.",
+      "undo": "Undo"
+    },
+    "actionErrors": {
+      "load": "Could not load your conversations. Please try again.",
+      "rename": "Could not rename the conversation.",
+      "delete": "Could not delete the conversation. It is back in the list."
+    },
+    "topbar": {
+      "home": "Humanitaria: back to chat",
+      "nav": "Main"
+    },
+    "menu": {
+      "label": "Account menu",
+      "account": "Account",
+      "settings": "Settings",
+      "admin": "Admin panel"
+    },
+    "suggest": {
+      "card": "Refine your query suggestions",
+      "prev": "Previous step",
+      "next": "Next step",
+      "close": "Close suggestions",
+      "use": "Use your input",
+      "finish": "Finish",
+      "skip": "Skip",
+      "country": {
+        "title": "Which country would you like information about?",
+        "placeholder": "Enter a country…"
+      },
+      "date": {
+        "title": "Which time period?",
+        "placeholder": "Enter a time period…"
+      },
+      "theme": {
+        "title": "Which topic?",
+        "placeholder": "or enter a topic…"
+      }
     }
   },
   "errors": {

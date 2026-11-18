@@ -1,13 +1,13 @@
 <template>
   <div class="chat">
-    <p class="sr-only" role="status" aria-live="polite">{{ announcement }}</p>
+    <p class="sr-only" role="status" aria-live="polite">{{ announcementText }}</p>
     <CitePreview :root="messagesContainer" />
     <div
       ref="messagesContainer"
       class="messages"
       role="log"
       aria-live="off"
-      aria-label="Conversation"
+      :aria-label="t('chat.log')"
       @click="onCiteClick"
       @keydown="onCiteKeydown"
     >
@@ -32,7 +32,7 @@
         :key="idx"
         :class="['message', msg.role]"
         role="article"
-        :aria-label="msg.role === 'user' ? 'Your message' : 'Assistant message'"
+        :aria-label="msg.role === 'user' ? t('chat.yourMessage') : t('chat.assistantMessage')"
       >
         <div class="message-row">
           <div class="message-bubble">
@@ -42,7 +42,7 @@
               <div class="typing-indicator" role="status">
                 <span class="skeleton skel-line" aria-hidden="true"></span>
                 <span class="skeleton skel-line short" aria-hidden="true"></span>
-                <span class="sr-only">Generating response…</span>
+                <span class="sr-only">{{ t('chat.generating') }}</span>
               </div>
             </template>
             <template v-else>
@@ -52,13 +52,17 @@
                   v-model="editText"
                   class="edit-textarea"
                   rows="3"
-                  aria-label="Edit your message"
+                  :aria-label="t('chat.edit.label')"
                   @keydown.esc="cancelEdit"
                   @keydown.enter.exact.prevent="saveEdit"
                 ></textarea>
                 <div class="edit-actions">
-                  <button type="button" class="edit-cancel" @click="cancelEdit">Cancel</button>
-                  <button type="button" class="edit-save" @click="saveEdit">Save & send</button>
+                  <button type="button" class="edit-cancel" @click="cancelEdit">
+                    {{ t('common.cancel') }}
+                  </button>
+                  <button type="button" class="edit-save" @click="saveEdit">
+                    {{ t('chat.edit.save') }}
+                  </button>
                 </div>
               </div>
               <template v-else>
@@ -68,7 +72,7 @@
                 ></div>
                 <div v-if="msg.error" class="error-banner">
                   <AlertCircle :size="16" class="error-icon" />
-                  <span class="error-text">{{ msg.error }}</span>
+                  <span class="error-text">{{ errorText(msg.error) }}</span>
                   <!-- The failed answer is the last turn: resend its question in place
                        (same path as Regenerate), instead of making the user retype it. -->
                   <button
@@ -78,7 +82,7 @@
                     @click="regenerate"
                   >
                     <RotateCcw :size="14" aria-hidden="true" />
-                    Try again
+                    {{ t('common.tryAgain') }}
                   </button>
                 </div>
                 <SuggestionCardIsland
@@ -116,7 +120,7 @@
         v-model="input"
         rows="1"
         class="chat-input"
-        aria-label="Chat message input"
+        :aria-label="t('chat.composer.label')"
         enterkeyhint="send"
         @input="autoGrow"
         @keydown.enter.exact.prevent="sendMessage"
@@ -125,7 +129,7 @@
         v-if="loading"
         type="button"
         class="send-btn stop-btn"
-        aria-label="Stop generating"
+        :aria-label="t('chat.composer.stop')"
         @click="stopGenerating"
       >
         <Square :size="18" />
@@ -135,7 +139,7 @@
         type="submit"
         class="send-btn"
         :disabled="!input.trim()"
-        aria-label="Send message"
+        :aria-label="t('chat.composer.send')"
       >
         <Send :size="20" />
       </button>
@@ -144,8 +148,9 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick, onMounted, defineAsyncComponent } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, defineAsyncComponent } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { Send, AlertCircle, Square, RotateCcw } from 'lucide-vue-next'
 import SourceList from './SourceList.vue'
 import EmptyState from './EmptyState.vue'
@@ -166,15 +171,25 @@ import { findLastUserIndex, lastServerIdBefore, planResend } from '../utils/conv
 import { getMessages, truncateConversation } from '../utils/api.js'
 import { handleSessionExpired } from '../utils/authStore.js'
 import { prefillFor, takeStashedQuestion } from '../utils/askQuestion.js'
+import { errorFromResponse, errorMessage } from '../utils/errorMessage.js'
+
+const { t } = useI18n()
 
 // Each failure says what happened; the banner's "Try again" is the recovery.
 // The free-tier server sleeps when idle, so the first request after a pause is
 // the most likely to fail: say so instead of a generic "connection lost".
+// A message's `error` is kept untranslated, { key } for these or { err } for a
+// coded server error, and translated on render so it follows a language switch.
 const ERROR_MESSAGES = {
-  connection: "Couldn't reach the server. It may be waking up, which can take about 30 seconds.",
-  stream_interrupted: 'The answer was cut off. Some content may be missing.',
-  empty_response: 'No answer came back.',
-  sse_parse: 'Something went wrong while answering.',
+  connection: { key: 'chat.errors.connection' },
+  stream_interrupted: { key: 'chat.errors.streamInterrupted' },
+  empty_response: { key: 'chat.errors.emptyResponse' },
+  sse_parse: { key: 'chat.errors.sseParse' },
+}
+
+function errorText(error) {
+  if (!error) return ''
+  return error.key ? t(error.key) : errorMessage(error.err, t)
 }
 
 const props = defineProps({
@@ -186,20 +201,27 @@ const messages = ref([])
 const input = ref('')
 const loading = ref(false) // a response is streaming
 // One short screen-reader message per answer (the message list itself is silent).
-const announcement = ref('')
+// Stored as { key, n?, error? } and translated on render.
+const announcement = ref(null)
+const announcementText = computed(() => {
+  const a = announcement.value
+  if (!a) return ''
+  if (a.error) return t(a.key, { error: errorText(a.error) })
+  return a.n != null ? t(a.key, a.n) : t(a.key)
+})
 
 function announceAnswer(msg, stopped) {
   if (stopped) {
-    announcement.value = 'Answer stopped.'
+    announcement.value = { key: 'chat.announce.stopped' }
   } else if (msg.error) {
-    announcement.value = `Answer failed. ${msg.error}`
+    announcement.value = { key: 'chat.announce.failed', error: msg.error }
   } else if (msg.clarification) {
-    announcement.value = 'The assistant needs a clarification.'
+    announcement.value = { key: 'chat.announce.clarification' }
   } else {
     const n = (msg.sources || []).filter(isValidSource).length
     announcement.value = n
-      ? `Answer ready, ${n} ${n === 1 ? 'source' : 'sources'}.`
-      : 'Answer ready.'
+      ? { key: 'chat.announce.readyWithSources', n }
+      : { key: 'chat.announce.ready' }
   }
 }
 const isLoadingMessages = ref(false) // past conversation's history is being fetched
@@ -226,7 +248,7 @@ async function sendMessage(opts = {}) {
     nextTick(autoGrow)
   }
   loading.value = true
-  announcement.value = ''
+  announcement.value = null
   let stopped = false
 
   const assistantMsg = {
@@ -262,9 +284,10 @@ async function sendMessage(opts = {}) {
         handleSessionExpired()
         return
       }
-      // 409 = per-user conversation limit; show the server's reason, not "connection".
-      const detail = res.status === 409 ? (await res.json().catch(() => ({}))).detail : null
-      assistantMsg.error = detail || ERROR_MESSAGES.connection
+      // A coded refusal (conversation limit, message too long, rate limit) says
+      // why; anything else reads as the server not being reachable.
+      const err = await errorFromResponse(res, '/chat/stream')
+      assistantMsg.error = err.code ? { err } : ERROR_MESSAGES.connection
       messages.value[msgIndex] = { ...assistantMsg }
       return
     }
@@ -346,10 +369,13 @@ async function sendMessage(opts = {}) {
         } else if (sse.event === 'error') {
           try {
             const data = JSON.parse(sse.data)
-            console.error('SSE error event:', data.message)
-            // The backend sends a curated, user-safe message (busy / quota /
-            // generic) — show it so the user knows whether retrying can help.
-            assistantMsg.error = data.message || ERROR_MESSAGES.sse_parse
+            console.error('SSE error event:', data.code, data.message)
+            // The backend sends a code (busy / quota / generic) so the user knows
+            // whether retrying can help; the 200 status keeps an unknown code
+            // reading as "something went wrong", never as a network problem.
+            assistantMsg.error = data.code
+              ? { err: { code: data.code, status: res.status } }
+              : ERROR_MESSAGES.sse_parse
             messages.value[msgIndex] = { ...assistantMsg }
           } catch (e) {
             console.error('SSE error parse error:', e, sse.data)

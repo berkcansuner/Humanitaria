@@ -3,8 +3,8 @@
     <button
       type="button"
       class="action-btn"
-      :aria-label="copied ? 'Copied' : copyLabel"
-      :title="copied ? 'Copied' : copyLabel"
+      :aria-label="copied ? t('chat.actions.copied') : copyLabel"
+      :title="copied ? t('chat.actions.copied') : copyLabel"
       @click="onCopy"
     >
       <Check v-if="copied" :size="15" />
@@ -14,7 +14,7 @@
       v-if="role === 'assistant' && canRegenerate"
       type="button"
       class="action-btn"
-      aria-label="Regenerate response"
+      :aria-label="t('chat.actions.regenerate')"
       @click="$emit('regenerate')"
     >
       <RotateCcw :size="15" />
@@ -23,7 +23,7 @@
       v-if="role === 'user'"
       type="button"
       class="action-btn"
-      aria-label="Edit message"
+      :aria-label="t('chat.actions.edit')"
       @click="$emit('edit')"
     >
       <Pencil :size="15" />
@@ -33,6 +33,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Copy, Check, RotateCcw, Pencil } from 'lucide-vue-next'
 import { copyWithSources, referenceEntries } from '../utils/citationCopy.js'
 
@@ -46,10 +47,15 @@ const props = defineProps({
 
 const emit = defineEmits(['copy', 'regenerate', 'edit'])
 
+const { t } = useI18n()
 const copied = ref(false)
 
 const copyLabel = computed(() =>
-  referenceEntries(props.sources).length ? 'Copy answer with sources' : 'Copy message',
+  t(
+    referenceEntries(props.sources).length
+      ? 'chat.actions.copyWithSources'
+      : 'chat.actions.copyMessage',
+  ),
 )
 
 async function onCopy() {

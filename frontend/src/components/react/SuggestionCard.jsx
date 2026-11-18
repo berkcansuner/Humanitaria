@@ -4,44 +4,30 @@ import './SuggestionCard.css'
 
 // Each missing query dimension becomes one step (only those with suggestions).
 // `chips: false` -> free-text only (with autocomplete); `true` -> chips + text.
+// Step titles and placeholders come from `labels.steps[key]`.
 const STEP_DEFS = [
-  {
-    key: 'country',
-    src: 'countries',
-    chips: false,
-    title: 'Which country would you like information about?',
-    placeholder: 'Enter a country…',
-  },
-  {
-    key: 'date',
-    src: 'time_periods',
-    chips: false,
-    title: 'Which time period?',
-    placeholder: 'Enter a time period…',
-  },
-  {
-    key: 'theme',
-    src: 'themes',
-    chips: true,
-    title: 'Which topic?',
-    placeholder: 'or enter a topic…',
-  },
+  { key: 'country', src: 'countries', chips: false },
+  { key: 'date', src: 'time_periods', chips: false },
+  { key: 'theme', src: 'themes', chips: true },
 ]
 
 /**
  * Multi-step suggestion card (React island).
  * Props:
  *   clarification: { suggestions: { countries, time_periods, themes } }
+ *   labels: every visible string, already translated by the Vue host
+ *     { card, prev, next, close, use, finish, skip,
+ *       steps: { country|date|theme: { title, placeholder } } }
  *   onApply: (values: string[]) => void   // chosen values in step order
  *   onDismiss: () => void
  */
-export default function SuggestionCard({ clarification, onApply, onDismiss }) {
+export default function SuggestionCard({ clarification, labels, onApply, onDismiss }) {
+  // Labels are read at render, not memoised into the steps: a language switch
+  // re-renders the card without resetting the current step or typed text.
   const steps = useMemo(() => {
     const s = clarification?.suggestions || {}
     return STEP_DEFS.filter((d) => Array.isArray(s[d.src]) && s[d.src].length).map((d) => ({
       key: d.key,
-      title: d.title,
-      placeholder: d.placeholder,
       chips: d.chips,
       options: s[d.src],
     }))
@@ -71,6 +57,7 @@ export default function SuggestionCard({ clarification, onApply, onDismiss }) {
 
   if (!steps.length) return null
   const step = steps[current]
+  const { title, placeholder } = labels.steps[step.key]
   const isLast = current >= steps.length - 1
 
   // Prefix match (whole label or any word starts with the query) so "s" yields
@@ -166,15 +153,10 @@ export default function SuggestionCard({ clarification, onApply, onDismiss }) {
   const chosen = steps.map((s) => selections[s.key]).filter(Boolean)
 
   return (
-    <div
-      className="sc-card"
-      role="group"
-      aria-label="Refine your query suggestions"
-      onKeyDown={onCardKey}
-    >
+    <div className="sc-card" role="group" aria-label={labels.card} onKeyDown={onCardKey}>
       <div className="sc-header">
         <span className="sc-title" aria-live="polite">
-          {step.title}
+          {title}
         </span>
         <div className="sc-nav">
           <span className="sc-dots" aria-hidden="true">
@@ -192,14 +174,14 @@ export default function SuggestionCard({ clarification, onApply, onDismiss }) {
             className="sc-iconbtn"
             onClick={prev}
             disabled={current === 0}
-            aria-label="Previous step"
+            aria-label={labels.prev}
           >
             <ChevronLeft size={16} />
           </button>
-          <button className="sc-iconbtn" onClick={skip} aria-label="Next step">
+          <button className="sc-iconbtn" onClick={skip} aria-label={labels.next}>
             <ChevronRight size={16} />
           </button>
-          <button className="sc-iconbtn" onClick={onDismiss} aria-label="Close suggestions">
+          <button className="sc-iconbtn" onClick={onDismiss} aria-label={labels.close}>
             <X size={16} />
           </button>
         </div>
@@ -217,7 +199,7 @@ export default function SuggestionCard({ clarification, onApply, onDismiss }) {
       )}
 
       {step.chips && (
-        <div className="sc-options" role="radiogroup" aria-label={step.title} key={current}>
+        <div className="sc-options" role="radiogroup" aria-label={title} key={current}>
           {step.options.map((opt, i) => (
             <button
               key={opt}
@@ -247,8 +229,8 @@ export default function SuggestionCard({ clarification, onApply, onDismiss }) {
               setActiveMatch(-1)
             }}
             onKeyDown={onInputKey}
-            placeholder={step.placeholder}
-            aria-label={step.placeholder}
+            placeholder={placeholder}
+            aria-label={placeholder}
             autoComplete="off"
             role="combobox"
             aria-expanded={matches.length > 0}
@@ -258,7 +240,7 @@ export default function SuggestionCard({ clarification, onApply, onDismiss }) {
             className="sc-input-go"
             type="submit"
             disabled={!custom.trim()}
-            aria-label="Use your input"
+            aria-label={labels.use}
           >
             <ArrowRight size={16} />
           </button>
@@ -286,7 +268,7 @@ export default function SuggestionCard({ clarification, onApply, onDismiss }) {
 
       <div className="sc-footer">
         <button className="sc-skip" onClick={skip}>
-          {isLast ? 'Finish' : 'Skip'}
+          {isLast ? labels.finish : labels.skip}
         </button>
       </div>
     </div>
