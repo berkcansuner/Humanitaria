@@ -37,8 +37,9 @@ class Indicator:
     credit: str = ""
 
     def name(self, language: str = "tr") -> str:
-        """The indicator's name in the report language (Turkish unless "en")."""
-        return self.label_en if language == "en" and self.label_en else self.label
+        """The indicator's name in the report language: Turkish for "tr", else English
+        (as the section headings are)."""
+        return self.label if language == "tr" or not self.label_en else self.label_en
 
 
 INDICATORS: list[Indicator] = [

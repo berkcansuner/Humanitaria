@@ -432,3 +432,7 @@ def test_dtm_charts_carry_iom_required_credit_line():
     # Indicators without a required credit keep the short publisher name.
     assert _credit(by_key("funding"), "2025-01-01", "en") == "OCHA FTS"
 
+
+def test_indicators_are_named_in_turkish_only_for_turkish_reports():
+    # A report in another language takes the English names, like its English headings.
+    assert all(ind.name("fr") == ind.name("en") for ind in INDICATORS)
