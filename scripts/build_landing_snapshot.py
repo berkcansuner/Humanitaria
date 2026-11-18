@@ -4,10 +4,17 @@ Writes two JSON files that the Vue landing imports at build time:
   frontend/src/marketing/data/coverage.json  (indexed reports per country, for the map)
   frontend/src/marketing/data/sudan.json     (Sudan figures from HDX HAPI, computed in code)
 
-Read-only: the database is only queried with SELECT; no Gemini calls are made.
+No Gemini calls are made. Database access is read-only in effect: the script only
+runs SELECTs, but rag.db.connect() first applies its idempotent CREATE/ALTER ... IF NOT
+EXISTS schema setup, which changes nothing on an up-to-date database.
+
+When to regenerate: before a landing release, or when the corpus or Sudan figures have
+moved enough to show on the page. It reads the database named by DATABASE_URL (the live
+one), ReliefWeb and HDX HAPI, so it needs network access and costs no model calls.
+Review and commit the two JSON files it rewrites.
 
 Usage:
-    python scripts/build_landing_snapshot.py
+    .venv/Scripts/python scripts/build_landing_snapshot.py
 """
 import json
 import logging

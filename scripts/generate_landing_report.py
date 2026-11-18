@@ -6,11 +6,17 @@ frontend/src/marketing/data/meReport.json: title, type, sector, period, generate
 date, two Key Findings sentences verbatim with their [n] markers, and the sources
 those sentences cite.
 
-Safety: the database is only read (retrieval). The report is never saved to a user
+Safety: the database is only read (retrieval; rag.db.connect() first applies its
+idempotent CREATE/ALTER ... IF NOT EXISTS schema setup, a no-op on an up-to-date database). The report is never saved to a user
 account or any table; the full text goes to a local file (--raw). The report model is
 called once, and once more only if that call fails. The reranker is switched off
 (its monthly quota is shared with the live app), so ranking falls back to the
 dense/MMR order, as it does when the quota is spent.
+
+When to regenerate: rarely, when the quoted sample report should change. A normal run
+COSTS A GEMINI CALL (one report generation); --reuse re-excerpts a saved --raw file and
+costs nothing. It rewrites frontend/src/marketing/data/meReport.json; review and commit
+it. The page's other figures come from scripts/build_landing_snapshot.py instead.
 
 Usage:
     python scripts/generate_landing_report.py --raw <path.json>          # generate
