@@ -18,28 +18,45 @@ logger = logging.getLogger(__name__)
 # not the sector total (Nigeria CCCM 2024: 780 vs 2,487,269; Myanmar 2025: 1,957,173 vs
 # 19,902,649 people in need).
 _STRAY_SHARE = 0.5
+# Under a parent code that also carries sub-lines (PRO beside PRO-CPN …), the plan's other
+# lines leak into the undisaggregated row: Haiti 2025's '' row under PRO is the migrants
+# line (349,999) while 'total' is the general line's breakdown total (466,589); Nigeria
+# 2024's '' row (5,093,865, 2% below its 'total') is the published overall figure.
+_STRAY_SHARE_BESIDE_SUB_LINES = 0.9
 
 
-def _published_total(totals: dict) -> tuple[str, float]:
+def _published_total(totals: dict, beside_sub_lines: bool = False) -> tuple[str, float]:
     """('', value) or ('total', value): the figure the HNO publishes for one period.
     Checked against the plans' published caseloads (HPC Tools, 2026-11-18): the
     undisaggregated row is the published figure unless it is far below the 'total' row."""
     blank, total = totals.get(""), totals.get("total")
-    if blank is None or (total is not None and blank < _STRAY_SHARE * total):
+    share = _STRAY_SHARE_BESIDE_SUB_LINES if beside_sub_lines else _STRAY_SHARE
+    if blank is None or (total is not None and blank < share * total):
         return "total", total
     return "", blank
 
 
-def _dedup_aggregate_rows(df: pd.DataFrame, indicator: Indicator) -> pd.DataFrame:
+def _sub_line_periods(df: pd.DataFrame, indicator: Indicator) -> set:
+    """Periods in which HAPI returned sub-sector rows beside the indicator's sector."""
+    code = indicator.query_params.get("sector_code")
+    if not code or "sector_code" not in df.columns:
+        return set()
+    sub = df[df["sector_code"].astype(str).str.startswith(f"{code}-")]
+    return set(sub["reference_period_start"].astype(str))
+
+
+def _dedup_aggregate_rows(df: pd.DataFrame, indicator: Indicator,
+                          sub_periods: set | None = None) -> pd.DataFrame:
     if indicator.endpoint == "affected-people/humanitarian-needs" and "category" in df.columns:
         cat = df["category"].fillna("").astype(str).str.strip().str.lower()
         df = df[cat.isin(["", "total"])].assign(_cat=cat)
         # One row per period: the published total of its '' and 'total' rows (each the
         # largest of its kind, against sub-set rows leaking from an unpinned dimension).
         keep = []
-        for _, sub in df.groupby("reference_period_start"):
+        for period, sub in df.groupby("reference_period_start"):
             best = sub.sort_values("_value", ascending=False).drop_duplicates("_cat")
-            chosen, _ = _published_total(dict(zip(best["_cat"], best["_value"])))
+            chosen, _ = _published_total(dict(zip(best["_cat"], best["_value"])),
+                                         str(period) in (sub_periods or set()))
             keep.append(best[best["_cat"] == chosen].index[0])
         df = df.loc[keep].drop(columns="_cat")
     return df
@@ -61,10 +78,13 @@ def _frame(rows: list[dict], indicator: Indicator, dedup: bool = True) -> pd.Dat
     df = pd.DataFrame(rows)
     if indicator.value_field not in df.columns or "reference_period_start" not in df.columns:
         return pd.DataFrame()
+    sub_periods = _sub_line_periods(df, indicator)
     df = _exact(df, indicator).copy()
     df["_value"] = pd.to_numeric(df[indicator.value_field], errors="coerce") * indicator.scale
     df = df.dropna(subset=["_value", "reference_period_start"])
-    return _dedup_aggregate_rows(df, indicator) if dedup else df
+    if not dedup:
+        return df.assign(_beside_sub_lines=df["reference_period_start"].astype(str).isin(sub_periods))
+    return _dedup_aggregate_rows(df, indicator, sub_periods)
 
 
 def _agg(series: pd.Series, how: str) -> float:
@@ -106,27 +126,36 @@ def regional_series(rows: list[dict], indicator: Indicator) -> dict[str, list[fl
 _TOTALS_DIFFER = 0.01   # '' and 'total' rows further apart than this share are noted
 
 
-def competing_totals_note(rows: list[dict], indicator: Indicator) -> str | None:
+def two_totals_periods(rows: list[dict], indicator: Indicator) -> dict[str, dict]:
+    """period (YYYY-MM-DD) -> {'': value, 'total': value} for the periods whose two
+    totals differ by more than _TOTALS_DIFFER."""
+    df = _frame(rows, indicator, dedup=False)
+    if df.empty or "category" not in df.columns:
+        return {}
+    cat = df["category"].fillna("").astype(str).str.strip().str.lower()
+    out = {}
+    for period, sub in df.assign(_cat=cat)[cat.isin(["", "total"])].groupby("reference_period_start"):
+        totals = sub.groupby("_cat")["_value"].max().to_dict()
+        if len(totals) == 2 and abs(totals[""] - totals["total"]) > _TOTALS_DIFFER * max(totals.values()):
+            out[str(period)[:10]] = {**totals, "beside_sub_lines": bool(sub["_beside_sub_lines"].any())}
+    return out
+
+
+def competing_totals_note(rows: list[dict], indicator: Indicator,
+                          fmt=lambda v: str(int(v))) -> str | None:
     """HNO rows carry a sector's total twice per year: the undisaggregated row
     (category '') and the 'total' of its breakdown. They usually agree. When they do
     not, _published_total picks one, and the note says which, because HDX HAPI does not
     hold every published sector total: where a plan splits a cluster into sub-lines
     (Haiti protection 2025: migrants 349,999, general protection 466,589, protection
     total 2,160,007) HAPI keeps two sub-lines and neither is the sector figure."""
-    df = _frame(rows, indicator, dedup=False)
-    if df.empty or "category" not in df.columns:
-        return None
-    cat = df["category"].fillna("").astype(str).str.strip().str.lower()
     years = []
-    for period, sub in df.assign(_cat=cat)[cat.isin(["", "total"])].groupby("reference_period_start"):
-        totals = sub.groupby("_cat")["_value"].max().to_dict()
-        if len(totals) < 2 or abs(totals[""] - totals["total"]) <= _TOTALS_DIFFER * max(totals.values()):
-            continue
-        chosen, _ = _published_total(totals)
-        blank = f"{int(totals[''])} without a breakdown" + (" (used)" if chosen == "" else "")
-        total = f"{int(totals['total'])} as the total of its breakdown" + (
+    for period, totals in two_totals_periods(rows, indicator).items():
+        chosen, _ = _published_total(totals, totals["beside_sub_lines"])
+        blank = f"{fmt(totals[''])} without a breakdown" + (" (used)" if chosen == "" else "")
+        total = f"{fmt(totals['total'])} as the total of its breakdown" + (
             " (used)" if chosen == "total" else "")
-        years.append(f"{str(period)[:4]}: {blank} and {total}")
+        years.append(f"{period[:4]}: {blank} and {total}")
     if not years:
         return None
     return (f"HDX HAPI holds two totals for {'; '.join(years)}; the HNO's published sector "

@@ -15,7 +15,7 @@ import requests
 from analytics.charts import comparison_chart, correlation_chart, trend_chart
 from analytics.datasets import (
     competing_totals_note, consistent_snapshots, ipc_coverage_note, national_series,
-    regional_series, sub_sector_lines,
+    regional_series, sub_sector_lines, two_totals_periods,
 )
 from analytics.hapi_client import HapiError, fetch_rows, resource_metadata
 from analytics.indicators import indicators_for
@@ -272,35 +272,45 @@ def _plan_line(ind, rows: list[dict], periods: list, values: list,
     """The indicator's name, and a note for every period whose plan reports the sector
     in separate lines (HAPI returns the sub-sectors beside it: PRO-CPN, PRO-GBV …).
 
-    HAPI's figure for the parent code is then one plan line. When it is below one of
-    its sub-lines it cannot be the overall figure, so it is named as the general line
-    (Haiti 2025: 349,999 beside child protection's 1,611,291). Otherwise HAPI's rows
-    cannot tell: it is the general line in Afghanistan 2025 (14.2 million; overall 22.3
-    million) but the overall figure in Congo 2025 (7,870,319), so the name stays and the
-    note says it may be either. The lines are never added up."""
+    HAPI's figure for the parent code is then one plan line. Only what HAPI's rows show
+    is said: a figure below one of its sub-lines is not the overall figure (Haiti 2025:
+    466,589 beside child protection's 1,611,291), and it is likely the general line,
+    and so named, only when the period's undisaggregated and 'total' rows agree (Sudan
+    2025: 11,725,110 both) in every year of the series. Haiti's two rows disagree (349,999 is the migrants line) so
+    its name stays. A figure at least every sub-line may be either: the general line in
+    Afghanistan 2025 (14.2 million; overall 22.3 million), the overall figure in Congo
+    2025 (7,870,319). The lines are never added up."""
     name = ind.name(language)
     lines = sub_sector_lines(rows, ind)
     by_period = {str(p)[:10]: v for p, v in zip(periods, values)}
     lines = {p: subs for p, subs in lines.items() if p in by_period}
     if not lines:
         return name, []
-    latest = str(periods[-1])[:10]
-    if any(v > by_period[latest] for _, v in lines.get(latest, [])):
+    disputed = two_totals_periods(rows, ind)
+
+    def below(period):
+        return any(v > by_period[period] for _, v in lines.get(period, []))
+
+    # One heading covers the whole series: it says "general" only when every year is shown
+    # to be the general line (Sudan 2024's figure is the overall one, 2025's the general).
+    if all(p in lines and below(p) and p not in disputed for p in by_period):
         name = ind.general_name(language)
     sector = ind.sector_en or "the sector"
     notes = []
     for period, subs in lines.items():
-        listed = ", ".join(f"{n} {int(v)}" for n, v in subs)
-        figure = int(by_period[period])
-        if any(v > by_period[period] for _, v in subs):
-            what = (f"is below one of them, so it is the plan's general {sector} line, not its "
-                    f"overall {sector} figure, which may be higher")
+        listed = ", ".join(f"{n} {_plain(v)}" for n, v in subs)
+        if below(period):
+            what = (f"is below one of the plan's {sector} lines, so it is not the plan's overall "
+                    f"{sector} figure, which is higher")
+            if period not in disputed:
+                what += f"; it is likely the plan's general {sector} line"
         else:
             what = (f"may be the plan's general {sector} line rather than its overall {sector} "
                     f"figure, which may be higher")
         notes.append(f"{name}, {period[:4]}: the plan reports {sector} in separate lines "
-                     f"({listed}); the figure here ({figure}) {what}; this report does not add "
-                     f"the lines up, because people can be counted in more than one.")
+                     f"({listed}); the figure here ({_plain(by_period[period])}) {what}; this "
+                     f"report does not add the lines up, because people can be counted in more "
+                     f"than one.")
     return name, notes
 
 
@@ -341,7 +351,7 @@ def _series(rows: list[dict], ind, date_from: str, date_to: str, today: date):
     rows, note = consistent_snapshots(rows)
     coverage = ipc_coverage_note(rows)
     periods, values = national_series(rows, ind)
-    totals = competing_totals_note(rows, ind)
+    totals = competing_totals_note(rows, ind, fmt=_plain)
     return rows, [n for n in (note, coverage, totals) if n], periods, values
 
 

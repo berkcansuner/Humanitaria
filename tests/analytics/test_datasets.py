@@ -267,3 +267,15 @@ def test_sub_sector_lines_are_listed_per_period_and_never_summed():
         "2025-01-01": [("Child Protection", 1_611_291), ("Gender Based Violence", 1_535_819)]}
     assert sub_sector_lines(rows, by_key("pin_food_security")) == {}
     assert sub_sector_lines(rows, by_key("idps")) == {}
+
+
+def test_a_much_lower_undisaggregated_row_beside_sub_lines_is_a_leaked_plan_line():
+    # Haiti 2025: under PRO, '' = 349,999 is the migrants-protection line; the 'total'
+    # 466,589 is the general line (its age/sex breakdown sums to it). Nigeria 2024: under
+    # PRO beside its sub-lines, '' = 5,093,865 is the published overall figure ('total'
+    # 5,214,884), so a small gap still keeps the undisaggregated row.
+    hti = (_hno("PRO", 2025, [("", 349_999), ("Adult - Female", 133_535), ("total", 466_589)])
+           + _hno("PRO-CPN", 2025, [("", 1_611_291)]))
+    nga = _hno("PRO", 2024, [("", 5_093_865), ("total", 5_214_884)]) + _hno("PRO-GBV", 2024, [("", 2_103_352)])
+    assert national_series(hti, by_key("pin_protection"))[1] == [466_589]
+    assert national_series(nga, by_key("pin_protection"))[1] == [5_093_865]
