@@ -7,10 +7,6 @@
       <section ref="hero" class="hero">
         <div class="wrap hero-grid">
           <div class="hero-copy">
-            <p class="hero-status">
-              <span class="status-dot" aria-hidden="true"></span>{{ reportsLabel }} ReliefWeb
-              reports · updated daily
-            </p>
             <h1>The humanitarian record, <span class="h1-accent">answered and cited.</span></h1>
             <p class="hero-lede">
               Ask about any crisis, generate M&amp;E situation and technical reports, and see the
@@ -54,8 +50,10 @@
               <li>
                 <b>{{ coverage.countries }}</b> countries
               </li>
-              <li><b>12</b> months of reports</li>
-              <li><b>4</b> report types</li>
+              <li>
+                <b>{{ reportsLabel }}</b> reports
+              </li>
+              <li><b>12</b> months</li>
             </ul>
           </div>
           <HeroComposite ref="composite" />

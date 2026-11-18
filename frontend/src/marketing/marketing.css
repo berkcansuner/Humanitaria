@@ -240,25 +240,7 @@
   position: relative;
   z-index: 1;
 }
-.mkt-scope .hero-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: var(--mkt-brand-tint);
-  color: var(--color-accent);
-  font-size: 13px;
-  font-weight: 550;
-}
-.mkt-scope .status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--mkt-brand-chart);
-}
 .mkt-scope .hero h1 {
-  margin-top: 22px;
   font-family: var(--font-display);
   font-size: clamp(40px, 4.4vw, 60px);
   line-height: 1.02;
