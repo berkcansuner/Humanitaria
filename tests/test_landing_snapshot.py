@@ -92,3 +92,39 @@ def test_latest_round_regions_ranks_the_given_round_not_period_means():
     ]
     out = latest_round_regions(rows, by_key("idps"), "2025-09-30", n=2)
     assert out == [["B", 500], ["C", 300]]
+
+
+def _ref(host, date, pop):
+    return {"asylum_location_name": host, "reference_period_start": date, "population": pop}
+
+
+def test_latest_by_host_ranks_the_latest_round_and_sums_same_round_rows():
+    from scripts.build_landing_snapshot import latest_by_host
+
+    rows = [
+        _ref("A", "2024-01-01T00:00:00", 900), _ref("B", "2024-01-01T00:00:00", 100),
+        _ref("A", "2025-01-01T00:00:00", 100), _ref("B", "2025-01-01T00:00:00", 400),
+        _ref("C", "2025-01-01T00:00:00", 300), _ref("B", "2025-01-01T00:00:00", 50),
+    ]
+    assert latest_by_host(rows, n=2) == [["B", 450], ["C", 300]]
+
+
+def test_latest_by_host_is_none_without_rows_or_host_names():
+    from scripts.build_landing_snapshot import latest_by_host
+
+    assert latest_by_host([]) is None
+    assert latest_by_host([{"reference_period_start": "2025-01-01", "population": 5}]) is None
+
+
+def test_funding_by_year_sums_periods_in_the_same_calendar_year():
+    from scripts.build_landing_snapshot import funding_by_year
+
+    out = funding_by_year(["2024-01-01", "2024-01-01T00:00:00", "2025-01-01"], [1.234, 2.0, 5.0])
+    assert out == [[2024, 3.23], [2025, 5.0]]
+
+
+def test_pct_change_is_first_to_last():
+    from scripts.build_landing_snapshot import pct_change
+
+    assert pct_change([200.0, 150.0]) == -25.0
+    assert pct_change([5.0]) is None
