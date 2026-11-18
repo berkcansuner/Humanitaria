@@ -503,3 +503,57 @@ class TestSouthSudan:
     def test_prompt_tells_south_sudan_apart(self):
         from rag.query_processor import _FILTER_RULES
         assert "South Sudan" in _FILTER_RULES
+
+
+class TestInCountryIsNotADoctype:
+    """'ülke içinde yerinden edilmiş' (internally displaced) says where, not which document
+    type. Read as doctype=country it limited every Turkish IDP question to country-profile
+    records, and the chat answered 'no documents found'."""
+
+    IDP_QUESTION = ("Aralık 2024'ten bu yana kaç Suriyeli mülteci ve ülke içinde yerinden "
+                    "edilmiş kişi evine döndü ve nerelere dönüyorlar?")
+
+    def test_rule_based_idp_question_has_no_country_doctype(self):
+        f = _extract_filters_rule_based(self.IDP_QUESTION)
+        assert f.get("doctype") != "country"
+        assert f.get("country") == "Syria"
+
+    @pytest.mark.parametrize("text", [
+        "ülke içinde", "Ülke İçinde Yerinden Edilmiş Kişiler", "ulke icinde yerinden edilenler",
+        "ülke içi göç",
+    ])
+    def test_rule_based_bare_phrase_has_no_doctype(self, text):
+        assert "doctype" not in _extract_filters_rule_based(text)
+
+    @patch("rag.query_processor._extract_filters_llm", return_value=None)
+    def test_country_profile_still_sets_the_doctype(self, _mock):
+        assert extract_filters("Suriye ülke profili").get("doctype") == "country"
+
+    @patch("rag.query_processor._extract_filters_llm")
+    def test_llm_country_doctype_for_the_idp_phrase_is_dropped(self, mock_llm):
+        _clear_llm_cache()
+        mock_llm.return_value = {"country": "Syria", "doctype": "country"}
+        f = extract_filters(self.IDP_QUESTION)
+        assert "doctype" not in f
+        assert f["country"] == "Syria"
+        _clear_llm_cache()
+
+    @patch("rag.query_processor._extract_filters_llm")
+    def test_llm_country_doctype_kept_when_a_profile_is_asked_for(self, mock_llm):
+        _clear_llm_cache()
+        mock_llm.return_value = {"country": "Syria", "doctype": "country"}
+        f = extract_filters("Suriye ülke profili, ülke içinde yerinden edilmiş kişiler")
+        assert f["doctype"] == "country"
+        _clear_llm_cache()
+
+    def test_follow_up_plan_drops_the_misread_doctype(self):
+        from langchain_core.messages import AIMessage, HumanMessage
+        from rag.query_processor import QueryPlan, plan_retrieval
+        planner = MagicMock()
+        planner.invoke.return_value = QueryPlan(
+            standalone_query="Suriye'de ülke içinde yerinden edilmiş kişiler nereye dönüyor?",
+            country="Syria", doctype="country")
+        history = [HumanMessage(content="Suriye'de durum nedir?"), AIMessage(content="...")]
+        _, f = plan_retrieval("ya yerinden edilmiş kişiler?", history, planner=planner)
+        assert "doctype" not in f
+        assert f["country"] == "Syria"

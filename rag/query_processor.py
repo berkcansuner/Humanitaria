@@ -301,6 +301,22 @@ def _match_word(keyword: str, text: str) -> bool:
     return bool(re.search(r"\b" + re.escape(keyword), text))
 
 
+# "ülke içinde (yerinden edilmiş)" = internally (displaced), "ülke içi" = domestic: these
+# say where, not which document type. Read as doctype=country they limited every Turkish
+# IDP question to country-profile records, and the chat found no documents.
+_IN_COUNTRY = re.compile(r"\b[uü]lke\s+i[çc]i")
+
+
+def _without_misread_doctype(query: str, filters: Dict[str, Any],
+                             rule_filters: Dict[str, Any]) -> Dict[str, Any]:
+    """Drop an LLM doctype=country that only the "ülke içinde" phrase can have prompted
+    (the rule-based extractor, which skips that phrase, found no country doctype)."""
+    if (filters.get("doctype") == "country" and rule_filters.get("doctype") != "country"
+            and _IN_COUNTRY.search(_turkish_lower(query))):
+        return {key: value for key, value in filters.items() if key != "doctype"}
+    return filters
+
+
 def _extract_filters_rule_based(query: str) -> Dict[str, Any]:
     query_lower = _turkish_lower(query)
     filters: Dict[str, Any] = {}
@@ -318,8 +334,9 @@ def _extract_filters_rule_based(query: str) -> Dict[str, Any]:
         if _match_word(key, query_lower):
             filters["theme"] = val
             break
+    doctype_text = _IN_COUNTRY.sub(" ", query_lower)
     for key, val in _DOCTYPE_MAP.items():
-        if _match_word(key, query_lower):
+        if _match_word(key, doctype_text):
             filters["doctype"] = val
             break
 
@@ -413,7 +430,7 @@ def extract_filters(query: str) -> Dict[str, Any]:
     # date fields the LLM left empty, while the LLM still wins on any field it set.
     merged = dict(rule_filters)
     merged.update(llm_filters)
-    return merged
+    return _without_misread_doctype(query, merged, rule_filters)
 
 
 _llm_planner = None
@@ -468,9 +485,10 @@ def plan_retrieval(message: str, chat_history: list, planner=None) -> tuple[str,
         query = (result.standalone_query or "").strip() or message
         # Same merge semantics as extract_filters: rule-based backstop fills what
         # the LLM left empty; the LLM wins on any field it set.
-        merged = dict(_extract_filters_rule_based(query))
+        rule_filters = _extract_filters_rule_based(query)
+        merged = dict(rule_filters)
         merged.update(_normalize_llm_filters(result))
-        return query, merged
+        return query, _without_misread_doctype(query, merged, rule_filters)
     except Exception as e:
         logger.warning("Combined query planning failed, falling back to filters-only: %s", e)
         return message, extract_filters(message)
