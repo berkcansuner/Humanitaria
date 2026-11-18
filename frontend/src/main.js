@@ -9,6 +9,8 @@ import '@fontsource-variable/source-serif-4' // answers and reports (Claude-like
 import '@fontsource/ibm-plex-mono/400.css' // mono / citations
 import '@fontsource/ibm-plex-mono/500.css'
 import '@fontsource/ibm-plex-mono/600.css'
+import '@fontsource-variable/geist' // landing text (.mkt-scope)
+import '@fontsource-variable/geist-mono' // landing figures and citation chips
 import './style.css'
 import './marketing/marketing.css'
 import { router } from './router/index.js'

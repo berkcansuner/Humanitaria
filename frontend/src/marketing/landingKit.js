@@ -1,0 +1,92 @@
+// Pure helpers for the landing page: number formatting, map projection,
+// sparkline paths and the two motion primitives (count-up, visibility).
+import { gsap } from 'gsap'
+
+const LAT_LIMIT = 70
+
+const round = (n) => Math.round(n * 100) / 100
+
+export function formatCompact(n) {
+  const units = [
+    [1e9, 'B', 2],
+    [1e6, 'M', 1],
+    [1e3, 'K', 0],
+  ]
+  for (const [size, suffix, decimals] of units) {
+    if (Math.abs(n) >= size) return `${Number((n / size).toFixed(decimals))}${suffix}`
+  }
+  return String(Math.round(n))
+}
+
+// Equirectangular projection; latitude is clamped to the drawn ±70° band.
+export function project(lat, lon, w, h) {
+  const clamped = Math.max(-LAT_LIMIT, Math.min(LAT_LIMIT, lat))
+  return {
+    x: ((lon + 180) / 360) * w,
+    y: ((LAT_LIMIT - clamped) / (2 * LAT_LIMIT)) * h,
+  }
+}
+
+// Square-root scale so area, not radius, tracks report volume: 1.5-7 px.
+export function pulseRadius(reports, max) {
+  const t = max > 0 ? Math.sqrt(Math.max(0, Math.min(reports, max)) / max) : 0
+  return 1.5 + t * 5.5
+}
+
+// SVG path `d` for [x, y] points; x spans the points' own range over `w`.
+export function linePath(points, w, h, yMin, yMax) {
+  if (!points.length) return ''
+  const xs = points.map((p) => p[0])
+  const xMin = Math.min(...xs)
+  const xSpan = Math.max(...xs) - xMin || 1
+  const ySpan = yMax - yMin || 1
+  return points
+    .map(([x, y], i) => {
+      const px = round(((x - xMin) / xSpan) * w)
+      const py = round(h - ((y - yMin) / ySpan) * h)
+      return `${i === 0 ? 'M' : 'L'}${px},${py}`
+    })
+    .join(' ')
+}
+
+export function prefersReducedMotion() {
+  return (
+    typeof window !== 'undefined' &&
+    !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  )
+}
+
+// Calls cb(entry) once the element first intersects; returns a disconnect function.
+export function onVisible(el, cb) {
+  const observer = new IntersectionObserver(
+    (entries) => {
+      const entry = entries.find((e) => e.isIntersecting)
+      if (!entry) return
+      observer.disconnect()
+      cb(entry)
+    },
+    { threshold: 0.2 },
+  )
+  observer.observe(el)
+  return () => observer.disconnect()
+}
+
+// Counts the element's text up to `to`. Reduced motion: final text, no tween.
+export function countUp(el, to, { duration = 1.2, format = (v) => String(Math.round(v)) } = {}) {
+  if (prefersReducedMotion()) {
+    el.textContent = format(to)
+    return
+  }
+  const state = { v: 0 }
+  gsap.to(state, {
+    v: to,
+    duration,
+    ease: 'power3.out',
+    onUpdate: () => {
+      el.textContent = format(state.v)
+    },
+    onComplete: () => {
+      el.textContent = format(to)
+    },
+  })
+}

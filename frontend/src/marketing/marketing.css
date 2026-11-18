@@ -12,22 +12,38 @@
    ============================================================ */
 
 .mkt-scope {
-  --color-bg: #faf9f6;
-  --color-surface: #ffffff;
-  --color-surface-container-low: #f4f3f1;
-  --color-surface-container-high: #ece9e4;
-  --color-text-secondary: #56544f;
-  /* Warm muted text at 4.9:1 on paper, 5.2:1 on white, 4.7:1 on the low surface
-     (was #8a857e at 3.3–3.7:1, below AA for the auth divider and footer lines). */
-  --color-muted: #716c65;
-  --color-border: #e7e4df;
-  --color-border-strong: #d9d5ce;
-  --color-accent: oklch(0.47 0.12 152);
-  --color-accent-container: oklch(0.4 0.12 152);
-  --color-accent-soft: oklch(0.94 0.03 152);
+  /* Landing palette (direction contract). Raw tokens first, then the shared
+     --color-* names the existing marketing components already use. */
+  --mkt-ground: #ffffff;
+  --mkt-ground-soft: #f5f7fa;
+  --mkt-ink: #0b1d2e;
+  --mkt-ink-2: #44546a;
+  --mkt-ink-3: #56657a;
+  --mkt-line: #e3e8ef;
+  --mkt-brand: #0b6f6a; /* text and buttons */
+  --mkt-brand-chart: #0a8f88; /* chart marks only */
+  --mkt-brand-tint: #e6f4f3;
+  --mkt-coral: #d9452a;
+
+  --font-body: 'Geist Variable', system-ui, sans-serif;
+  --font-display: 'Geist Variable', system-ui, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, monospace; /* figures and citation chips only */
+
+  --color-bg: var(--mkt-ground);
+  --color-text: var(--mkt-ink);
+  --color-surface: var(--mkt-ground);
+  --color-surface-container-low: var(--mkt-ground-soft);
+  --color-surface-container-high: var(--mkt-line);
+  --color-text-secondary: var(--mkt-ink-2);
+  --color-muted: var(--mkt-ink-3);
+  --color-border: var(--mkt-line);
+  --color-border-strong: #cfd7e2;
+  --color-accent: var(--mkt-brand);
+  --color-accent-container: var(--mkt-brand);
+  --color-accent-soft: var(--mkt-brand-tint);
   --color-on-accent: #ffffff;
-  --color-ink: oklch(0.205 0.012 165);
-  --color-ink-2: oklch(0.255 0.013 167);
+  --color-ink: var(--mkt-ink);
+  --color-ink-2: #12283d;
   --content-max-width: 1160px;
 
   background: var(--color-bg);
@@ -39,21 +55,27 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Dark theme maps onto the night tokens. */
 :root[data-theme='dark'] .mkt-scope {
-  --color-bg: oklch(0.175 0.01 165);
-  --color-surface: oklch(0.225 0.012 167);
-  --color-surface-container-low: oklch(0.205 0.011 167);
-  --color-surface-container-high: oklch(0.275 0.014 168);
-  --color-text-secondary: oklch(0.77 0.012 165);
-  --color-muted: oklch(0.62 0.013 165);
-  --color-border: oklch(0.3 0.013 167);
-  --color-border-strong: oklch(0.38 0.015 167);
-  --color-accent: oklch(0.8 0.13 158);
-  --color-accent-container: oklch(0.73 0.15 154);
-  --color-accent-soft: oklch(0.3 0.05 152);
-  --color-on-accent: oklch(0.18 0.03 156);
-  --color-ink: oklch(0.25 0.014 167);
-  --color-ink-2: oklch(0.29 0.015 167);
+  --mkt-ground: #0b1d2e;
+  --mkt-ground-soft: #12283d;
+  --mkt-ink: #e8eef5;
+  --mkt-ink-2: #aebdcd;
+  --mkt-ink-3: #aebdcd;
+  --mkt-line: #22394f;
+  --mkt-brand: #16a196;
+  --mkt-brand-chart: #16a196;
+  --mkt-brand-tint: #12283d;
+  --mkt-coral: #e8553a;
+
+  --color-surface: #12283d;
+  --color-surface-container-low: #12283d;
+  --color-surface-container-high: #22394f;
+  --color-border-strong: #2e4a63;
+  --color-accent-soft: color-mix(in oklch, #16a196 20%, #0b1d2e);
+  --color-on-accent: #0b1d2e;
+  --color-ink: #12283d;
+  --color-ink-2: #12283d;
 }
 
 .mkt-scope section[id] {
