@@ -383,7 +383,7 @@
       "writingTechnical": "Writing the narrative from the computed statistics.",
       "checking": "Checking what changed against the previous report.",
       "readingCount": "Reading {n} source. The first words usually appear within two minutes. | Reading {n} sources. The first words usually appear within two minutes.",
-      "readCaption": "Sources being read",
+      "readCaption": "Sources in this report's reading list",
       "readMore": "and {n} more | and {n} more",
       "computed": "Statistics computed from HDX HAPI data: {n} indicator. The narrative is being prepared. | Statistics computed from HDX HAPI data: {n} indicators. The narrative is being prepared.",
       "computedCaption": "Indicators with data",

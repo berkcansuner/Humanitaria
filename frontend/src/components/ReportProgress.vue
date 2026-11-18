@@ -13,12 +13,15 @@
         t('reports.progress.elapsed', { time: elapsedClock(elapsed) })
       }}</span>
     </p>
-    <!-- What is being read, as the server listed it: titles and publishers as they
-         are (never translated), revealed row by row once; still under reduced motion. -->
+    <!-- The report's reading list as the server sent it: titles and publishers as
+         they are (never translated). Five rows at a time keep the outline and its
+         motion in view; the rows turn over slowly through the whole list (a reading
+         list, not a claim about which one is being read now). Under reduced motion
+         the first five stay put. -->
     <section v-if="!started && reading" class="progress-read" aria-labelledby="read-caption">
       <p id="read-caption" class="read-caption">{{ t('reports.progress.readCaption') }}</p>
-      <ul class="read-list">
-        <li v-for="(src, i) in readSources" :key="i" class="read-row" :style="{ '--i': i }">
+      <ul :key="readStart" class="read-list">
+        <li v-for="(src, i) in visibleSources" :key="i" class="read-row" :style="{ '--i': i }">
           <span class="read-title" :title="src.title">{{ src.title }}</span>
           <span class="read-meta">{{ sourceMeta(src) }}</span>
         </li>
@@ -64,7 +67,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { reportTypeLabel, sectorLabel } from '../utils/reportTypes.js'
 import { formatPeriod } from '../utils/reportTitle.js'
@@ -91,9 +94,35 @@ const props = defineProps({
 const { t, te, locale } = useI18n()
 
 const readSources = computed(() => (props.reading && props.reading.sources) || [])
-// The server lists the first sources; the count covers every document read.
+// Five rows at a time, turning over every few seconds and wrapping round, so every
+// listed source is shown; "and N more" counts every document read besides the rows
+// in view, so it stays the same as they turn.
+const READ_SHOWN = 5
+const TURN_MS = 6000
+const readStart = ref(0)
+const visibleSources = computed(() => {
+  const list = readSources.value
+  if (list.length <= READ_SHOWN) return list
+  return Array.from({ length: READ_SHOWN }, (_, k) => list[(readStart.value + k) % list.length])
+})
 const moreCount = computed(() =>
-  props.reading ? Math.max(0, (props.reading.count || 0) - readSources.value.length) : 0,
+  props.reading ? Math.max(0, (props.reading.count || 0) - visibleSources.value.length) : 0,
+)
+const reducedMotion = () =>
+  typeof window.matchMedia !== 'function' ||
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches
+let turn = null
+watch(
+  () => props.reading,
+  () => {
+    clearInterval(turn)
+    readStart.value = 0
+    if (readSources.value.length <= READ_SHOWN || reducedMotion()) return
+    turn = setInterval(() => {
+      readStart.value = (readStart.value + READ_SHOWN) % readSources.value.length
+    }, TURN_MS)
+  },
+  { immediate: true },
 )
 // "OCHA · 2026-10-11" ("OCHA · 11 Eki 2026"): the publisher as it is, the date in
 // the interface's format.
@@ -120,6 +149,7 @@ onMounted(() => {
 })
 onBeforeUnmount(() => {
   clearInterval(tick)
+  clearInterval(turn)
   clearTimeout(readyTimer)
 })
 

@@ -627,7 +627,7 @@ describe('ReportsView in two languages', () => {
       stream.push('status', READING)
       await flush()
       expect(stage()).toBe('Reading 14 sources. The first words usually appear within two minutes.')
-      expect(text('.progress-read .read-caption')).toBe('Sources being read')
+      expect(text('.progress-read .read-caption')).toBe("Sources in this report's reading list")
       expect(rows()).toEqual([
         ['Sudan: Humanitarian Access Snapshot', 'OCHA · 2026-10-11'],
         ['IPC Acute Food Insecurity Analysis', 'IPC · 2026-10-02'],
@@ -646,6 +646,58 @@ describe('ReportsView in two languages', () => {
       expect(stage()).toBe(en.reports.progress.writing)
     })
 
+    // Twelve listed of eighteen read: five rows at a time, so the outline and its
+    // motion stay in view; the rows turn over slowly through the real list.
+    const LONG = {
+      stage: 'reading',
+      count: 18,
+      sources: Array.from({ length: 12 }, (_, i) => ({
+        title: `Report ${i + 1}`,
+        source: 'OCHA',
+        date: '2026-10-01',
+      })),
+    }
+    const titles = () => rows().map((r) => r[0])
+    const motion = (reduce) =>
+      vi.stubGlobal('matchMedia', (query) => ({
+        matches: reduce && query.includes('reduce'),
+        media: query,
+        addEventListener() {},
+        removeEventListener() {},
+      }))
+
+    it('shows five sources at a time and turns slowly through the whole list', async () => {
+      motion(false)
+      const stream = stubStream()
+      await mount()
+      await start()
+      stream.push('status', LONG)
+      await flush()
+      expect(titles()).toEqual(['Report 1', 'Report 2', 'Report 3', 'Report 4', 'Report 5'])
+      // The count stays the same whichever rows are in view.
+      expect(text('.progress-read .read-more')).toBe('and 13 more')
+      await seconds(6)
+      expect(titles()).toEqual(['Report 6', 'Report 7', 'Report 8', 'Report 9', 'Report 10'])
+      expect(text('.progress-read .read-more')).toBe('and 13 more')
+      await seconds(6)
+      // The list wraps round, so every listed source is shown in turn.
+      expect(titles()).toEqual(['Report 11', 'Report 12', 'Report 1', 'Report 2', 'Report 3'])
+      // The live region named the count once; the turning rows are not announced.
+      expect(stage()).toBe('Reading 18 sources. The first words usually appear within two minutes.')
+    })
+
+    it('holds the first five still under reduced motion', async () => {
+      motion(true)
+      const stream = stubStream()
+      await mount()
+      await start()
+      stream.push('status', LONG)
+      await flush()
+      await seconds(30)
+      expect(titles()).toEqual(['Report 1', 'Report 2', 'Report 3', 'Report 4', 'Report 5'])
+      expect(text('.progress-read .read-more')).toBe('and 13 more')
+    })
+
     it('keeps the sources through a language switch, titles untranslated', async () => {
       const stream = stubStream()
       await mount()
@@ -658,7 +710,7 @@ describe('ReportsView in two languages', () => {
       expect(stage()).toBe(
         '14 kaynak okunuyor. İlk sözcükler genellikle iki dakika içinde görünür.',
       )
-      expect(text('.progress-read .read-caption')).toBe('Okunan kaynaklar')
+      expect(text('.progress-read .read-caption')).toBe('Bu raporun okuma listesindeki kaynaklar')
       expect(rows()[0]).toEqual(['Sudan: Humanitarian Access Snapshot', 'OCHA · 11 Eki 2026'])
       expect(text('.progress-read .read-more')).toBe('ve 11 kaynak daha')
       expect(text('.progress-elapsed')).toBe('Geçen süre: 0:20')
