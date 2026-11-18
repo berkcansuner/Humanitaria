@@ -12,6 +12,11 @@ describe('askTarget', () => {
   it('cuts text over 4000 characters to 4000', () => {
     expect(askTarget('a'.repeat(5000))).toBe('/app?q=' + 'a'.repeat(4000))
   })
+  it('does not split a surrogate pair at the 4000 boundary', () => {
+    const text = 'a'.repeat(3999) + '😀' + 'b'
+    expect(() => askTarget(text)).not.toThrow()
+    expect(askTarget(text)).toBe('/app?q=' + 'a'.repeat(3999) + encodeURIComponent('😀'))
+  })
 })
 
 describe('questionFromQuery', () => {
