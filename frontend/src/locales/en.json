@@ -225,6 +225,11 @@
       "regenerate": "Regenerate response",
       "edit": "Edit message"
     },
+    "code": {
+      "copy": "Copy",
+      "label": "Copy code",
+      "copied": "Copied"
+    },
     "newChat": "New chat",
     "search": "Search conversations",
     "toggleMenu": "Toggle menu",

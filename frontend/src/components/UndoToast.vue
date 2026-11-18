@@ -49,10 +49,14 @@ defineEmits(['action', 'dismiss'])
 const { t } = useI18n()
 
 const actionBtn = ref(null)
+// Focus follows a new toast (it opens, or focusKey changes), never a change of
+// its text alone: a language switch re-translates the message, and moving focus
+// then would pull it off the switcher onto Undo.
 watch(
-  () => [props.message, props.focusKey],
-  ([msg]) => {
-    if (msg && props.focusAction) nextTick(() => actionBtn.value?.focus())
+  () => [Boolean(props.message), props.focusKey],
+  ([shown], [wasShown, oldKey] = []) => {
+    if (!shown || !props.focusAction) return
+    if (shown !== wasShown || props.focusKey !== oldKey) nextTick(() => actionBtn.value?.focus())
   },
 )
 </script>

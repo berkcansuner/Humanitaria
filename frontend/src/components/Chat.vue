@@ -173,7 +173,7 @@ import { handleSessionExpired } from '../utils/authStore.js'
 import { prefillFor, takeStashedQuestion } from '../utils/askQuestion.js'
 import { errorFromResponse, errorMessage } from '../utils/errorMessage.js'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 // Each failure says what happened; the banner's "Try again" is the recovery.
 // The free-tier server sleeps when idle, so the first request after a pause is
@@ -603,6 +603,12 @@ watch(
     }
   },
 )
+
+// A language switch re-renders answers whose HTML depends on it (citation chip
+// labels), which drops the injected code-copy buttons; the rest keep theirs in the
+// old language. Re-decorate after that render: it adds what is missing and
+// relabels the rest, never duplicating a button.
+watch(locale, () => decorateCodeBlocks(messagesContainer.value), { flush: 'post' })
 </script>
 
 <style scoped>

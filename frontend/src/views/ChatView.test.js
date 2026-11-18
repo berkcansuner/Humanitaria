@@ -88,6 +88,24 @@ describe('ChatView in two languages', () => {
     expect(text('.toast-action')).toBe(tr.chat.toast.undo)
   })
 
+  it('moves focus to Undo when the toast opens, but not when only the language changes', async () => {
+    vi.mocked(listConversations).mockResolvedValue([
+      { id: 'a', title: 'Sudan access', updated_at: new Date().toISOString() },
+    ])
+    await mount()
+    host.querySelectorAll('.conv-action')[1].click()
+    await flush()
+    expect(document.activeElement).toBe(host.querySelector('.toast-action'))
+
+    // The user moves to the language switcher and picks Turkish inside the undo window.
+    const switcher = host.querySelector('.lang-btn')
+    switcher.focus()
+    setLocale('tr')
+    await flush()
+    expect(text('.toast-text')).toBe(tr.chat.toast.deleted)
+    expect(document.activeElement).toBe(switcher)
+  })
+
   it('renders the empty state, sidebar and date groups in Turkish', async () => {
     vi.mocked(listConversations).mockResolvedValue([
       { id: 'a', title: 'Sudan access', updated_at: new Date().toISOString() },

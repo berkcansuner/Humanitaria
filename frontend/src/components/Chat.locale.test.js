@@ -122,6 +122,58 @@ describe('Chat across a language switch', () => {
     expect(textarea().value).toBe('next question')
   })
 
+  it('keeps exactly one translated copy button per code block after a language switch', async () => {
+    const stream = streamingResponse()
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(stream.res))
+    await mountChat()
+    await type('Show the query')
+    host.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true }))
+    await flush()
+    // Citation chips make the rendered HTML depend on the locale (their aria-labels),
+    // so the switch re-renders the answer and drops injected buttons.
+    stream.send('token', {
+      content: 'Run this [1].\n\n```\nprint(1)\n```\n\nThen this:\n\n```\nx = 2\n```\n',
+    })
+    stream.send('sources', {
+      sources: [
+        {
+          index: 1,
+          title: 'Bulletin',
+          url: 'https://reliefweb.int/r/1',
+          source: 'WHO',
+          date: '2026-10-09',
+        },
+      ],
+    })
+    stream.end()
+    await flush()
+
+    const answerEl = () => host.querySelector('.message.assistant .message-content')
+    const buttonsPerPre = () =>
+      [...answerEl().querySelectorAll('pre')].map(
+        (pre) => pre.querySelectorAll('.copy-code').length,
+      )
+    expect(answerEl().querySelector('.cite').getAttribute('aria-label')).toContain('Source 1')
+    expect(buttonsPerPre()).toEqual([1, 1])
+    expect(answerEl().querySelector('.copy-code').getAttribute('aria-label')).toBe(
+      en.chat.code.label,
+    )
+
+    setLocale('tr')
+    await flush()
+    expect(answerEl().querySelector('.cite').getAttribute('aria-label')).toContain('Kaynak 1')
+    expect(buttonsPerPre()).toEqual([1, 1])
+    for (const btn of answerEl().querySelectorAll('.copy-code')) {
+      expect(btn.textContent).toBe(tr.chat.code.copy)
+      expect(btn.getAttribute('aria-label')).toBe(tr.chat.code.label)
+    }
+
+    setLocale('en')
+    await flush()
+    expect(buttonsPerPre()).toEqual([1, 1])
+    expect(answerEl().querySelector('.copy-code').textContent).toBe(en.chat.code.copy)
+  })
+
   it('translates an SSE error event by its code and follows a language switch', async () => {
     const stream = streamingResponse()
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(stream.res))

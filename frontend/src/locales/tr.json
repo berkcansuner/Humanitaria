@@ -206,7 +206,7 @@
       "stop": "Yanıtı durdur"
     },
     "errors": {
-      "connection": "Sunucuya ulaşılamadı. Uyku modundan çıkıyor olabilir; bu yaklaşık 30 saniye sürebilir.",
+      "connection": "Sunucuya ulaşılamadı. Sunucu uyku modundan çıkıyor olabilir; bu yaklaşık 30 saniye sürebilir.",
       "streamInterrupted": "Yanıt yarıda kesildi. Bazı bölümler eksik olabilir.",
       "emptyResponse": "Yanıt gelmedi.",
       "sseParse": "Yanıt hazırlanırken bir sorun oluştu."
@@ -224,6 +224,11 @@
       "copied": "Kopyalandı",
       "regenerate": "Yanıtı yeniden oluştur",
       "edit": "Mesajı düzenle"
+    },
+    "code": {
+      "copy": "Kopyala",
+      "label": "Kodu kopyala",
+      "copied": "Kopyalandı"
     },
     "newChat": "Yeni sohbet",
     "search": "Sohbetlerde ara",
@@ -253,11 +258,11 @@
       "details": "Kaynak {n}: {details}"
     },
     "empty": {
-      "title": "İnsani yardım kayıtlarına sorun.",
+      "title": "İnsani yardım kayıtlarına danışın.",
       "lede": "Her yanıt dayandığı ReliefWeb raporlarını kaynak olarak gösterir; böylece yanıtı doğrulayabilir ve alıntılayabilirsiniz.",
       "examples": "Örnek sorular",
       "prompts": {
-        "p1": "Sudan için en güncel IPC gıda güvensizliği rakamları neler?",
+        "p1": "Sudan için en güncel IPC gıda güvensizliği verileri neler?",
         "p2": "Haiti'de ülke içinde yerinden edilmiş kişilerin sayısı kaç ve bu kişiler nerede bulunuyor?",
         "p3": "İnsani yardım ortakları Myanmar'da hangi erişim kısıtlamalarını bildiriyor?",
         "p4": "Son raporlar Yemen'deki kolera salgını hakkında ne diyor?"
@@ -270,7 +275,7 @@
     "actionErrors": {
       "load": "Sohbetleriniz yüklenemedi. Lütfen yeniden deneyin.",
       "rename": "Sohbetin adı değiştirilemedi.",
-      "delete": "Sohbet silinemedi ve listeye geri eklendi."
+      "delete": "Sohbet silinemedi. Listeye geri eklendi."
     },
     "topbar": {
       "home": "Humanitaria: sohbete dön",
@@ -287,7 +292,7 @@
       "prev": "Önceki adım",
       "next": "Sonraki adım",
       "close": "Önerileri kapat",
-      "use": "Bu değeri kullan",
+      "use": "Bunu kullan",
       "finish": "Bitir",
       "skip": "Atla",
       "country": {
