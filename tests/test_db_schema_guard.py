@@ -120,3 +120,41 @@ def test_other_database_errors_still_raise():
                      fail_on="ALTER TABLE users", error=_db_error("42501"))
     with pytest.raises(OperationalError):
         db._pg_migrate_columns(_FakeEngine(conn))
+
+
+class _RlsConn:
+    """Answers relrowsecurity from `rls_on` (tables with RLS already enabled) and
+    the Supabase role lookup; records every statement."""
+
+    def __init__(self, rls_on):
+        self.rls_on = rls_on
+        self.sql = []
+
+    def exec_driver_sql(self, statement):
+        self.sql.append(statement)
+        if "relrowsecurity" in statement:
+            table = statement.split("to_regclass('")[1].split("'")[0]
+            return _Result([(table in self.rls_on,)])
+        if "pg_roles" in statement:
+            return _Result([("anon",), ("authenticated",)])
+        return _Result([])
+
+
+def _app_tables():
+    return [t.name for t in db.metadata.sorted_tables] + ["chunks"]
+
+
+def test_steady_state_start_enables_no_row_level_security():
+    """ENABLE ROW LEVEL SECURITY takes an ACCESS EXCLUSIVE lock even when RLS is
+    already on, so a start must not re-issue it for tables that have it."""
+    conn = _RlsConn(set(_app_tables()))
+    db._close_supabase_data_api(_FakeEngine(conn))
+    assert conn.sql[0] == "SET LOCAL lock_timeout = '5s'"
+    assert _alters(conn) == []
+    assert any(s.startswith("REVOKE ALL") for s in conn.sql)
+
+
+def test_row_level_security_enabled_only_where_missing():
+    conn = _RlsConn(set(_app_tables()) - {"ingest_state"})
+    db._close_supabase_data_api(_FakeEngine(conn))
+    assert _alters(conn) == ['ALTER TABLE "ingest_state" ENABLE ROW LEVEL SECURITY']

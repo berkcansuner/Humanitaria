@@ -299,8 +299,13 @@ def _close_supabase_data_api(engine: Engine) -> None:
     names = ", ".join(f'"{t}"' for t in tables)
     try:
         with engine.begin() as conn:
+            conn.exec_driver_sql(f"SET LOCAL lock_timeout = '{_DDL_LOCK_TIMEOUT}'")
             for t in tables:
-                conn.exec_driver_sql(f'ALTER TABLE "{t}" ENABLE ROW LEVEL SECURITY')
+                # ENABLE ROW LEVEL SECURITY takes an ACCESS EXCLUSIVE lock even when
+                # RLS is already on, so only tables still without it get the ALTER.
+                if not conn.exec_driver_sql(
+                        f"SELECT relrowsecurity FROM pg_class WHERE oid = to_regclass('{t}')").scalar():
+                    conn.exec_driver_sql(f'ALTER TABLE "{t}" ENABLE ROW LEVEL SECURITY')
             roles = [r[0] for r in conn.exec_driver_sql(
                 "SELECT rolname FROM pg_roles WHERE rolname IN ('anon', 'authenticated')")]
             if roles:
