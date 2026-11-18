@@ -223,3 +223,17 @@ def test_the_headline_sentence_with_its_caveat_survives(sentence, language, keep
     heading = "Executive Summary" if language == "en" else "Yönetici Özeti"
     res = verify_narrative(f"## {heading}\n\n{sentence}", PROT_R3, PROT_R3_CTX, language)
     assert (res.removed == 0) == keep
+
+
+# Natural Executive Summary sentences the round-3 probe found removed though correct.
+@pytest.mark.parametrize("sentence,language", [
+    ("Neither tested trend is statistically significant after the Holm correction across two "
+     "tests.", "en"),
+    ("Protection needs remained high, at 15.0 million people in 2026, while returns surged to "
+     "1.95 million in 2025.", "en"),
+    ("Koruma ihtiyacı 2026'da 15,0 milyon kişiyle yüksek düzeyini korurken geri dönüşler 2025'te "
+     "1,95 milyona çıktı.", "tr"),
+])
+def test_correct_summary_sentences_found_by_the_probe_survive(sentence, language):
+    heading = "Executive Summary" if language == "en" else "Yönetici Özeti"
+    assert verify_narrative(f"## {heading}\n\n{sentence}", PROT_R3, PROT_R3_CTX, language).removed == 0

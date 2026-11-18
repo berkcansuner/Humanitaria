@@ -228,3 +228,20 @@ def test_a_methods_sentence_naming_a_used_test_stays():
             ("A single test was run, so no multiple-comparison correction applies.", "en", "Methods"),
             ("Eğilim Mann-Kendall testiyle ve Sen eğimiyle sınandı.", "tr", "Yöntemler")):
         assert _methods(sentence, language, heading).removed == 0, sentence
+
+
+# --- Round 3: each removed sentence is logged with the report it came from and the rule. ---
+
+def test_each_removed_sentence_is_logged_with_its_report_and_rule(caplog):
+    import logging
+    caplog.set_level(logging.INFO, logger="analytics.narrative_check")
+    text = (f"## {TREND_H}\n\nThe number of IDPs increased by 1,500 people per year.\n\n"
+            "## Methods\n\nCorrelations were measured with Pearson's coefficient.")
+    findings = _findings()
+    out = verify_narrative(text, findings, ONE_TEST_CONTEXT, "en",
+                           label="Afghanistan / Protection and Human Rights / technical_monitoring")
+    assert out.removed == 2
+    logged = [r.getMessage() for r in caplog.records if r.name == "analytics.narrative_check"]
+    assert any("Afghanistan / Protection and Human Rights / technical_monitoring" in m
+               and "a number not in the findings" in m and "1,500" in m for m in logged)
+    assert any("a test the method notes do not list" in m and "Pearson" in m for m in logged)

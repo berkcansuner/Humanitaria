@@ -363,7 +363,9 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                 # Numbers and significance claims are checked against what the model
                 # was given; unverifiable sentences never reach the saved report.
                 full = verify_narrative(full, findings, f"{context}\n{directive}",
-                                        req.language).content
+                                        req.language,
+                                        label=f"{req.country} / {req.theme or 'All sectors'} / "
+                                              f"{req.report_type}").content
                 if previous:
                     yield _checking_event()
                     checked = await _checked(full, req)

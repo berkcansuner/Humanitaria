@@ -60,7 +60,8 @@ _EN_NEGATION = re.compile(
     r"\b(?:not|no|non|neither|nor|without|lacks?|lacked|fails?|failed)\b|n't\b", re.IGNORECASE)
 _TR_NEGATION = re.compile(
     r"de[ğg]il|olmay|\byok\b|m[ae]m[ae]kte|m[ae]m[ıiuü][şs]|m[ae]d[ıiuü]|m[ae]z\b", re.IGNORECASE)
-_WINDOW = 4   # words before (English) / after (Turkish) a claim that can negate it
+_WINDOW = 4   # words after a claim (Turkish) that can negate it
+_WINDOW_BEFORE = 6   # words before it (English: "Neither tested trend is statistically significant")
 
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
 _LIST_ITEM = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s+")
@@ -137,7 +138,7 @@ def _claim(sentence: str) -> str | None:
     if _NEGATIVE_CLAIM.search(sentence):
         polarities.add("not significant")
     for m in _CLAIM.finditer(sentence):
-        before = " ".join(sentence[:m.start()].split()[-_WINDOW:])
+        before = " ".join(sentence[:m.start()].split()[-_WINDOW_BEFORE:])
         after = " ".join(sentence[m.start():].split()[:_WINDOW + 1])
         negated = _EN_NEGATION.search(before) or _TR_NEGATION.search(after)
         polarities.add("not significant" if negated else "significant")
@@ -344,13 +345,13 @@ def _says_change(sentence: str) -> bool:
 
 
 def _series_values_in(sentence: str, values: list[float]) -> int:
-    """How many different values of a series the sentence quotes (rounded quotes count)."""
+    """How many different numbers of the sentence are values of the series (rounded quotes
+    count). Counted per number: one "15.0 million" matching both 14,988,378 and, rounded to
+    two digits, 14,809,904 is still one value."""
     hit = set()
     for m in _NUMBER.finditer(sentence):
-        readings = _number_readings(m)
-        for i, v in enumerate(values):
-            if _matches_value(readings, [v]):
-                hit.add(i)
+        if _matches_value(_number_readings(m), values):
+            hit.add(m.group(0).strip())
     return len(hit)
 
 
@@ -489,9 +490,12 @@ def _names_unlisted_method(sentence: str, listed: set) -> bool:
                if family not in listed)
 
 
-def verify_narrative(text: str, findings, allowed_text: str, language: str) -> NarrativeCheck:
+def verify_narrative(text: str, findings, allowed_text: str, language: str,
+                     label: str = "") -> NarrativeCheck:
     """*allowed_text*: the context and directive the model was given (its numbers are
-    the only numbers the narrative may use)."""
+    the only numbers the narrative may use). *label* names the report in the log of
+    removed sentences ("Afghanistan / Health / technical_monitoring"); the sentences
+    are model-written report text, not user data."""
     allowed = _allowed_values(allowed_text)
     # None: the finding was not tested (no p-value), so it has no verdict at all.
     verdicts = {s.heading: (None if s.stat_result.get("tested") is False
@@ -527,24 +531,29 @@ def verify_narrative(text: str, findings, allowed_text: str, language: str) -> N
 
     listed_methods = _listed_methods(allowed_text)
 
-    def bad(sentence: str, section: str | None) -> bool:
+    def bad(sentence: str, section: str | None) -> str | None:
+        """The rule the sentence breaks, or None."""
         if not _numbers_ok(sentence, allowed):
-            return True
+            return "a number not in the findings"
         if listed_methods is not None and section and _METHODS_HEADING.match(section) and \
                 _names_unlisted_method(sentence, listed_methods):
-            return True     # the Methods section names a test this report did not run
+            return "a test the method notes do not list"
         if not _relative_claim_ok(sentence, profiles.get(section or "", whole)):
-            return True
+            return "a relative change the findings do not support"
         if across_years(sentence, section):
-            return True
+            return "a change or comparison between years that are not comparable"
         claim = _claim(sentence)
         if claim is None:
-            return False
+            return None
         if section in verdicts:
             if verdicts[section] is None:
-                return True     # neither 'significant' nor 'not significant' was tested
-            return claim != ("significant" if verdicts[section] else "not significant")
-        return claim == "significant" and not any_significant
+                return "a significance claim about an untested finding"
+            if claim != ("significant" if verdicts[section] else "not significant"):
+                return "a significance claim against the computed verdict"
+            return None
+        if claim == "significant" and not any_significant:
+            return "a significance claim when no finding is significant"
+        return None
 
     out: list[str] = []
     removed = 0
@@ -565,9 +574,11 @@ def verify_narrative(text: str, findings, allowed_text: str, language: str) -> N
             continue
         kept = []
         for item in items:
-            if bad(item, section):
+            rule = bad(item, section)
+            if rule:
                 removed_here += 1
-                logger.info("Technical report sentence removed (unverified): %s", item)
+                logger.info("Narrative check removed a sentence [%s] (%s) under '%s': %s",
+                            label or "report", rule, section or "(no heading)", item)
             else:
                 kept.append(item)
         removed += len(items) - len(kept)

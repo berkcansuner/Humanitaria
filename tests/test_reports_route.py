@@ -313,3 +313,21 @@ def test_a_technical_report_is_saved_with_its_data_sources():
     assert saved[0]["doctype"] == "dataset" and saved[0]["source"] == "OCHA HNO"
     assert saved[0]["url"] == "https://data.humdata.org/dataset/global-hpc-hno"
     assert "app_identifier" not in saved[0]["url"]
+
+
+def test_the_route_labels_the_narrative_check_log_with_the_report(caplog):
+    import logging
+    caplog.set_level(logging.INFO, logger="analytics.narrative_check")
+
+    async def mock_astream(*a, **k):
+        yield "## İnsani ihtiyaç — Eğilim Analizi\n\nNeeds grew by 4,812 people per year."
+
+    chain = MagicMock()
+    chain.astream = mock_astream
+    with patch("api.routes.reports.technical_report.compute_findings",
+               return_value=_findings_with_sections()), \
+         patch("api.routes.reports.build_report_chain", return_value=chain):
+        _client().post("/reports/stream", json={
+            "country": "Afghanistan", "report_type": "technical_monitoring", "language": "en"})
+    assert any("Afghanistan / All sectors / technical_monitoring" in r.getMessage()
+               for r in caplog.records if r.name == "analytics.narrative_check")
