@@ -68,3 +68,29 @@ def _get_page(url: str, params: dict, timeout: int) -> list[dict]:
             continue
         raise HapiError(f"HAPI {code} for {url}")   # 4xx → retry yok
     raise HapiError(f"HAPI retries exhausted for {url}") from last_exc
+
+
+_RESOURCE_CACHE: dict[str, dict] = {}   # found datasets only: a failure is retried later
+
+
+def resource_metadata(resource_hdx_id: str) -> dict | None:
+    """The HDX dataset behind a HAPI row (its `resource_hdx_id`): the dataset's stub and
+    title, for a source link a reader can open. None when HAPI cannot say (or fails);
+    a report's source list must never fail the report."""
+    if resource_hdx_id in _RESOURCE_CACHE:
+        return _RESOURCE_CACHE[resource_hdx_id]
+    settings = get_settings()
+    url = f"{settings.HDX_HAPI_BASE_URL.rstrip('/')}/metadata/resource"
+    params = {"output_format": "json", "resource_hdx_id": resource_hdx_id,
+              "app_identifier": settings.HDX_APP_IDENTIFIER or ""}
+    try:
+        data = _get_page(url, params, settings.HDX_HAPI_TIMEOUT)
+    except (HapiError, requests.exceptions.RequestException) as exc:
+        logger.warning("HAPI metadata/resource %s failed: %s", resource_hdx_id, exc)
+        return None
+    if not data or not data[0].get("dataset_hdx_stub"):
+        return None
+    found = {k: data[0].get(k) for k in ("dataset_hdx_stub", "dataset_hdx_title")}
+    if len(_RESOURCE_CACHE) < 512:
+        _RESOURCE_CACHE[resource_hdx_id] = found
+    return found

@@ -839,3 +839,54 @@ def test_look_back_keeps_the_chosen_period_notes_too(_mock):
     looked = [n for n in f.notes if n.startswith(f"{name} (trend look-back {lb['date_from']} to {date_to}): ")]
     assert chosen and "1 other operation(s)" in chosen[0]
     assert looked and "incomplete round(s)" in looked[0]
+
+
+# --- Round 2 (owner): "it would be good if the other reports had sources too". A
+# technical report lists the HDX HAPI series it used. ---
+
+def _sourced_rows(ep, params):
+    if params.get("sector_code") == "FSC":
+        return [{"population": v, "category": "", "resource_hdx_id": f"hno-{y}",
+                 "reference_period_start": f"{y}-01-01", "reference_period_end": f"{y}-12-31"}
+                for y, v in ((2024, 15_823_677), (2025, 14_764_729), (2026, 17_412_653))]
+    return []
+
+
+def test_findings_record_each_series_used_for_the_sources(monkeypatch):
+    monkeypatch.setattr("analytics.technical_report.fetch_rows", _recording_fetch([], _sourced_rows))
+    f = compute_findings("AFG", "2021-01-01", "2026-11-18", language="en",
+                         theme="Food and Nutrition")
+    assert f.data_sources == [{
+        "key": "pin_food_security", "title": "Food security: people in need",
+        "source": "OCHA HNO", "first_period": "2024-01-01", "last_period": "2026-01-01",
+        "resource_hdx_id": "hno-2026"}]
+
+
+def test_data_sources_are_listed_like_report_sources(monkeypatch):
+    from analytics.technical_report import data_sources
+    f = Findings(sections=[], gaps=[], indicators_covered=["pin_food_security", "idps"],
+                 data_sources=[
+                     {"key": "pin_food_security", "title": "Food security: people in need",
+                      "source": "OCHA HNO", "first_period": "2024-01-01",
+                      "last_period": "2026-01-01", "resource_hdx_id": "hno-2026"},
+                     {"key": "idps", "title": "Internally displaced people (IDPs)",
+                      "source": "International Organization for Migration (IOM), January 2026, "
+                                "Displacement Tracking Matrix (DTM), https://dtm.iom.int",
+                      "first_period": "2026-01-31", "last_period": "2026-01-31",
+                      "resource_hdx_id": "dtm-1"}])
+    meta = {"hno-2026": {"dataset_hdx_stub": "global-hpc-hno",
+                         "dataset_hdx_title": "Global Humanitarian Programme Cycle, Humanitarian Needs"}}
+    monkeypatch.setattr("analytics.technical_report.resource_metadata", lambda rid: meta.get(rid))
+    assert data_sources(f, "Afghanistan", retrieved="2026-11-18") == [
+        {"index": 1, "title": "Food security: people in need",
+         "url": "https://data.humdata.org/dataset/global-hpc-hno", "source": "OCHA HNO",
+         "date": "2026-01-01", "country": "Afghanistan", "doctype": "dataset",
+         "dataset": "Global Humanitarian Programme Cycle, Humanitarian Needs",
+         "period": "2024-01-01 to 2026-01-01", "retrieved": "2026-11-18"},
+        {"index": 2, "title": "Internally displaced people (IDPs)",
+         "url": "https://hapi.humdata.org/",
+         "source": "International Organization for Migration (IOM), January 2026, "
+                   "Displacement Tracking Matrix (DTM), https://dtm.iom.int",
+         "date": "2026-01-31", "country": "Afghanistan", "doctype": "dataset",
+         "period": "2026-01-31", "retrieved": "2026-11-18"},
+    ]

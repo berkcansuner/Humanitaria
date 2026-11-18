@@ -370,6 +370,13 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                     full = checked.content
                     yield _checked_event(checked.removed)
                 section_images = technical_report.assemble_section_images(findings)
+                # The HDX HAPI series the report used, listed like a report's sources.
+                try:
+                    data_sources = await anyio.to_thread.run_sync(
+                        technical_report.data_sources, findings, req.country)
+                except Exception as exc:   # the list must never block the report
+                    logger.warning("Technical report sources failed: %s", exc)
+                    data_sources = []
                 report_id = str(uuid4())
                 title = report_title(req.country, req.theme, req.date_from, req.date_to,
                                      report_type=req.report_type)
@@ -377,7 +384,7 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                     lambda: report_store.create_report(
                         report_id, user["id"], country=req.country, theme=req.theme,
                         date_from=req.date_from, date_to=req.date_to, language=req.language,
-                        title=title, content=full, sources=None,
+                        title=title, content=full, sources=data_sources or None,
                         doc_count=len(findings.indicators_covered),
                         report_type=req.report_type,
                         cover_image=None,
@@ -385,6 +392,11 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                         previous_report_id=previous_id,
                     )
                 )
+                if data_sources:
+                    yield ServerSentEvent(
+                        event="sources",
+                        data=json.dumps({"sources": data_sources}, ensure_ascii=False),
+                    )
                 yield ServerSentEvent(
                     event="saved",
                     data=json.dumps({"report_id": report_id, "title": title}, ensure_ascii=False),

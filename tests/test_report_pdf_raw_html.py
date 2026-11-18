@@ -38,3 +38,22 @@ def test_old_saved_reports_print_adjacent_citations_in_order():
 def test_citations_one_space_apart_print_in_order():
     out = _body_html("Lean season [5] [2].")
     assert '<span class="cite">[2]</span> <span class="cite">[5]</span>' in out
+
+
+def test_pdf_lists_a_technical_report_data_source():
+    from rag.report_pdf import _sources_rows
+    rows = _sources_rows([{"index": 1, "title": "Food security: people in need",
+                           "url": "https://data.humdata.org/dataset/global-hpc-hno",
+                           "source": "OCHA HNO", "date": "2026-01-01", "doctype": "dataset",
+                           "period": "2024-01-01 to 2026-01-01", "retrieved": "2026-11-18"}])
+    assert "Food security: people in need" in rows
+    assert "OCHA HNO · 2024-01-01 to 2026-01-01 · retrieved 2026-11-18" in rows
+    assert "https://data.humdata.org/dataset/global-hpc-hno" in rows
+
+
+def test_a_turkish_pdf_names_the_retrieval_day_in_turkish():
+    from rag.report_pdf import _sources_rows
+    rows = _sources_rows([{"index": 1, "title": "t", "url": "https://data.humdata.org/dataset/x",
+                           "source": "IPC", "doctype": "dataset", "period": "2022-03-01 to 2026-09-01",
+                           "retrieved": "2026-11-18"}], "tr")
+    assert "IPC · 2022-03-01 to 2026-09-01 · erişim 2026-11-18" in rows

@@ -284,3 +284,32 @@ def test_a_hapi_outage_is_not_reported_as_a_sector_without_data():
         events = _parse_sse_events(resp.text)
         assert next(e for e in events if e["event"] == "error")["data"]["code"] == "report_failed"
         assert "token" not in [e["event"] for e in events]
+
+
+def test_a_technical_report_is_saved_with_its_data_sources():
+    from analytics.technical_report import Findings
+    findings = _findings_with_sections()
+    findings.data_sources = [{"key": "humanitarian_needs", "title": "People in need (people)",
+                              "source": "OCHA HNO", "first_period": "2024-01-01",
+                              "last_period": "2026-01-01", "resource_hdx_id": "r1"}]
+    assert isinstance(findings, Findings)
+
+    async def mock_astream(*a, **k):
+        yield "## İnsani ihtiyaç — Eğilim Analizi\n\nThe trend has p=0.010."
+
+    chain = MagicMock()
+    chain.astream = mock_astream
+    meta = {"dataset_hdx_stub": "global-hpc-hno", "dataset_hdx_title": "Global HNO"}
+    with patch("api.routes.reports.technical_report.compute_findings", return_value=findings), \
+         patch("api.routes.reports.build_report_chain", return_value=chain), \
+         patch("analytics.technical_report.resource_metadata", return_value=meta):
+        resp = _client().post("/reports/stream", json={
+            "country": "Afghanistan", "report_type": "technical_monitoring", "language": "en"})
+        events = _parse_sse_events(resp.text)
+        sources = next(e for e in events if e["event"] == "sources")["data"]["sources"]
+        rid = next(e for e in events if e["event"] == "saved")["data"]["report_id"]
+        saved = _client().get(f"/reports/{rid}").json()["sources"]
+    assert saved == sources
+    assert saved[0]["doctype"] == "dataset" and saved[0]["source"] == "OCHA HNO"
+    assert saved[0]["url"] == "https://data.humdata.org/dataset/global-hpc-hno"
+    assert "app_identifier" not in saved[0]["url"]

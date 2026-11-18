@@ -222,12 +222,19 @@ def _valid_sources(sources) -> list:
     return [s for s in (sources or []) if s.get("title") and s.get("url")]
 
 
-def _sources_rows(sources) -> str:
+def _sources_rows(sources, language: str = "en") -> str:
     rows = []
     for s in _valid_sources(sources):
         n = s.get("index", "")
         title = html.escape(str(s.get("title", "")))
-        meta_bits = [b for b in (s.get("source"), s.get("date")) if b]
+        if s.get("doctype") == "dataset":
+            # A technical report's data source: who publishes it, the period it covers,
+            # and when it was read from HDX HAPI.
+            word = "erişim" if language == "tr" else "retrieved"
+            retrieved = f"{word} {s['retrieved']}" if s.get("retrieved") else None
+            meta_bits = [b for b in (s.get("source"), s.get("period"), retrieved) if b]
+        else:
+            meta_bits = [b for b in (s.get("source"), s.get("date")) if b]
         meta = html.escape(" · ".join(str(b) for b in meta_bits))
         url = html.escape(str(s.get("url", "")))
         rows.append(
@@ -307,7 +314,7 @@ def render_report_pdf(report: dict) -> bytes:
 <div class="body">{_body_html(report.get("content"), section_images)}</div>
 
 <h2 class="sources-h">{labels["sources"]}</h2>
-<table class="sources" width="100%">{_sources_rows(report.get("sources"))}</table>
+<table class="sources" width="100%">{_sources_rows(report.get("sources"), language)}</table>
 
 <div id="footerContent">{labels["footer"].format(date=html.escape(generated))}</div>
 </body></html>"""

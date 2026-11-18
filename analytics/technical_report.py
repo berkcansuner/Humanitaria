@@ -17,7 +17,7 @@ from analytics.datasets import (
     competing_totals_note, consistent_snapshots, ipc_coverage_note, national_series,
     regional_series,
 )
-from analytics.hapi_client import HapiError, fetch_rows
+from analytics.hapi_client import HapiError, fetch_rows, resource_metadata
 from analytics.indicators import indicators_for
 from analytics.stat_tests import ALPHA, CORRELATION_MIN_POINTS, by_region, correlate, holm, trend
 from config import get_settings
@@ -48,6 +48,9 @@ class Findings:
     look_backs: list = field(default_factory=list)
     # Indicators whose HAPI request failed (an outage, not an absence of data).
     failed: list = field(default_factory=list)
+    # One entry per indicator with data: what the report's source list is built from
+    # ({"key", "title", "source", "first_period", "last_period", "resource_hdx_id"}).
+    data_sources: list = field(default_factory=list)
 
 
 # Section headings are copied verbatim by the model and matched back to their charts,
@@ -86,6 +89,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                                    settings.TECHNICAL_REPORT_DEFAULT_YEARS).isoformat()
     look_backs: list[dict] = []
     failed: list[str] = []
+    used: list[dict] = []
 
     for ind in indicators_for(theme):
         name = ind.name(language)
@@ -142,6 +146,12 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
             percent_by_label[name] = percent
             source_by_label[name] = _credit(ind, t_periods[-1], language)
             source = _source_line([source_by_label[name]], language)
+            latest = str(t_periods[-1])[:10]
+            used.append({"key": ind.key, "title": name, "source": source_by_label[name],
+                         "first_period": str(t_periods[0])[:10], "last_period": latest,
+                         "resource_hdx_id": next(
+                             (r["resource_hdx_id"] for r in all_rows if r.get("resource_hdx_id")
+                              and str(r.get("reference_period_start"))[:10] == latest), None)})
 
             # Trend (gerçek zaman ekseni: ilk dönemden beri yıl → eğim yıl başına)
             times = _years_since_first(t_periods)
@@ -252,7 +262,34 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
     _adjust_and_describe(sections)
     return Findings(sections=sections, gaps=gaps, indicators_covered=covered,
                     date_from=date_from, date_to=date_to, default_years=default_years,
-                    notes=notes, look_backs=look_backs, failed=failed)
+                    notes=notes, look_backs=look_backs, failed=failed, data_sources=used)
+
+
+# Where a reader can open HDX HAPI when HAPI cannot name the dataset behind a series.
+_HAPI_PAGE = "https://hapi.humdata.org/"
+
+
+def data_sources(findings: Findings, country: str, retrieved: str | None = None) -> list[dict]:
+    """The report's source list: one entry per series it used, in the shape of a
+    report's document sources (index, title, url, source, date, country) with
+    doctype "dataset" and the period covered and the day retrieved. The url is the HDX
+    dataset page (never a HAPI request, which would carry the app identifier)."""
+    retrieved = retrieved or date.today().isoformat()
+    out = []
+    for i, used in enumerate(findings.data_sources, start=1):
+        meta = resource_metadata(used["resource_hdx_id"]) if used.get("resource_hdx_id") else None
+        first, last = used["first_period"], used["last_period"]
+        entry = {"index": i, "title": used["title"],
+                 "url": (f"https://data.humdata.org/dataset/{meta['dataset_hdx_stub']}"
+                         if meta else _HAPI_PAGE),
+                 "source": used["source"], "date": last, "country": country,
+                 "doctype": "dataset"}
+        if meta and meta.get("dataset_hdx_title"):
+            entry["dataset"] = meta["dataset_hdx_title"]
+        entry["period"] = first if first == last else f"{first} to {last}"
+        entry["retrieved"] = retrieved
+        out.append(entry)
+    return out
 
 
 def _series(rows: list[dict], ind, date_from: str, date_to: str, today: date):

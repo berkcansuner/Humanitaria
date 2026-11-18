@@ -93,3 +93,30 @@ def test_fetch_rows_defaults_location_code(monkeypatch):
     from analytics.hapi_client import fetch_rows
     fetch_rows("affected-people/idps", "AFG")
     assert captured["location_code"] == "AFG"
+
+
+# --- Round 2: a technical report's sources name the HDX dataset behind each series. ---
+
+@patch("analytics.hapi_client.requests.get")
+def test_resource_metadata_names_the_hdx_dataset(mock_get):
+    from analytics.hapi_client import resource_metadata
+    __import__('analytics.hapi_client', fromlist=['x'])._RESOURCE_CACHE.clear()
+    mock_get.return_value = _resp(200, {"data": [{
+        "resource_hdx_id": "r1", "dataset_hdx_stub": "global-hpc-hno",
+        "dataset_hdx_title": "Global Humanitarian Programme Cycle, Humanitarian Needs"}]})
+    assert resource_metadata("r1") == {
+        "dataset_hdx_stub": "global-hpc-hno",
+        "dataset_hdx_title": "Global Humanitarian Programme Cycle, Humanitarian Needs"}
+    assert mock_get.call_args.kwargs["params"]["resource_hdx_id"] == "r1"
+    assert mock_get.call_args.args[0].endswith("/metadata/resource")
+
+
+@patch("analytics.hapi_client.requests.get")
+def test_resource_metadata_is_none_when_hapi_cannot_say(mock_get):
+    from analytics.hapi_client import resource_metadata
+    __import__('analytics.hapi_client', fromlist=['x'])._RESOURCE_CACHE.clear()
+    mock_get.return_value = _resp(200, {"data": []})
+    assert resource_metadata("missing") is None
+    __import__('analytics.hapi_client', fromlist=['x'])._RESOURCE_CACHE.clear()
+    mock_get.side_effect = __import__("requests").exceptions.ConnectionError("down")
+    assert resource_metadata("down") is None
