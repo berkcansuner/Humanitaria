@@ -242,22 +242,22 @@ onBeforeUnmount(() => mm?.revert())
    frame the chat card above and to its right; it fades out before the copy. */
 .hc-map {
   position: absolute;
-  left: 12%;
+  right: -150px;
   width: 160%;
-  top: -4%;
+  top: -9%;
   aspect-ratio: 360 / 140;
   pointer-events: none;
-  -webkit-mask-image: radial-gradient(ellipse 64% 62% at 60% 50%, #000 50%, transparent);
-  mask-image: radial-gradient(ellipse 64% 62% at 60% 50%, #000 50%, transparent);
+  -webkit-mask-image: radial-gradient(ellipse 64% 62% at 66% 50%, #000 60%, transparent);
+  mask-image: radial-gradient(ellipse 64% 62% at 66% 50%, #000 60%, transparent);
 }
 
-/* Narrower desktops: the card covers more of the map, so slide it right to
-   keep Africa and the Middle East peeking out beside the chat card. */
+/* Narrower desktops: the viewport edge sits closer, so overhang less and
+   scale up; the whole map stays inside the viewport. */
 @media (min-width: 1024px) and (max-width: 1279px) {
   .hc-map {
-    left: 20%;
-    -webkit-mask-image: radial-gradient(ellipse 64% 62% at 50% 50%, #000 50%, transparent);
-    mask-image: radial-gradient(ellipse 64% 62% at 50% 50%, #000 50%, transparent);
+    right: -20px;
+    width: 190%;
+    top: -9%;
   }
 }
 
@@ -453,7 +453,11 @@ onBeforeUnmount(() => mm?.revert())
 @media (max-width: 1023px) {
   .hc-map {
     left: -30%;
+    right: auto;
+    width: 160%;
     top: -100px;
+    -webkit-mask-image: radial-gradient(ellipse 64% 62% at 60% 50%, #000 50%, transparent);
+    mask-image: radial-gradient(ellipse 64% 62% at 60% 50%, #000 50%, transparent);
   }
   .hc-chat-slot {
     height: auto;
