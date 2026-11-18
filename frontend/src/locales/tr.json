@@ -582,7 +582,7 @@
       "repeat": "Yeni parolayı tekrarlayın",
       "submit": "Parolayı değiştir",
       "submitting": "Değiştiriliyor…",
-      "changed": "Parola değiştirildi. Diğer oturumlardaki girişler kapatıldı.",
+      "changed": "Parola değiştirildi. Diğer cihazlardaki oturumlarınız kapatıldı.",
       "mismatch": "Yeni parolalar eşleşmiyor.",
       "failed": "Parola değiştirilemedi. Lütfen yeniden deneyin."
     },
@@ -619,14 +619,14 @@
       "schedule": "Zamanlama",
       "scheduleValue": "Her gün 03:17 ve 14:47 (UTC)",
       "scheduleNote": "GitHub Actions ile",
-      "chunks": "Dizinlenen parçalar",
+      "chunks": "Dizindeki parçalar",
       "unavailable": "ulaşılamıyor",
       "dbUnavailable": "Veritabanına ulaşılamıyor",
       "documents": "{n} belge | {n} belge"
     },
     "run": {
       "title": "Veri alımını çalıştır",
-      "text": "ReliefWeb'de son çalıştırmadan bu yana yayımlanan belgeleri getirir ve arama dizinine ekler. Gece çalıştırması da aynı yolu kullanır, bu yüzden aynı anda yalnızca biri çalışır.",
+      "text": "ReliefWeb'de son çalıştırmadan bu yana yayımlanan belgeleri getirir ve arama dizinine ekler. Gece çalıştırması da aynı işlemi kullanır; bu yüzden aynı anda yalnızca biri çalışabilir.",
       "button": "Veri alımını şimdi çalıştır",
       "inProgress": "Veri alımı sürüyor…",
       "lastFailed": "Son çalıştırma başarısız oldu: {error}",
@@ -637,15 +637,20 @@
       "total": "Toplam",
       "ok": "Başarılı",
       "failed": "Başarısız",
-      "skipped": "Atlanan"
+      "skipped": "Atlanan",
+      "sources": {
+        "manual": "elle",
+        "cron": "zamanlanmış (cron)",
+        "scheduled": "zamanlanmış"
+      }
     },
     "reports": {
       "title": "Raporlar",
       "building": "Oluşturuluyor",
-      "text": "Dizine eklenen raporlar, en yenisi başta. Liste, her veri alımı yeni belge yazdıkça güncellenir.",
+      "text": "Dizine eklenen raporlar, en yenisi başta. Liste, her veri alımında eklenen yeni belgelerle güncellenir.",
       "placeholder": "Başlık, kaynak veya ülkeye göre ara…",
       "searchLabel": "Raporlarda ara",
-      "count": "{n} rapor · güncellenme: {time} | {n} rapor · güncellenme: {time}",
+      "count": "{n} rapor · son güncelleme: {time} | {n} rapor · son güncelleme: {time}",
       "scanFailed": "Son tarama başarısız oldu: {error}",
       "buildingList": "Rapor listesi oluşturuluyor… Bu işlem bir dakikayı bulabilir.",
       "noMatch": "“{q}” ile eşleşen rapor yok.",
@@ -670,7 +675,7 @@
       "email": "E-posta",
       "provider": "Sağlayıcı",
       "admin": "Yönetici",
-      "joined": "Katılım",
+      "joined": "Kayıt tarihi",
       "lastLogin": "Son giriş",
       "providerGoogle": "Google",
       "providerPassword": "Parola",

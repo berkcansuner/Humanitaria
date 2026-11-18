@@ -4,7 +4,7 @@ import { createRouter, createMemoryHistory } from 'vue-router'
 import SettingsView from './SettingsView.vue'
 import { i18n } from '../i18n/index.js'
 import { setLocale } from '../i18n/locale.js'
-import { changePassword } from '../utils/authApi.js'
+import { changePassword, deleteAccount } from '../utils/authApi.js'
 
 vi.mock('../utils/authStore.js', () => ({
   auth: {
@@ -59,6 +59,7 @@ describe('SettingsView', () => {
     localStorage.clear()
     setLocale('en')
     vi.mocked(changePassword).mockReset()
+    vi.mocked(deleteAccount).mockReset()
   })
   afterEach(() => {
     app.unmount()
@@ -116,5 +117,27 @@ describe('SettingsView', () => {
     setLocale('tr')
     await nextTick()
     expect(pwError()).toBe('Parola değiştirilemedi. Lütfen yeniden deneyin.')
+  })
+
+  it('marks the delete input invalid only for errors about that field', async () => {
+    await mount()
+    host.querySelector('.danger-quiet-btn').click()
+    await nextTick()
+    const input = host.querySelector('.modal input')
+    type(input, 'secret-password')
+    deleteAccount.mockRejectedValue(Object.assign(new Error('x'), { status: 500 }))
+    host.querySelector('.modal form').dispatchEvent(new Event('submit', { cancelable: true }))
+    await new Promise((r) => setTimeout(r))
+    await nextTick()
+    expect(host.querySelector('#delete-error')).not.toBeNull()
+    expect(input.getAttribute('aria-invalid')).toBeNull()
+    deleteAccount.mockRejectedValue(
+      Object.assign(new Error('x'), { status: 403, code: 'wrong_password' }),
+    )
+    host.querySelector('.modal form').dispatchEvent(new Event('submit', { cancelable: true }))
+    await new Promise((r) => setTimeout(r))
+    await nextTick()
+    expect(input.getAttribute('aria-invalid')).toBe('true')
+    expect(input.getAttribute('aria-describedby')).toBe('delete-error')
   })
 })

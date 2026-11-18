@@ -31,8 +31,8 @@
               type="text"
               maxlength="100"
               required
-              :aria-invalid="nameError ? 'true' : undefined"
-              :aria-describedby="nameError ? 'name-error' : undefined"
+              :aria-invalid="nameInvalid ? 'true' : undefined"
+              :aria-describedby="nameInvalid ? 'name-error' : undefined"
             />
           </label>
           <button class="primary-btn" type="submit" :disabled="savingName || !nameDirty">
@@ -152,8 +152,8 @@
                 type="password"
                 autocomplete="current-password"
                 required
-                :aria-invalid="deleteError ? 'true' : undefined"
-                :aria-describedby="deleteError ? 'delete-error' : undefined"
+                :aria-invalid="deleteInvalid ? 'true' : undefined"
+                :aria-describedby="deleteInvalid ? 'delete-error' : undefined"
               />
             </label>
             <label v-else class="field">
@@ -163,8 +163,8 @@
                 v-model="deleteConfirm"
                 type="email"
                 required
-                :aria-invalid="deleteError ? 'true' : undefined"
-                :aria-describedby="deleteError ? 'delete-error' : undefined"
+                :aria-invalid="deleteInvalid ? 'true' : undefined"
+                :aria-describedby="deleteInvalid ? 'delete-error' : undefined"
               />
             </label>
             <p v-if="deleteError" id="delete-error" class="error-box" role="alert">
@@ -218,6 +218,10 @@ const savingName = ref(false)
 const nameSaved = ref(false)
 const nameProblem = ref(null)
 const nameError = computed(() => problemText(nameProblem.value))
+// Mark a field invalid only for problems that are about that field, not for a network
+// or server failure.
+const isFieldProblem = (p, codes) => !!p && (!!p.key || codes.includes(p.err?.code))
+const nameInvalid = computed(() => isFieldProblem(nameProblem.value, ['validation_failed']))
 const nameDirty = computed(
   () => nameInput.value.trim() && nameInput.value.trim() !== auth.user?.name,
 )
@@ -299,6 +303,9 @@ const deleteConfirm = ref('')
 const deleting = ref(false)
 const deleteProblem = ref(null)
 const deleteError = computed(() => problemText(deleteProblem.value))
+const deleteInvalid = computed(() =>
+  isFieldProblem(deleteProblem.value, ['wrong_password', 'email_mismatch']),
+)
 const deleteTriggerBtn = ref(null)
 const deleteInputEl = ref(null)
 const cancelBtnEl = ref(null)

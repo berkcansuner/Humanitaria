@@ -104,12 +104,12 @@
                 {{
                   run.finished_at
                     ? t('admin.run.metaFinished', {
-                        source: run.source,
+                        source: runSource,
                         start: formatDateTime(run.started_at),
                         end: formatDateTime(run.finished_at),
                       })
                     : t('admin.run.meta', {
-                        source: run.source,
+                        source: runSource,
                         start: formatDateTime(run.started_at),
                       })
                 }}
@@ -238,7 +238,7 @@ import { getIngestStatus, triggerIngest, getIngestDocuments } from '../utils/adm
 import { isoDate, isoDateTime } from '../utils/isoDate.js'
 import { errorMessage } from '../utils/errorMessage.js'
 
-const { t, n } = useI18n()
+const { t, n, te } = useI18n()
 
 const tab = ref('ingestion')
 const status = ref(null)
@@ -255,6 +255,12 @@ const actionError = computed(() => {
 let pollTimer = null
 
 const run = computed(() => status.value?.run || {})
+// The run source is a fixed server code (manual / cron / scheduled): translate the known
+// ones, show a future value as received.
+const runSource = computed(() => {
+  const key = `admin.run.sources.${run.value.source}`
+  return te(key) ? t(key) : run.value.source
+})
 const running = computed(() => run.value.running === true)
 const lastStatsRows = computed(() =>
   Object.entries(run.value.last_stats || {}).map(([endpoint, s]) => ({ endpoint, ...s })),

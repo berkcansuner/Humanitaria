@@ -58,8 +58,8 @@ describe('errorMessage', () => {
       'chat_failed',
       'body_too_large',
       'validation_failed',
+      'ingest_running',
     ]
-    codes.push('ingest_running')
     for (const code of codes) {
       expect(en.errors[code], code).toBeTruthy()
       expect(tr.errors[code], code).toBeTruthy()

@@ -637,7 +637,12 @@
       "total": "Total",
       "ok": "OK",
       "failed": "Failed",
-      "skipped": "Skipped"
+      "skipped": "Skipped",
+      "sources": {
+        "manual": "manual",
+        "cron": "cron",
+        "scheduled": "scheduled"
+      }
     },
     "reports": {
       "title": "Reports",
