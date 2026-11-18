@@ -141,11 +141,19 @@ describe('ReportsView in two languages', () => {
     vi.mocked(listReports).mockResolvedValue({ reports: [q2] })
     vi.mocked(getReport).mockResolvedValue({ ...q2, content: '## Summary\n\nText.' })
     await mount('/reports?report=q2')
+    // jsdom has neither matchMedia nor scrollIntoView; this is a wide screen.
+    vi.stubGlobal('matchMedia', () => ({ matches: false }))
+    const scrollIntoView = vi.fn()
+    Element.prototype.scrollIntoView = scrollIntoView
     const run = [...host.querySelectorAll('.pdf-btn')].find(
       (b) => b.textContent.trim() === en.reports.viewer.runNext,
     )
     run.click()
     await flush()
+    delete Element.prototype.scrollIntoView
+    // Wide screens keep the report open and bring the Generate button into view.
+    expect(host.querySelector('.report-content')).toBeTruthy()
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center' })
     expect(text('.continues p')).toBe(
       'Continues Sudan · Health, 01.05.2026 - 31.07.2026. The new report opens with what changed since then.',
     )
