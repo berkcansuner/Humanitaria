@@ -245,3 +245,25 @@ def test_the_note_names_the_total_used_when_it_is_the_breakdown_total():
     assert competing_totals_note(rows, by_key("pin_cccm")) == (
         "HDX HAPI holds two totals for 2024: 780 without a breakdown and 2487269 as the total "
         "of its breakdown (used); the HNO's published sector figure may differ")
+
+
+# --- Round 2 decision: when HAPI holds a parent sector's sub-lines (PRO-CPN, PRO-GBV …),
+# the parent figure is one plan line, not necessarily the sector's overall figure. ---
+
+def _pin(code, name, year, value, category=""):
+    return {"sector_code": code, "sector_name": name, "reference_period_start": f"{year}-01-01",
+            "population": value, "category": category}
+
+
+def test_sub_sector_lines_are_listed_per_period_and_never_summed():
+    from analytics.datasets import sub_sector_lines
+    rows = [_pin("PRO", "Protection", 2025, 349_999), _pin("PRO", "Protection", 2025, 466_589, "total"),
+            _pin("PRO-CPN", "Child Protection", 2025, 1_611_291),
+            _pin("PRO-GBV", "Gender Based Violence", 2025, 1_535_819),
+            _pin("PRO-GBV", "Gender Based Violence", 2025, 1_535_819, "total"),
+            _pin("PRO", "Protection", 2026, 2_195_026),
+            _pin("PROTECTION-X", "Not a sub-line", 2025, 9)]   # no "PRO-" prefix: not a sub-line
+    assert sub_sector_lines(rows, by_key("pin_protection")) == {
+        "2025-01-01": [("Child Protection", 1_611_291), ("Gender Based Violence", 1_535_819)]}
+    assert sub_sector_lines(rows, by_key("pin_food_security")) == {}
+    assert sub_sector_lines(rows, by_key("idps")) == {}

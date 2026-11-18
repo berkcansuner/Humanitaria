@@ -133,6 +133,33 @@ def competing_totals_note(rows: list[dict], indicator: Indicator) -> str | None:
             f"figure may differ")
 
 
+def sub_sector_lines(rows: list[dict], indicator: Indicator) -> dict[str, list[tuple[str, float]]]:
+    """period -> [(sub-line name, figure)] for the sub-sectors HAPI returns beside a
+    sector (sector_code=PRO also brings PRO-CPN, PRO-GBV, PRO-HLP, PRO-MIN). Each
+    sub-line's figure is its published total; the lines are never added up, since a
+    person can be counted in more than one. Empty for an indicator without sector_code."""
+    code = indicator.query_params.get("sector_code")
+    if not code or not rows:
+        return {}
+    df = pd.DataFrame(rows)
+    if "sector_code" not in df.columns or "reference_period_start" not in df.columns:
+        return {}
+    df = df[df["sector_code"].astype(str).str.startswith(f"{code}-")].copy()
+    if df.empty:
+        return {}
+    df["_value"] = pd.to_numeric(df[indicator.value_field], errors="coerce")
+    df = df.dropna(subset=["_value"])
+    cat = df.get("category", pd.Series("", index=df.index)).fillna("").astype(str).str.strip().str.lower()
+    df = df[cat.isin(["", "total"])].assign(_cat=cat)
+    out: dict[str, list[tuple[str, float]]] = {}
+    for (period, sub_code), sub in df.groupby(["reference_period_start", "sector_code"]):
+        totals = sub.groupby("_cat")["_value"].max().to_dict()
+        _, value = _published_total(totals)
+        name = str(sub["sector_name"].iloc[0]) if "sector_name" in sub.columns else str(sub_code)
+        out.setdefault(str(period)[:10], []).append((name, float(value)))
+    return {p: sorted(lines) for p, lines in sorted(out.items())}
+
+
 _COMPLETE_SHARE = 0.8  # a snapshot must cover at least this share of the operation's regions
 
 

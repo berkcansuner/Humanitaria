@@ -15,7 +15,7 @@ import requests
 from analytics.charts import comparison_chart, correlation_chart, trend_chart
 from analytics.datasets import (
     competing_totals_note, consistent_snapshots, ipc_coverage_note, national_series,
-    regional_series,
+    regional_series, sub_sector_lines,
 )
 from analytics.hapi_client import HapiError, fetch_rows, resource_metadata
 from analytics.indicators import indicators_for
@@ -127,6 +127,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                     look_back = {"date_from": look_back_from, "date_to": date_to,
                                  "chosen_points": len(values)}
                     t_periods, t_values = lb_periods, lb_values
+            name, line_notes = _plan_line(ind, all_rows, t_periods, t_values, language)
             if look_back and lb_notes != series_notes:
                 # Each window's notes, named: the regional ranking stays on the chosen
                 # period, the trend covers the look-back.
@@ -136,6 +137,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                           for n in lb_notes]
             else:
                 notes += [f"{name}: {n}" for n in series_notes]
+            notes += line_notes
             if not t_values:
                 gaps.append(f"{name}: dönem içinde veri yok")
                 continue
@@ -263,6 +265,43 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
     return Findings(sections=sections, gaps=gaps, indicators_covered=covered,
                     date_from=date_from, date_to=date_to, default_years=default_years,
                     notes=notes, look_backs=look_backs, failed=failed, data_sources=used)
+
+
+def _plan_line(ind, rows: list[dict], periods: list, values: list,
+               language: str) -> tuple[str, list[str]]:
+    """The indicator's name, and a note for every period whose plan reports the sector
+    in separate lines (HAPI returns the sub-sectors beside it: PRO-CPN, PRO-GBV …).
+
+    HAPI's figure for the parent code is then one plan line. When it is below one of
+    its sub-lines it cannot be the overall figure, so it is named as the general line
+    (Haiti 2025: 349,999 beside child protection's 1,611,291). Otherwise HAPI's rows
+    cannot tell: it is the general line in Afghanistan 2025 (14.2 million; overall 22.3
+    million) but the overall figure in Congo 2025 (7,870,319), so the name stays and the
+    note says it may be either. The lines are never added up."""
+    name = ind.name(language)
+    lines = sub_sector_lines(rows, ind)
+    by_period = {str(p)[:10]: v for p, v in zip(periods, values)}
+    lines = {p: subs for p, subs in lines.items() if p in by_period}
+    if not lines:
+        return name, []
+    latest = str(periods[-1])[:10]
+    if any(v > by_period[latest] for _, v in lines.get(latest, [])):
+        name = ind.general_name(language)
+    sector = ind.sector_en or "the sector"
+    notes = []
+    for period, subs in lines.items():
+        listed = ", ".join(f"{n} {int(v)}" for n, v in subs)
+        figure = int(by_period[period])
+        if any(v > by_period[period] for _, v in subs):
+            what = (f"is below one of them, so it is the plan's general {sector} line, not its "
+                    f"overall {sector} figure, which may be higher")
+        else:
+            what = (f"may be the plan's general {sector} line rather than its overall {sector} "
+                    f"figure, which may be higher")
+        notes.append(f"{name}, {period[:4]}: the plan reports {sector} in separate lines "
+                     f"({listed}); the figure here ({figure}) {what}; this report does not add "
+                     f"the lines up, because people can be counted in more than one.")
+    return name, notes
 
 
 # Where a reader can open HDX HAPI when HAPI cannot name the dataset behind a series.

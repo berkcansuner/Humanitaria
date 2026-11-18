@@ -733,9 +733,10 @@ def test_competing_totals_reach_the_data_notes(monkeypatch):
     f = compute_findings("HTI", None, None, language="en", theme="Protection and Human Rights")
     snap = next(s for s in f.sections if s.stat_result["kind"] == "snapshot")
     assert "350000 people (2025-01-01)" in snap.findings_text        # not PRO-CPN's 1,611,291
-    assert ("Protection: people in need: HDX HAPI holds two totals for 2025: 349999 without a "
-            "breakdown (used) and 466589 as the total of its breakdown; the HNO's published "
-            "sector figure may differ") in f.notes
+    # Below its child protection line, the figure is named as the general line.
+    assert ("General protection: people in need: HDX HAPI holds two totals for 2025: 349999 "
+            "without a breakdown (used) and 466589 as the total of its breakdown; the HNO's "
+            "published sector figure may differ") in f.notes
 
 
 # --- Review 2026-11-18: AFG IPC 3+ read "relative change along the trend line … =-48.3%"
@@ -890,3 +891,74 @@ def test_data_sources_are_listed_like_report_sources(monkeypatch):
          "date": "2026-01-31", "country": "Afghanistan", "doctype": "dataset",
          "period": "2026-01-31", "retrieved": "2026-11-18"},
     ]
+
+
+# --- Round 2 decision: a parent sector's figure is named for the plan line it is. ---
+
+def _protection_rows(parent, subs, years=(2025,)):
+    def rows(ep, params):
+        if params.get("sector_code") != "PRO":
+            return []
+        out = []
+        for y in years:
+            for cat, v in parent[y]:
+                out.append({"sector_code": "PRO", "sector_name": "Protection", "population": v,
+                            "category": cat, "resource_hdx_id": "r",
+                            "reference_period_start": f"{y}-01-01",
+                            "reference_period_end": f"{y}-12-31"})
+            for code, name, v in subs.get(y, []):
+                out.append({"sector_code": code, "sector_name": name, "population": v,
+                            "category": "", "reference_period_start": f"{y}-01-01",
+                            "reference_period_end": f"{y}-12-31"})
+        return out
+    return rows
+
+
+def test_a_parent_figure_below_one_of_its_sub_lines_is_the_general_line(monkeypatch):
+    # Haiti 2025: HAPI's protection rows are 349,999 / 466,589, its child protection line
+    # 1,611,291: the figure cannot be the overall protection figure.
+    rows = _protection_rows({2025: [("", 349_999), ("total", 466_589)]},
+                            {2025: [("PRO-CPN", "Child Protection", 1_611_291),
+                                    ("PRO-GBV", "Gender Based Violence", 1_535_819)]})
+    monkeypatch.setattr("analytics.technical_report.fetch_rows", _recording_fetch([], rows))
+    monkeypatch.setattr("analytics.technical_report.resource_metadata", lambda rid: None)
+    f = compute_findings("HTI", None, None, language="en", theme="Protection and Human Rights")
+    snap = next(s for s in f.sections if s.stat_result["kind"] == "snapshot")
+    assert snap.heading == "General protection: people in need — Latest Values"
+    assert snap.findings_text.startswith("General protection: people in need: 1 observation")
+    assert f.data_sources[0]["title"] == "General protection: people in need"
+    assert ("General protection: people in need, 2025: the plan reports protection in separate "
+            "lines (Child Protection 1611291, Gender Based Violence 1535819); the figure here "
+            "(349999) is below one of them, so it is the plan's general protection line, not "
+            "its overall protection figure, which may be higher; this report does not add the "
+            "lines up, because people can be counted in more than one.") in f.notes
+    tr = compute_findings("HTI", None, None, language="tr", theme="Protection and Human Rights")
+    assert tr.sections[0].heading == "Genel koruma: insani yardıma ihtiyaç duyan kişiler — Son Değerler"
+
+
+def test_a_parent_figure_that_may_be_either_line_keeps_its_name_and_says_so(monkeypatch):
+    # Afghanistan 2025: HAPI's protection figure 14,213,777 is the plan's general line
+    # (overall 22,258,295), but nothing in HAPI's rows proves it (Congo's figure in the
+    # same position is the overall one), so the name stays and the note says both.
+    rows = _protection_rows({2025: [("", 14_213_777)], 2026: [("", 14_988_378)]},
+                            {2025: [("PRO-CPN", "Child Protection", 9_352_775),
+                                    ("PRO-MIN", "Mine Action", 4_369_984)]},
+                            years=(2025, 2026))
+    monkeypatch.setattr("analytics.technical_report.fetch_rows", _recording_fetch([], rows))
+    f = compute_findings("AFG", None, None, language="en", theme="Protection and Human Rights")
+    snap = next(s for s in f.sections if s.stat_result["kind"] == "snapshot")
+    assert snap.heading == "Protection: people in need — Latest Values"
+    assert ("Protection: people in need, 2025: the plan reports protection in separate lines "
+            "(Child Protection 9352775, Mine Action 4369984); the figure here (14213777) may be "
+            "the plan's general protection line rather than its overall protection figure, which "
+            "may be higher; this report does not add the lines up, because people can be counted "
+            "in more than one.") in f.notes
+    assert not [n for n in f.notes if ", 2026:" in n]          # 2026 has no sub-lines
+
+
+def test_a_sector_without_sub_lines_has_no_plan_line_note(monkeypatch):
+    monkeypatch.setattr("analytics.technical_report.fetch_rows",
+                        _recording_fetch([], _three_year_pin_rows))
+    f = compute_findings("AFG", None, None, language="en", theme="Food and Nutrition")
+    assert f.sections[0].heading == "Food security: people in need — Latest Values"
+    assert not [n for n in f.notes if "separate lines" in n]

@@ -124,3 +124,10 @@ def test_sector_indicators_are_named_in_both_languages():
     assert by_key("pin_food_security").name("en") == "Food security: people in need"
     assert by_key("pin_food_security").name("tr") == (
         "Gıda güvenliği: insani yardıma ihtiyaç duyan kişiler")
+
+
+def test_a_sector_has_a_general_line_name_in_both_languages():
+    pro = by_key("pin_protection")
+    assert pro.general_name("en") == "General protection: people in need"
+    assert pro.general_name("tr") == "Genel koruma: insani yardıma ihtiyaç duyan kişiler"
+    assert pro.sector_en == "protection"

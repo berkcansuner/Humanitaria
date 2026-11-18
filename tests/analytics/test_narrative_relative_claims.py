@@ -148,3 +148,39 @@ def test_multiplicative_words_about_counts_need_the_observed_values():
 def test_a_relative_change_the_code_did_not_compute_is_removed_for_counts_too():
     # 3,100,000 / 1,000,000 is +210%, but the model was not given that figure.
     assert not _counts_kept("Refugees rose by 210% between 2022 and 2025.", REF_H)
+
+
+# --- Round 2 decision: the plan-line note is restated in Data Coverage & Limitations and
+# must survive the check. ---
+
+GEN_H = "General protection: people in need — Latest Values"
+LINE_CONTEXT = (
+    f"## {GEN_H}\nGeneral protection: people in need: 1 observation (2025-01-01) — too few for "
+    "a trend test (at least 4 are needed), so no trend or statistical test is reported. Values: "
+    "2025-01-01 350000 people. Latest value as of the chosen period: 350000 people (2025-01-01).\n\n"
+    "DATA NOTES:\n- General protection: people in need, 2025: the plan reports protection in "
+    "separate lines (Child Protection 1611291, Gender Based Violence 1535819); the figure here "
+    "(349999) is below one of them, so it is the plan's general protection line, not its overall "
+    "protection figure, which may be higher; this report does not add the lines up, because "
+    "people can be counted in more than one.\n"
+)
+
+
+@pytest.mark.parametrize("language,sentence", [
+    ("en", "The plan reports protection in separate lines: child protection (1,611,291 people) "
+           "and gender-based violence (1,535,819 people)."),
+    ("en", "The 349,999 figure is the plan's general protection line; its overall protection "
+           "figure may be higher, and the lines are not added up because people can be counted "
+           "in more than one."),
+    ("tr", "Plan korumayı ayrı satırlarda raporluyor: çocuk koruma 1.611.291 ve toplumsal "
+           "cinsiyete dayalı şiddet 1.535.819 kişi."),
+    ("tr", "349.999 rakamı planın genel koruma satırıdır; genel koruma toplamı daha yüksek "
+           "olabilir ve aynı kişi birden fazla satırda sayılabildiği için satırlar toplanmadı."),
+])
+def test_the_plan_line_note_survives_in_data_coverage(language, sentence):
+    findings = Findings(sections=[ReportSection(GEN_H, {"kind": "snapshot", "p_value": None,
+                                                        "tested": False, "value_unit": "people",
+                                                        "values": [349_999.0]}, None, "")],
+                        gaps=[], indicators_covered=["pin_protection"])
+    text = f"## Data Coverage & Limitations\n\n{sentence}"
+    assert verify_narrative(text, findings, LINE_CONTEXT, language).removed == 0
