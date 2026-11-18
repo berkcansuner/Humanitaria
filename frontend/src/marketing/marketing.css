@@ -130,6 +130,7 @@
   display: flex;
   align-items: center;
   gap: 11px;
+  min-height: 44px;
 }
 .mkt-scope .brand .name {
   font-family: var(--font-display);
@@ -472,7 +473,7 @@
   margin-top: var(--space-3);
   max-width: 26em;
 }
-.mkt-scope .foot-col h5 {
+.mkt-scope .foot-col h3 {
   font-size: 13px;
   font-weight: 650;
   color: var(--color-text);

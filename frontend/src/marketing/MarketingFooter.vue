@@ -10,20 +10,20 @@
           <p>Answers from the humanitarian record, with the source attached.</p>
         </div>
         <div class="foot-col">
-          <h5>Product</h5>
+          <h3>Product</h3>
           <router-link :to="{ path: '/', hash: '#workflows' }">Chat and reports</router-link>
           <router-link :to="{ path: '/', hash: '#dashboards' }">Dashboards</router-link>
           <router-link :to="{ path: '/', hash: '#coverage' }">Coverage</router-link>
         </div>
         <div class="foot-col">
-          <h5>Use cases</h5>
+          <h3>Use cases</h3>
           <router-link :to="{ path: '/', hash: '#audiences' }">M&amp;E teams</router-link>
           <router-link :to="{ path: '/', hash: '#audiences' }">Organizations</router-link>
           <router-link :to="{ path: '/', hash: '#audiences' }">Researchers</router-link>
           <router-link :to="{ path: '/', hash: '#audiences' }">Journalists</router-link>
         </div>
         <div class="foot-col">
-          <h5>Account</h5>
+          <h3>Account</h3>
           <router-link to="/app">Open app</router-link>
           <router-link to="/login">Log in</router-link>
           <router-link to="/signup">Sign up</router-link>
