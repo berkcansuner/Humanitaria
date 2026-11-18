@@ -94,6 +94,15 @@ describe('buildCopyText', () => {
   })
 })
 
+describe('copied text orders adjacent citations', () => {
+  const sources = [2, 5].map((n) => ({ index: n, url: `https://r.int/${n}`, title: `S${n}` }))
+
+  it('writes [5][2] as [2][5] in the plain text and the rich copy', () => {
+    expect(buildCopyText('Lean season [5][2].', sources)).toMatch(/^Lean season \[2\]\[5\]\./)
+    expect(buildCopyHtml('Lean season [5][2][5].', sources)).toContain('Lean season [2][5].')
+  })
+})
+
 describe('buildCopyHtml', () => {
   it('renders the answer and a linked, numbered list', () => {
     const html = buildCopyHtml('**High** needs [1].', sources)

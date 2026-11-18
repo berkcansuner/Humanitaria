@@ -185,7 +185,9 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                     heading=headings["region"].format(name=name),
                     stat_result={"kind": "region", "indicator": name,
                                  "ranking": rr.ranking, "p_value": rr.p_value,
-                                 "kruskal_h": rr.kruskal_h},
+                                 "kruskal_h": rr.kruskal_h,
+                                 "max_obs": max(len(v) for v in reg.values()),
+                                 "first_period": periods[0], "last_period": periods[-1]},
                     chart=chart,
                     chart_dark=chart_dark,
                     findings_text="",
@@ -322,6 +324,8 @@ def _adjust_and_describe(sections: list) -> None:
     text — the model narrates the verdict, it never decides it."""
     adjusted = holm([s.stat_result.get("p_value") for s in sections])
     for s, p_adj in zip(sections, adjusted):
+        # Untested (no p-value): outside the Holm family, and no verdict to narrate.
+        s.stat_result["tested"] = s.stat_result.get("p_value") is not None
         s.stat_result["p_adjusted"] = p_adj
         s.stat_result["significant"] = p_adj is not None and p_adj < ALPHA
         s.findings_text = _TEXT[s.stat_result["kind"]](s.stat_result)
@@ -412,6 +416,16 @@ def _look_back_text(r: dict) -> str:
 
 def _region_text(r: dict) -> str:
     top = ", ".join(f"{name} ({_plain(val)})" for name, val in r["ranking"][:3])
+    if r["p_value"] is None:
+        # Not tested: a ranking for the stated date, never a "not significant" result.
+        first, last = str(r["first_period"])[:10], str(r["last_period"])[:10]
+        when = (f"as of {first}" if first == last
+                else f", mean per region over {first} to {last}")
+        why = ("one observation per region" if r["max_obs"] <= 1
+               else "fewer than two regions have two or more observations")
+        return (f"{r['indicator']}: ranking snapshot{' ' if first == last else ''}{when} — "
+                f"highest regions: {top}; a statistical comparison between regions was not "
+                f"possible: {why}.")
     h = "n/a" if r["kruskal_h"] is None else f"{r['kruskal_h']:.2f}"
     return (f"{r['indicator']}: highest regions — {top}; difference between regions "
             f"Kruskal-Wallis H={h}, {_verdict(r)}.")

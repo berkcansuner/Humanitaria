@@ -2,6 +2,7 @@ import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import { isValidSource, ledgerDate } from './sources.js'
 import { expandCitationGroups } from './renderMarkdown.js'
+import { orderCitationRuns } from './citationRuns.js'
 import { safeUrl } from './parseSSE.js'
 import { i18n, t } from '../i18n/index.js'
 
@@ -42,7 +43,7 @@ export function referenceLine(src, lang) {
 
 /** Plain-text clipboard payload: the answer markdown plus a "Sources" list. */
 export function buildCopyText(markdown, sources, lang) {
-  const body = expandCitationGroups(String(markdown || '')).trim()
+  const body = orderCitationRuns(expandCitationGroups(String(markdown || ''))).trim()
   const refs = referenceEntries(sources)
   if (!refs.length) return body
   const lines = refs.map((s) => referenceLine(s, lang)).join('\n')
@@ -59,7 +60,7 @@ function esc(text) {
 
 /** Rich clipboard payload: the rendered answer plus a linked, numbered list. */
 export function buildCopyHtml(markdown, sources, lang) {
-  const body = marked.parse(expandCitationGroups(String(markdown || '')), {
+  const body = marked.parse(orderCitationRuns(expandCitationGroups(String(markdown || ''))), {
     gfm: true,
     breaks: true,
   })

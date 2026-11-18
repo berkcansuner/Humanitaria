@@ -1,6 +1,7 @@
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import { isValidSource, citeLabel } from './sources.js'
+import { orderCitationRuns } from './citationRuns.js'
 
 /**
  * Expand a comma-separated citation group into adjacent single citations so the
@@ -42,7 +43,7 @@ export function renderMarkdown(text, sources = null) {
   const textNodes = []
   while (walker.nextNode()) textNodes.push(walker.currentNode)
   for (const node of textNodes) {
-    const text = expandCitationGroups(node.nodeValue)
+    const text = orderCitationRuns(expandCitationGroups(node.nodeValue))
     if (!/\[\d+\]/.test(text)) continue
     const parts = document.createDocumentFragment()
     let last = 0

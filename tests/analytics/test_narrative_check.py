@@ -152,3 +152,48 @@ def test_scale_words_on_a_range_in_the_context_are_honoured():
     # A figure written out in full against a scaled context value also passes.
     out = verify_narrative("## X\n\nNüfus 35.000.000 kişiydi.", findings, context, "tr")
     assert out.removed == 0, out.content
+
+
+# --- 2026-11-18: a regional comparison that could not be tested (one observation per
+# region) was narrated as "not statistically significant". An untested finding has no
+# verdict: neither claim survives the check, the plain statement does. ---
+
+SNAPSHOT_H = "Internally displaced people (IDPs) — Regional Analysis"
+SNAPSHOT_CONTEXT = (
+    f"## {SNAPSHOT_H}\n"
+    "Internally displaced people (IDPs): ranking snapshot as of 2026-03-31 — highest regions: "
+    "Herat (443000), Balkh (363000), Kabul (310000); a statistical comparison between regions "
+    "was not possible: one observation per region.\n"
+)
+
+
+def _untested_check(text, language="en"):
+    findings = Findings(sections=[ReportSection(
+        SNAPSHOT_H, {"kind": "region", "significant": False, "tested": False}, None, "")],
+        gaps=[], indicators_covered=["idps"])
+    return verify_narrative(text, findings, SNAPSHOT_CONTEXT, language)
+
+
+def test_an_untested_finding_is_never_called_not_significant():
+    text = (f"## {SNAPSHOT_H}\n\nHerat (443,000) has the most IDPs, followed by Balkh "
+            "(363,000). The difference between regions is not statistically significant.")
+    out = _untested_check(text)
+    assert out.removed == 1
+    assert "not statistically significant" not in out.content
+    assert "Herat (443,000) has the most IDPs" in out.content
+
+
+def test_an_untested_finding_said_to_be_untested_is_kept():
+    text = (f"## {SNAPSHOT_H}\n\nHerat (443,000) has the most IDPs as of 31 March 2026. "
+            "A statistical comparison between regions was not possible, as each region has "
+            "one observation.")
+    assert _untested_check(text).removed == 0
+    tr = (f"## {SNAPSHOT_H}\n\n31 Mart 2026 itibarıyla en çok IDP Herat'ta (443.000). "
+          "Her bölgede tek gözlem olduğundan bölgeler arasında istatistiksel bir "
+          "karşılaştırma yapılamadı.")
+    assert _untested_check(tr, "tr").removed == 0
+
+
+def test_an_untested_finding_is_never_called_significant_either():
+    text = f"## {SNAPSHOT_H}\n\nHerat stands out significantly from the other regions."
+    assert _untested_check(text).removed == 1

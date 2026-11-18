@@ -1,6 +1,7 @@
 // Pure helpers for the landing page: number formatting, map projection,
 // sparkline paths and the two motion primitives (count-up, visibility).
 import { gsap } from 'gsap'
+import { orderCitationRuns } from '../utils/citationRuns.js'
 
 const LAT_LIMIT = 70
 
@@ -302,7 +303,9 @@ export function passageSources(parts, sources) {
 
 // A generated sentence's [n] markers as chip parts, in the hero answer's shape:
 // 'Out of service [3].' -> [{ text: 'Out of service' }, { cite: 3 }, { text: '.' }].
-export function citedParts(text) {
+// Adjacent markers read in ascending order, as in the app ('[5][2]' -> 2, 5).
+export function citedParts(sentence) {
+  const text = orderCitationRuns(sentence)
   const parts = []
   let last = 0
   for (const m of text.matchAll(/\s*\[(\d+)\]/g)) {

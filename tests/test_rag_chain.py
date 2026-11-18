@@ -281,3 +281,12 @@ def test_technical_prompt_keeps_a_sector_report_on_its_sector():
     p = _REPORT_PROMPTS["technical_monitoring"]
     assert "frame the Executive Summary around that sector" in p
     assert "indicators that are not in the Context" in p
+
+
+def test_technical_prompt_gives_untested_findings_no_verdict():
+    # 2026-11-18: a regional ranking with one observation per region was narrated as
+    # "not statistically significant".
+    from rag.chain import _REPORT_PROMPTS
+    p = _REPORT_PROMPTS["technical_monitoring"]
+    assert "no statistical test was possible" in p
+    assert "never call it significant or not significant" in p

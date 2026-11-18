@@ -456,6 +456,34 @@ describe('citedParts', () => {
   it('keeps text without markers whole', () => {
     expect(citedParts('No citation here.')).toEqual([{ text: 'No citation here.' }])
   })
+
+  it('orders adjacent markers and drops a repeat, like the app', () => {
+    expect(citedParts('Lean season [5][2][5].')).toEqual([
+      { text: 'Lean season' },
+      { cite: 2 },
+      { cite: 5 },
+      { text: '.' },
+    ])
+  })
+})
+
+// The hero answers are stored as parts, not text: their adjacent chips must already
+// read in ascending order, without repeats (a regenerated sample fails here first).
+describe('sample answers cite in ascending runs', () => {
+  for (const locale of ['en', 'tr']) {
+    it(`has no out-of-order or repeated chip run (${locale})`, () => {
+      const runs = []
+      let run = []
+      for (const part of [...sampleAnswer(locale).parts, { text: '' }]) {
+        if (part.cite !== undefined) run.push(part.cite)
+        else {
+          if (run.length > 1) runs.push(run)
+          run = []
+        }
+      }
+      for (const r of runs) expect(r).toEqual([...new Set(r)].sort((a, b) => a - b))
+    })
+  }
 })
 
 describe('mapLabels', () => {

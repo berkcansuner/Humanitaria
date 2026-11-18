@@ -7,8 +7,8 @@ enforce it. After generation this removes, sentence by sentence:
    (Turkish and English number formats, 'million'/'milyon' scale words and rounding
    to fewer decimals are accepted; small counts up to 10 are exempt);
 2. a significance claim that contradicts the code's verdict in that finding's
-   section, and, outside the finding sections, a claim that something is
-   significant when no finding is.
+   section (any claim, either way, in a finding that was not tested), and, outside
+   the finding sections, a claim that something is significant when no finding is.
 
 Headings are kept. A finding section left empty gets a placeholder sentence, and a
 note at the end says how many sentences were removed. The check only deletes: it
@@ -145,7 +145,10 @@ def verify_narrative(text: str, findings, allowed_text: str, language: str) -> N
     """*allowed_text*: the context and directive the model was given (its numbers are
     the only numbers the narrative may use)."""
     allowed = _allowed_values(allowed_text)
-    verdicts = {s.heading: bool(s.stat_result.get("significant")) for s in findings.sections}
+    # None: the finding was not tested (no p-value), so it has no verdict at all.
+    verdicts = {s.heading: (None if s.stat_result.get("tested") is False
+                            else bool(s.stat_result.get("significant")))
+                for s in findings.sections}
     any_significant = any(verdicts.values())
 
     def bad(sentence: str, section: str | None) -> bool:
@@ -155,6 +158,8 @@ def verify_narrative(text: str, findings, allowed_text: str, language: str) -> N
         if claim is None:
             return False
         if section in verdicts:
+            if verdicts[section] is None:
+                return True     # neither 'significant' nor 'not significant' was tested
             return claim != ("significant" if verdicts[section] else "not significant")
         return claim == "significant" and not any_significant
 

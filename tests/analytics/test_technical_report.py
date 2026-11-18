@@ -658,3 +658,51 @@ def test_snapshots_do_not_count_toward_the_holm_family(monkeypatch):
     # One test in the family: its Holm-adjusted p is its own p.
     assert trend_section.stat_result["p_adjusted"] == trend_section.stat_result["p_value"]
     assert "Holm correction across all 1 tests" in findings_to_context(f)
+
+
+# --- Untestable comparisons are snapshots, not negative results (2026-11-18: "H of n/a,
+# a p-value of n/a … the difference between regions is not statistically significant"). ---
+
+def _one_round_idp_rows(ep):
+    if not ep.endswith("idps"):
+        return []
+    from datetime import date
+    y = date.today().year
+    return [{"population": v, "admin1_name": r, "reference_period_start": f"{y}-03-31"}
+            for r, v in (("Herat", 443_000), ("Balkh", 363_000), ("Kabul", 310_000),
+                         ("Kandahar", 120_000))]
+
+
+@patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _one_round_idp_rows(ep))
+def test_an_untestable_regional_comparison_is_a_ranking_snapshot(_mock):
+    from datetime import date
+    y = date.today().year
+    f = compute_findings("AFG", f"{y}-01-01", None, language="en")
+    region = next(s for s in f.sections if s.stat_result["kind"] == "region")
+    text = region.findings_text
+    assert text == (
+        f"Internally displaced people (IDPs): ranking snapshot as of {y}-03-31 — highest "
+        "regions: Herat (443000), Balkh (363000), Kabul (310000); a statistical comparison "
+        "between regions was not possible: one observation per region.")
+    assert region.stat_result["tested"] is False and region.stat_result["significant"] is False
+    assert "Holm correction across all 0 tests" in findings_to_context(f)
+
+
+def test_a_partly_testable_regional_comparison_names_why():
+    from analytics.technical_report import _region_text
+    text = _region_text({"indicator": "IDPs", "ranking": [("A", 10.0), ("B", 5.0)],
+                         "p_value": None, "kruskal_h": None, "max_obs": 2,
+                         "first_period": "2025-01-01", "last_period": "2025-07-01"})
+    assert text == ("IDPs: ranking snapshot, mean per region over 2025-01-01 to 2025-07-01 — "
+                    "highest regions: A (10.0), B (5.00); a statistical comparison between "
+                    "regions was not possible: fewer than two regions have two or more "
+                    "observations.")
+
+
+@patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _multi_region_rows(
+    "idps" if ep.endswith("idps") else "other"))
+def test_a_tested_regional_comparison_keeps_its_verdict(_mock):
+    f = compute_findings("AFG", "2025-01-01", "2025-12-31", language="en")
+    region = next(s for s in f.sections if s.stat_result["kind"] == "region")
+    assert region.stat_result["tested"] is True
+    assert "Kruskal-Wallis H=" in region.findings_text and "(α=0.05)" in region.findings_text
