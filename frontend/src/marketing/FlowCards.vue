@@ -189,15 +189,12 @@ onBeforeUnmount(() => mm?.revert())
 .flows {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
+  gap: 32px;
 }
+/* Heading and lede sit on the ground; the product panel is the only card. */
 .flow {
   display: flex;
   flex-direction: column;
-  padding: 22px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 16px;
 }
 .flow h3 {
   font-size: 18px;
@@ -217,11 +214,11 @@ onBeforeUnmount(() => mm?.revert())
   flex: 1;
   min-height: 170px;
   margin-top: 18px;
-  padding: 14px;
+  padding: 18px;
   font-size: 12.5px;
   background: var(--color-surface-container-low);
   border: 1px solid var(--color-border);
-  border-radius: 12px;
+  border-radius: 16px;
 }
 .fu-answer {
   line-height: 1.65;
@@ -355,6 +352,7 @@ onBeforeUnmount(() => mm?.revert())
 @media (max-width: 900px) {
   .flows {
     grid-template-columns: minmax(0, 1fr);
+    gap: 48px;
   }
   .fu-sources .source-link {
     line-height: 24px;
