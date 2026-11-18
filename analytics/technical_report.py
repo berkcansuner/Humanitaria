@@ -127,7 +127,8 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                     look_back = {"date_from": look_back_from, "date_to": date_to,
                                  "chosen_points": len(values)}
                     t_periods, t_values = lb_periods, lb_values
-            name, line_notes = _plan_line(ind, all_rows, t_periods, t_values, language)
+            name, line_notes, not_comparable = _plan_line(ind, all_rows, t_periods, t_values,
+                                                          language)
             if look_back and lb_notes != series_notes:
                 # Each window's notes, named: the regional ranking stays on the chosen
                 # period, the trend covers the look-back.
@@ -160,7 +161,10 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
             tr = trend(t_values, indicator=name, min_points=min_pts, times=times)
             if tr.direction == "insufficient_data":
                 gaps.append(f"{name}: trend için yetersiz veri (n={tr.n_points})")
-            if tr.direction == "insufficient_data" and theme is not None:
+            elif not_comparable:
+                # Years that are different plan lines: no trend is tested across them.
+                gaps.append(f"{name}: yıllar karşılaştırılamaz, trend testi yapılmadı")
+            if (tr.direction == "insufficient_data" and theme is not None) or not_comparable:
                 # The values are still the sector's figures: reported as they are, untested.
                 # ("All sectors" keeps such a series as a gap only, as it always did.)
                 chart, chart_dark = _both_modes(
@@ -172,7 +176,8 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                     stat_result={"kind": "snapshot", "indicator": name, "p_value": None,
                                  "periods": t_periods, "values": t_values,
                                  "value_unit": _value_unit(ind), "min_points": min_pts,
-                                 "look_back": look_back, "chosen_from": date_from},
+                                 "look_back": look_back, "chosen_from": date_from,
+                                 "not_comparable": not_comparable},
                     chart=chart,
                     chart_dark=chart_dark,
                     findings_text="",
@@ -268,9 +273,11 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
 
 
 def _plan_line(ind, rows: list[dict], periods: list, values: list,
-               language: str) -> tuple[str, list[str]]:
-    """The indicator's name, and a note for every period whose plan reports the sector
-    in separate lines (HAPI returns the sub-sectors beside it: PRO-CPN, PRO-GBV …).
+               language: str) -> tuple[str, list[str], str | None]:
+    """The indicator's name, a note for every period whose plan reports the sector in
+    separate lines (HAPI returns the sub-sectors beside it: PRO-CPN, PRO-GBV …), and,
+    when the series mixes what its years are (a line that is not the overall figure, a
+    line that may be, the plan's only figure), why its years are not comparable.
 
     HAPI's figure for the parent code is then one plan line. Only what HAPI's rows show
     is said: a figure below one of its sub-lines is not the overall figure (Haiti 2025:
@@ -285,7 +292,7 @@ def _plan_line(ind, rows: list[dict], periods: list, values: list,
     by_period = {str(p)[:10]: v for p, v in zip(periods, values)}
     lines = {p: subs for p, subs in lines.items() if p in by_period}
     if not lines:
-        return name, []
+        return name, [], None
     disputed = two_totals_periods(rows, ind)
 
     def below(period):
@@ -311,7 +318,23 @@ def _plan_line(ind, rows: list[dict], periods: list, values: list,
                      f"({listed}); the figure here ({_plain(by_period[period])}) {what}; this "
                      f"report does not add the lines up, because people can be counted in more "
                      f"than one.")
-    return name, notes
+    return name, notes, _not_comparable(by_period, lines, below, sector)
+
+
+def _not_comparable(by_period: dict, lines: dict, below, sector: str) -> str | None:
+    """Why a series' years are not comparable, or None when they are all of one kind."""
+    kinds = {
+        "below": f"one of the plan's separate {sector} lines, not its overall figure",
+        "line": f"one of the plan's separate {sector} lines, possibly its overall figure",
+        "single": f"the plan's only {sector} figure",
+    }
+    years: dict[str, list[str]] = {}
+    for period in sorted(by_period):
+        kind = "single" if period not in lines else ("below" if below(period) else "line")
+        years.setdefault(kind, []).append(period[:4])
+    if len(years) < 2:
+        return None
+    return "; ".join(f"{', '.join(ys)}: {kinds[k]}" for k, ys in years.items())
 
 
 # Where a reader can open HDX HAPI when HAPI cannot name the dataset behind a series.
@@ -567,8 +590,12 @@ def _snapshot_text(r: dict) -> str:
     span = f"({periods[0]})" if n == 1 else f"from {periods[0]} to {periods[-1]}"
     values = "; ".join(f"{p} {_value(v, unit)}" for p, v in zip(periods, r["values"]))
     as_of = ("before" if lb and not lb["chosen_points"] else "as of")
-    why = ("the values do not vary" if n >= r["min_points"]
-           else f"too few for a trend test (at least {r['min_points']} are needed)")
+    if r.get("not_comparable"):
+        why = f"the values are not comparable across years ({r['not_comparable']})"
+    elif n >= r["min_points"]:
+        why = "the values do not vary"
+    else:
+        why = f"too few for a trend test (at least {r['min_points']} are needed)"
     return (f"{window}{r['indicator']}: {_observations(n)} {span} — {why}, so no trend or "
             f"statistical test is reported. Values: {values}. Latest value {as_of} the chosen period: "
             f"{_value(r['values'][-1], unit)} ({periods[-1]}).")

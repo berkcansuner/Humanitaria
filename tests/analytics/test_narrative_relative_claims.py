@@ -224,3 +224,24 @@ def test_a_supported_fractional_change_of_a_count_is_kept():
                                ("Geri dönenlerin sayısı üçte bir oranında azaldı.", "tr")):
         text = f"## {RET_H}\n\n{sentence}"
         assert verify_narrative(text, findings, findings_ctx, language).removed == 0
+
+
+def test_the_not_comparable_statement_survives():
+    heading = "Protection: people in need — Latest Values"
+    context = (f"## {heading}\nProtection: people in need: 3 observations from 2024-01-01 to "
+               "2026-01-01 — the values are not comparable across years (2024, 2025: one of the "
+               "plan's separate protection lines, possibly its overall figure; 2026: the plan's "
+               "only protection figure), so no trend or statistical test is reported. Values: "
+               "2024-01-01 14800000 people; 2025-01-01 14200000 people; 2026-01-01 15000000 people.\n")
+    findings = Findings(sections=[ReportSection(heading, {"kind": "snapshot", "p_value": None,
+                                                          "tested": False, "value_unit": "people",
+                                                          "values": [14.8e6, 14.2e6, 15.0e6]},
+                                                None, "")], gaps=[], indicators_covered=["pin_protection"])
+    for sentence, language in (
+            ("The 2024 and 2025 figures are one of the plan's separate protection lines, while the "
+             "2026 figure of 15.0 million is the plan's only protection figure, so the values are "
+             "not comparable across years.", "en"),
+            ("2024 ve 2025 rakamları planın ayrı koruma satırlarından biri, 2026'daki 15,0 milyon ise "
+             "planın tek koruma rakamı olduğundan değerler yıllar arasında karşılaştırılamaz.", "tr")):
+        text = f"## {heading}\n\n{sentence}"
+        assert verify_narrative(text, findings, context, language).removed == 0

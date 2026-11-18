@@ -992,3 +992,47 @@ def test_the_general_name_needs_every_year_of_the_series_to_be_shown_general(mon
     monkeypatch.setattr("analytics.technical_report.fetch_rows", _recording_fetch([], rows))
     f = compute_findings("SDN", None, None, language="en", theme="Protection and Human Rights")
     assert f.sections[0].heading == "Protection: people in need — Latest Values"
+
+
+# --- Review of round 2: a series mixing plan lines with single figures read as a rise
+# (Afghanistan 14.8M, 14.2M, 15.0M while the published overall fell). The section's own
+# text now says the years are not comparable, and no trend is tested across them. ---
+
+def _afg_like_rows():
+    return _protection_rows({2024: [("", 14_809_904)], 2025: [("", 14_213_777)],
+                             2026: [("", 14_988_378)]},
+                            {2024: [("PRO-CPN", "Child Protection", 9_213_752)],
+                             2025: [("PRO-CPN", "Child Protection", 9_352_775)]},
+                            years=(2024, 2025, 2026))
+
+
+def test_a_series_mixing_plan_lines_and_single_figures_says_so_in_its_section(monkeypatch):
+    monkeypatch.setattr("analytics.technical_report.fetch_rows", _recording_fetch([], _afg_like_rows()))
+    f = compute_findings("AFG", None, None, language="en", theme="Protection and Human Rights")
+    sec = f.sections[0]
+    assert sec.stat_result["kind"] == "snapshot" and sec.stat_result["p_value"] is None
+    assert ("Protection: people in need: 3 observations from 2024-01-01 to 2026-01-01 — the values "
+            "are not comparable across years (2024, 2025: one of the plan's separate protection "
+            "lines, possibly its overall figure; 2026: the plan's only protection figure), so no "
+            "trend or statistical test is reported.") in sec.findings_text
+
+
+def test_no_trend_is_tested_across_years_that_are_not_comparable(monkeypatch):
+    # Five years, enough for a trend, but 2022-2023 single figures and 2024-2026 lines.
+    parent = {y: [("", 10_000_000 + 100_000 * k)] for k, y in enumerate(range(2022, 2027))}
+    subs = {y: [("PRO-GBV", "Gender Based Violence", 20_000_000)] for y in (2024, 2025, 2026)}
+    rows = _protection_rows(parent, subs, years=tuple(range(2022, 2027)))
+    monkeypatch.setattr("analytics.technical_report.fetch_rows", _recording_fetch([], rows))
+    f = compute_findings("AFG", "2021-01-01", None, language="en", theme="Protection and Human Rights")
+    assert [s.stat_result["kind"] for s in f.sections] == ["snapshot"]
+    assert ("the values are not comparable across years (2022, 2023: the plan's only protection "
+            "figure; 2024, 2025, 2026: one of the plan's separate protection lines, not its overall "
+            "figure)") in f.sections[0].findings_text
+    assert "No statistical test was possible" in findings_to_context(f)
+
+
+def test_comparable_years_keep_the_usual_text(monkeypatch):
+    monkeypatch.setattr("analytics.technical_report.fetch_rows",
+                        _recording_fetch([], _three_year_pin_rows))
+    f = compute_findings("AFG", None, None, language="en", theme="Food and Nutrition")
+    assert "not comparable" not in f.sections[0].findings_text
