@@ -10,6 +10,7 @@ import {
   answerLength,
   revealedParts,
   peakChange,
+  monthsSpan,
   peakPhrase,
   monthLabel,
   dayLabel,
@@ -314,5 +315,13 @@ describe('mapLabels', () => {
   it('never labels a point the map cannot draw', () => {
     const points = [pt('AAA', 900, null, 10), pt('BBB', 0, 5, 5), pt('CCC', 10, 5, 5)]
     expect(mapLabels(points, { count: 3 }).map((p) => p.iso3)).toEqual(['CCC'])
+  })
+})
+
+describe('monthsSpan', () => {
+  it('counts whole months between two ISO dates', () => {
+    expect(monthsSpan('2025-11-17', '2026-11-17')).toBe(12)
+    expect(monthsSpan('2025-11-18', '2026-11-17')).toBe(11)
+    expect(monthsSpan('2026-11-01', '2026-11-17')).toBe(0)
   })
 })

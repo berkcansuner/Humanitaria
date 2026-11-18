@@ -129,6 +129,14 @@ export function peakChange(series) {
   return { peak, latest, pct: Math.round((latest[1] / peak[1] - 1) * 100) }
 }
 
+// Whole months from one ISO date to a later one, read in UTC.
+export function monthsSpan(from, to) {
+  const a = new Date(from)
+  const b = new Date(to)
+  const months = (b.getUTCFullYear() - a.getUTCFullYear()) * 12 + b.getUTCMonth() - a.getUTCMonth()
+  return b.getUTCDate() < a.getUTCDate() ? months - 1 : months
+}
+
 const MONTH = new Intl.DateTimeFormat('en-US', { month: 'short', timeZone: 'UTC' })
 
 // 'Sep 2026' for an ISO date, read in UTC.

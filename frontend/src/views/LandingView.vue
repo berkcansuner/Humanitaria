@@ -54,7 +54,9 @@
               <li>
                 <b>{{ reportsLabel }}</b> reports
               </li>
-              <li><b>12</b> months</li>
+              <li>
+                <b>{{ monthsLabel }}</b> months
+              </li>
             </ul>
           </div>
           <HeroComposite ref="composite" />
@@ -139,7 +141,9 @@ import FlowCards from '../marketing/FlowCards.vue'
 import DashboardPreview from '../marketing/DashboardPreview.vue'
 import CoverageStats from '../marketing/CoverageStats.vue'
 import coverage from '../marketing/data/coverage.json'
+import { monthsSpan } from '../marketing/landingKit.js'
 
+const monthsLabel = monthsSpan(coverage.since, coverage.generated)
 const reportsLabel = coverage.reports.toLocaleString('en-US')
 
 const router = useRouter()

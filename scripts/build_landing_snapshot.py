@@ -136,12 +136,13 @@ def _db_figures() -> dict:
     with connect() as conn:
         counts = {r[0]: r[1] for r in conn.execute(text(
             "SELECT country, COUNT(*) FROM documents WHERE country <> '' GROUP BY country"))}
-        total, publishers = conn.execute(text(
-            "SELECT COUNT(*), COUNT(DISTINCT NULLIF(source, '')) FROM documents")).one()
+        total, publishers, since = conn.execute(text(
+            "SELECT COUNT(*), COUNT(DISTINCT NULLIF(source, '')), MIN(NULLIF(date, '')) "
+            "FROM documents")).one()
         sudan_n, sudan_since = conn.execute(text(
             "SELECT COUNT(*), MIN(NULLIF(date, '')) FROM documents WHERE country = 'Sudan'")).one()
     return {"counts": counts, "countries": len(counts) - ("World" in counts),
-            "reports": total, "publishers": publishers,
+            "reports": total, "publishers": publishers, "since": since,
             "sudan": {"count": sudan_n, "since": sudan_since}}
 
 
@@ -202,7 +203,8 @@ def main() -> None:
     db = _db_figures()
     points = coverage_points(_fetch_countries(), db["counts"])
     coverage = {"generated": date.today().isoformat(), "countries": db["countries"],
-                "reports": db["reports"], "publishers": db["publishers"], "points": points}
+                "reports": db["reports"], "publishers": db["publishers"],
+                "since": db["since"], "points": points}
     sudan = _sudan(db["sudan"])
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     for name, data in (("coverage.json", coverage), ("sudan.json", sudan)):
