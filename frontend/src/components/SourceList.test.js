@@ -17,7 +17,7 @@ const DATASETS = [
     country: 'Afghanistan',
     doctype: 'dataset',
     dataset: 'Global Humanitarian Programme Cycle, Humanitarian Needs',
-    period: '2024-01-01 to 2026-01-01',
+    period: '2024-01-01 – 2026-01-01',
     retrieved: '2026-11-18',
   },
   {

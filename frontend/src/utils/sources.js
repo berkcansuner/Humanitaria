@@ -50,14 +50,21 @@ export function isDataSource(src) {
   return !!src && src.doctype === 'dataset'
 }
 
-/** A dataset's reference period ("2024-01-01 to 2026-01-01", or one date) in the
- * ledger's date format for `locale`, joined with an en dash. */
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}(?:T[\d:.]+Z?)?$/
+
+/**
+ * A dataset's reference period in the ledger's date format for `locale`, both ends
+ * joined with an en dash. The backend sends "2024-01-01 – 2026-01-01" or a single
+ * date; the older "2024-01-01 to 2026-01-01" and a spaced hyphen read the same. The
+ * separator needs spaces round it, so a date's own hyphens never split it. Anything
+ * that is not one or two ISO dates is shown exactly as received.
+ */
 export function dataPeriod(period, locale = 'en') {
   if (!period) return ''
-  return String(period)
-    .split(/\s+to\s+/)
-    .map((day) => ledgerDate(day, locale) || day)
-    .join(' – ')
+  const text = String(period).trim()
+  const ends = text.split(/\s+(?:to|–|—|-)\s+/)
+  if (ends.length > 2 || !ends.every((day) => ISO_DAY.test(day))) return text
+  return ends.map((day) => ledgerDate(day, locale)).join(' – ')
 }
 
 /**

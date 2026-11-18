@@ -403,7 +403,7 @@ describe('ReportsView in two languages', () => {
       date: '2026-01-01',
       doctype: 'dataset',
       dataset: 'Global Humanitarian Programme Cycle, Humanitarian Needs',
-      period: '2024-01-01 to 2026-01-01',
+      period: '2024-01-01 – 2026-01-01',
       retrieved: '2026-11-18',
     }
 
@@ -813,6 +813,33 @@ describe('ReportsView in two languages', () => {
       stream.push('token', { content: '## Executive Summary\n\nText.' })
       await flush()
       expect(stage()).toBe(en.reports.progress.writingTechnical)
+    })
+
+    it("lists a technical report's data sources as soon as the stream sends them", async () => {
+      const stream = stubStream()
+      await mount()
+      await start({ type: 'technical_monitoring', theme: '' })
+      stream.push('token', { content: '## Executive Summary\n\nText.' })
+      const dataset = (index, title) => ({
+        index,
+        title,
+        url: `https://data.humdata.org/dataset/${index}`,
+        source: 'OCHA HNO',
+        date: '2026-01-01',
+        doctype: 'dataset',
+        period: '2024-01-01 – 2026-01-01',
+        retrieved: '2026-11-18',
+      })
+      // Indexes as the backend numbered them (no markers in a technical narrative).
+      stream.push('sources', { sources: [dataset(1, 'People in need'), dataset(3, 'IDPs')] })
+      await flush()
+      // Still streaming (nothing saved yet), and the list is already there.
+      expect(host.querySelector('.report-progress')).toBeTruthy()
+      expect(text('.sources-summary')).toMatch(/^2 sources/)
+      expect(
+        [...host.querySelectorAll('.source-index')].map((el) => el.textContent.trim()),
+      ).toEqual(['1', '3'])
+      expect(text('.source-meta')).toBe('OCHA HNO · 2024-01-01 – 2026-01-01 · retrieved 2026-11-18')
     })
 
     it('outlines "What changed" for the next period of a series', async () => {

@@ -7,6 +7,7 @@ import {
   revealSource,
   returnToCite,
   citeLabel,
+  dataPeriod,
 } from './sources.js'
 
 describe('isValidSource', () => {
@@ -183,5 +184,31 @@ describe('citeLabel', () => {
       ).toBe('Kaynak 3: Bulletin, WHO, 9 Eki 2026')
       expect(citeLabel('4', null)).toBe('Kaynak 4')
     })
+  })
+})
+
+// A data source's period as the backend sends it: two ISO dates with an en dash
+// ("2024-01-01 – 2026-01-01"), one date, or (older) "… to …".
+describe('dataPeriod', () => {
+  it('shows both ends of the period, joined by an en dash', () => {
+    expect(dataPeriod('2024-01-01 – 2026-01-01')).toBe('2024-01-01 – 2026-01-01')
+    expect(dataPeriod('2024-01-01 – 2026-01-01', 'tr')).toBe('1 Oca 2024 – 1 Oca 2026')
+  })
+
+  it('reads the older "to" form and a spaced hyphen the same way', () => {
+    expect(dataPeriod('2022-03-01 to 2026-09-01', 'tr')).toBe('1 Mar 2022 – 1 Eyl 2026')
+    expect(dataPeriod('2022-03-01 - 2026-09-01')).toBe('2022-03-01 – 2026-09-01')
+  })
+
+  it('never splits inside an ISO date', () => {
+    expect(dataPeriod('2026-01-31')).toBe('2026-01-31')
+    expect(dataPeriod('2026-01-31', 'tr')).toBe('31 Oca 2026')
+  })
+
+  it('shows a period it cannot read exactly as received', () => {
+    expect(dataPeriod('Q3 2026')).toBe('Q3 2026')
+    expect(dataPeriod('2024 – mid-2026', 'tr')).toBe('2024 – mid-2026')
+    expect(dataPeriod('')).toBe('')
+    expect(dataPeriod(null)).toBe('')
   })
 })

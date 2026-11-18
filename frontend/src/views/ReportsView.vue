@@ -647,6 +647,11 @@ const shown = computed(() => {
   const c = current.value
   if (!c) return { content: '', sources: null }
   if (c.id && !generating.value) return { content: c.content, sources: c.sources }
+  // A technical report's sources are its data provenance, cited by no marker: they
+  // show as the server numbered them, the same while streaming as once saved.
+  if (c.sources && c.report_type === 'technical_monitoring') {
+    return { content: c.content, sources: c.sources }
+  }
   if (c.sources) return renumberCitations(c.content, c.sources)
   return { content: numberByFirstAppearance(c.content), sources: null }
 })
