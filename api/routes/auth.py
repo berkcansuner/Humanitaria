@@ -15,7 +15,7 @@ from authlib.integrations.starlette_client import OAuth, OAuthError
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import DBAPIError, IntegrityError
 
 from config import get_settings
 from rag import users as users_store
@@ -246,7 +246,14 @@ async def update_me(body: UpdateProfileIn, user: dict = Depends(get_current_user
 
 @router.patch("/me/language", response_model=UserOut)
 async def update_language(body: UpdateLanguageIn, user: dict = Depends(get_current_user)):
-    await anyio.to_thread.run_sync(users_store.update_user_language, user["id"], body.ui_language)
+    try:
+        await anyio.to_thread.run_sync(users_store.update_user_language, user["id"], body.ui_language)
+    except DBAPIError as e:
+        # users.ui_language is missing when a start gave up on its migration (lock
+        # timeout, see rag/db.py); the next start adds it. The UI keeps the choice
+        # on the device meanwhile.
+        logger.warning("auth: language not saved (user=%s): %s", user["id"], type(e.orig).__name__)
+        raise HTTPException(503, "Interface language could not be saved")
     logger.info("auth: language updated (user=%s)", user["id"])
     return _user_out({**user, "ui_language": body.ui_language})
 

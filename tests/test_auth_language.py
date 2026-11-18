@@ -38,6 +38,24 @@ def test_patch_language_requires_auth(client):
     assert client.patch("/auth/me/language", json={"ui_language": "tr"}).status_code == 401
 
 
+def test_missing_column_fails_the_save_gracefully(client, caplog):
+    """If a start could not add users.ui_language (lock timeout, retried on the
+    next start), sign-in and /auth/me keep working and saving the language
+    answers 503 with a logged warning instead of a 500 traceback."""
+    from rag.db import get_engine
+
+    client.post("/auth/signup", json=SIGNUP)
+    with get_engine().begin() as conn:
+        conn.exec_driver_sql("ALTER TABLE users DROP COLUMN ui_language")
+    assert client.get("/auth/me").json()["ui_language"] is None
+    with caplog.at_level("WARNING", logger="api.routes.auth"):
+        r = client.patch("/auth/me/language", json={"ui_language": "tr"})
+    assert r.status_code == 503
+    assert isinstance(r.json()["detail"], str)
+    assert "language not saved" in caplog.text
+    assert "Traceback" not in caplog.text
+
+
 def test_schema_migration_adds_column_once(tmp_path):
     """A pre-existing users table without ui_language gains it; re-running is a no-op."""
     from rag.db import _ensure_schema

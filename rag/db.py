@@ -28,7 +28,8 @@ from sqlalchemy import (
     create_engine,
     event,
 )
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection, Engine
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.pool import NullPool
 
 from config import get_settings
@@ -203,24 +204,57 @@ def _ensure_schema(engine: Engine) -> None:
             if cols and "previous_report_id" not in cols:
                 conn.exec_driver_sql("ALTER TABLE reports ADD COLUMN previous_report_id TEXT")
     else:
-        # Postgres: same self-healing migration for an already-deployed reports
-        # table (guard the ALTER on the table existing, since a brand-new
-        # database has no reports table yet — create_all() below creates it
-        # fresh, already including report_type).
-        with engine.begin() as conn:
-            # to_regclass resolves through search_path, like the ALTERs below.
-            if conn.exec_driver_sql("SELECT to_regclass('users')").scalar():
-                conn.exec_driver_sql("ALTER TABLE users ADD COLUMN IF NOT EXISTS ui_language TEXT")
-            exists = conn.exec_driver_sql("SELECT to_regclass('reports')").scalar()
-            if exists:
-                conn.exec_driver_sql("ALTER TABLE reports ADD COLUMN IF NOT EXISTS report_type TEXT")
-                conn.exec_driver_sql("ALTER TABLE reports ADD COLUMN IF NOT EXISTS cover_image TEXT")
-                conn.exec_driver_sql("ALTER TABLE reports ADD COLUMN IF NOT EXISTS section_images TEXT")
-                conn.exec_driver_sql("ALTER TABLE reports ADD COLUMN IF NOT EXISTS previous_report_id TEXT")
+        _pg_migrate_columns(engine)
     metadata.create_all(engine)
     if engine.dialect.name == "postgresql":
         _ensure_vector_schema(engine)
         _close_supabase_data_api(engine)
+
+
+# Columns added after their table was first deployed: create_all() never alters
+# an existing table, so an already-deployed Postgres database gains them here.
+_PG_ADDED_COLUMNS = {
+    "users": ("ui_language",),
+    "reports": ("report_type", "cover_image", "section_images", "previous_report_id"),
+}
+# How long a start waits for a table lock before giving up on the migration.
+_DDL_LOCK_TIMEOUT = "5s"
+_LOCK_NOT_AVAILABLE = "55P03"  # SQLSTATE raised when lock_timeout expires
+
+
+def _pg_migrate_columns(engine: Engine) -> None:
+    """Add the columns in _PG_ADDED_COLUMNS that an existing table lacks.
+
+    ``ADD COLUMN IF NOT EXISTS`` takes an ACCESS EXCLUSIVE lock before it checks,
+    and ``users`` is read on every request, so the ALTER runs only for a column
+    the catalog says is missing: a steady-state start takes no lock on the
+    tables. A blocked ALTER gives up after _DDL_LOCK_TIMEOUT instead of queueing
+    every session lookup behind it; the start then goes on without the column
+    (reads use ``SELECT *``, saving the interface language answers 503) and the
+    next start retries. Any other error still stops the start, as before."""
+    try:
+        with engine.begin() as conn:
+            _pg_add_missing_columns(conn)
+    except DBAPIError as e:
+        if getattr(e.orig, "sqlstate", None) != _LOCK_NOT_AVAILABLE:
+            raise
+        logger.warning("Schema migration skipped: a table lock was not granted within %s; "
+                       "missing columns are added on the next start", _DDL_LOCK_TIMEOUT)
+
+
+def _pg_add_missing_columns(conn: Connection) -> None:
+    conn.exec_driver_sql(f"SET LOCAL lock_timeout = '{_DDL_LOCK_TIMEOUT}'")
+    for table, columns in _PG_ADDED_COLUMNS.items():
+        # to_regclass resolves through search_path, like the ALTER below. NULL =
+        # a brand-new database: create_all() creates the table complete.
+        if not conn.exec_driver_sql(f"SELECT to_regclass('{table}')").scalar():
+            continue
+        present = {r[0] for r in conn.exec_driver_sql(
+            "SELECT attname FROM pg_attribute "
+            f"WHERE attrelid = to_regclass('{table}') AND attnum > 0 AND NOT attisdropped")}
+        for column in columns:
+            if column not in present:
+                conn.exec_driver_sql(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} TEXT")
 
 
 def _ensure_vector_schema(engine: Engine) -> None:
