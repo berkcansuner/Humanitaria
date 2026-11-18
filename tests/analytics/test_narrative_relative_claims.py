@@ -1,0 +1,150 @@
+"""Relative-change claims are checked, not only forbidden (owner feedback, round 2).
+
+On the live Afghanistan Food and Nutrition context, "food insecurity fell by about 32%"
+passed the number check (32 is the latest value, 32.0%) and "nearly halved" has no
+number at all, so a wrong relative change about a share could reach a report.
+The context below is the real one (HDX HAPI, 2026-11-18)."""
+from pathlib import Path
+
+import pytest
+
+from analytics.narrative_check import verify_narrative
+from analytics.technical_report import Findings, ReportSection
+
+CONTEXT = (Path(__file__).parent / "afg_food_nutrition_context.txt").read_text(encoding="utf-8")
+DIRECTIVE = ("Generate the technical monitoring report narrative. Country: Afghanistan. "
+             "Sector(s): Food and Nutrition. Period: 2025-11-18 to 2026-11-18.")
+
+FS_H = "Food security: people in need — Latest Values"
+NUT_H = "Nutrition: people in need — Latest Values"
+IPC_H = "Food insecurity (IPC 3+, % of the analysed population) — Trend Analysis"
+
+
+def _afg_findings():
+    return Findings(sections=[
+        ReportSection(FS_H, {"kind": "snapshot", "p_value": None, "tested": False,
+                             "significant": False, "value_unit": "people",
+                             "values": [15_823_677.0, 14_764_729.0, 17_412_653.0]}, None, ""),
+        ReportSection(NUT_H, {"kind": "snapshot", "p_value": None, "tested": False,
+                              "significant": False, "value_unit": "people",
+                              "values": [7_399_632.0, 7_801_981.0, 7_464_230.0]}, None, ""),
+        ReportSection(IPC_H, {"kind": "trend", "p_value": 0.059, "tested": True,
+                              "significant": False, "unit": "percentage points",
+                              "value_unit": "%", "slope": -4.65, "line_change": -20.97,
+                              "pct_change": -48.3, "first_value": 47.0, "latest_value": 32.0},
+                      None, ""),
+    ], gaps=[], indicators_covered=["pin_food_security", "pin_nutrition", "food_security"])
+
+
+def _kept(sentence: str, section: str | None, language: str = "en") -> bool:
+    text = (f"## {section}\n\n{sentence}" if section else f"## Executive Summary\n\n{sentence}")
+    return verify_narrative(text, _afg_findings(), f"{CONTEXT}\n{DIRECTIVE}", language).removed == 0
+
+
+CORRECT_EN = [
+    (IPC_H, "As of September 2026, 32.0% of the analysed population was in IPC Phase 3 or above."),
+    (IPC_H, "The share fell from 47.0% in March 2022 to 32.0% in September 2026."),
+    (IPC_H, "Along the trend line the share fell by 21.0 percentage points between March 2022 "
+            "and September 2026."),
+    (IPC_H, "The decline of 4.65 percentage points per year is not statistically significant "
+            "(p=0.059, Holm-adjusted p=0.059)."),
+    (IPC_H, "The 95% confidence interval of the slope runs from -7.99 to 0 percentage points."),
+    (FS_H, "In 2026, 17.4 million people needed food security assistance, up from 14.8 million "
+           "in 2025."),
+    (None, "In September 2026, 32.0% of the analysed population faced acute food insecurity."),
+    (None, "Food insecurity stood at 32% of the analysed population in September 2026."),
+]
+WRONG_EN = [
+    (IPC_H, "Food insecurity fell by about 32% over the period."),
+    (IPC_H, "This is a 21% decline in food insecurity."),
+    (IPC_H, "Food insecurity nearly halved since 2022."),
+    (IPC_H, "The share of people in IPC Phase 3+ was cut in half."),
+    (None, "Food insecurity fell by 32% over five years."),
+    (None, "Acute food insecurity dropped 48.3% along the trend line."),
+    (FS_H, "The number of people in need of food security assistance doubled between 2024 "
+           "and 2026."),
+]
+CORRECT_TR = [
+    (IPC_H, "Eylül 2026 itibarıyla analiz edilen nüfusun %32,0'si IPC Aşama 3 ve üzerindeydi."),
+    (IPC_H, "Oran Mart 2022'deki %47,0'den Eylül 2026'da %32,0'ye geriledi."),
+    (IPC_H, "Eğilim çizgisi boyunca oran 21,0 yüzde puan azaldı."),
+    (IPC_H, "Oran Eylül 2026'da %32 düzeyinde kaldı."),
+    (FS_H, "2026'da 17,4 milyon kişinin gıda güvenliği yardımına ihtiyacı vardı."),
+    (None, "Eylül 2026'da analiz edilen nüfusun yüzde 32'si akut gıda güvensizliği yaşıyordu."),
+]
+WRONG_TR = [
+    (IPC_H, "Gıda güvensizliği %32 azaldı."),
+    (IPC_H, "Gıda güvensizliğinde yüzde 32'lik bir düşüş yaşandı."),
+    (IPC_H, "Gıda güvensizliği yarı yarıya azaldı."),
+    (IPC_H, "Gıda güvensizliği 2022'den bu yana yarıya indi."),
+    (None, "Gıda güvensizliği beş yılda %32 oranında azaldı."),
+    (FS_H, "Gıda güvenliği yardımına ihtiyaç duyan kişi sayısı iki katına çıktı."),
+    (FS_H, "İhtiyaç duyan kişi sayısı 2024'ten bu yana ikiye katlandı."),
+]
+
+
+@pytest.mark.parametrize("section,sentence", CORRECT_EN)
+def test_correct_english_sentences_survive(section, sentence):
+    assert _kept(sentence, section)
+
+
+@pytest.mark.parametrize("section,sentence", WRONG_EN)
+def test_wrong_english_relative_claims_are_removed(section, sentence):
+    assert not _kept(sentence, section)
+
+
+@pytest.mark.parametrize("section,sentence", CORRECT_TR)
+def test_correct_turkish_sentences_survive(section, sentence):
+    assert _kept(sentence, section, "tr")
+
+
+@pytest.mark.parametrize("section,sentence", WRONG_TR)
+def test_wrong_turkish_relative_claims_are_removed(section, sentence):
+    assert not _kept(sentence, section, "tr")
+
+
+# --- "All sectors": computed relative changes of counts stay legitimate. ---
+
+REF_H = "Refugees (people) — Trend Analysis"
+RET_H = "Returnees (people) — Trend Analysis"
+COUNTS_CONTEXT = (
+    f"## {REF_H}\nRefugees (people): direction=increasing, Sen slope=500000 per year, "
+    "relative change along the trend line 2022-01-01 → 2025-01-01=+236.8%, observed first value "
+    "1000000 people (2022-01-01), latest value 3100000 people (2025-01-01), n=4.\n\n"
+    f"## {RET_H}\nReturnees (people): direction=decreasing, Sen slope=-300000 per year, "
+    "relative change along the trend line 2022-01-01 → 2025-01-01=-48.0%, observed first value "
+    "2000000 people (2022-01-01), latest value 1000000 people (2025-01-01), n=4.\n"
+)
+
+
+def _counts_kept(sentence: str, section: str | None) -> bool:
+    findings = Findings(sections=[
+        ReportSection(REF_H, {"kind": "trend", "p_value": 0.2, "significant": False,
+                              "unit": "", "value_unit": "people", "pct_change": 236.8,
+                              "line_change": None, "first_value": 1e6, "latest_value": 3.1e6},
+                      None, ""),
+        ReportSection(RET_H, {"kind": "trend", "p_value": 0.2, "significant": False,
+                              "unit": "", "value_unit": "people", "pct_change": -48.0,
+                              "line_change": None, "first_value": 2e6, "latest_value": 1e6},
+                      None, ""),
+    ], gaps=[], indicators_covered=["refugees", "returnees"])
+    text = f"## {section or 'Executive Summary'}\n\n{sentence}"
+    return verify_narrative(text, findings, COUNTS_CONTEXT, "en").removed == 0
+
+
+def test_a_computed_relative_change_of_a_count_still_passes():
+    assert _counts_kept("Refugee numbers rose by 236.8% along the trend line.", REF_H)
+    assert _counts_kept("Refugees rose by +236.8% along the trend line.", None)
+    assert _counts_kept("Returnees fell 48.0% along the trend line.", RET_H)
+
+
+def test_multiplicative_words_about_counts_need_the_observed_values():
+    assert _counts_kept("The number of refugees tripled between 2022 and 2025.", REF_H)
+    assert _counts_kept("Returnees halved between 2022 and 2025.", RET_H)
+    assert not _counts_kept("Returnees tripled between 2022 and 2025.", RET_H)
+    assert not _counts_kept("Refugee numbers halved between 2022 and 2025.", REF_H)
+
+
+def test_a_relative_change_the_code_did_not_compute_is_removed_for_counts_too():
+    # 3,100,000 / 1,000,000 is +210%, but the model was not given that figure.
+    assert not _counts_kept("Refugees rose by 210% between 2022 and 2025.", REF_H)

@@ -8,7 +8,13 @@ enforce it. After generation this removes, sentence by sentence:
    to fewer decimals are accepted; small counts up to 10 are exempt);
 2. a significance claim that contradicts the code's verdict in that finding's
    section (any claim, either way, in a finding that was not tested), and, outside
-   the finding sections, a claim that something is significant when no finding is.
+   the finding sections, a claim that something is significant when no finding is;
+3. a relative-change claim the code did not compute: a change stated in percent
+   ('fell by 32%', '%32 azaldı') is kept only when it is a count's computed relative
+   change, or a share's computed percentage-point change said in percentage points;
+   'halved' / 'doubled' / 'yarıya' / 'iki katına' and the like never about a share,
+   and about a count only when the observed latest/first ratio is within ±10% of the
+   factor. A level ('to 32%', '%32'ye', '%32 düzeyinde') is checked as a number only.
 
 Headings are kept. A finding section left empty gets a placeholder sentence, and a
 note at the end says how many sentences were removed. The check only deletes: it
@@ -110,6 +116,132 @@ def _claim(sentence: str) -> str | None:
     return polarities.pop() if len(polarities) == 1 else None
 
 
+# --- Relative-change claims (owner feedback 2026-11-18). A share (IPC 3+, % of the
+# analysed population) changes in percentage points; "fell by 32%" or "halved" about it
+# is a relative claim the code never computed. A count's relative change is legitimate
+# only as computed (the trend's change along its line). ---
+
+_PCT_EN = re.compile(r"(?<![\w.,])(\d+(?:[.,]\d+)*)\s*(?:%|percent\b|per cent\b)", re.IGNORECASE)
+_PCT_TR = re.compile(r"(?:%\s*|\byüzde\s+)(\d+(?:[.,]\d+)*)(?![\d.,]*\s*(?:yüzde\s+)?puan)",
+                     re.IGNORECASE)
+_PP = re.compile(r"percentage[- ]points?|yüzde\s+puan|\bpuan", re.IGNORECASE)
+_QUALIFIER = {"about", "around", "nearly", "almost", "roughly", "approximately", "some",
+              "over", "under", "just", "more", "than", "less", "only", "a", "an", "the"}
+_EN_CHANGE_BEFORE = re.compile(
+    r"^(?:by|up|down|rose|risen|rise|rises|rising|increased?|increases|increasing|grew|grown|"
+    r"grows?|growing|fell|fallen|falls?|falling|dropped|drops?|dropping|declined?|declines|"
+    r"declining|decreased?|decreases|decreasing|shrank|shrunk|climbed|surged|jumped|plunged|"
+    r"slid|eased|gained|lost|cut|reduced|changed)$", re.IGNORECASE)
+_EN_CHANGE_AFTER = re.compile(
+    r"^(?:decline|drop|fall|increase|rise|reduction|decrease|gain|growth|jump|cut|lower|higher|"
+    r"fewer|more|less|down|up|surge|change)\w*", re.IGNORECASE)
+_EN_CHANGE_OF = re.compile(
+    r"\b(?:decline|drop|fall|increase|rise|reduction|decrease|growth|change|jump|cut)s?\s+of\s*$",
+    re.IGNORECASE)
+# Turkish: a level takes a case or 'düzey' word after the number ("%32'ye", "%32'den",
+# "%32 düzeyinde"); a change is followed by a change word ("%32 azaldı", "yüzde 32'lik
+# bir düşüş", "%32 oranında arttı").
+_TR_LEVEL_SUFFIX = re.compile(r"^['’](?:y?[ae]|[dt][ae]n?|s[ıi]|[ıiuü])\b", re.IGNORECASE)
+_TR_CHANGE = re.compile(r"^(?:azal|art|düş|yüksel|geril|eksil|büyü|küçül|kayb|gerile)",
+                        re.IGNORECASE)
+_TR_FILLER = {"bir", "oranında", "civarında", "kadar", "dolayında", "lik", "lık", "luk", "lük"}
+
+# Multiplicative words, with the factor they claim. Supported for a count when the
+# observed latest/first ratio is within ±10% of the factor (halved: 0.45–0.55,
+# doubled: 1.8–2.2, tripled: 2.7–3.3, quadrupled: 3.6–4.4); never for a share.
+_MULTIPLIERS = [
+    (0.5, re.compile(r"\bhalv(?:ed|es|ing|e)\b|\b(?:by|in) half\b|\bhalf as\b|"
+                     r"yar[ıi]\s+yar[ıi]ya|\byar[ıi]ya\b|\byar[ıi]s[ıi]na\b", re.IGNORECASE)),
+    (2.0, re.compile(r"\bdoubl(?:ed|es|ing)\b|\btwo-?fold\b|\btwice as\b|"
+                     r"\bikiye\s+katla\w*|\biki\s+kat\w*", re.IGNORECASE)),
+    (3.0, re.compile(r"\btripl(?:ed|es|ing)\b|\bthree-?fold\b|\bthree times\b|\büç\s+kat\w*",
+                     re.IGNORECASE)),
+    (4.0, re.compile(r"\bquadrupl\w*\b|\bfour-?fold\b|\bfour times\b|\bdört\s+kat\w*",
+                     re.IGNORECASE)),
+]
+_FACTOR_TOLERANCE = 0.10
+
+
+def _is_en_change(sentence: str, start: int, end: int) -> bool:
+    before = [w.strip("(),;:").lower() for w in sentence[:start].split()]
+    while before and before[-1] in _QUALIFIER:
+        before.pop()
+    if before and _EN_CHANGE_BEFORE.match(before[-1]):
+        return True
+    if _EN_CHANGE_OF.search(" ".join(before)):
+        return True
+    after = sentence[end:].split()
+    return bool(after) and bool(_EN_CHANGE_AFTER.match(after[0].strip("(),;:.")))
+
+
+def _is_tr_change(sentence: str, end: int) -> bool:
+    rest = sentence[end:]
+    if _TR_LEVEL_SUFFIX.match(rest):
+        return False
+    words = [w.strip("(),;:.'’").lower() for w in re.split(r"[\s'’]+", rest) if w.strip("'’")]
+    while words and words[0] in _TR_FILLER:
+        words.pop(0)
+    return bool(words) and bool(_TR_CHANGE.match(words[0]))
+
+
+def _percent_changes(sentence: str) -> list[float]:
+    """The values of the percentages the sentence states as a change ('fell by 32%',
+    'a 32% decline', '%32 azaldı', "yüzde 32'lik bir düşüş"), not as a level."""
+    out = []
+    for m in _PCT_EN.finditer(sentence):
+        if _is_en_change(sentence, m.start(), m.end()):
+            out += [v for v, _ in _readings(m.group(1))[:1]]
+    for m in _PCT_TR.finditer(sentence):
+        if _is_tr_change(sentence, m.end()):
+            out += [v for v, _ in _readings(m.group(1))[-1:]]
+    return out
+
+
+def _matches(value: float, computed: list[float]) -> bool:
+    """*value* as written equals a computed figure rounded to its decimals (or to a
+    whole number)."""
+    return any(abs(value - abs(c)) <= 0.5 + 1e-9 if value == int(value)
+               else abs(value - abs(c)) <= 0.05 + 1e-9 for c in computed)
+
+
+def _ratio(r: dict) -> float | None:
+    """Observed latest / first value of a finding, or None."""
+    if r.get("kind") == "snapshot" and r.get("values"):
+        first, last = r["values"][0], r["values"][-1]
+    else:
+        first, last = r.get("first_value"), r.get("latest_value")
+    return last / first if first and last is not None else None
+
+
+def _profile(stat_results: list[dict]) -> dict:
+    """What relative claims a stretch of text may make: the computed relative changes
+    of counts, the percentage-point changes of shares, the observed count ratios, and
+    whether it is about a share."""
+    shares = [r for r in stat_results
+              if r.get("unit") == "percentage points" or r.get("value_unit") == "%"]
+    counts = [r for r in stat_results if r not in shares]
+    return {
+        "share": bool(shares) and not counts,
+        "relative": [r["pct_change"] for r in counts if r.get("pct_change") is not None],
+        "pp": [r["line_change"] for r in shares if r.get("line_change") is not None],
+        "ratios": [x for x in (_ratio(r) for r in counts) if x],
+    }
+
+
+def _relative_claim_ok(sentence: str, profile: dict) -> bool:
+    for value in _percent_changes(sentence):
+        if profile["share"] or not _matches(value, profile["relative"]):
+            # A share's change is in percentage points, and only as computed.
+            if not (_PP.search(sentence) and _matches(value, profile["pp"])):
+                return False
+    for factor, pattern in _MULTIPLIERS:
+        if pattern.search(sentence):
+            if profile["share"] or not any(
+                    abs(x - factor) <= _FACTOR_TOLERANCE * factor for x in profile["ratios"]):
+                return False
+    return True
+
+
 def _blocks(text: str) -> list[tuple[str, list[str]]]:
     """('heading', [line]) | ('para', [sentences]) | ('list', [items]) in order."""
     blocks: list[tuple[str, list[str]]] = []
@@ -150,9 +282,16 @@ def verify_narrative(text: str, findings, allowed_text: str, language: str) -> N
                             else bool(s.stat_result.get("significant")))
                 for s in findings.sections}
     any_significant = any(verdicts.values())
+    # A finding section may claim its own computed changes; any other section (the
+    # Executive Summary, the coverage and methods notes) those of the whole report.
+    profiles = {s.heading: _profile([s.stat_result]) for s in findings.sections}
+    whole = _profile([s.stat_result for s in findings.sections])
+    whole["share"] = False
 
     def bad(sentence: str, section: str | None) -> bool:
         if not _numbers_ok(sentence, allowed):
+            return True
+        if not _relative_claim_ok(sentence, profiles.get(section or "", whole)):
             return True
         claim = _claim(sentence)
         if claim is None:
