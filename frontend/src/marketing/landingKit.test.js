@@ -264,12 +264,9 @@ describe('passageSources', () => {
     { n: 4, meta: 'IOM · Haiti', date: '2026-09-21' },
     { n: 5, meta: 'UN Security Council · Haiti', date: '2026-10-20' },
   ]
-  it('names each cited publisher once and the newest cited date', () => {
-    const parts = [{ text: 'a' }, { cite: 3 }, { cite: 1 }, { text: 'b' }, { cite: 4 }]
-    expect(passageSources(parts, sources)).toEqual({
-      publishers: ['IOM', 'OCHA'],
-      newest: '2026-11-06',
-    })
+  it('lists each cited source once, in citation order', () => {
+    const parts = [{ text: 'a' }, { cite: 3 }, { cite: 1 }, { text: 'b' }, { cite: 4 }, { cite: 3 }]
+    expect(passageSources(parts, sources).map((s) => s.n)).toEqual([3, 1, 4])
   })
 })
 
@@ -279,10 +276,7 @@ describe('the workflow chat sample', () => {
     const sample = passage(parts, 'Nearly 80 percent', 'Grand Sud (39%)')
     expect(sample.filter((p) => p.cite).map((p) => p.cite)).toEqual([1, 3, 4])
     expect(sample[0].text.startsWith('Nearly 80 percent')).toBe(true)
-    expect(passageSources(sample, sources)).toEqual({
-      publishers: ['OCHA', 'IOM'],
-      newest: '2026-11-06',
-    })
+    expect(passageSources(sample, sources).map((s) => s.n)).toEqual([1, 3, 4])
   })
 })
 

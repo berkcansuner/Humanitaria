@@ -197,16 +197,11 @@ export function passage(parts, from, to) {
   return out
 }
 
-// Publishers (from `meta`, 'OCHA · Haiti') of the sources a passage cites, each
-// once in citation order, and the newest cited date.
+// The sources a passage cites, each once, in citation order.
 export function passageSources(parts, sources) {
   const cited = sources.filter((s) => parts.some((p) => p.cite === s.n))
   const order = parts.filter((p) => p.cite !== undefined).map((p) => p.cite)
-  cited.sort((a, b) => order.indexOf(a.n) - order.indexOf(b.n))
-  return {
-    publishers: [...new Set(cited.map((s) => s.meta.split(' · ')[0]))],
-    newest: cited.map((s) => s.date).sort().at(-1),
-  }
+  return cited.sort((a, b) => order.indexOf(a.n) - order.indexOf(b.n))
 }
 
 // A generated sentence's [n] markers as chip parts, in the hero answer's shape:

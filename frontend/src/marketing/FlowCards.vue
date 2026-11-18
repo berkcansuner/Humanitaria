@@ -7,6 +7,7 @@ import meReport from './data/meReport.json'
 import { parts, sources } from './haitiAnswer.js'
 import { citedParts, dayLabel, formatCompact, monthLabel, passage, passageSources } from './landingKit.js'
 import { citeLabel, revealSource } from '../utils/sources.js'
+import WindowChart from './WindowChart.vue'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -17,12 +18,14 @@ const peakMonth = monthLabel(test.period[0])
 const testPeriod = `${peakMonth} – ${monthLabel(test.period[1])}, from the peak`
 const pValue = test.p_value < 0.001 ? '< 0.001' : String(test.p_value)
 const dtmCredit = `${sudan.idps.credit} · HDX HAPI`
+const testSeries = sudan.idps.series.filter(([d]) => d >= test.period[0] && d <= test.period[1])
 
 // A passage of the hero's Haiti answer, quoted with its own citations.
 const sample = passage(parts, 'Nearly 80 percent', 'Grand Sud (39%)')
-const cited = passageSources(sample, sources)
-const sampleCredit = `From the Haiti answer above · ${cited.publishers.join(', ')} · `
-const sampleDate = dayLabel(cited.newest)
+const sampleSources = passageSources(sample, sources).map((s) => ({
+  ...s,
+  publisher: s.meta.split(' · ')[0],
+}))
 
 // One sample report generated for this page (scripts/generate_landing_report.py);
 // its Key Findings sentences are quoted verbatim, chips open their source rows.
@@ -94,10 +97,26 @@ onBeforeUnmount(() => mm?.revert())
                 ><template v-else>{{ part.text }}</template></template
               >.
             </p>
-            <p class="fu-credit">
-              {{ sampleCredit
-              }}<time class="fu-date" :datetime="cited.newest">{{ sampleDate }}</time>
-            </p>
+            <ol class="fu-sources" aria-label="Sources">
+              <li v-for="src in sampleSources" :key="src.n" class="source-item" :data-srcid="src.n">
+                <span class="fu-src-n">{{ src.n }}</span>
+                <span class="fu-src-body">
+                  <a
+                    class="source-link"
+                    :href="src.url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    :title="src.title"
+                    >{{ src.title }}</a
+                  >
+                  <span class="fu-src-meta"
+                    >{{ src.publisher }} ·
+                    <time class="fu-date" :datetime="src.date">{{ src.date }}</time></span
+                  >
+                </span>
+              </li>
+            </ol>
+            <p class="fu-credit">From the Haiti answer above</p>
           </div>
         </article>
 
@@ -177,6 +196,7 @@ onBeforeUnmount(() => mm?.revert())
                 <dd>{{ test.n_points }}</dd>
               </div>
             </dl>
+            <WindowChart :series="testSeries" label="Internally displaced people, Sudan" />
             <p class="fu-credit">{{ dtmCredit }}</p>
           </div>
         </article>
