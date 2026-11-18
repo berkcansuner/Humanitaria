@@ -1206,3 +1206,17 @@ def test_food_and_nutrition_headline_lists_both_people_in_need_figures(monkeypat
 @patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _yearly_ipc_rows(ep))
 def test_all_sectors_has_no_headline(_mock):
     assert "HEADLINE" not in findings_to_context(compute_findings("AFG", None, None, language="en"))
+
+
+# --- Round 3: a period ending "today" in the user's timezone (a day ahead of UTC) is kept. ---
+
+@patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _yearly_ipc_rows(ep))
+def test_a_period_ending_tomorrow_utc_is_kept_and_later_ones_are_capped(_mock):
+    from datetime import date, timedelta
+    from analytics.technical_report import _day
+    today = date.today()
+    tomorrow, later = today + timedelta(days=1), today + timedelta(days=2)
+    f = compute_findings("AFG", "2025-01-01", tomorrow.isoformat(), language="en")
+    assert f.date_to == tomorrow.isoformat()
+    assert f"to {_day(tomorrow.isoformat())}" in findings_to_context(f)
+    assert compute_findings("AFG", "2025-01-01", later.isoformat(), language="en").date_to == today.isoformat()

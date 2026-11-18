@@ -8,7 +8,7 @@ findings_to_context, hesaplanmış sayıları LLM'e 'context' olarak verilecek m
 import logging
 import math
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
 
 import requests
 
@@ -87,7 +87,11 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
     default_years = None if date_from else settings.TECHNICAL_REPORT_DEFAULT_YEARS
     if default_years:
         date_from = _years_before(today, default_years).isoformat()
-    date_to = min(date_to, today.isoformat()) if date_to else today.isoformat()
+    # The form sends the user's local date: up to one day ahead of the server's (UTC)
+    # today it is a real "today" east of UTC and is kept; anything later is capped.
+    latest_today = (today + timedelta(days=1)).isoformat()
+    date_to = (date_to if date_to and date_to <= latest_today
+               else min(date_to, today.isoformat()) if date_to else today.isoformat())
     look_back_from = _years_before(date.fromisoformat(date_to),
                                    settings.TECHNICAL_REPORT_DEFAULT_YEARS).isoformat()
     look_backs: list[dict] = []
