@@ -84,7 +84,7 @@ function intro() {
   return gsap
     .timeline({ defaults: { ease: 'expo.out', duration: 1 } })
     .from(q('.hc-map'), { autoAlpha: 0, duration: 1.6, ease: 'power1.out' }, 0)
-    .from(q('.hc-chat'), { y: 28, autoAlpha: 0 }, 0)
+    .from(q('.hc-chat'), { y: 28, opacity: 0 }, 0)
     .from(q('.hc-trend'), { y: 36, autoAlpha: 0 }, 0.18)
     .to(
       stream,
