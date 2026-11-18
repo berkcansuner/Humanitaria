@@ -566,6 +566,28 @@ html:has(.mkt-scope) {
   }
 }
 
+/* 320px reflow: tighten the nav so the brand, language selector and CTA all fit. */
+@media (max-width: 360px) {
+  .mkt-scope .nav .wrap {
+    padding: 0 12px;
+  }
+  .mkt-scope .nav-in {
+    gap: var(--space-2);
+  }
+  .mkt-scope .brand {
+    gap: 8px;
+  }
+  .mkt-scope .brand .name {
+    font-size: 17px;
+  }
+  .mkt-scope .nav-right {
+    gap: 4px;
+  }
+  .mkt-scope .nav-right .btn-solid {
+    padding: 10px 12px;
+  }
+}
+
 .mkt-scope .foot-brand .brand {
   min-height: 44px;
 }

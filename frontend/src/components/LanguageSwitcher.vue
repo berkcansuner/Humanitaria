@@ -203,6 +203,16 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
   }
 }
 
+/* 320px: the code alone (EN/TR) names the control; the globe is decoration. */
+@media (max-width: 360px) {
+  .is-marketing .lang-btn svg {
+    display: none;
+  }
+  .is-marketing .lang-btn {
+    padding: 0 8px;
+  }
+}
+
 /* App: as compact as the 28px top-bar controls; an invisible pad brings the
    hit area to 44px. */
 .is-app .lang-btn {
