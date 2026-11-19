@@ -61,10 +61,21 @@ _SCALE = {"milyon": 1e6, "million": 1e6, "milyar": 1e9, "billion": 1e9,
           "bin": 1e3, "thousand": 1e3}
 _SMALL_COUNT = 10
 
-_CLAIM = re.compile(r"\bsignificant(?:ly)?\b|\banlaml[ıi](?!l[ıi]k)\w*", re.IGNORECASE)
-_NEGATIVE_CLAIM = re.compile(r"\b(?:in|non-?)significant\b|\banlams[ıi]z", re.IGNORECASE)
+# The noun is a claim only with its verbs: "reached / achieved / attained (statistical)
+# significance", negated as usual ("did not reach", "failed to reach"); "anlamlılık düzeyine
+# ulaştı / ulaşmadı", "anlamlılığa ulaşmadı". "The 0.05 significance level", "the significance
+# threshold" and "anlamlılık düzeyi α=0,05" are not claims.
+_CLAIM = re.compile(
+    r"\bsignificant(?:ly)?\b|\banlaml[ıi](?!l[ıi]k)\w*|"
+    r"\b(?:reach\w*|achiev\w*|attain\w*)\s+(?:statistical\s+)?significance\b|"
+    r"\banlaml[ıi]l[ıi][kğ]\w*(?=\s+(?:(?:düzeyine|eşiğine|seviyesine)\s+)?ulaş)", re.IGNORECASE)
+_NEGATIVE_CLAIM = re.compile(
+    r"\b(?:in|non-?)significant\b|\banlams[ıi]z|"
+    r"\bf(?:all|alls|ell|alling)\s+(?:just\s+|well\s+|far\s+)?short\s+of\s+(?:statistical\s+)?significance\b|"
+    r"\bno\s+(?:statistical\s+)?significance\b", re.IGNORECASE)
 _EN_NEGATION = re.compile(
-    r"\b(?:not|no|non|never|neither|nor|without|lacks?|lacked|fails?|failed)\b|n't\b", re.IGNORECASE)
+    r"\b(?:not|cannot|no|non|never|neither|nor|without|lacks?|lacked|fails?|failed)\b|n['’]t\b",
+    re.IGNORECASE)
 _TR_NEGATION = re.compile(
     r"de[ğg]il|olmay|\byok\b|m[ae]m[ae]kte|m[ae]m[ıiuü][şs]|m[ae]d[ıiuü]|m[ae]z\b", re.IGNORECASE)
 _WINDOW = 4   # words after a claim (Turkish) that can negate it
@@ -330,16 +341,19 @@ def _is_tr_change(sentence: str, end: int) -> bool:
     return bool(words) and bool(_TR_CHANGE.match(words[0]))
 
 
-def _percent_changes(sentence: str) -> list[float]:
+def _percent_changes(sentence: str, language: str) -> list[float]:
     """The values of the percentages the sentence states as a change ('fell by 32%',
-    'a 32% decline', '%32 azaldı', "yüzde 32'lik bir düşüş"), not as a level."""
+    'a 32% decline', '%32 azaldı', "yüzde 32'lik bir düşüş"), not as a level. The change
+    words are those of the report's language."""
     out = []
-    for m in _PCT_EN.finditer(sentence):
-        if _is_en_change(sentence, m.start(), m.end()):
-            out += [v for v, _ in _readings(m.group(1))[:1]]
-    for m in _PCT_TR.finditer(sentence):
-        if _is_tr_change(sentence, m.end()):
-            out += [v for v, _ in _readings(m.group(1))[-1:]]
+    if language != "tr":
+        for m in _PCT_EN.finditer(sentence):
+            if _is_en_change(sentence, m.start(), m.end()):
+                out += [v for v, _ in _readings(m.group(1))[:1]]
+    else:
+        for m in _PCT_TR.finditer(sentence):
+            if _is_tr_change(sentence, m.end()):
+                out += [v for v, _ in _readings(m.group(1))[-1:]]
     return out
 
 
@@ -526,10 +540,40 @@ def _change_clauses(sentence: str) -> list[str]:
     return [c for c in out if c.strip()]
 
 
-def _says_change(sentence: str) -> bool:
-    """A word of change between years, in English or Turkish."""
-    return bool(_EN_CROSS_YEAR.search(sentence) or _TR_MULTIPLE.search(sentence)
-                or _tr_change_word(sentence))
+# The not-comparable caveat: a change word governed by a negation in its own clause is not a
+# change claim ("the figures should not be read as a rise or fall", "they do not show an
+# increase or a decrease", "cannot be interpreted as a rise", "no rise or fall can be stated";
+# "bir artış ya da düşüş olarak yorumlanmamalıdır", "… okunamaz", "bir artış göstermez",
+# "artış anlamına gelmez"). Only that phrase is masked: a change claim elsewhere in the
+# sentence still counts.
+_CHANGE_NOUN = r"(?:rise|fall|increase|decrease|decline|drop|growth|reduction|change|jump|surge)s?"
+_CHANGE_LIST = (rf"(?:(?:an?|any)\s+)?{_CHANGE_NOUN}"
+                rf"(?:\s*(?:,|or|and|nor)\s+(?:(?:an?|any)\s+)?{_CHANGE_NOUN})*")
+_EN_CAVEAT = re.compile(
+    r"\b(?:should\s+not|shouldn['’]t|must\s+not|mustn['’]t|cannot|can\s+not|can['’]t|could\s+not|"
+    r"couldn['’]t|do\s+not|does\s+not|did\s+not|don['’]t|doesn['’]t|didn['’]t|need\s+not|is\s+not|"
+    r"are\s+not)\s+(?:be\s+)?(?:read|interpreted|understood|taken|seen|treated|regarded|viewed|"
+    r"shows?|shown|reflects?|indicates?|represents?|describes?|means?|impl(?:y|ies)|signals?)\s+"
+    rf"(?:as\s+)?{_CHANGE_LIST}|"
+    rf"\bno\s+{_CHANGE_NOUN}(?:\s+(?:or|and|nor)\s+{_CHANGE_NOUN})*\s+(?:\w+\s+){{0,3}}?"
+    r"can\s+be\s+(?:stated|inferred|drawn|claimed|read|shown)\b", re.IGNORECASE)
+_TR_CAVEAT = re.compile(
+    r"(?:\bbir\s+)?\w+(?:\s+(?:ya\s+da|veya|ve|yahut)\s+(?:bir\s+)?\w+)*\s+(?:"
+    r"olarak\s+(?:yorumlan|okun|değerlendiril|görül|algılan|kabul\s+edil)\w*?"
+    r"(?:mamalı|memeli|amaz|emez|mamak|memek|maz|mez)\w*|"
+    r"göstermez\w*|göstermemekte\w*|anlamına\s+gelmez\w*)", re.IGNORECASE)
+
+
+def _mask_caveats(sentence: str, language: str) -> str:
+    return (_TR_CAVEAT if language == "tr" else _EN_CAVEAT).sub(" ", sentence)
+
+
+def _says_change(sentence: str, language: str) -> bool:
+    """A word of change between years, in the report's language: Turkish stems on English
+    words ("in-" + "-di": indicator, individuals) are not change words."""
+    if language == "tr":
+        return bool(_TR_MULTIPLE.search(sentence) or _tr_change_word(sentence))
+    return bool(_EN_CROSS_YEAR.search(sentence))
 
 
 def _series_values_in(sentence: str, values: list[float]) -> int:
@@ -559,12 +603,15 @@ def _compares_years(sentence: str, years: set, values: list[float]) -> bool:
     return False
 
 
-def _direction(sentence: str) -> int | None:
+def _direction(sentence: str, language: str) -> int | None:
     """+1 when the sentence only says something rose, -1 when it only says something
-    fell, None when it says neither or both."""
-    words = [w.strip("(),;:.'’") for w in re.split(r"[\s'’]+", sentence)]
-    rise = bool(_EN_RISE.search(sentence)) or any(_TR_RISE.match(w) for w in words)
-    fall = bool(_EN_FALL.search(sentence)) or any(_TR_FALL.match(w) for w in words)
+    fell, None when it says neither or both (in the report's language)."""
+    if language == "tr":
+        words = [w.strip("(),;:.'’") for w in re.split(r"[\s'’]+", sentence)]
+        rise = any(_TR_RISE.match(w) for w in words)
+        fall = any(_TR_FALL.match(w) for w in words)
+    else:
+        rise, fall = bool(_EN_RISE.search(sentence)), bool(_EN_FALL.search(sentence))
     return (1 if rise else -1) if rise != fall else None
 
 
@@ -593,9 +640,9 @@ def _profile(stat_results: list[dict]) -> dict:
     }
 
 
-def _relative_claim_ok(sentence: str, profile: dict) -> bool:
-    direction = _direction(sentence)
-    for value in _percent_changes(sentence):
+def _relative_claim_ok(sentence: str, profile: dict, language: str) -> bool:
+    direction = _direction(sentence, language)
+    for value in _percent_changes(sentence, language):
         if profile["share"] or not _matches(value, profile["relative"], direction):
             # A share's change is in percentage points, and only as computed.
             if not (_PP.search(sentence) and _matches(value, profile["pp"], direction)):
@@ -613,9 +660,11 @@ def _relative_claim_ok(sentence: str, profile: dict) -> bool:
             if profile["share"] or not any(
                     abs(x - factor) <= _FACTOR_TOLERANCE * factor for x in profile["ratios"]):
                 return False
-    claims = [f for f, pattern in _EN_FRACTION_CHANGE if pattern.search(sentence)]
-    claims += [f for f, pattern in _TR_FRACTION_CHANGE
-               if any(_TR_CHANGE.match(m.group(1)) for m in pattern.finditer(sentence))]
+    if language == "tr":
+        claims = [f for f, pattern in _TR_FRACTION_CHANGE
+                  if any(_TR_CHANGE.match(m.group(1)) for m in pattern.finditer(sentence))]
+    else:
+        claims = [f for f, pattern in _EN_FRACTION_CHANGE if pattern.search(sentence)]
     for fraction in claims:
         near = _FACTOR_TOLERANCE * fraction
         if profile["share"] or not any(
@@ -735,20 +784,21 @@ def verify_narrative(text: str, findings, allowed_text: str, language: str,
         whose years are not comparable, without saying they are not comparable."""
         if _SAYS_NOT_COMPARABLE.search(sentence):
             return False
+        sentence = _mask_caveats(sentence, language)    # "should not be read as a rise or fall"
         for heading, (years, values) in not_comparable.items():
             # One value of the series, narrated as a change ("rose to 15.0 million in 2026",
             # "artarak 15,0 milyona ulaştı", "…, up from 2025"): the change word, or a phrase
             # that sets the value against a year, must sit in the clause that quotes it.
-            if any(_series_values_in(c, values) and (_CHANGE_PHRASE.search(c) or _says_change(c))
+            if any(_series_values_in(c, values) and (_CHANGE_PHRASE.search(c) or _says_change(c, language))
                    for c in _change_clauses(sentence)):
                 return True
             own = section == heading
             two_years = len(years & set(_YEAR.findall(sentence))) >= 2
             two_values = _series_values_in(sentence, values) >= 2
-            if own and _says_change(sentence):
+            if own and _says_change(sentence, language):
                 return True     # in its own section, any change of the figure is across years
             if (two_values or (own and two_years)) and (
-                    _says_change(sentence) or _compares_years(sentence, years, values)):
+                    _says_change(sentence, language) or _compares_years(sentence, years, values)):
                 return True
         return False
 
@@ -763,7 +813,7 @@ def verify_narrative(text: str, findings, allowed_text: str, language: str,
         if listed_methods is not None and section and _METHODS_HEADING.search(section.casefold()) and \
                 _names_unlisted_method(sentence, listed_methods):
             return "a test the method notes do not list"
-        if not _relative_claim_ok(sentence, profiles.get(section or "", whole)):
+        if not _relative_claim_ok(sentence, profiles.get(section or "", whole), language):
             return "a relative change the findings do not support"
         if across_years(sentence, section):
             return "a change or comparison between years that are not comparable"
