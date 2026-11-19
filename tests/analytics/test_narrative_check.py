@@ -273,3 +273,33 @@ from analytics.narrative_check import _claim  # noqa: E402
 ])
 def test_a_negation_counts_only_in_the_claims_own_clause(sentence, claim):
     assert _claim(sentence) == claim
+
+
+# --- Round 3 review (I1, I2, I5): the Methods rule reads only this report's METHOD NOTES,
+# allows a method named only to say it was not applied, and knows more heading forms. ---
+
+_PREVIOUS_REPORT = ("\nWrite the report.\n\nCOMPARISON WITH THE PREVIOUS REPORT. previous report:\n"
+                    "## Methods\n\nTrends were tested with Mann-Kendall; regions with Kruskal-Wallis; "
+                    "correlations with Pearson; Holm correction across all 1 tests.")
+
+
+def test_the_methods_rule_ignores_a_previous_report_after_the_notes():
+    text = "## Methods\n\nRegional differences were tested with the Kruskal-Wallis test."
+    out = verify_narrative(text, _findings(), ONE_TEST_CONTEXT + _PREVIOUS_REPORT, "en")
+    assert out.removed == 1
+
+
+@pytest.mark.parametrize("sentence,language,heading", [
+    ("Because only one test was run, no Holm correction was applied.", "en", "Methods"),
+    ("No multiple-comparison correction such as Holm's was needed, since a single test was run.", "en", "Methods"),
+    ("Yalnızca bir test yapıldığı için Holm düzeltmesi uygulanmadı.", "tr", "Yöntem"),
+])
+def test_a_method_named_only_as_not_applied_stays(sentence, language, heading):
+    assert _methods(sentence, language, heading).removed == 0
+
+
+@pytest.mark.parametrize("heading", ["Methods Note", "Methodology Note", "Yöntem Notu", "Metodoloji",
+                                     "YÖNTEM"])
+def test_more_methods_headings_are_recognised(heading):
+    assert _methods("Regional differences were tested with the Kruskal-Wallis test.", "en",
+                    heading).removed == 1

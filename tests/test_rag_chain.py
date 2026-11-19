@@ -370,3 +370,10 @@ def test_indicator_prompt_cites_every_factual_paragraph():
     from rag.chain import _INDICATOR_SYSTEM_PROMPT
     assert ("Every paragraph that states facts carries at least one [n] citation, the Overview "
             "included") in _INDICATOR_SYSTEM_PROMPT
+
+
+def test_technical_prompt_methods_restate_the_correction_the_notes_state():
+    from rag.chain import _REPORT_PROMPTS
+    p = _REPORT_PROMPTS["technical_monitoring"]
+    assert "the multiple-comparison handling the notes state" in p
+    assert "the Holm correction and the α=0.05 threshold" not in p

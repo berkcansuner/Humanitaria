@@ -483,18 +483,32 @@ _METHODS = {
     "correlation": re.compile(r"pearson", re.IGNORECASE),
     "holm": re.compile(r"\bholm\b|bonferroni", re.IGNORECASE),
 }
-_METHODS_HEADING = re.compile(r"^(?:methods?|methodology|yöntem\w*)$", re.IGNORECASE)
+_METHODS_HEADING = re.compile(r"method|yöntem|metodoloji", re.IGNORECASE)
+# A method named only to say it was not applied or not needed ("no Holm correction was
+# applied", "Holm düzeltmesi uygulanmadı") is not a claim that it was used.
+_NOT_APPLIED = re.compile(
+    r"\b(?:no|not|none|without|never)\b|n't\b|m[ae]d[ıiuü]|m[ae]m[ıiuü][şs]|de[ğg]il|gerekme\w*|\byok\b",
+    re.IGNORECASE)
 
 
 def _listed_methods(allowed_text: str) -> set | None:
     """The test families the context's METHOD NOTES list (None: the context has none)."""
     if "METHOD NOTES:" not in allowed_text:
         return None
-    notes = allowed_text.split("METHOD NOTES:", 1)[1]
+    # Only the note lines themselves: the directive and, for a next-period report, the
+    # previous report's whole text follow them, and name every method there is.
+    lines = []
+    for line in allowed_text.split("METHOD NOTES:", 1)[1].splitlines()[1:]:
+        if not line.startswith("- "):
+            break
+        lines.append(line)
+    notes = "\n".join(lines)
     return {family for family, pattern in _METHODS.items() if pattern.search(notes)}
 
 
 def _names_unlisted_method(sentence: str, listed: set) -> bool:
+    if _NOT_APPLIED.search(sentence):
+        return False
     return any(pattern.search(sentence) for family, pattern in _METHODS.items()
                if family not in listed)
 
@@ -544,7 +558,7 @@ def verify_narrative(text: str, findings, allowed_text: str, language: str,
         """The rule the sentence breaks, or None."""
         if not _numbers_ok(sentence, allowed):
             return "a number not in the findings"
-        if listed_methods is not None and section and _METHODS_HEADING.match(section) and \
+        if listed_methods is not None and section and _METHODS_HEADING.search(section.casefold()) and \
                 _names_unlisted_method(sentence, listed_methods):
             return "a test the method notes do not list"
         if not _relative_claim_ok(sentence, profiles.get(section or "", whole)):
