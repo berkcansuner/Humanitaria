@@ -245,3 +245,31 @@ def test_each_removed_sentence_is_logged_with_its_report_and_rule(caplog):
     assert any("Afghanistan / Protection and Human Rights / technical_monitoring" in m
                and "a number not in the findings" in m and "1,500" in m for m in logged)
     assert any("a test the method notes do not list" in m and "Pearson" in m for m in logged)
+
+
+# --- Round 3 review (C1, I3): the reviewer's claims.py sentences. ---
+
+import pytest  # noqa: E402
+from analytics.narrative_check import _claim  # noqa: E402
+
+
+@pytest.mark.parametrize("sentence,claim", [
+    ("Although not large, the decline is statistically significant.", "significant"),
+    ("With no correction needed, the decline is significant.", "significant"),
+    ("Returnee numbers did not fall; the increase is statistically significant.", "significant"),
+    ("Although not large, the increase is statistically significant (p=0.027).", "significant"),
+    ("The difference between regions is not just visible but statistically significant (p=0.001).", "significant"),
+    ("None of the tested trends is statistically significant.", "not significant"),
+    ("Neither of the two tested trends is statistically significant after the Holm correction.", "not significant"),
+    ("None of the four trends tested was statistically significant after the Holm correction.", "not significant"),
+    ("Neither tested trend is statistically significant.", "not significant"),
+    ("No trend was statistically significant.", "not significant"),
+    ("Not one of the trends is statistically significant.", "not significant"),
+    ("There is no statistically significant trend in any indicator.", "not significant"),
+    ("The refugee trend is not significant, but the IDP trend is significant.", None),
+    ("No regional data exist for refugees, but the refugee increase is significant.", "significant"),
+    ("Test edilen eğilimlerin hiçbiri istatistiksel olarak anlamlı değildir.", "not significant"),
+    ("Hiçbir eğilim istatistiksel olarak anlamlı değildir.", "not significant"),
+])
+def test_a_negation_counts_only_in_the_claims_own_clause(sentence, claim):
+    assert _claim(sentence) == claim
