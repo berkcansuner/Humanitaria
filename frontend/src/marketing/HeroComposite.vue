@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, shallowRef, useTemplateRef, watch } from 'vue'
+import { computed, shallowRef, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { gsap } from 'gsap'
 import CoverageMap from './CoverageMap.vue'
@@ -11,7 +11,6 @@ import { answerBlocks, answerLength, emphasisParts, revealedParts } from './land
 import { ledgerDate, revealSource } from '../utils/sources.js'
 
 const MS_PER_CHAR = 14
-const PARALLAX = { chat: -5, trend: 8 } // px at the composite's edge
 
 const { t, locale } = useI18n()
 
@@ -58,13 +57,15 @@ let follow = true
 const scrolled = shallowRef(false)
 function onAnswerScroll() {
   const el = answer.value
+  if (!el) return
   follow = el.scrollTop + el.clientHeight >= el.scrollHeight - 8
   scrolled.value = el.scrollTop > 2
 }
 watch(
   progress,
   () => {
-    if (streaming.value && follow) answer.value.scrollTop = answer.value.scrollHeight
+    // The element is gone once the visitor leaves mid-stream (the ask field navigates).
+    if (streaming.value && follow && answer.value) answer.value.scrollTop = answer.value.scrollHeight
   },
   { flush: 'post' },
 )
@@ -125,42 +126,6 @@ function finish() {
 
 defineExpose({ intro, finish })
 
-// Pointer parallax on the two cards: fine pointers only, never under reduced motion.
-let mm = null
-onMounted(() => {
-  mm = gsap.matchMedia()
-  mm.add(
-    '(prefers-reduced-motion: no-preference) and (hover: hover) and (pointer: fine)',
-    () => {
-      const el = root.value
-      const layers = Object.entries(PARALLAX).map(([name, depth]) => {
-        const target = el.querySelector(`.hc-${name}-slot`)
-        return {
-          depth,
-          x: gsap.quickTo(target, 'x', { duration: 0.9, ease: 'power3' }),
-          y: gsap.quickTo(target, 'y', { duration: 0.9, ease: 'power3' }),
-        }
-      })
-      const move = (nx, ny) => layers.forEach((l) => (l.x(nx * l.depth), l.y(ny * l.depth)))
-      const onMove = (e) => {
-        const box = el.getBoundingClientRect()
-        const nx = gsap.utils.clamp(-1, 1, ((e.clientX - box.left) / box.width) * 2 - 1)
-        const ny = gsap.utils.clamp(-1, 1, ((e.clientY - box.top) / box.height) * 2 - 1)
-        move(nx, ny)
-      }
-      const onLeave = () => move(0, 0)
-      el.addEventListener('pointermove', onMove)
-      el.addEventListener('pointerleave', onLeave)
-      return () => {
-        el.removeEventListener('pointermove', onMove)
-        el.removeEventListener('pointerleave', onLeave)
-      }
-    },
-    root.value,
-  )
-})
-
-onBeforeUnmount(() => mm?.revert())
 </script>
 
 <template>
