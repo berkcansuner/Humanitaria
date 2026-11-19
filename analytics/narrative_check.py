@@ -317,8 +317,9 @@ _PP_NUMBER = re.compile(r"(?<![\w.,])(\d+(?:[.,]\d+)*)\s*(?:percentage[- ]points
 
 
 _SAYS_NOT_COMPARABLE = re.compile(
-    r"not comparable|cannot be compared|can't be compared|karşılaştırılamaz|kıyaslanamaz|"
-    r"karşılaştırılabilir değil", re.IGNORECASE)
+    r"not comparable|cannot be compared|can't be compared|not be compared|different basis|"
+    r"karşılaştırılam|kıyaslanam|karşılaştırılabilir değil|karşılaştırılması mümkün değil|"
+    r"farklı bir temel", re.IGNORECASE)
 # Words that say a figure moved between years: verbs and nouns of change, multipliers,
 # "went from … to", "stable". Not "higher"/"lower"/"up to" on their own: comparing a year's
 # figure with a sub-line or with the unpublished overall figure is not a change.
@@ -356,6 +357,63 @@ _CHANGE_PHRASE = re.compile(
 _RANGE = re.compile(
     r"(\d+(?:[.,]\d+)?)(\s+(?:to|and|-|–|ile|ila)\s+\d+(?:[.,]\d+)?\s*"
     r"(million|milyon|billion|milyar|thousand|bin))", re.IGNORECASE)
+
+
+# --- A series value with the wrong period ("fell to 14.8 million in 2026" when 14.8
+# million is 2025's figure). Conservative: one year (and at most one month) named, no
+# range or "since". ---
+_MONTH_NUMBER = {name: i + 1 for i, name in enumerate(
+    ["january", "february", "march", "april", "may", "june", "july", "august", "september",
+     "october", "november", "december"])}
+_MONTH_NUMBER.update({name: i + 1 for i, name in enumerate(
+    ["ocak", "şubat", "mart", "nisan", "mayıs", "haziran", "temmuz", "ağustos", "eylül",
+     "ekim", "kasım", "aralık"])})
+# A month only as a date, followed by its year ("may be" is not May): "March 2022", "Ocak 2026".
+_MONTH = re.compile(r"\b(" + "|".join(_MONTH_NUMBER) + r")\s+(?:19|20)\d{2}", re.IGNORECASE)
+_AMBIGUOUS_TIME = re.compile(
+    r"\bsince\b|\bbetween\b|\bfrom\b.*\bto\b|\bbu\s+yana\b|\bberi\b|arasında|\bile\b.*\barası",
+    re.IGNORECASE)
+
+
+def _series_points(findings) -> list[tuple[float, str, str]]:
+    """(value, 'YYYY-MM-DD', resolution) for every value the code wrote about a series."""
+    points = []
+    for s in findings.sections:
+        r = s.stat_result
+        res = r.get("resolution", "month")
+        if r.get("periods") and r.get("values"):
+            points += [(float(v), str(p)[:10], res) for p, v in zip(r["periods"], r["values"])]
+        for v, p in ((r.get("first_value"), r.get("first_period")),
+                     (r.get("latest_value"), r.get("latest_period"))):
+            if v is not None and p:
+                points.append((float(v), str(p)[:10], res))
+    return points
+
+
+def _wrong_period(sentence: str, points: list) -> bool:
+    """The sentence names one year (and at most one month) and quotes a series value that
+    belongs to another period of that series."""
+    years = set(_YEAR.findall(sentence))
+    months = {_MONTH_NUMBER[m.lower()] for m in _MONTH.findall(sentence)}
+    if len(years) != 1 or len(months) > 1 or _AMBIGUOUS_TIME.search(sentence):
+        return False
+    year, month = years.pop(), (months.pop() if months else None)
+    for m in _NUMBER.finditer(sentence):
+        token = m.group(1)
+        if not m.group(2) and _YEAR.fullmatch(token):
+            continue                                    # a year, not a value
+        readings = _number_readings(m)
+        matched = [(p, res) for v, p, res in points if _matches_value(readings, [v])]
+        if not matched:
+            continue
+
+        def fits(p, res):
+            if p[:4] != year:
+                return False
+            return month is None or res == "year" or int(p[5:7]) == month
+        if not any(fits(p, res) for p, res in matched):
+            return True
+    return False
 
 
 def _clauses(sentence: str) -> list[str]:
@@ -548,6 +606,7 @@ def verify_narrative(text: str, findings, allowed_text: str, language: str,
     whole["share"] = False
     # Sections whose years are not comparable (different plan lines): a sentence there may
     # give each year's value, but not a rise, fall or change between them.
+    points = _series_points(findings)
     not_comparable = {s.heading: ({str(p)[:4] for p in s.stat_result.get("periods") or []},
                                   [float(v) for v in s.stat_result.get("values") or []])
                       for s in findings.sections if s.stat_result.get("not_comparable")}
@@ -582,6 +641,8 @@ def verify_narrative(text: str, findings, allowed_text: str, language: str,
         """The rule the sentence breaks, or None."""
         if not _numbers_ok(sentence, allowed):
             return "a number not in the findings"
+        if _wrong_period(sentence, points):
+            return "a series value given for another period"
         if listed_methods is not None and section and _METHODS_HEADING.search(section.casefold()) and \
                 _names_unlisted_method(sentence, listed_methods):
             return "a test the method notes do not list"

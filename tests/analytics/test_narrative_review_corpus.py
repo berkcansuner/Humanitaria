@@ -257,3 +257,43 @@ def test_one_value_of_a_not_comparable_series_cannot_be_narrated_as_a_change(sen
     heading = "Executive Summary" if language == "en" else "Yönetici Özeti"
     res = verify_narrative(f"## {heading}\n\n{sentence}", PROT_R3, PROT_R3_CTX, language)
     assert (res.removed == 0) == keep
+
+
+# --- Round 3 review (minors): natural ways of saying the years are not comparable, and a
+# series value attached to the wrong year or month. ---
+
+PRO_R3 = next(s.heading for s in PROT_R3.sections if s.heading.startswith("Protection"))
+REF_R3 = next(s.heading for s in PROT_R3.sections if s.heading.startswith("Refugees"))
+
+
+@pytest.mark.parametrize("sentence,language", [
+    ("The 2026 figure should not be read as an increase, because earlier years are reported on a "
+     "different basis.", "en"),
+    ("Because earlier years are reported on a different basis, no rise or fall between them can be "
+     "stated.", "en"),
+    ("2026 rakamı önceki yıllarla karşılaştırılamadığından bir artış olarak yorumlanmamalıdır.", "tr"),
+    ("Koruma ihtiyacı 2026'da 15,0 milyon kişiydi; önceki yıllarla karşılaştırılması mümkün değildir.", "tr"),
+])
+def test_natural_not_comparable_wording_is_recognised(sentence, language):
+    assert verify_narrative(f"## {PRO_R3}\n\n{sentence}", PROT_R3, PROT_R3_CTX, language).removed == 0
+
+
+@pytest.mark.parametrize("key,heading,sentence,keep", [
+    ("food", FOOD_FSC_R3, "Food security needs fell to 14.8 million people in 2026.", False),
+    ("food", FOOD_IPC_R3, "The latest IPC analysis, from October 2026, placed 32.0% of the analysed "
+                          "population in Phase 3 or above.", False),
+    ("protection", REF_R3, "Refugees fell to 2.67 million in 2026.", False),
+    ("protection", PROT_IDP_R3, "IDPs numbered 3.06 million people in March 2026.", False),
+    ("food", FOOD_FSC_R3, "Food security needs stood at 17.4 million people in 2026.", True),
+    ("food", FOOD_IPC_R3, "The latest IPC analysis, from September 2026, placed 32.0% of the "
+                          "analysed population in Phase 3 or above.", True),
+    ("protection", REF_R3, "Refugees numbered 2.67 million in 2025.", True),
+    ("protection", PROT_IDP_R3, "Ocak 2026'da 3,06 milyon kişi ülke içinde yerinden edilmiş durumdaydı.", True),
+    ("protection", PROT_IDP_R3, "IDPs numbered 3.06 million in January 2026, down from 3.11 million in "
+                                "May 2025.", True),
+])
+def test_a_series_value_must_carry_its_own_period(key, heading, sentence, keep):
+    findings, context = (FOOD_R3, FOOD_R3_CTX) if key == "food" else (PROT_R3, PROT_R3_CTX)
+    language = "tr" if any(c in sentence for c in "ğışçöüİ") else "en"
+    res = verify_narrative(f"## {heading}\n\n{sentence}", findings, context, language)
+    assert (res.removed == 0) == keep
