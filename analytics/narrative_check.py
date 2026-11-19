@@ -145,7 +145,7 @@ _STATISTICS = re.compile(
     r"\bstatistic\w*|\bchance\b|\bnoise\b|\brandom\w*|\bartefacts?\b|\bartifacts?\b|\bprov(?:e[nsd]?|ing)\b|"
     r"\bproof\b|\bconclusive\w*|\brobust\w*|\bsettled\b|\bbeyond\s+doubt\b|\bthreshold\w*|"
     r"\bevidential\b|\bevidence\b|\b(?:un)?reliabl\w*|\bfirm(?:ly)?\b|\bsolid\w*|\bcertain\w*|"
-    r"\bdefinit\w*|\bundeniabl\w*|\bunquestionabl\w*|\bweak\w*|\bstrong\w*|\btests?\s+confirm\w*|"
+    r"\bdefinite(?:ly)?\b|\bdefinitive\w*|\bundeniabl\w*|\bunquestionabl\w*|\bweak\w*|\bstrong\w*|\btests?\s+confirm\w*|"
     r"\bistatisti\w*|\btesadüf\w*|\brastlant\w*|\bgürültü\w*|\bkanıt\w*|\bkesin\w*|\bsağlam\w*|"
     r"\bgüvenil\w*|\bsınama\w*|\bşüphesiz\w*|\bkuşkusuz\w*|\bzayıf\w*|\bgüçlü\w*|\beşi[kğ]\w*|"
     r"\bsonucu\s+(?:bunu\s+)?doğrul\w*", re.IGNORECASE)
