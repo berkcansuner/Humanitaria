@@ -252,6 +252,13 @@ def test_correct_summary_sentences_found_by_the_probe_survive(sentence, language
      "1.95 million in 2025.", "en", True),
     ("In 2026, 15.0 million people needed protection assistance, although the figures for earlier "
      "years are not comparable.", "en", True),
+    # Round 3, second pass: the change word must be in the value's clause. A comma-detached
+    # "up from …" or "to …" belongs to the clause before it; "and" separates two clauses only
+    # when each side quotes a figure other than a year.
+    ("Protection needs stood at 15.0 million people in 2026, up from 2025.", "en", False),
+    ("Protection needs rose in 2026 and stood at 15.0 million people.", "en", False),
+    ("Returnees surged to 1.95 million in 2025 and protection needs stood at 15.0 million people "
+     "in 2026.", "en", True),
 ])
 def test_one_value_of_a_not_comparable_series_cannot_be_narrated_as_a_change(sentence, language, keep):
     heading = "Executive Summary" if language == "en" else "Yönetici Özeti"

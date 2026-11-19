@@ -57,19 +57,58 @@ _SMALL_COUNT = 10
 _CLAIM = re.compile(r"\bsignificant(?:ly)?\b|\banlaml[ıi](?!l[ıi]k)\w*", re.IGNORECASE)
 _NEGATIVE_CLAIM = re.compile(r"\b(?:in|non-?)significant\b|\banlams[ıi]z", re.IGNORECASE)
 _EN_NEGATION = re.compile(
-    r"\b(?:not|no|non|neither|nor|without|lacks?|lacked|fails?|failed)\b|n't\b", re.IGNORECASE)
+    r"\b(?:not|no|non|never|neither|nor|without|lacks?|lacked|fails?|failed)\b|n't\b", re.IGNORECASE)
 _TR_NEGATION = re.compile(
     r"de[ğg]il|olmay|\byok\b|m[ae]m[ae]kte|m[ae]m[ıiuü][şs]|m[ae]d[ıiuü]|m[ae]z\b", re.IGNORECASE)
 _WINDOW = 4   # words after a claim (Turkish) that can negate it
 _WINDOW_BEFORE = 6   # words before it, within its own clause ("was not found to be statistically significant")
 # A negation belongs to the claim's own clause: "Although not large, the decline is
-# significant" and "not just visible but significant" claim significance.
-_CLAUSE_BREAK = re.compile(
-    r"[,;:]|\b(?:but|although|though|while|yet|whereas|ancak|fakat|ama|rağmen|karşın)\b",
+# significant" and "not just visible but significant" claim significance. A comma between
+# digits ("14,988,378", "15,0") is part of a number, and "not yet" is one negation.
+_STRONG_BREAK = re.compile(
+    r"[;:]|\b(?:but|although|though|while|whereas|ancak|fakat|ama|rağmen|karşın)\b|(?<!\bnot )\byet\b",
     re.IGNORECASE)
+_CLAUSE_BREAK = re.compile(rf"(?<!\d),|,(?!\d)|{_STRONG_BREAK.pattern}", re.IGNORECASE)
+# A short comma aside right after a negation keeps it in scope: "was not, however,
+# significant", "was not found, at α=0.05, to be significant".
+_NEGATION_ASIDE = re.compile(r"\b(not|never)((?:\s+\w+)?)\s*,(?:\s*[^\s,;:]+){1,6}\s*,", re.IGNORECASE)
 # A clause whose subject is negated: "None of the trends was significant", "Neither (of
 # the) …", "Not one …", "No trend was …"; Turkish "hiçbiri", "hiçbir …".
 _SUBJECT_NEGATION = re.compile(r"^\s*(?:none|neither|not\s+one|no\s+\w+)\b|\bhiçbir", re.IGNORECASE)
+# The sentence's subject is negated and the claim is its predicate: "None of the four trends
+# (food insecurity, refugees, …) was significant", "Neither the decrease in refugees, nor
+# the increase in returnees, was significant", "No trend in this report, whether for …, is
+# significant". Parentheses and dash asides are dropped first; the subject reaches the claim
+# when no strong break comes between them and no comma-separated part before the claim's
+# own has a verb of its own ("No trend was significant, and the regional difference is").
+_ASIDE = re.compile(r"\([^()]*\)|\s[—–]\s[^—–]*?\s[—–]\s")
+_FINITE = re.compile(r"\b(?:is|are|was|were|remains?|remained|has|have|had|shows?|showed|does|did)\b",
+                     re.IGNORECASE)
+_PREDICATE_START = re.compile(
+    r"\s*(?:is|are|was|were|be|been|remains?|remained|has|have|had|shows?|showed|does|did|could|"
+    r"can|would|should|may|might|will|proved|appears?|appeared|seems?|seemed|reached|achieved)\b",
+    re.IGNORECASE)
+# A negated subject of a verb that itself negates is a double negation: "No partner disputes
+# that the increase is significant", "Neither … prevents the increase from being significant".
+_DOUBLE_NEGATION = re.compile(
+    r"\b(?:disput\w*|doubt\w*|den(?:y|ies|ied)|question\w*)\s+that\b|\b(?:prevent|stop)\w*\b.*\bfrom\b",
+    re.IGNORECASE)
+
+
+def _subject_negates(prefix: str) -> bool:
+    """The negated subject at the start of *prefix* (the sentence up to the claim) governs
+    the claim."""
+    prefix = _ASIDE.sub(" ", prefix)
+    if not re.match(r"\s*(?:none|neither|not\s+one|no\s+\w+)\b", prefix, re.IGNORECASE):
+        return False
+    if _STRONG_BREAK.search(prefix) or _DOUBLE_NEGATION.search(prefix):
+        return False
+    # A lone dash left after the asides separates clauses like a comma. With commas, the
+    # claim's own part must open with the subject's verb ("…, nor the increase in returnees,
+    # was significant"), not with a new subject ("No region stands out, and the difference …").
+    parts = re.split(r"(?<!\d),|,(?!\d)|\s[—–]\s", prefix)
+    return not any(_FINITE.search(part) for part in parts[:-1]) and (
+        len(parts) == 1 or bool(_PREDICATE_START.match(parts[-1])))
 
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
 _LIST_ITEM = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s+")
@@ -145,12 +184,15 @@ def _claim(sentence: str) -> str | None:
     polarities = set()
     if _NEGATIVE_CLAIM.search(sentence):
         polarities.add("not significant")
+    sentence = _NEGATION_ASIDE.sub(r"\1\2", sentence)
     for m in _CLAIM.finditer(sentence):
-        clause = _CLAUSE_BREAK.split(sentence[:m.start()])[-1]
+        prefix = sentence[:m.start()]
+        clause = _CLAUSE_BREAK.split(prefix)[-1]
         before = " ".join(clause.split()[-_WINDOW_BEFORE:])
         after = " ".join(sentence[m.start():].split()[:_WINDOW + 1])
-        negated = (_EN_NEGATION.search(before) or _SUBJECT_NEGATION.search(clause)
-                   or _TR_NEGATION.search(after))
+        subject = (_SUBJECT_NEGATION.search(clause) and not _DOUBLE_NEGATION.search(clause)) \
+            or _subject_negates(prefix)
+        negated = _EN_NEGATION.search(before) or subject or _TR_NEGATION.search(after)
         polarities.add("not significant" if negated else "significant")
     return polarities.pop() if len(polarities) == 1 else None
 
@@ -352,6 +394,10 @@ def _tr_change_word(sentence: str) -> bool:
 # Phrases that set a figure against another year even without a change verb next to it.
 _CHANGE_PHRASE = re.compile(
     r"\b(?:up|down)\s+from\b|\b(?:highest|lowest)\b.*\bsince\b|\bbu\s+yana\b|"
+    # "exceeded the 2025 figure", "below the 2024 level"; not "above the 2025 Gender Based
+    # Violence line", a sub-line of the plan.
+    r"\b(?:exceed\w*|surpass\w*|above|below|(?:higher|lower|more|less)\s+than)\s+(?:the\s+|its\s+)?"
+    r"(?:19|20)\d{2}\s+(?:figure|level|value|total|number)\b|"
     r"\ben\s+(?:yüksek|düşük)\b.*\b(?:beri|bu\s+yana)\b", re.IGNORECASE)
 # "from 14.8 to 15.0 million": the scale word after the last number applies to the first.
 _RANGE = re.compile(
@@ -375,49 +421,90 @@ _AMBIGUOUS_TIME = re.compile(
     re.IGNORECASE)
 
 
-def _series_points(findings) -> list[tuple[float, str, str]]:
-    """(value, 'YYYY-MM-DD', resolution) for every value the code wrote about a series."""
+def _series_points(findings) -> list[tuple[float, str, str, str]]:
+    """(value, 'YYYY-MM-DD', resolution, heading) for every value the code wrote about a
+    series."""
     points = []
     for s in findings.sections:
         r = s.stat_result
         res = r.get("resolution", "month")
         if r.get("periods") and r.get("values"):
-            points += [(float(v), str(p)[:10], res) for p, v in zip(r["periods"], r["values"])]
+            points += [(float(v), str(p)[:10], res, s.heading) for p, v in zip(r["periods"], r["values"])]
         for v, p in ((r.get("first_value"), r.get("first_period")),
                      (r.get("latest_value"), r.get("latest_period"))):
             if v is not None and p:
-                points.append((float(v), str(p)[:10], res))
+                points.append((float(v), str(p)[:10], res, s.heading))
     return points
 
 
 def _wrong_period(sentence: str, points: list) -> bool:
-    """The sentence names one year (and at most one month) and quotes a series value that
-    belongs to another period of that series."""
+    """The sentence names one year (and at most one month) and quotes a value of a series
+    for it, but none of the values it quotes of that series belongs to that period. A
+    second value of the series beside the period's own is a comparison ("17.4 million in
+    2026, up from 14.8 million"), not a wrong period."""
     years = set(_YEAR.findall(sentence))
     months = {_MONTH_NUMBER[m.lower()] for m in _MONTH.findall(sentence)}
     if len(years) != 1 or len(months) > 1 or _AMBIGUOUS_TIME.search(sentence):
         return False
     year, month = years.pop(), (months.pop() if months else None)
+
+    def fits(p, res):
+        if p[:4] != year:
+            return False
+        return month is None or res == "year" or int(p[5:7]) == month
+    fitting: set[str] = set()          # series with a quoted value of the stated period
+    misplaced: list[set[str]] = []     # per quoted value of another period: its series
     for m in _NUMBER.finditer(sentence):
         token = m.group(1)
         if not m.group(2) and _YEAR.fullmatch(token):
             continue                                    # a year, not a value
         readings = _number_readings(m)
-        matched = [(p, res) for v, p, res in points if _matches_value(readings, [v])]
-        if not matched:
-            continue
-
-        def fits(p, res):
-            if p[:4] != year:
-                return False
-            return month is None or res == "year" or int(p[5:7]) == month
-        if not any(fits(p, res) for p, res in matched):
-            return True
-    return False
+        matched = [(p, res, h) for v, p, res, h in points if _matches_value(readings, [v])]
+        if any(fits(p, res) for p, res, _ in matched):
+            fitting |= {h for p, res, h in matched if fits(p, res)}
+        elif matched:
+            misplaced.append({h for _, _, h in matched})
+    return any(not (series & fitting) for series in misplaced)
 
 
-def _clauses(sentence: str) -> list[str]:
-    return [c for c in _CLAUSE_BREAK.split(sentence) if c.strip()]
+# A comma-detached phrase that completes the clause before it: "increased in 2026, to
+# 14,988,378", "stood at 15.0 million, up from 2025", "…, the highest since 2024".
+_ATTACHED = re.compile(r"^\s*(?:up|down|to|from|by|the\s+(?:highest|lowest))\b", re.IGNORECASE)
+_AND = re.compile(r"\b(?:and|ve)\b", re.IGNORECASE)
+# Turkish "while" is a converb on the verb: "korurken", "artarken", "azalmazken".
+_TR_WHILE = re.compile(r"(?<=[rz]ken)\s", re.IGNORECASE)
+
+
+def _has_figure(text: str) -> bool:
+    """A number other than a year."""
+    return any(m.group(2) or not _YEAR.fullmatch(m.group(1)) for m in _NUMBER.finditer(text))
+
+
+def _change_clauses(sentence: str) -> list[str]:
+    """The sentence's clauses for the one-value change rule. Breaks: ';', ':', a comma
+    (not one between digits), 'but', 'while', 'although' and the like, and a Turkish verb in
+    '-rken'/'-zken' ("korurken", while keeping); a comma piece that
+    starts with 'up', 'down', 'to', 'from', 'by' or 'the highest/lowest' stays with the
+    clause before it. 'and' ('ve') separates two clauses only when the text on each side
+    of it quotes a figure other than a year ("IDPs fell to 3.06 million and protection
+    needs stood at 15.0 million"), not in "rose in 2026 and stood at 15.0 million"."""
+    clauses: list[str] = []
+    for piece in (p for chunk in _CLAUSE_BREAK.split(sentence) for p in _TR_WHILE.split(chunk)):
+        if clauses and _ATTACHED.match(piece):
+            clauses[-1] += "," + piece
+        else:
+            clauses.append(piece)
+    out = []
+    for clause in clauses:
+        parts = _AND.split(clause)
+        start = 0
+        for i in range(1, len(parts)):
+            left, right = " and ".join(parts[start:i]), " and ".join(parts[i:])
+            if _has_figure(left) and _has_figure(right):
+                out.append(left)
+                start = i
+        out.append(" and ".join(parts[start:]))
+    return [c for c in out if c.strip()]
 
 
 def _says_change(sentence: str) -> bool:
@@ -559,10 +646,18 @@ _METHODS = {
 }
 _METHODS_HEADING = re.compile(r"method|yöntem|metodoloji", re.IGNORECASE)
 # A method named only to say it was not applied or not needed ("no Holm correction was
-# applied", "Holm düzeltmesi uygulanmadı") is not a claim that it was used.
+# applied", "Kruskal-Wallis was not applicable", "Holm düzeltmesi uygulanmadı") is not a
+# claim that it was used. The negation must govern the method's application in the clause
+# that names it: "did not find a significant difference" or "…, and no Holm correction was
+# needed" after another method do not exempt that method.
+_APPLIED = (r"appl(?:y|ies|ied|icable)|needed|necessary|required|used|run|computed|performed|"
+            r"conducted|tested|carried\s+out|done|made|warranted")
 _NOT_APPLIED = re.compile(
-    r"\b(?:no|not|none|without|never)\b|n't\b|m[ae]d[ıiuü]|m[ae]m[ıiuü][şs]|de[ğg]il|gerekme\w*|\byok\b",
-    re.IGNORECASE)
+    rf"\b(?:not|never)\s+(?:\w+\s+)?(?:{_APPLIED})\b|n't\s+(?:\w+\s+)?(?:{_APPLIED})\b|"
+    rf"\b(?:no|none|neither)\b.*\b(?:{_APPLIED})\b|\bwithout\b|\bunnecessary\b|"
+    r"\b(?:was|were)\s+not\s*\.?\s*$|"      # elliptical: "…; Kruskal-Wallis and Pearson were not."
+    r"uygulanma\w*|uygulanam\w*|gerekme\w*|gereksiz\w*|gerek\s+(?:yok|duyulma\w*|kalma\w*)|"
+    r"kullanılma\w*|yapılma\w*", re.IGNORECASE)
 
 
 def _listed_methods(allowed_text: str) -> set | None:
@@ -580,11 +675,16 @@ def _listed_methods(allowed_text: str) -> set | None:
     return {family for family, pattern in _METHODS.items() if pattern.search(notes)}
 
 
+_RELATIVE_ASIDE = re.compile(r",\s*(?:which|that|who)\b[^,;:]*,", re.IGNORECASE)
+
+
 def _names_unlisted_method(sentence: str, listed: set) -> bool:
-    if _NOT_APPLIED.search(sentence):
-        return False
-    return any(pattern.search(sentence) for family, pattern in _METHODS.items()
-               if family not in listed)
+    # "A Holm correction, which adjusts for several tests, was not needed": the relative
+    # aside is dropped so the method and its "not needed" stay in one clause.
+    sentence = _RELATIVE_ASIDE.sub("", sentence)
+    return any(pattern.search(clause) and not _NOT_APPLIED.search(clause)
+               for clause in _CLAUSE_BREAK.split(sentence)
+               for family, pattern in _METHODS.items() if family not in listed)
 
 
 def verify_narrative(text: str, findings, allowed_text: str, language: str,
@@ -618,12 +718,10 @@ def verify_narrative(text: str, findings, allowed_text: str, language: str,
             return False
         for heading, (years, values) in not_comparable.items():
             # One value of the series, narrated as a change ("rose to 15.0 million in 2026",
-            # "artarak 15,0 milyona ulaştı", "…, up from 2025"): the change word must sit in
-            # the clause that quotes the value, or be a phrase that sets it against a year.
-            if _series_values_in(sentence, values) and (
-                    _CHANGE_PHRASE.search(sentence)
-                    or any(_series_values_in(c, values) and _says_change(c)
-                           for c in _clauses(sentence))):
+            # "artarak 15,0 milyona ulaştı", "…, up from 2025"): the change word, or a phrase
+            # that sets the value against a year, must sit in the clause that quotes it.
+            if any(_series_values_in(c, values) and (_CHANGE_PHRASE.search(c) or _says_change(c))
+                   for c in _change_clauses(sentence)):
                 return True
             own = section == heading
             two_years = len(years & set(_YEAR.findall(sentence))) >= 2
