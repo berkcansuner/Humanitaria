@@ -366,7 +366,8 @@ def summary_facts(findings, language: str) -> str:
             out.append(
                 f"This report ran {n} statistical tests; "
                 + (f"statistically significant at the 0.05 level{after}: {'; '.join(significant)}."
-                   if significant else f"none is statistically significant at the 0.05 level{after}."))
+                   if significant else f"{'neither' if len(tested) == 2 else 'none'} is statistically "
+                                           f"significant at the 0.05 level{after}."))
     looked = [s.stat_result for s in findings.sections if s.stat_result.get("look_back")]
     if looked:
         names = ", ".join(dict.fromkeys(r["indicator"] for r in looked))
@@ -380,24 +381,33 @@ def summary_facts(findings, language: str) -> str:
             out.append(f"The chosen period holds too few observations for {names}, so their "
                        f"values and trends cover the longer look-back window "
                        f"{_day(lb['date_from'], lang)} to {_day(lb['date_to'], lang)}.")
-    out.append(_limitation(bool(tested), lang, short=True))
+    out.append(_limitation(findings, lang, short=True))
     return " ".join(out)
 
 
-def _limitation(tested: bool, lang: str, short: bool = False) -> str:
+_LONG_SERIES = 12     # from this many observations a series is not called short
+
+
+def _limitation(findings, lang: str, short: bool = False) -> str:
+    tested = bool(_tested(findings))
+    # "The series are short" is not said of a 40-observation series.
+    some_long = any(s.stat_result.get("n_points", 0) >= _LONG_SERIES for s in findings.sections
+                    if s.stat_result["kind"] == "trend")
     if lang == "tr":
+        series = "Serilerin çoğu kısa" if some_long else "Seriler kısa"
         if not tested:
-            return "Seriler kısa olduğundan değerler betimleyicidir."
+            return f"{series} olduğundan değerler betimleyicidir."
         if short:
-            return "Seriler kısa olduğundan sonuçlar gösterge niteliğindedir."
-        return ("Seriler kısadır; testler gözlemlerin bağımsız olduğunu varsayar ve ardışık "
+            return f"{series} olduğundan sonuçlar gösterge niteliğindedir."
+        return (f"{series}dır; testler gözlemlerin bağımsız olduğunu varsayar ve ardışık "
                 "dönemler arasındaki seri korelasyon düzeltilmez, bu nedenle sonuçlar gösterge "
                 "niteliğindedir.")
+    series = "Most of the series are short" if some_long else "The series are short"
     if not tested:
-        return "The series are short, so the values are descriptive."
+        return f"{series}, so the values are descriptive."
     if short:
-        return "The series are short, so the results are indicative."
-    return ("The series are short; the tests assume independent observations and serial "
+        return f"{series}, so the results are indicative."
+    return (f"{series}; the tests assume independent observations and serial "
             "correlation between consecutive periods is not corrected for, so the results are "
             "indicative.")
 
@@ -408,6 +418,13 @@ _GAPS_TR = {
     "too_few": "eğilim testi için gözlem sayısı yetersiz (n={n})",
     "not_comparable": "yıllar karşılaştırılabilir olmadığından eğilim testi yapılmadı",
     "analysis_error": "analiz hatası",
+}
+_GAPS_EN = {
+    "not_retrieved": "could not be retrieved from HDX HAPI",
+    "no_data": "no data in the period",
+    "too_few": "too few observations for a trend test (n={n})",
+    "not_comparable": "years not comparable, so no trend was tested",
+    "analysis_error": "analysis error",
 }
 _WINDOW_TR = {"chosen": " (seçilen dönem)", "look_back": " (geriye bakış penceresi)", None: ""}
 
@@ -455,19 +472,25 @@ def _note_tr(item: dict) -> str:
 def coverage_text(findings, language: str) -> str:
     """Data Coverage & Limitations: the gaps, what each series leaves out, the limitation."""
     lang = _lang(language)
+    # A series whose years are not comparable gives that as its reason here too, not
+    # "too few observations" (its finding says "not comparable … so no trend is tested").
+    not_comparable = {s.stat_result["indicator"] for s in findings.sections
+                      if s.stat_result.get("not_comparable")}
+    wording = _GAPS_TR if lang == "tr" else _GAPS_EN
+    gaps = [f"{g['name']}: " + wording["not_comparable" if g["name"] in not_comparable
+                                       else g["code"]].format(n=g.get("n"))
+            for g in findings.gap_items] or list(findings.gaps)
     if lang == "tr":
-        gaps = [f"{g['name']}: {_GAPS_TR[g['code']].format(n=g.get('n'))}"
-                for g in findings.gap_items]
         notes = [_note_tr(n) for n in findings.note_items]
         labels = ("Veri boşlukları:", "Veri notları:", "Sınırlılık:")
     else:
-        gaps, notes = list(findings.gaps), list(findings.notes)
+        notes = list(findings.notes)
         labels = ("Data gaps:", "Data notes:", "Limitation:")
     out = []
     for label, items in zip(labels, (gaps, notes)):
         if items:
-            out.append(label + "\n\n" + "\n".join(f"- {i}" for i in items))
-    limitation = _limitation(bool(_tested(findings)), lang)
+            out.append(label + "\n\n" + "\n".join(f"- {i.rstrip('.')}" for i in items))
+    limitation = _limitation(findings, lang)
     out.append(f"{labels[2]} {limitation[0].lower()}{limitation[1:]}")
     return "\n\n".join(out)
 
@@ -497,10 +520,12 @@ def methods_text(findings, language: str) -> str:
                    f"{CORRELATION_MIN_POINTS} common periods.")
     if len(kinds) >= 2:
         n = _count(len(kinds), lang)
-        out.append(f"Çoklu karşılaştırma: bu rapordaki {n} testin tümüne birlikte Holm düzeltmesi "
+        every = "her iki teste" if len(kinds) == 2 else f"{n} testin tümüne"
+        out.append(f"Çoklu karşılaştırma: bu rapordaki {every} birlikte Holm düzeltmesi "
                    f"uygulandı; anlamlılık 0,05 düzeyinde Holm düzeltmeli p-değerine göre "
                    f"belirlendi." if tr_ else
-                   f"Multiple comparisons: Holm correction across all {n} tests in this report; "
+                   f"Multiple comparisons: Holm correction across "
+                   f"{'both' if len(kinds) == 2 else f'all {n}'} tests in this report; "
                    f"significance is decided on the Holm-adjusted p-value at the 0.05 level.")
     elif kinds:
         out.append("Tek bir istatistiksel test yapıldığı için çoklu karşılaştırma düzeltmesi "

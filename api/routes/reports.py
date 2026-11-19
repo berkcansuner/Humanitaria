@@ -18,10 +18,10 @@ from pydantic import BaseModel, Field, field_validator
 from typing import Literal, Optional
 from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 
-from analytics import technical_report
+from analytics import report_text, technical_report
 from analytics.countries import iso3_for
 from analytics.indicators import indicators_for
-from analytics.narrative_check import UNCHECKED_NOTE, verify_narrative
+from analytics.narrative_check import check_commentary
 from config import get_settings
 from ingestion import analytics
 from rag import report_images
@@ -261,6 +261,94 @@ def _computed_event(findings: technical_report.Findings, req: ReportRequest) -> 
          "date_from": findings.date_from, "date_to": findings.date_to}, ensure_ascii=False))
 
 
+def _commentary_headings(findings: technical_report.Findings, language: str,
+                         comparison_heading: str | None) -> str:
+    """The directive's list of the headings the model writes a paragraph under."""
+    names = report_text.headings(findings, language)
+    if comparison_heading:
+        names.insert(1, comparison_heading)
+    listed = "\n".join(f"## {n}" for n in names)
+    exception = (f"The '{comparison_heading}' section is the one place where figures are "
+                 f"allowed, as its instructions below say." if comparison_heading else "")
+    return (f"\nWrite one interpretation paragraph under each of these headings, in this "
+            f"order, and nothing else:\n{listed}\n{exception}")
+
+
+class _CommentaryStream:
+    """The model's stream as the waiting reader sees it: each finding's computed paragraph
+    is placed under its heading when the heading arrives, and the model's paragraph is
+    marked as interpretation. Only a preview: the saved report is assembled in code."""
+
+    def __init__(self, findings: technical_report.Findings, language: str):
+        lang = "tr" if language == "tr" else "en"
+        self._findings, self._language = findings, language
+        self._label = report_text.COMMENTARY_LABEL[lang]
+        self._summary = self._key(report_text.HEADINGS[lang]["summary"])
+        self._blocks = {self._key(s.heading): report_text.section_block(s, language)
+                        for s in findings.sections}
+        self._shown: set[str] = set()
+        self._buffer = ""
+        self._mid_line = False
+        self._label_due = True       # the summary's facts are already on screen
+
+    @staticmethod
+    def _key(heading: str) -> str:
+        return " ".join(heading.lstrip("#").strip().strip("*").casefold().split())
+
+    def _labelled(self, text: str) -> str:
+        if not self._label_due:
+            return text
+        self._label_due = False
+        return f"{self._label} {text}"
+
+    def _line(self, line: str) -> str:
+        if not line.strip():
+            return "\n"
+        if not line.lstrip().startswith("#"):
+            return self._labelled(line.lstrip()) + "\n"
+        key = self._key(line)
+        self._label_due = key == self._summary or key in self._blocks
+        if key == self._summary:
+            return ""
+        if key in self._blocks:
+            if key in self._shown:
+                return ""
+            self._shown.add(key)
+            return f"\n\n{self._blocks[key]}\n\n"
+        return f"\n\n{line.strip()}\n\n"
+
+    def feed(self, chunk: str) -> str:
+        self._buffer += chunk
+        out = ""
+        while self._buffer:
+            newline = self._buffer.find("\n")
+            if self._mid_line:
+                if newline == -1:
+                    out, self._buffer = out + self._buffer, ""
+                    break
+                out += self._buffer[:newline + 1]
+                self._buffer, self._mid_line = self._buffer[newline + 1:], False
+            elif newline != -1:
+                line, self._buffer = self._buffer[:newline], self._buffer[newline + 1:]
+                out += self._line(line)
+            else:
+                start = self._buffer.lstrip()
+                if not start or start.startswith("#"):
+                    break                       # wait for the whole heading line
+                out += self._labelled(start)
+                self._buffer, self._mid_line = "", True
+        return out
+
+    def finish(self) -> str:
+        """What is left: the buffered line, the findings the model skipped, then Data
+        Coverage & Limitations and Methods."""
+        out = self._buffer if self._mid_line else (self._line(self._buffer) if self._buffer else "")
+        self._buffer = ""
+        rest = [block for key, block in self._blocks.items() if key not in self._shown]
+        rest.append(report_text.closing(self._findings, self._language))
+        return out + "\n\n" + "\n\n".join(rest)
+
+
 def _checked_event(removed: int) -> ServerSentEvent:
     """Sent after the check: how many "What changed" sentences it removed."""
     return ServerSentEvent(event="status",
@@ -348,42 +436,62 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                 context = technical_report.findings_to_context(findings)
                 # The period the analysis used: a requested end in the future is capped.
                 date_to = findings.date_to if req.date_to else req.date_to
+                comparison_heading = (COMPARISON_HEADINGS.get(req.language, COMPARISON_HEADINGS["en"])
+                                      if previous else None)
                 directive = build_report_directive(
                     req.country, req.theme, req.date_from, date_to,
                     len(findings.indicators_covered), req.language,
                     report_type=req.report_type,
-                )
+                ) + _commentary_headings(findings, req.language, comparison_heading)
                 if previous:
                     directive += build_comparison_block(
                         previous, req.language, req.report_type, req.date_from, date_to
                     )
                 chain = build_report_chain(req.report_type)
-
-                full = ""
-                async for chunk in _astream_with_retry(
-                    chain, {"question": directive, "context": context},
-                    get_settings().CHAT_LLM_MAX_RETRIES,
-                ):
-                    if chunk:
-                        full += chunk
-                        yield ServerSentEvent(
-                            event="token",
-                            data=json.dumps({"content": chunk}, ensure_ascii=False),
-                        )
-
-                # Numbers and significance claims are checked against what the model
-                # was given; unverifiable sentences never reach the saved report.
                 label = f"{req.country} / {req.theme or 'All sectors'} / {req.report_type}"
+
+                # The report's facts are written in code (analytics.report_text) and shown
+                # at once; the model only adds an interpretation paragraph per section.
+                def token(text: str) -> ServerSentEvent:
+                    return ServerSentEvent(
+                        event="token", data=json.dumps({"content": text}, ensure_ascii=False))
+
+                yield token(report_text.opening(findings, req.language) + "\n\n")
+                stream = _CommentaryStream(findings, req.language)
+                written = ""
                 try:
-                    full = verify_narrative(full, findings, f"{context}\n{directive}",
-                                            req.language, label=label).content
+                    async for chunk in _astream_with_retry(
+                        chain, {"question": directive, "context": context},
+                        get_settings().CHAT_LLM_MAX_RETRIES,
+                    ):
+                        if chunk:
+                            written += chunk
+                            shown = stream.feed(chunk)
+                            if shown:
+                                yield token(shown)
                 except Exception:
-                    # A checker error must never lose the report: it is kept as generated,
-                    # and its footnote says the check did not run.
-                    logger.exception("Narrative check failed [%s]; the report is saved unchecked",
-                                     label)
-                    full = (f"{full.rstrip()}\n\n"
-                            f"{UNCHECKED_NOTE.get(req.language, UNCHECKED_NOTE['en'])}")
+                    # The facts do not depend on the model: the report is saved without
+                    # interpretation paragraphs.
+                    logger.exception("Technical report commentary failed [%s]; the report is "
+                                     "saved without it", label)
+                    written = ""
+                yield token(stream.finish())
+
+                # What an interpretation paragraph must not say is dropped; a checker error
+                # drops the paragraphs, never the report.
+                try:
+                    checked_commentary = check_commentary(
+                        written, findings, f"{context}\n{directive}", req.language,
+                        comparison_heading=comparison_heading, label=label)
+                    commentary = checked_commentary.by_heading
+                    comparison = checked_commentary.comparison
+                except Exception:
+                    logger.exception("Commentary check failed [%s]; the report is saved "
+                                     "without interpretation paragraphs", label)
+                    commentary, comparison = {}, None
+                full = report_text.assemble(
+                    findings, req.language, commentary,
+                    (comparison_heading, comparison) if comparison else None)
                 if previous:
                     yield _checking_event()
                     checked = await _checked(full, req)

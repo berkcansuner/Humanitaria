@@ -146,10 +146,8 @@ def test_all_sectors_series_matches_on_null_theme():
 
 
 def test_technical_report_compares_and_stores_link():
-    from analytics.technical_report import Findings, ReportSection
-    findings = Findings(sections=[ReportSection(
-        heading="Needs — Trend", stat_result={"kind": "trend"}, chart=None,
-        findings_text="Needs: up, p=0.010, n=6.")], gaps=[], indicators_covered=["needs"])
+    from tests.analytics import samples
+    findings = samples.findings(samples.trend(heading="Needs — Trend"), indicators_covered=["needs"])
     _save_previous(country="Afghanistan", theme=None, report_type="technical_monitoring")
     seen = []
     with patch("api.routes.reports.technical_report.compute_findings", return_value=findings), \
@@ -190,10 +188,8 @@ def test_one_off_report_is_not_checked(verify):
 
 
 def test_technical_comparative_report_is_checked(verify):
-    from analytics.technical_report import Findings, ReportSection
-    findings = Findings(sections=[ReportSection(
-        heading="Needs — Trend", stat_result={"kind": "trend"}, chart=None,
-        findings_text="Needs: up, p=0.010, n=6.")], gaps=[], indicators_covered=["needs"])
+    from tests.analytics import samples
+    findings = samples.findings(samples.trend(heading="Needs — Trend"), indicators_covered=["needs"])
     _save_previous(country="Afghanistan", theme=None, report_type="technical_monitoring")
     seen = []
     with patch("api.routes.reports.technical_report.compute_findings", return_value=findings),          patch("api.routes.reports.build_report_chain", return_value=_capturing_chain(seen)):
@@ -203,6 +199,33 @@ def test_technical_comparative_report_is_checked(verify):
     verify.assert_awaited_once()
     stored = _client().get(f"/reports/{_saved_id(resp)}").json()["content"]
     assert stored.endswith("<!-- checked -->")
+
+
+def test_technical_what_changed_section_sits_after_the_summary_with_given_figures_only():
+    """The model's "What changed" section keeps the figures it was given (the previous
+    report's included) and loses any other; it is placed right after the summary."""
+    from tests.analytics import samples
+    findings = samples.findings(samples.trend(heading="Needs — Trend"), indicators_covered=["needs"])
+    _save_previous(country="Afghanistan", theme=None, report_type="technical_monitoring",
+                   content="## Executive Summary\nRefugees stood at 3.10 million people.")
+
+    async def mock_astream(inputs, *a, **k):
+        yield ("## Executive Summary\nRead the findings together.\n\n"
+               "## What changed since the last report\n"
+               "Refugees went from 3.10 million to 2.67 million people. Needs hit 9.9 million.\n\n"
+               "## Needs — Trend\nThe series is short.")
+    chain = MagicMock()
+    chain.astream = mock_astream
+    with patch("api.routes.reports.technical_report.compute_findings", return_value=findings), \
+         patch("api.routes.reports.build_report_chain", return_value=chain):
+        resp = _client().post("/reports/stream", json={
+            "country": "Afghanistan", "report_type": "technical_monitoring", "language": "en",
+            "date_from": "2026-07-01", "date_to": "2026-09-30", "previous_report_id": "r-prev"})
+    stored = _client().get(f"/reports/{_saved_id(resp)}").json()["content"]
+    assert ("*Interpretation:* Read the findings together.\n\n"
+            "## What changed since the last report\n\n"
+            "Refugees went from 3.10 million to 2.67 million people.\n\n## Needs — Trend") in stored
+    assert "9.9 million" not in stored
 
 
 # The stream's status events also include the "reading" stage before the first

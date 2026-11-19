@@ -1,0 +1,3934 @@
+{
+ "contexts": {
+  "afg_all_en": {
+   "language": "en",
+   "allowed": "COMPUTED STATISTICAL FINDINGS (do not recompute — narrate only):\n\nPERIOD ANALYSED: 19 November 2021 to 19 November 2026 (no period was chosen: the last five years)\n\n## Food insecurity (IPC 3+, % of the analysed population) — Trend Analysis\nFood insecurity (IPC 3+, % of the analysed population): latest value 32.0% (September 2026), against 47.0% in March 2022. Trend, March 2022 to September 2026: decreasing, Sen slope -4.65 percentage points per year (95% CI -7.99 to 0 percentage points), Kendall tau -0.53, Mann-Kendall p=0.059, Holm-adjusted p=0.237 → NOT SIGNIFICANT (α=0.05); change along the trend line -21.0 percentage points; nine observations.\n\n## Refugees (people) — Trend Analysis\nRefugees (people): latest value 2.67 million people (2025), against 5.66 million people in 2022. Trend, 2022 to 2025: decreasing, Sen slope -817,000 people per year (95% CI: too few points), Kendall tau -0.33, Mann-Kendall p=0.734, Holm-adjusted p=0.734 → NOT SIGNIFICANT (α=0.05); relative change along the trend line -38.1%; four observations.\n\n## Returnees (people) — Trend Analysis\nReturnees (people): latest value 1.95 million people (2025), against 6,510 people in 2022. Trend, 2022 to 2025: increasing, Sen slope 477,000 people per year (95% CI: too few points), Kendall tau 1.00, Mann-Kendall p=0.089, Holm-adjusted p=0.268 → NOT SIGNIFICANT (α=0.05); four observations.\n\n## Internally displaced people (IDPs) — Regional Analysis\nInternally displaced people (IDPs): highest regions (mean per region, January 2025 to January 2026): Herat (442,000 people), Balkh (348,000 people), Kabul (299,000 people); difference between regions Kruskal-Wallis H=100.08, p<0.001, Holm-adjusted p<0.001 → SIGNIFICANT (α=0.05).\n\n## Humanitarian funding (USD) — Trend Analysis\nHumanitarian funding (USD): latest value 1.16 billion USD (2025), against 3.82 billion USD in 2022. Trend, 2022 to 2025: decreasing, Sen slope -717 million USD per year (95% CI: too few points), Kendall tau -1.00, Mann-Kendall p=0.089, Holm-adjusted p=0.268 → NOT SIGNIFICANT (α=0.05); relative change along the trend line -66.7%; four observations.\n\nDATA GAPS:\n- People in need (people): too few observations for a trend test (n=3)\n- Internally displaced people (IDPs): too few observations for a trend test (n=3)\n\nDATA NOTES:\n- Food insecurity (IPC 3+, % of the analysed population): IPC analyses covered different parts of the country in different periods (analysed population 41.4 to 49.7 million), so the share of the analysed population is used, not the number of people\n- Internally displaced people (IDPs): only the DTM operation 'Climate and mobility in Afghanistan' is used; 1 other operation(s) count displacement differently and are not mixed in\n\nMETHOD NOTES:\n- Trend: Mann-Kendall test; the slope is Sen's slope per year on the real dates of the periods; Kendall tau is the effect size.\n- Regions: Kruskal-Wallis test across admin-1 regions.\n- Multiple comparisons: Holm correction across all five tests in this report; significance is decided on the Holm-adjusted p-value at α=0.05.\n- Limitation: the series are short; the tests assume independent observations and serial correlation between consecutive periods is not corrected for, so the results are indicative.",
+   "note_items": [
+    {
+     "name": "Food insecurity (IPC 3+, % of the analysed population)",
+     "window": null,
+     "kind": "ipc",
+     "low": 41399180.48780488,
+     "high": 49712906.25
+    },
+    {
+     "name": "Internally displaced people (IDPs)",
+     "window": null,
+     "kind": "dtm",
+     "operation": "Climate and mobility in Afghanistan",
+     "other_operations": 1,
+     "incomplete_rounds": 0
+    }
+   ],
+   "sections": [
+    {
+     "heading": "Food insecurity (IPC 3+, % of the analysed population) — Trend Analysis",
+     "stat_result": {
+      "kind": "trend",
+      "indicator": "Food insecurity (IPC 3+, % of the analysed population)",
+      "direction": "decreasing",
+      "slope": -4.6531795410471855,
+      "p_value": 0.059172067825859376,
+      "pct_change": -48.34988317757007,
+      "n_points": 9,
+      "ci_low": -7.99452804377565,
+      "ci_high": 0.0,
+      "tau": -0.5277777777777778,
+      "first_period": "2022-03-01T00:00:00",
+      "last_period": "2026-09-01T00:00:00",
+      "unit": "percentage points",
+      "look_back": null,
+      "chosen_from": "2021-11-19",
+      "latest_value": 32.0,
+      "latest_period": "2026-09-01T00:00:00",
+      "first_value": 47.0,
+      "periods": [
+       "2022-03-01T00:00:00",
+       "2022-09-01T00:00:00",
+       "2023-04-01T00:00:00",
+       "2023-10-01T00:00:00",
+       "2024-03-01T00:00:00",
+       "2024-09-01T00:00:00",
+       "2025-03-01T00:00:00",
+       "2025-09-01T00:00:00",
+       "2026-09-01T00:00:00"
+      ],
+      "values": [
+       47.0,
+       41.0,
+       40.0,
+       28.999999999999996,
+       32.0,
+       25.0,
+       27.0,
+       28.000000000000004,
+       32.0
+      ],
+      "line_change": -20.95682503770738,
+      "value_unit": "%",
+      "resolution": "month",
+      "family": 5,
+      "tested": true,
+      "p_adjusted": 0.2366882713034375,
+      "significant": false
+     }
+    },
+    {
+     "heading": "Refugees (people) — Trend Analysis",
+     "stat_result": {
+      "kind": "trend",
+      "indicator": "Refugees (people)",
+      "direction": "decreasing",
+      "slope": -816742.8224218203,
+      "p_value": 0.7340951823194757,
+      "pct_change": -38.05261974868894,
+      "n_points": 4,
+      "ci_low": null,
+      "ci_high": null,
+      "tau": -0.3333333333333333,
+      "first_period": "2022-01-01T00:00:00",
+      "last_period": "2025-01-01T00:00:00",
+      "unit": "",
+      "look_back": null,
+      "chosen_from": "2021-11-19",
+      "latest_value": 2671560.0,
+      "latest_period": "2025-01-01T00:00:00",
+      "first_value": 5661717.0,
+      "periods": [
+       "2022-01-01T00:00:00",
+       "2023-01-01T00:00:00",
+       "2024-01-01T00:00:00",
+       "2025-01-01T00:00:00"
+      ],
+      "values": [
+       5661717.0,
+       6403144.0,
+       5766586.0,
+       2671560.0
+      ],
+      "line_change": null,
+      "value_unit": "people",
+      "resolution": "year",
+      "family": 5,
+      "tested": true,
+      "p_adjusted": 0.7340951823194757,
+      "significant": false
+     }
+    },
+    {
+     "heading": "Returnees (people) — Trend Analysis",
+     "stat_result": {
+      "kind": "trend",
+      "indicator": "Returnees (people)",
+      "direction": "increasing",
+      "slope": 476933.9950795545,
+      "p_value": 0.08942935902899363,
+      "pct_change": null,
+      "n_points": 4,
+      "ci_low": null,
+      "ci_high": null,
+      "tau": 1.0,
+      "first_period": "2022-01-01T00:00:00",
+      "last_period": "2025-01-01T00:00:00",
+      "unit": "",
+      "look_back": null,
+      "chosen_from": "2021-11-19",
+      "latest_value": 1947183.0,
+      "latest_period": "2025-01-01T00:00:00",
+      "first_value": 6506.0,
+      "periods": [
+       "2022-01-01T00:00:00",
+       "2023-01-01T00:00:00",
+       "2024-01-01T00:00:00",
+       "2025-01-01T00:00:00"
+      ],
+      "values": [
+       6506.0,
+       57530.0,
+       364443.0,
+       1947183.0
+      ],
+      "line_change": null,
+      "value_unit": "people",
+      "resolution": "year",
+      "family": 5,
+      "tested": true,
+      "p_adjusted": 0.2682880770869809,
+      "significant": false
+     }
+    },
+    {
+     "heading": "Internally displaced people (IDPs) — Regional Analysis",
+     "stat_result": {
+      "kind": "region",
+      "indicator": "Internally displaced people (IDPs)",
+      "ranking": [
+       [
+        "Herat",
+        441836.3333333333
+       ],
+       [
+        "Balkh",
+        347911.0
+       ],
+       [
+        "Kabul",
+        298758.0
+       ],
+       [
+        "Nangarhar",
+        251437.66666666666
+       ],
+       [
+        "Kandahar",
+        152368.66666666666
+       ],
+       [
+        "Helmand",
+        127353.0
+       ],
+       [
+        "Takhar",
+        114763.0
+       ],
+       [
+        "Khost",
+        106995.33333333333
+       ],
+       [
+        "Faryab",
+        106919.33333333333
+       ],
+       [
+        "Baghlan",
+        97272.0
+       ],
+       [
+        "Farah",
+        87465.66666666667
+       ],
+       [
+        "Kunduz",
+        86258.33333333333
+       ],
+       [
+        "Ghazni",
+        75961.0
+       ],
+       [
+        "Badakhshan",
+        67538.66666666667
+       ],
+       [
+        "Zabul",
+        62996.0
+       ],
+       [
+        "Ghor",
+        61523.666666666664
+       ],
+       [
+        "Sar-e-Pul",
+        57124.333333333336
+       ],
+       [
+        "Kunar",
+        56805.333333333336
+       ],
+       [
+        "Laghman",
+        48679.0
+       ],
+       [
+        "Nimroz",
+        46791.333333333336
+       ],
+       [
+        "Badghis",
+        43352.333333333336
+       ],
+       [
+        "Paktya",
+        39771.0
+       ],
+       [
+        "Parwan",
+        37921.0
+       ],
+       [
+        "Samangan",
+        34307.666666666664
+       ],
+       [
+        "Logar",
+        28804.666666666668
+       ],
+       [
+        "Maidan Wardak",
+        28161.0
+       ],
+       [
+        "Kapisa",
+        28023.0
+       ],
+       [
+        "Jawzjan",
+        27519.333333333332
+       ],
+       [
+        "Daykundi",
+        21726.666666666668
+       ],
+       [
+        "Bamyan",
+        19049.333333333332
+       ],
+       [
+        "Paktika",
+        17091.0
+       ],
+       [
+        "Uruzgan",
+        12876.0
+       ],
+       [
+        "Nuristan",
+        8553.333333333334
+       ],
+       [
+        "Panjsher",
+        3795.3333333333335
+       ]
+      ],
+      "p_value": 1.114904389740733e-08,
+      "kruskal_h": 100.08471349704911,
+      "max_obs": 3,
+      "first_period": "2025-01-31T00:00:00",
+      "last_period": "2026-01-31T00:00:00",
+      "value_unit": "people",
+      "resolution": "month",
+      "family": 5,
+      "tested": true,
+      "p_adjusted": 5.574521948703665e-08,
+      "significant": true
+     }
+    },
+    {
+     "heading": "Humanitarian funding (USD) — Trend Analysis",
+     "stat_result": {
+      "kind": "trend",
+      "indicator": "Humanitarian funding (USD)",
+      "direction": "decreasing",
+      "slope": -716608687.4464501,
+      "p_value": 0.08942935902899363,
+      "pct_change": -66.72749409247041,
+      "n_points": 4,
+      "ci_low": null,
+      "ci_high": null,
+      "tau": -1.0,
+      "first_period": "2022-01-01T00:00:00",
+      "last_period": "2025-01-01T00:00:00",
+      "unit": "",
+      "look_back": null,
+      "chosen_from": "2021-11-19",
+      "latest_value": 1157815685.0,
+      "latest_period": "2025-01-01T00:00:00",
+      "first_value": 3820782856.0,
+      "periods": [
+       "2022-01-01T00:00:00",
+       "2023-01-01T00:00:00",
+       "2024-01-01T00:00:00",
+       "2025-01-01T00:00:00"
+      ],
+      "values": [
+       3820782856.0,
+       1921345270.0,
+       1704700478.0,
+       1157815685.0
+      ],
+      "line_change": null,
+      "value_unit": "USD",
+      "resolution": "year",
+      "family": 5,
+      "tested": true,
+      "p_adjusted": 0.2682880770869809,
+      "significant": false
+     }
+    }
+   ]
+  },
+  "afg_fn_en": {
+   "language": "en",
+   "allowed": "COMPUTED STATISTICAL FINDINGS (do not recompute — narrate only):\n\nPERIOD ANALYSED: 19 November 2025 to 19 November 2026\n\nHEADLINE (the sector's own figures; open the Executive Summary with them): Food security: people in need: 17.4 million people (2026). Nutrition: people in need: 7.46 million people (2026).\n\nLOOK-BACK: the chosen period holds too few observations for Food security: people in need, Nutrition: people in need, Food insecurity (IPC 3+, % of the analysed population), so their values and trends below cover the longer look-back window 19 November 2021 to 19 November 2026 (marked “look-back window”).\n\n## Food security: people in need — Latest Values\nFood security: people in need (look-back window): latest value 17.4 million people (2026), up from 14.8 million people in 2025; earlier 15.8 million people in 2024. Three observations: too few for a trend test.\n\n## Nutrition: people in need — Latest Values\nNutrition: people in need (look-back window): latest value 7.46 million people (2026), down from 7.80 million people in 2025; earlier 7.40 million people in 2024. Three observations: too few for a trend test.\n\n## Food insecurity (IPC 3+, % of the analysed population) — Trend Analysis\nFood insecurity (IPC 3+, % of the analysed population): latest value 32.0% (September 2026), against 47.0% in March 2022. Trend over the look-back window, March 2022 to September 2026: decreasing, Sen slope -4.65 percentage points per year (95% CI -7.99 to 0 percentage points), Kendall tau -0.53, Mann-Kendall p=0.059 → NOT SIGNIFICANT (α=0.05); change along the trend line -21.0 percentage points; nine observations.\n\nDATA GAPS:\n- Food security: people in need: too few observations for a trend test (n=3)\n- Nutrition: people in need: too few observations for a trend test (n=3)\n\nDATA NOTES:\n- Food insecurity (IPC 3+, % of the analysed population) (look-back window): IPC analyses covered different parts of the country in different periods (analysed population 41.4 to 49.7 million), so the share of the analysed population is used, not the number of people\n\nMETHOD NOTES:\n- Trend: Mann-Kendall test; the slope is Sen's slope per year on the real dates of the periods; Kendall tau is the effect size.\n- One statistical test was run, so no multiple-comparison correction applies; significance is decided on its p-value at α=0.05.\n- Limitation: the series are short; the tests assume independent observations and serial correlation between consecutive periods is not corrected for, so the results are indicative.",
+   "note_items": [
+    {
+     "name": "Food insecurity (IPC 3+, % of the analysed population)",
+     "window": "look_back",
+     "kind": "ipc",
+     "low": 41399180.48780488,
+     "high": 49712906.25
+    }
+   ],
+   "sections": [
+    {
+     "heading": "Food security: people in need — Latest Values",
+     "stat_result": {
+      "kind": "snapshot",
+      "indicator": "Food security: people in need",
+      "p_value": null,
+      "periods": [
+       "2024-01-01T00:00:00",
+       "2025-01-01T00:00:00",
+       "2026-01-01T00:00:00"
+      ],
+      "values": [
+       15823677.0,
+       14764729.0,
+       17412653.0
+      ],
+      "value_unit": "people",
+      "min_points": 4,
+      "look_back": {
+       "date_from": "2021-11-19",
+       "date_to": "2026-11-19",
+       "chosen_points": 1
+      },
+      "chosen_from": "2025-11-19",
+      "not_comparable": null,
+      "not_comparable_years": null,
+      "sector_en": "food security",
+      "sector_tr": "gıda güvenliği",
+      "resolution": "year",
+      "exact": false,
+      "family": 1,
+      "tested": false,
+      "p_adjusted": null,
+      "significant": false
+     }
+    },
+    {
+     "heading": "Nutrition: people in need — Latest Values",
+     "stat_result": {
+      "kind": "snapshot",
+      "indicator": "Nutrition: people in need",
+      "p_value": null,
+      "periods": [
+       "2024-01-01T00:00:00",
+       "2025-01-01T00:00:00",
+       "2026-01-01T00:00:00"
+      ],
+      "values": [
+       7399632.0,
+       7801981.0,
+       7464230.0
+      ],
+      "value_unit": "people",
+      "min_points": 4,
+      "look_back": {
+       "date_from": "2021-11-19",
+       "date_to": "2026-11-19",
+       "chosen_points": 1
+      },
+      "chosen_from": "2025-11-19",
+      "not_comparable": null,
+      "not_comparable_years": null,
+      "sector_en": "nutrition",
+      "sector_tr": "beslenme",
+      "resolution": "year",
+      "exact": false,
+      "family": 1,
+      "tested": false,
+      "p_adjusted": null,
+      "significant": false
+     }
+    },
+    {
+     "heading": "Food insecurity (IPC 3+, % of the analysed population) — Trend Analysis",
+     "stat_result": {
+      "kind": "trend",
+      "indicator": "Food insecurity (IPC 3+, % of the analysed population)",
+      "direction": "decreasing",
+      "slope": -4.6531795410471855,
+      "p_value": 0.059172067825859376,
+      "pct_change": -48.34988317757007,
+      "n_points": 9,
+      "ci_low": -7.99452804377565,
+      "ci_high": 0.0,
+      "tau": -0.5277777777777778,
+      "first_period": "2022-03-01T00:00:00",
+      "last_period": "2026-09-01T00:00:00",
+      "unit": "percentage points",
+      "look_back": {
+       "date_from": "2021-11-19",
+       "date_to": "2026-11-19",
+       "chosen_points": 1
+      },
+      "chosen_from": "2025-11-19",
+      "latest_value": 32.0,
+      "latest_period": "2026-09-01T00:00:00",
+      "first_value": 47.0,
+      "periods": [
+       "2022-03-01T00:00:00",
+       "2022-09-01T00:00:00",
+       "2023-04-01T00:00:00",
+       "2023-10-01T00:00:00",
+       "2024-03-01T00:00:00",
+       "2024-09-01T00:00:00",
+       "2025-03-01T00:00:00",
+       "2025-09-01T00:00:00",
+       "2026-09-01T00:00:00"
+      ],
+      "values": [
+       47.0,
+       41.0,
+       40.0,
+       28.999999999999996,
+       32.0,
+       25.0,
+       27.0,
+       28.000000000000004,
+       32.0
+      ],
+      "line_change": -20.95682503770738,
+      "value_unit": "%",
+      "resolution": "month",
+      "family": 1,
+      "tested": true,
+      "p_adjusted": 0.059172067825859376,
+      "significant": false
+     }
+    }
+   ]
+  },
+  "afg_fn_tr": {
+   "language": "tr",
+   "allowed": "COMPUTED STATISTICAL FINDINGS (do not recompute — narrate only):\n\nPERIOD ANALYSED: 19 November 2025 to 19 November 2026\n\nHEADLINE (the sector's own figures; open the Executive Summary with them): Gıda güvenliği: insani yardıma ihtiyaç duyan kişiler: 17.4 million people (2026). Beslenme: insani yardıma ihtiyaç duyan kişiler: 7.46 million people (2026).\n\nLOOK-BACK: the chosen period holds too few observations for Gıda güvenliği: insani yardıma ihtiyaç duyan kişiler, Beslenme: insani yardıma ihtiyaç duyan kişiler, Gıda güvensizliği (IPC 3+, analiz edilen nüfusun yüzdesi), so their values and trends below cover the longer look-back window 19 November 2021 to 19 November 2026 (marked “look-back window”).\n\n## Gıda güvenliği: insani yardıma ihtiyaç duyan kişiler — Son Değerler\nGıda güvenliği: insani yardıma ihtiyaç duyan kişiler (look-back window): latest value 17.4 million people (2026), up from 14.8 million people in 2025; earlier 15.8 million people in 2024. Three observations: too few for a trend test.\n\n## Beslenme: insani yardıma ihtiyaç duyan kişiler — Son Değerler\nBeslenme: insani yardıma ihtiyaç duyan kişiler (look-back window): latest value 7.46 million people (2026), down from 7.80 million people in 2025; earlier 7.40 million people in 2024. Three observations: too few for a trend test.\n\n## Gıda güvensizliği (IPC 3+, analiz edilen nüfusun yüzdesi) — Eğilim Analizi\nGıda güvensizliği (IPC 3+, analiz edilen nüfusun yüzdesi): latest value 32.0% (September 2026), against 47.0% in March 2022. Trend over the look-back window, March 2022 to September 2026: decreasing, Sen slope -4.65 percentage points per year (95% CI -7.99 to 0 percentage points), Kendall tau -0.53, Mann-Kendall p=0.059 → NOT SIGNIFICANT (α=0.05); change along the trend line -21.0 percentage points; nine observations.\n\nDATA GAPS:\n- Gıda güvenliği: insani yardıma ihtiyaç duyan kişiler: too few observations for a trend test (n=3)\n- Beslenme: insani yardıma ihtiyaç duyan kişiler: too few observations for a trend test (n=3)\n\nDATA NOTES:\n- Gıda güvensizliği (IPC 3+, analiz edilen nüfusun yüzdesi) (look-back window): IPC analyses covered different parts of the country in different periods (analysed population 41.4 to 49.7 million), so the share of the analysed population is used, not the number of people\n\nMETHOD NOTES:\n- Trend: Mann-Kendall test; the slope is Sen's slope per year on the real dates of the periods; Kendall tau is the effect size.\n- One statistical test was run, so no multiple-comparison correction applies; significance is decided on its p-value at α=0.05.\n- Limitation: the series are short; the tests assume independent observations and serial correlation between consecutive periods is not corrected for, so the results are indicative.",
+   "note_items": [
+    {
+     "name": "Gıda güvensizliği (IPC 3+, analiz edilen nüfusun yüzdesi)",
+     "window": "look_back",
+     "kind": "ipc",
+     "low": 41399180.48780488,
+     "high": 49712906.25
+    }
+   ],
+   "sections": [
+    {
+     "heading": "Gıda güvenliği: insani yardıma ihtiyaç duyan kişiler — Son Değerler",
+     "stat_result": {
+      "kind": "snapshot",
+      "indicator": "Gıda güvenliği: insani yardıma ihtiyaç duyan kişiler",
+      "p_value": null,
+      "periods": [
+       "2024-01-01T00:00:00",
+       "2025-01-01T00:00:00",
+       "2026-01-01T00:00:00"
+      ],
+      "values": [
+       15823677.0,
+       14764729.0,
+       17412653.0
+      ],
+      "value_unit": "people",
+      "min_points": 4,
+      "look_back": {
+       "date_from": "2021-11-19",
+       "date_to": "2026-11-19",
+       "chosen_points": 1
+      },
+      "chosen_from": "2025-11-19",
+      "not_comparable": null,
+      "not_comparable_years": null,
+      "sector_en": "food security",
+      "sector_tr": "gıda güvenliği",
+      "resolution": "year",
+      "exact": false,
+      "family": 1,
+      "tested": false,
+      "p_adjusted": null,
+      "significant": false
+     }
+    },
+    {
+     "heading": "Beslenme: insani yardıma ihtiyaç duyan kişiler — Son Değerler",
+     "stat_result": {
+      "kind": "snapshot",
+      "indicator": "Beslenme: insani yardıma ihtiyaç duyan kişiler",
+      "p_value": null,
+      "periods": [
+       "2024-01-01T00:00:00",
+       "2025-01-01T00:00:00",
+       "2026-01-01T00:00:00"
+      ],
+      "values": [
+       7399632.0,
+       7801981.0,
+       7464230.0
+      ],
+      "value_unit": "people",
+      "min_points": 4,
+      "look_back": {
+       "date_from": "2021-11-19",
+       "date_to": "2026-11-19",
+       "chosen_points": 1
+      },
+      "chosen_from": "2025-11-19",
+      "not_comparable": null,
+      "not_comparable_years": null,
+      "sector_en": "nutrition",
+      "sector_tr": "beslenme",
+      "resolution": "year",
+      "exact": false,
+      "family": 1,
+      "tested": false,
+      "p_adjusted": null,
+      "significant": false
+     }
+    },
+    {
+     "heading": "Gıda güvensizliği (IPC 3+, analiz edilen nüfusun yüzdesi) — Eğilim Analizi",
+     "stat_result": {
+      "kind": "trend",
+      "indicator": "Gıda güvensizliği (IPC 3+, analiz edilen nüfusun yüzdesi)",
+      "direction": "decreasing",
+      "slope": -4.6531795410471855,
+      "p_value": 0.059172067825859376,
+      "pct_change": -48.34988317757007,
+      "n_points": 9,
+      "ci_low": -7.99452804377565,
+      "ci_high": 0.0,
+      "tau": -0.5277777777777778,
+      "first_period": "2022-03-01T00:00:00",
+      "last_period": "2026-09-01T00:00:00",
+      "unit": "percentage points",
+      "look_back": {
+       "date_from": "2021-11-19",
+       "date_to": "2026-11-19",
+       "chosen_points": 1
+      },
+      "chosen_from": "2025-11-19",
+      "latest_value": 32.0,
+      "latest_period": "2026-09-01T00:00:00",
+      "first_value": 47.0,
+      "periods": [
+       "2022-03-01T00:00:00",
+       "2022-09-01T00:00:00",
+       "2023-04-01T00:00:00",
+       "2023-10-01T00:00:00",
+       "2024-03-01T00:00:00",
+       "2024-09-01T00:00:00",
+       "2025-03-01T00:00:00",
+       "2025-09-01T00:00:00",
+       "2026-09-01T00:00:00"
+      ],
+      "values": [
+       47.0,
+       41.0,
+       40.0,
+       28.999999999999996,
+       32.0,
+       25.0,
+       27.0,
+       28.000000000000004,
+       32.0
+      ],
+      "line_change": -20.95682503770738,
+      "value_unit": "%",
+      "resolution": "month",
+      "family": 1,
+      "tested": true,
+      "p_adjusted": 0.059172067825859376,
+      "significant": false
+     }
+    }
+   ]
+  },
+  "afg_pro_en": {
+   "language": "en",
+   "allowed": "COMPUTED STATISTICAL FINDINGS (do not recompute — narrate only):\n\nPERIOD ANALYSED: 19 November 2025 to 19 November 2026\n\nHEADLINE (the sector's own figures; open the Executive Summary with them): Protection: people in need: 14,988,378 people (2026); earlier years are reported on a different basis and are not comparable.\n\nLOOK-BACK: the chosen period holds too few observations for Protection: people in need, Refugees (people), Returnees (people), Internally displaced people (IDPs), so their values and trends below cover the longer look-back window 19 November 2021 to 19 November 2026 (marked “look-back window”).\n\n## Protection: people in need — Latest Values\nProtection: people in need (look-back window): latest value 14,988,378 people (2026); earlier 14,213,777 people in 2025, 14,809,904 people in 2024. The values are not comparable across years (2024, 2025: possibly one of the plan's separate protection lines rather than its overall figure; 2026: the plan's only protection figure; HDX HAPI does not say which line each year's figure is), so no trend is tested.\n\n## Refugees (people) — Trend Analysis\nRefugees (people): latest value 2.67 million people (2025, before the chosen period), against 5.66 million people in 2022. Trend over the look-back window, 2022 to 2025: decreasing, Sen slope -817,000 people per year (95% CI: too few points), Kendall tau -0.33, Mann-Kendall p=0.734, Holm-adjusted p=0.734 → NOT SIGNIFICANT (α=0.05); relative change along the trend line -38.1%; four observations.\n\n## Returnees (people) — Trend Analysis\nReturnees (people): latest value 1.95 million people (2025, before the chosen period), against 6,510 people in 2022. Trend over the look-back window, 2022 to 2025: increasing, Sen slope 477,000 people per year (95% CI: too few points), Kendall tau 1.00, Mann-Kendall p=0.089, Holm-adjusted p=0.179 → NOT SIGNIFICANT (α=0.05); four observations.\n\n## Internally displaced people (IDPs) — Latest Values\nInternally displaced people (IDPs) (look-back window): latest value 3.06 million people (January 2026), down from 3.11 million people in May 2025; earlier 2.97 million people in January 2025. Three observations: too few for a trend test.\n\n## Internally displaced people (IDPs) — Regional Analysis\nInternally displaced people (IDPs): highest regions as of January 2026: Herat (443,000 people), Balkh (363,000 people), Kabul (310,000 people); a statistical comparison between regions was not possible: one observation per region.\n\nDATA GAPS:\n- Protection: people in need: too few observations for a trend test (n=3)\n- Internally displaced people (IDPs): too few observations for a trend test (n=3)\n\nDATA NOTES:\n- Protection: people in need, 2024: the plan reports protection in separate lines (Child Protection 9,213,752, Gender Based Violence 13,253,951, Housing, Land and Property 6,296,804, Mine Action 4,182,879); this figure (14,809,904) may be another of the plan's protection lines (not listed in HDX HAPI) rather than its overall protection figure; this report does not add the lines up, because people can be counted in more than one.\n- Protection: people in need, 2025: the plan reports protection in separate lines (Child Protection 9,352,775, Gender Based Violence 14,173,291, Housing, Land and Property 3,392,653, Mine Action 4,369,984); this figure (14,213,777) may be another of the plan's protection lines (not listed in HDX HAPI) rather than its overall protection figure; this report does not add the lines up, because people can be counted in more than one.\n- Internally displaced people (IDPs) (look-back window): only the DTM operation 'Climate and mobility in Afghanistan' is used; 1 other operation(s) count displacement differently and are not mixed in\n\nMETHOD NOTES:\n- Trend: Mann-Kendall test; the slope is Sen's slope per year on the real dates of the periods; Kendall tau is the effect size.\n- Multiple comparisons: Holm correction across all two tests in this report; significance is decided on the Holm-adjusted p-value at α=0.05.\n- Limitation: the series are short; the tests assume independent observations and serial correlation between consecutive periods is not corrected for, so the results are indicative.",
+   "note_items": [
+    {
+     "name": "Protection: people in need",
+     "window": null,
+     "kind": "plan_line",
+     "year": "2024",
+     "lines": [
+      [
+       "Child Protection",
+       9213752.0
+      ],
+      [
+       "Gender Based Violence",
+       13253951.0
+      ],
+      [
+       "Housing, Land and Property",
+       6296804.0
+      ],
+      [
+       "Mine Action",
+       4182879.0
+      ]
+     ],
+     "figure": 14809904.0,
+     "below": false,
+     "sector_en": "protection",
+     "sector_tr": "koruma"
+    },
+    {
+     "name": "Protection: people in need",
+     "window": null,
+     "kind": "plan_line",
+     "year": "2025",
+     "lines": [
+      [
+       "Child Protection",
+       9352775.0
+      ],
+      [
+       "Gender Based Violence",
+       14173291.0
+      ],
+      [
+       "Housing, Land and Property",
+       3392653.0
+      ],
+      [
+       "Mine Action",
+       4369984.0
+      ]
+     ],
+     "figure": 14213777.0,
+     "below": false,
+     "sector_en": "protection",
+     "sector_tr": "koruma"
+    },
+    {
+     "name": "Internally displaced people (IDPs)",
+     "window": "look_back",
+     "kind": "dtm",
+     "operation": "Climate and mobility in Afghanistan",
+     "other_operations": 1,
+     "incomplete_rounds": 0
+    }
+   ],
+   "sections": [
+    {
+     "heading": "Protection: people in need — Latest Values",
+     "stat_result": {
+      "kind": "snapshot",
+      "indicator": "Protection: people in need",
+      "p_value": null,
+      "periods": [
+       "2024-01-01T00:00:00",
+       "2025-01-01T00:00:00",
+       "2026-01-01T00:00:00"
+      ],
+      "values": [
+       14809904.0,
+       14213777.0,
+       14988378.0
+      ],
+      "value_unit": "people",
+      "min_points": 4,
+      "look_back": {
+       "date_from": "2021-11-19",
+       "date_to": "2026-11-19",
+       "chosen_points": 1
+      },
+      "chosen_from": "2025-11-19",
+      "not_comparable": "2024, 2025: possibly one of the plan's separate protection lines rather than its overall figure; 2026: the plan's only protection figure; HDX HAPI does not say which line each year's figure is",
+      "not_comparable_years": {
+       "line": [
+        "2024",
+        "2025"
+       ],
+       "single": [
+        "2026"
+       ]
+      },
+      "sector_en": "protection",
+      "sector_tr": "koruma",
+      "resolution": "year",
+      "exact": true,
+      "family": 2,
+      "tested": false,
+      "p_adjusted": null,
+      "significant": false
+     }
+    },
+    {
+     "heading": "Refugees (people) — Trend Analysis",
+     "stat_result": {
+      "kind": "trend",
+      "indicator": "Refugees (people)",
+      "direction": "decreasing",
+      "slope": -816742.8224218203,
+      "p_value": 0.7340951823194757,
+      "pct_change": -38.05261974868894,
+      "n_points": 4,
+      "ci_low": null,
+      "ci_high": null,
+      "tau": -0.3333333333333333,
+      "first_period": "2022-01-01T00:00:00",
+      "last_period": "2025-01-01T00:00:00",
+      "unit": "",
+      "look_back": {
+       "date_from": "2021-11-19",
+       "date_to": "2026-11-19",
+       "chosen_points": 0
+      },
+      "chosen_from": "2025-11-19",
+      "latest_value": 2671560.0,
+      "latest_period": "2025-01-01T00:00:00",
+      "first_value": 5661717.0,
+      "periods": [
+       "2022-01-01T00:00:00",
+       "2023-01-01T00:00:00",
+       "2024-01-01T00:00:00",
+       "2025-01-01T00:00:00"
+      ],
+      "values": [
+       5661717.0,
+       6403144.0,
+       5766586.0,
+       2671560.0
+      ],
+      "line_change": null,
+      "value_unit": "people",
+      "resolution": "year",
+      "family": 2,
+      "tested": true,
+      "p_adjusted": 0.7340951823194757,
+      "significant": false
+     }
+    },
+    {
+     "heading": "Returnees (people) — Trend Analysis",
+     "stat_result": {
+      "kind": "trend",
+      "indicator": "Returnees (people)",
+      "direction": "increasing",
+      "slope": 476933.9950795545,
+      "p_value": 0.08942935902899363,
+      "pct_change": null,
+      "n_points": 4,
+      "ci_low": null,
+      "ci_high": null,
+      "tau": 1.0,
+      "first_period": "2022-01-01T00:00:00",
+      "last_period": "2025-01-01T00:00:00",
+      "unit": "",
+      "look_back": {
+       "date_from": "2021-11-19",
+       "date_to": "2026-11-19",
+       "chosen_points": 0
+      },
+      "chosen_from": "2025-11-19",
+      "latest_value": 1947183.0,
+      "latest_period": "2025-01-01T00:00:00",
+      "first_value": 6506.0,
+      "periods": [
+       "2022-01-01T00:00:00",
+       "2023-01-01T00:00:00",
+       "2024-01-01T00:00:00",
+       "2025-01-01T00:00:00"
+      ],
+      "values": [
+       6506.0,
+       57530.0,
+       364443.0,
+       1947183.0
+      ],
+      "line_change": null,
+      "value_unit": "people",
+      "resolution": "year",
+      "family": 2,
+      "tested": true,
+      "p_adjusted": 0.17885871805798725,
+      "significant": false
+     }
+    },
+    {
+     "heading": "Internally displaced people (IDPs) — Latest Values",
+     "stat_result": {
+      "kind": "snapshot",
+      "indicator": "Internally displaced people (IDPs)",
+      "p_value": null,
+      "periods": [
+       "2025-01-31T00:00:00",
+       "2025-05-31T00:00:00",
+       "2026-01-31T00:00:00"
+      ],
+      "values": [
+       2971985.0,
+       3109221.0,
+       3061922.0
+      ],
+      "value_unit": "people",
+      "min_points": 4,
+      "look_back": {
+       "date_from": "2021-11-19",
+       "date_to": "2026-11-19",
+       "chosen_points": 1
+      },
+      "chosen_from": "2025-11-19",
+      "not_comparable": null,
+      "not_comparable_years": null,
+      "sector_en": "",
+      "sector_tr": "",
+      "resolution": "month",
+      "exact": false,
+      "family": 2,
+      "tested": false,
+      "p_adjusted": null,
+      "significant": false
+     }
+    },
+    {
+     "heading": "Internally displaced people (IDPs) — Regional Analysis",
+     "stat_result": {
+      "kind": "region",
+      "indicator": "Internally displaced people (IDPs)",
+      "ranking": [
+       [
+        "Herat",
+        443229.0
+       ],
+       [
+        "Balkh",
+        362925.0
+       ],
+       [
+        "Kabul",
+        309769.0
+       ],
+       [
+        "Nangarhar",
+        270944.0
+       ],
+       [
+        "Kandahar",
+        148985.0
+       ],
+       [
+        "Helmand",
+        132937.0
+       ],
+       [
+        "Baghlan",
+        119791.0
+       ],
+       [
+        "Takhar",
+        112821.0
+       ],
+       [
+        "Khost",
+        101433.0
+       ],
+       [
+        "Faryab",
+        99019.0
+       ],
+       [
+        "Kunduz",
+        85571.0
+       ],
+       [
+        "Farah",
+        79310.0
+       ],
+       [
+        "Ghazni",
+        68885.0
+       ],
+       [
+        "Zabul",
+        62436.0
+       ],
+       [
+        "Badakhshan",
+        62067.0
+       ],
+       [
+        "Ghor",
+        62022.0
+       ],
+       [
+        "Sar-e-Pul",
+        57605.0
+       ],
+       [
+        "Kunar",
+        51993.0
+       ],
+       [
+        "Nimroz",
+        49419.0
+       ],
+       [
+        "Laghman",
+        42261.0
+       ],
+       [
+        "Samangan",
+        41805.0
+       ],
+       [
+        "Paktya",
+        39963.0
+       ],
+       [
+        "Badghis",
+        38059.0
+       ],
+       [
+        "Parwan",
+        35796.0
+       ],
+       [
+        "Logar",
+        27851.0
+       ],
+       [
+        "Jawzjan",
+        27759.0
+       ],
+       [
+        "Kapisa",
+        26520.0
+       ],
+       [
+        "Maidan Wardak",
+        25944.0
+       ],
+       [
+        "Daykundi",
+        19203.0
+       ],
+       [
+        "Paktika",
+        18834.0
+       ],
+       [
+        "Bamyan",
+        15385.0
+       ],
+       [
+        "Uruzgan",
+        10864.0
+       ],
+       [
+        "Nuristan",
+        7108.0
+       ],
+       [
+        "Panjsher",
+        3409.0
+       ]
+      ],
+      "p_value": null,
+      "kruskal_h": null,
+      "max_obs": 1,
+      "first_period": "2026-01-31T00:00:00",
+      "last_period": "2026-01-31T00:00:00",
+      "value_unit": "people",
+      "resolution": "month",
+      "family": 2,
+      "tested": false,
+      "p_adjusted": null,
+      "significant": false
+     }
+    }
+   ]
+  },
+  "afg_pro_tr": {
+   "language": "tr",
+   "allowed": "COMPUTED STATISTICAL FINDINGS (do not recompute — narrate only):\n\nPERIOD ANALYSED: 19 November 2025 to 19 November 2026\n\nHEADLINE (the sector's own figures; open the Executive Summary with them): Koruma: insani yardıma ihtiyaç duyan kişiler: 14,988,378 people (2026); earlier years are reported on a different basis and are not comparable.\n\nLOOK-BACK: the chosen period holds too few observations for Koruma: insani yardıma ihtiyaç duyan kişiler, Mülteciler (kişi), Geri dönenler (kişi), Ülke içinde yerinden edilmiş kişiler (IDP), so their values and trends below cover the longer look-back window 19 November 2021 to 19 November 2026 (marked “look-back window”).\n\n## Koruma: insani yardıma ihtiyaç duyan kişiler — Son Değerler\nKoruma: insani yardıma ihtiyaç duyan kişiler (look-back window): latest value 14,988,378 people (2026); earlier 14,213,777 people in 2025, 14,809,904 people in 2024. The values are not comparable across years (2024, 2025: possibly one of the plan's separate protection lines rather than its overall figure; 2026: the plan's only protection figure; HDX HAPI does not say which line each year's figure is), so no trend is tested.\n\n## Mülteciler (kişi) — Eğilim Analizi\nMülteciler (kişi): latest value 2.67 million people (2025, before the chosen period), against 5.66 million people in 2022. Trend over the look-back window, 2022 to 2025: decreasing, Sen slope -817,000 people per year (95% CI: too few points), Kendall tau -0.33, Mann-Kendall p=0.734, Holm-adjusted p=0.734 → NOT SIGNIFICANT (α=0.05); relative change along the trend line -38.1%; four observations.\n\n## Geri dönenler (kişi) — Eğilim Analizi\nGeri dönenler (kişi): latest value 1.95 million people (2025, before the chosen period), against 6,510 people in 2022. Trend over the look-back window, 2022 to 2025: increasing, Sen slope 477,000 people per year (95% CI: too few points), Kendall tau 1.00, Mann-Kendall p=0.089, Holm-adjusted p=0.179 → NOT SIGNIFICANT (α=0.05); four observations.\n\n## Ülke içinde yerinden edilmiş kişiler (IDP) — Son Değerler\nÜlke içinde yerinden edilmiş kişiler (IDP) (look-back window): latest value 3.06 million people (January 2026), down from 3.11 million people in May 2025; earlier 2.97 million people in January 2025. Three observations: too few for a trend test.\n\n## Ülke içinde yerinden edilmiş kişiler (IDP) — Bölgesel Analiz\nÜlke içinde yerinden edilmiş kişiler (IDP): highest regions as of January 2026: Herat (443,000 people), Balkh (363,000 people), Kabul (310,000 people); a statistical comparison between regions was not possible: one observation per region.\n\nDATA GAPS:\n- Koruma: insani yardıma ihtiyaç duyan kişiler: too few observations for a trend test (n=3)\n- Ülke içinde yerinden edilmiş kişiler (IDP): too few observations for a trend test (n=3)\n\nDATA NOTES:\n- Koruma: insani yardıma ihtiyaç duyan kişiler, 2024: the plan reports protection in separate lines (Child Protection 9,213,752, Gender Based Violence 13,253,951, Housing, Land and Property 6,296,804, Mine Action 4,182,879); this figure (14,809,904) may be another of the plan's protection lines (not listed in HDX HAPI) rather than its overall protection figure; this report does not add the lines up, because people can be counted in more than one.\n- Koruma: insani yardıma ihtiyaç duyan kişiler, 2025: the plan reports protection in separate lines (Child Protection 9,352,775, Gender Based Violence 14,173,291, Housing, Land and Property 3,392,653, Mine Action 4,369,984); this figure (14,213,777) may be another of the plan's protection lines (not listed in HDX HAPI) rather than its overall protection figure; this report does not add the lines up, because people can be counted in more than one.\n- Ülke içinde yerinden edilmiş kişiler (IDP) (look-back window): only the DTM operation 'Climate and mobility in Afghanistan' is used; 1 other operation(s) count displacement differently and are not mixed in\n\nMETHOD NOTES:\n- Trend: Mann-Kendall test; the slope is Sen's slope per year on the real dates of the periods; Kendall tau is the effect size.\n- Multiple comparisons: Holm correction across all two tests in this report; significance is decided on the Holm-adjusted p-value at α=0.05.\n- Limitation: the series are short; the tests assume independent observations and serial correlation between consecutive periods is not corrected for, so the results are indicative.",
+   "note_items": [
+    {
+     "name": "Koruma: insani yardıma ihtiyaç duyan kişiler",
+     "window": null,
+     "kind": "plan_line",
+     "year": "2024",
+     "lines": [
+      [
+       "Child Protection",
+       9213752.0
+      ],
+      [
+       "Gender Based Violence",
+       13253951.0
+      ],
+      [
+       "Housing, Land and Property",
+       6296804.0
+      ],
+      [
+       "Mine Action",
+       4182879.0
+      ]
+     ],
+     "figure": 14809904.0,
+     "below": false,
+     "sector_en": "protection",
+     "sector_tr": "koruma"
+    },
+    {
+     "name": "Koruma: insani yardıma ihtiyaç duyan kişiler",
+     "window": null,
+     "kind": "plan_line",
+     "year": "2025",
+     "lines": [
+      [
+       "Child Protection",
+       9352775.0
+      ],
+      [
+       "Gender Based Violence",
+       14173291.0
+      ],
+      [
+       "Housing, Land and Property",
+       3392653.0
+      ],
+      [
+       "Mine Action",
+       4369984.0
+      ]
+     ],
+     "figure": 14213777.0,
+     "below": false,
+     "sector_en": "protection",
+     "sector_tr": "koruma"
+    },
+    {
+     "name": "Ülke içinde yerinden edilmiş kişiler (IDP)",
+     "window": "look_back",
+     "kind": "dtm",
+     "operation": "Climate and mobility in Afghanistan",
+     "other_operations": 1,
+     "incomplete_rounds": 0
+    }
+   ],
+   "sections": [
+    {
+     "heading": "Koruma: insani yardıma ihtiyaç duyan kişiler — Son Değerler",
+     "stat_result": {
+      "kind": "snapshot",
+      "indicator": "Koruma: insani yardıma ihtiyaç duyan kişiler",
+      "p_value": null,
+      "periods": [
+       "2024-01-01T00:00:00",
+       "2025-01-01T00:00:00",
+       "2026-01-01T00:00:00"
+      ],
+      "values": [
+       14809904.0,
+       14213777.0,
+       14988378.0
+      ],
+      "value_unit": "people",
+      "min_points": 4,
+      "look_back": {
+       "date_from": "2021-11-19",
+       "date_to": "2026-11-19",
+       "chosen_points": 1
+      },
+      "chosen_from": "2025-11-19",
+      "not_comparable": "2024, 2025: possibly one of the plan's separate protection lines rather than its overall figure; 2026: the plan's only protection figure; HDX HAPI does not say which line each year's figure is",
+      "not_comparable_years": {
+       "line": [
+        "2024",
+        "2025"
+       ],
+       "single": [
+        "2026"
+       ]
+      },
+      "sector_en": "protection",
+      "sector_tr": "koruma",
+      "resolution": "year",
+      "exact": true,
+      "family": 2,
+      "tested": false,
+      "p_adjusted": null,
+      "significant": false
+     }
+    },
+    {
+     "heading": "Mülteciler (kişi) — Eğilim Analizi",
+     "stat_result": {
+      "kind": "trend",
+      "indicator": "Mülteciler (kişi)",
+      "direction": "decreasing",
+      "slope": -816742.8224218203,
+      "p_value": 0.7340951823194757,
+      "pct_change": -38.05261974868894,
+      "n_points": 4,
+      "ci_low": null,
+      "ci_high": null,
+      "tau": -0.3333333333333333,
+      "first_period": "2022-01-01T00:00:00",
+      "last_period": "2025-01-01T00:00:00",
+      "unit": "",
+      "look_back": {
+       "date_from": "2021-11-19",
+       "date_to": "2026-11-19",
+       "chosen_points": 0
+      },
+      "chosen_from": "2025-11-19",
+      "latest_value": 2671560.0,
+      "latest_period": "2025-01-01T00:00:00",
+      "first_value": 5661717.0,
+      "periods": [
+       "2022-01-01T00:00:00",
+       "2023-01-01T00:00:00",
+       "2024-01-01T00:00:00",
+       "2025-01-01T00:00:00"
+      ],
+      "values": [
+       5661717.0,
+       6403144.0,
+       5766586.0,
+       2671560.0
+      ],
+      "line_change": null,
+      "value_unit": "people",
+      "resolution": "year",
+      "family": 2,
+      "tested": true,
+      "p_adjusted": 0.7340951823194757,
+      "significant": false
+     }
+    },
+    {
+     "heading": "Geri dönenler (kişi) — Eğilim Analizi",
+     "stat_result": {
+      "kind": "trend",
+      "indicator": "Geri dönenler (kişi)",
+      "direction": "increasing",
+      "slope": 476933.9950795545,
+      "p_value": 0.08942935902899363,
+      "pct_change": null,
+      "n_points": 4,
+      "ci_low": null,
+      "ci_high": null,
+      "tau": 1.0,
+      "first_period": "2022-01-01T00:00:00",
+      "last_period": "2025-01-01T00:00:00",
+      "unit": "",
+      "look_back": {
+       "date_from": "2021-11-19",
+       "date_to": "2026-11-19",
+       "chosen_points": 0
+      },
+      "chosen_from": "2025-11-19",
+      "latest_value": 1947183.0,
+      "latest_period": "2025-01-01T00:00:00",
+      "first_value": 6506.0,
+      "periods": [
+       "2022-01-01T00:00:00",
+       "2023-01-01T00:00:00",
+       "2024-01-01T00:00:00",
+       "2025-01-01T00:00:00"
+      ],
+      "values": [
+       6506.0,
+       57530.0,
+       364443.0,
+       1947183.0
+      ],
+      "line_change": null,
+      "value_unit": "people",
+      "resolution": "year",
+      "family": 2,
+      "tested": true,
+      "p_adjusted": 0.17885871805798725,
+      "significant": false
+     }
+    },
+    {
+     "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Son Değerler",
+     "stat_result": {
+      "kind": "snapshot",
+      "indicator": "Ülke içinde yerinden edilmiş kişiler (IDP)",
+      "p_value": null,
+      "periods": [
+       "2025-01-31T00:00:00",
+       "2025-05-31T00:00:00",
+       "2026-01-31T00:00:00"
+      ],
+      "values": [
+       2971985.0,
+       3109221.0,
+       3061922.0
+      ],
+      "value_unit": "people",
+      "min_points": 4,
+      "look_back": {
+       "date_from": "2021-11-19",
+       "date_to": "2026-11-19",
+       "chosen_points": 1
+      },
+      "chosen_from": "2025-11-19",
+      "not_comparable": null,
+      "not_comparable_years": null,
+      "sector_en": "",
+      "sector_tr": "",
+      "resolution": "month",
+      "exact": false,
+      "family": 2,
+      "tested": false,
+      "p_adjusted": null,
+      "significant": false
+     }
+    },
+    {
+     "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Bölgesel Analiz",
+     "stat_result": {
+      "kind": "region",
+      "indicator": "Ülke içinde yerinden edilmiş kişiler (IDP)",
+      "ranking": [
+       [
+        "Herat",
+        443229.0
+       ],
+       [
+        "Balkh",
+        362925.0
+       ],
+       [
+        "Kabul",
+        309769.0
+       ],
+       [
+        "Nangarhar",
+        270944.0
+       ],
+       [
+        "Kandahar",
+        148985.0
+       ],
+       [
+        "Helmand",
+        132937.0
+       ],
+       [
+        "Baghlan",
+        119791.0
+       ],
+       [
+        "Takhar",
+        112821.0
+       ],
+       [
+        "Khost",
+        101433.0
+       ],
+       [
+        "Faryab",
+        99019.0
+       ],
+       [
+        "Kunduz",
+        85571.0
+       ],
+       [
+        "Farah",
+        79310.0
+       ],
+       [
+        "Ghazni",
+        68885.0
+       ],
+       [
+        "Zabul",
+        62436.0
+       ],
+       [
+        "Badakhshan",
+        62067.0
+       ],
+       [
+        "Ghor",
+        62022.0
+       ],
+       [
+        "Sar-e-Pul",
+        57605.0
+       ],
+       [
+        "Kunar",
+        51993.0
+       ],
+       [
+        "Nimroz",
+        49419.0
+       ],
+       [
+        "Laghman",
+        42261.0
+       ],
+       [
+        "Samangan",
+        41805.0
+       ],
+       [
+        "Paktya",
+        39963.0
+       ],
+       [
+        "Badghis",
+        38059.0
+       ],
+       [
+        "Parwan",
+        35796.0
+       ],
+       [
+        "Logar",
+        27851.0
+       ],
+       [
+        "Jawzjan",
+        27759.0
+       ],
+       [
+        "Kapisa",
+        26520.0
+       ],
+       [
+        "Maidan Wardak",
+        25944.0
+       ],
+       [
+        "Daykundi",
+        19203.0
+       ],
+       [
+        "Paktika",
+        18834.0
+       ],
+       [
+        "Bamyan",
+        15385.0
+       ],
+       [
+        "Uruzgan",
+        10864.0
+       ],
+       [
+        "Nuristan",
+        7108.0
+       ],
+       [
+        "Panjsher",
+        3409.0
+       ]
+      ],
+      "p_value": null,
+      "kruskal_h": null,
+      "max_obs": 1,
+      "first_period": "2026-01-31T00:00:00",
+      "last_period": "2026-01-31T00:00:00",
+      "value_unit": "people",
+      "resolution": "month",
+      "family": 2,
+      "tested": false,
+      "p_adjusted": null,
+      "significant": false
+     }
+    }
+   ]
+  },
+  "hti_pro_en": {
+   "language": "en",
+   "allowed": "COMPUTED STATISTICAL FINDINGS (do not recompute — narrate only):\n\nPERIOD ANALYSED: 1 January 2025 to 31 December 2025\n\nHEADLINE (the sector's own figures; open the Executive Summary with them): Protection: people in need: 466,589 people (2025); earlier years are reported on a different basis and are not comparable; it is not the plan's overall protection figure.\n\nLOOK-BACK: the chosen period holds too few observations for Protection: people in need, Refugees (people), Internally displaced people (IDPs), so their values and trends below cover the longer look-back window 31 December 2020 to 31 December 2025 (marked “look-back window”).\n\n## Protection: people in need — Latest Values\nProtection: people in need (look-back window): latest value 466,589 people (2025); earlier 250,000 people in 2024. The values are not comparable across years (2024, 2025: one of the plan's separate protection lines, not its overall figure; HDX HAPI does not say which line each year's figure is), so no trend is tested.\n\n## Refugees (people) — Trend Analysis\nRefugees (people): latest value 181,000 people (2025), against 29,500 people in 2021. Trend over the look-back window, 2021 to 2025: increasing, Sen slope 38,700 people per year (95% CI 854 people to 91,900 people), Kendall tau 1.00, Mann-Kendall p=0.027, Holm-adjusted p=0.027 → SIGNIFICANT (α=0.05); relative change along the trend line +525.8%; five observations.\n\n## Internally displaced people (IDPs) — Trend Analysis\nInternally displaced people (IDPs): latest value 1.45 million people (December 2025), against 578,000 people in May 2024. Trend over the look-back window, May 2024 to December 2025: increasing, Sen slope 550,000 people per year (95% CI 323,000 people to 791,000 people), Kendall tau 1.00, Mann-Kendall p=0.009, Holm-adjusted p=0.017 → SIGNIFICANT (α=0.05); relative change along the trend line +138.8%; six observations.\n\n## Internally displaced people (IDPs) — Regional Analysis\nInternally displaced people (IDPs): highest regions (mean per region, June 2025 to December 2025): West (405,000 people), South (195,000 people), Centre (170,000 people); difference between regions Kruskal-Wallis H=27.34, p=0.001, Holm-adjusted p=0.004 → SIGNIFICANT (α=0.05).\n\nDATA GAPS:\n- Protection: people in need: too few observations for a trend test (n=2)\n- Returnees (people): no data in the period\n\nDATA NOTES:\n- Protection: people in need: HDX HAPI holds two totals for 2025: 349,999 without a breakdown and 466,589 as the total of its breakdown (used); the HNO's published sector figure may differ\n- Protection: people in need, 2024: the plan reports protection in separate lines (Child Protection 1,253,982, Gender Based Violence 1,171,183); this figure (250,000) is below one of the plan's protection lines, so it is not the plan's overall protection figure; HDX HAPI does not say which of the plan's lines it is; this report does not add the lines up, because people can be counted in more than one.\n- Protection: people in need, 2025: the plan reports protection in separate lines (Child Protection 1,611,291, Gender Based Violence 1,535,819); this figure (466,589) is below one of the plan's protection lines, so it is not the plan's overall protection figure; HDX HAPI does not say which of the plan's lines it is; this report does not add the lines up, because people can be counted in more than one.\n- Internally displaced people (IDPs) (look-back window): only the DTM operation 'Countrywide monitoring' is used; 1 other operation(s) count displacement differently and are not mixed in; 6 incomplete round(s) covering under 80% of its regions are left out\n\nMETHOD NOTES:\n- Trend: Mann-Kendall test; the slope is Sen's slope per year on the real dates of the periods; Kendall tau is the effect size.\n- Regions: Kruskal-Wallis test across admin-1 regions.\n- Multiple comparisons: Holm correction across all three tests in this report; significance is decided on the Holm-adjusted p-value at α=0.05.\n- Limitation: the series are short; the tests assume independent observations and serial correlation between consecutive periods is not corrected for, so the results are indicative.",
+   "note_items": [
+    {
+     "name": "Protection: people in need",
+     "window": null,
+     "kind": "totals",
+     "years": [
+      {
+       "year": "2025",
+       "blank": 349999.0,
+       "total": 466589.0,
+       "used": "total"
+      }
+     ]
+    },
+    {
+     "name": "Protection: people in need",
+     "window": null,
+     "kind": "plan_line",
+     "year": "2024",
+     "lines": [
+      [
+       "Child Protection",
+       1253982.0
+      ],
+      [
+       "Gender Based Violence",
+       1171183.0
+      ]
+     ],
+     "figure": 250000.0,
+     "below": true,
+     "sector_en": "protection",
+     "sector_tr": "koruma"
+    },
+    {
+     "name": "Protection: people in need",
+     "window": null,
+     "kind": "plan_line",
+     "year": "2025",
+     "lines": [
+      [
+       "Child Protection",
+       1611291.0
+      ],
+      [
+       "Gender Based Violence",
+       1535819.0
+      ]
+     ],
+     "figure": 466589.0,
+     "below": true,
+     "sector_en": "protection",
+     "sector_tr": "koruma"
+    },
+    {
+     "name": "Internally displaced people (IDPs)",
+     "window": "look_back",
+     "kind": "dtm",
+     "operation": "Countrywide monitoring",
+     "other_operations": 1,
+     "incomplete_rounds": 6
+    }
+   ],
+   "sections": [
+    {
+     "heading": "Protection: people in need — Latest Values",
+     "stat_result": {
+      "kind": "snapshot",
+      "indicator": "Protection: people in need",
+      "p_value": null,
+      "periods": [
+       "2024-01-01T00:00:00",
+       "2025-01-01T00:00:00"
+      ],
+      "values": [
+       250000.0,
+       466589.0
+      ],
+      "value_unit": "people",
+      "min_points": 4,
+      "look_back": {
+       "date_from": "2020-12-31",
+       "date_to": "2025-12-31",
+       "chosen_points": 1
+      },
+      "chosen_from": "2025-01-01",
+      "not_comparable": "2024, 2025: one of the plan's separate protection lines, not its overall figure; HDX HAPI does not say which line each year's figure is",
+      "not_comparable_years": {
+       "below": [
+        "2024",
+        "2025"
+       ]
+      },
+      "sector_en": "protection",
+      "sector_tr": "koruma",
+      "resolution": "year",
+      "exact": true,
+      "family": 3,
+      "tested": false,
+      "p_adjusted": null,
+      "significant": false
+     }
+    },
+    {
+     "heading": "Refugees (people) — Trend Analysis",
+     "stat_result": {
+      "kind": "trend",
+      "indicator": "Refugees (people)",
+      "direction": "increasing",
+      "slope": 38719.22808219178,
+      "p_value": 0.0274863361115103,
+      "pct_change": 525.8264151856017,
+      "n_points": 5,
+      "ci_low": 853.5842465753425,
+      "ci_high": 91894.89863013699,
+      "tau": 1.0,
+      "first_period": "2021-01-01T00:00:00",
+      "last_period": "2025-01-01T00:00:00",
+      "unit": "",
+      "look_back": {
+       "date_from": "2020-12-31",
+       "date_to": "2025-12-31",
+       "chosen_points": 1
+      },
+      "chosen_from": "2025-01-01",
+      "latest_value": 180702.0,
+      "latest_period": "2025-01-01T00:00:00",
+      "first_value": 29454.0,
+      "periods": [
+       "2021-01-01T00:00:00",
+       "2022-01-01T00:00:00",
+       "2023-01-01T00:00:00",
+       "2024-01-01T00:00:00",
+       "2025-01-01T00:00:00"
+      ],
+      "values": [
+       29454.0,
+       30307.0,
+       122139.0,
+       148252.0,
+       180702.0
+      ],
+      "line_change": null,
+      "value_unit": "people",
+      "resolution": "year",
+      "family": 3,
+      "tested": true,
+      "p_adjusted": 0.0274863361115103,
+      "significant": true
+     }
+    },
+    {
+     "heading": "Internally displaced people (IDPs) — Trend Analysis",
+     "stat_result": {
+      "kind": "trend",
+      "indicator": "Internally displaced people (IDPs)",
+      "direction": "increasing",
+      "slope": 550196.450777202,
+      "p_value": 0.008534920414227098,
+      "pct_change": 138.80726579053066,
+      "n_points": 6,
+      "ci_low": 322890.9252717391,
+      "ci_high": 790501.6997663552,
+      "tau": 1.0,
+      "first_period": "2024-05-31T00:00:00",
+      "last_period": "2025-12-31T00:00:00",
+      "unit": "",
+      "look_back": {
+       "date_from": "2020-12-31",
+       "date_to": "2025-12-31",
+       "chosen_points": 3
+      },
+      "chosen_from": "2025-01-01",
+      "latest_value": 1450254.0,
+      "latest_period": "2025-12-31T00:00:00",
+      "first_value": 578074.0,
+      "periods": [
+       "2024-05-31T00:00:00",
+       "2024-09-30T00:00:00",
+       "2024-12-31T00:00:00",
+       "2025-06-30T00:00:00",
+       "2025-09-30T00:00:00",
+       "2025-12-31T00:00:00"
+      ],
+      "values": [
+       578074.0,
+       702973.0,
+       1041229.0,
+       1287593.0,
+       1412199.0,
+       1450254.0
+      ],
+      "line_change": null,
+      "value_unit": "people",
+      "resolution": "month",
+      "family": 3,
+      "tested": true,
+      "p_adjusted": 0.017069840828454197,
+      "significant": true
+     }
+    },
+    {
+     "heading": "Internally displaced people (IDPs) — Regional Analysis",
+     "stat_result": {
+      "kind": "region",
+      "indicator": "Internally displaced people (IDPs)",
+      "ranking": [
+       [
+        "West",
+        404861.3333333333
+       ],
+       [
+        "South",
+        194695.0
+       ],
+       [
+        "Centre",
+        169620.66666666666
+       ],
+       [
+        "South-East",
+        156863.0
+       ],
+       [
+        "North",
+        123162.66666666667
+       ],
+       [
+        "Grande'Anse",
+        122401.0
+       ],
+       [
+        "Artibonite",
+        121493.0
+       ],
+       [
+        "Nippes",
+        63987.666666666664
+       ],
+       [
+        "North-West",
+        18776.333333333332
+       ],
+       [
+        "North-East",
+        7488.0
+       ]
+      ],
+      "p_value": 0.0012286915663900278,
+      "kruskal_h": 27.33978494623655,
+      "max_obs": 3,
+      "first_period": "2025-06-30T00:00:00",
+      "last_period": "2025-12-31T00:00:00",
+      "value_unit": "people",
+      "resolution": "month",
+      "family": 3,
+      "tested": true,
+      "p_adjusted": 0.0036860746991700835,
+      "significant": true
+     }
+    }
+   ]
+  },
+  "hti_pro_tr": {
+   "language": "tr",
+   "allowed": "COMPUTED STATISTICAL FINDINGS (do not recompute — narrate only):\n\nPERIOD ANALYSED: 1 January 2025 to 31 December 2025\n\nHEADLINE (the sector's own figures; open the Executive Summary with them): Koruma: insani yardıma ihtiyaç duyan kişiler: 466,589 people (2025); earlier years are reported on a different basis and are not comparable; it is not the plan's overall protection figure.\n\nLOOK-BACK: the chosen period holds too few observations for Koruma: insani yardıma ihtiyaç duyan kişiler, Mülteciler (kişi), Ülke içinde yerinden edilmiş kişiler (IDP), so their values and trends below cover the longer look-back window 31 December 2020 to 31 December 2025 (marked “look-back window”).\n\n## Koruma: insani yardıma ihtiyaç duyan kişiler — Son Değerler\nKoruma: insani yardıma ihtiyaç duyan kişiler (look-back window): latest value 466,589 people (2025); earlier 250,000 people in 2024. The values are not comparable across years (2024, 2025: one of the plan's separate protection lines, not its overall figure; HDX HAPI does not say which line each year's figure is), so no trend is tested.\n\n## Mülteciler (kişi) — Eğilim Analizi\nMülteciler (kişi): latest value 181,000 people (2025), against 29,500 people in 2021. Trend over the look-back window, 2021 to 2025: increasing, Sen slope 38,700 people per year (95% CI 854 people to 91,900 people), Kendall tau 1.00, Mann-Kendall p=0.027, Holm-adjusted p=0.027 → SIGNIFICANT (α=0.05); relative change along the trend line +525.8%; five observations.\n\n## Ülke içinde yerinden edilmiş kişiler (IDP) — Eğilim Analizi\nÜlke içinde yerinden edilmiş kişiler (IDP): latest value 1.45 million people (December 2025), against 578,000 people in May 2024. Trend over the look-back window, May 2024 to December 2025: increasing, Sen slope 550,000 people per year (95% CI 323,000 people to 791,000 people), Kendall tau 1.00, Mann-Kendall p=0.009, Holm-adjusted p=0.017 → SIGNIFICANT (α=0.05); relative change along the trend line +138.8%; six observations.\n\n## Ülke içinde yerinden edilmiş kişiler (IDP) — Bölgesel Analiz\nÜlke içinde yerinden edilmiş kişiler (IDP): highest regions (mean per region, June 2025 to December 2025): West (405,000 people), South (195,000 people), Centre (170,000 people); difference between regions Kruskal-Wallis H=27.34, p=0.001, Holm-adjusted p=0.004 → SIGNIFICANT (α=0.05).\n\nDATA GAPS:\n- Koruma: insani yardıma ihtiyaç duyan kişiler: too few observations for a trend test (n=2)\n- Geri dönenler (kişi): no data in the period\n\nDATA NOTES:\n- Koruma: insani yardıma ihtiyaç duyan kişiler: HDX HAPI holds two totals for 2025: 349,999 without a breakdown and 466,589 as the total of its breakdown (used); the HNO's published sector figure may differ\n- Koruma: insani yardıma ihtiyaç duyan kişiler, 2024: the plan reports protection in separate lines (Child Protection 1,253,982, Gender Based Violence 1,171,183); this figure (250,000) is below one of the plan's protection lines, so it is not the plan's overall protection figure; HDX HAPI does not say which of the plan's lines it is; this report does not add the lines up, because people can be counted in more than one.\n- Koruma: insani yardıma ihtiyaç duyan kişiler, 2025: the plan reports protection in separate lines (Child Protection 1,611,291, Gender Based Violence 1,535,819); this figure (466,589) is below one of the plan's protection lines, so it is not the plan's overall protection figure; HDX HAPI does not say which of the plan's lines it is; this report does not add the lines up, because people can be counted in more than one.\n- Ülke içinde yerinden edilmiş kişiler (IDP) (look-back window): only the DTM operation 'Countrywide monitoring' is used; 1 other operation(s) count displacement differently and are not mixed in; 6 incomplete round(s) covering under 80% of its regions are left out\n\nMETHOD NOTES:\n- Trend: Mann-Kendall test; the slope is Sen's slope per year on the real dates of the periods; Kendall tau is the effect size.\n- Regions: Kruskal-Wallis test across admin-1 regions.\n- Multiple comparisons: Holm correction across all three tests in this report; significance is decided on the Holm-adjusted p-value at α=0.05.\n- Limitation: the series are short; the tests assume independent observations and serial correlation between consecutive periods is not corrected for, so the results are indicative.",
+   "note_items": [
+    {
+     "name": "Koruma: insani yardıma ihtiyaç duyan kişiler",
+     "window": null,
+     "kind": "totals",
+     "years": [
+      {
+       "year": "2025",
+       "blank": 349999.0,
+       "total": 466589.0,
+       "used": "total"
+      }
+     ]
+    },
+    {
+     "name": "Koruma: insani yardıma ihtiyaç duyan kişiler",
+     "window": null,
+     "kind": "plan_line",
+     "year": "2024",
+     "lines": [
+      [
+       "Child Protection",
+       1253982.0
+      ],
+      [
+       "Gender Based Violence",
+       1171183.0
+      ]
+     ],
+     "figure": 250000.0,
+     "below": true,
+     "sector_en": "protection",
+     "sector_tr": "koruma"
+    },
+    {
+     "name": "Koruma: insani yardıma ihtiyaç duyan kişiler",
+     "window": null,
+     "kind": "plan_line",
+     "year": "2025",
+     "lines": [
+      [
+       "Child Protection",
+       1611291.0
+      ],
+      [
+       "Gender Based Violence",
+       1535819.0
+      ]
+     ],
+     "figure": 466589.0,
+     "below": true,
+     "sector_en": "protection",
+     "sector_tr": "koruma"
+    },
+    {
+     "name": "Ülke içinde yerinden edilmiş kişiler (IDP)",
+     "window": "look_back",
+     "kind": "dtm",
+     "operation": "Countrywide monitoring",
+     "other_operations": 1,
+     "incomplete_rounds": 6
+    }
+   ],
+   "sections": [
+    {
+     "heading": "Koruma: insani yardıma ihtiyaç duyan kişiler — Son Değerler",
+     "stat_result": {
+      "kind": "snapshot",
+      "indicator": "Koruma: insani yardıma ihtiyaç duyan kişiler",
+      "p_value": null,
+      "periods": [
+       "2024-01-01T00:00:00",
+       "2025-01-01T00:00:00"
+      ],
+      "values": [
+       250000.0,
+       466589.0
+      ],
+      "value_unit": "people",
+      "min_points": 4,
+      "look_back": {
+       "date_from": "2020-12-31",
+       "date_to": "2025-12-31",
+       "chosen_points": 1
+      },
+      "chosen_from": "2025-01-01",
+      "not_comparable": "2024, 2025: one of the plan's separate protection lines, not its overall figure; HDX HAPI does not say which line each year's figure is",
+      "not_comparable_years": {
+       "below": [
+        "2024",
+        "2025"
+       ]
+      },
+      "sector_en": "protection",
+      "sector_tr": "koruma",
+      "resolution": "year",
+      "exact": true,
+      "family": 3,
+      "tested": false,
+      "p_adjusted": null,
+      "significant": false
+     }
+    },
+    {
+     "heading": "Mülteciler (kişi) — Eğilim Analizi",
+     "stat_result": {
+      "kind": "trend",
+      "indicator": "Mülteciler (kişi)",
+      "direction": "increasing",
+      "slope": 38719.22808219178,
+      "p_value": 0.0274863361115103,
+      "pct_change": 525.8264151856017,
+      "n_points": 5,
+      "ci_low": 853.5842465753425,
+      "ci_high": 91894.89863013699,
+      "tau": 1.0,
+      "first_period": "2021-01-01T00:00:00",
+      "last_period": "2025-01-01T00:00:00",
+      "unit": "",
+      "look_back": {
+       "date_from": "2020-12-31",
+       "date_to": "2025-12-31",
+       "chosen_points": 1
+      },
+      "chosen_from": "2025-01-01",
+      "latest_value": 180702.0,
+      "latest_period": "2025-01-01T00:00:00",
+      "first_value": 29454.0,
+      "periods": [
+       "2021-01-01T00:00:00",
+       "2022-01-01T00:00:00",
+       "2023-01-01T00:00:00",
+       "2024-01-01T00:00:00",
+       "2025-01-01T00:00:00"
+      ],
+      "values": [
+       29454.0,
+       30307.0,
+       122139.0,
+       148252.0,
+       180702.0
+      ],
+      "line_change": null,
+      "value_unit": "people",
+      "resolution": "year",
+      "family": 3,
+      "tested": true,
+      "p_adjusted": 0.0274863361115103,
+      "significant": true
+     }
+    },
+    {
+     "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Eğilim Analizi",
+     "stat_result": {
+      "kind": "trend",
+      "indicator": "Ülke içinde yerinden edilmiş kişiler (IDP)",
+      "direction": "increasing",
+      "slope": 550196.450777202,
+      "p_value": 0.008534920414227098,
+      "pct_change": 138.80726579053066,
+      "n_points": 6,
+      "ci_low": 322890.9252717391,
+      "ci_high": 790501.6997663552,
+      "tau": 1.0,
+      "first_period": "2024-05-31T00:00:00",
+      "last_period": "2025-12-31T00:00:00",
+      "unit": "",
+      "look_back": {
+       "date_from": "2020-12-31",
+       "date_to": "2025-12-31",
+       "chosen_points": 3
+      },
+      "chosen_from": "2025-01-01",
+      "latest_value": 1450254.0,
+      "latest_period": "2025-12-31T00:00:00",
+      "first_value": 578074.0,
+      "periods": [
+       "2024-05-31T00:00:00",
+       "2024-09-30T00:00:00",
+       "2024-12-31T00:00:00",
+       "2025-06-30T00:00:00",
+       "2025-09-30T00:00:00",
+       "2025-12-31T00:00:00"
+      ],
+      "values": [
+       578074.0,
+       702973.0,
+       1041229.0,
+       1287593.0,
+       1412199.0,
+       1450254.0
+      ],
+      "line_change": null,
+      "value_unit": "people",
+      "resolution": "month",
+      "family": 3,
+      "tested": true,
+      "p_adjusted": 0.017069840828454197,
+      "significant": true
+     }
+    },
+    {
+     "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Bölgesel Analiz",
+     "stat_result": {
+      "kind": "region",
+      "indicator": "Ülke içinde yerinden edilmiş kişiler (IDP)",
+      "ranking": [
+       [
+        "West",
+        404861.3333333333
+       ],
+       [
+        "South",
+        194695.0
+       ],
+       [
+        "Centre",
+        169620.66666666666
+       ],
+       [
+        "South-East",
+        156863.0
+       ],
+       [
+        "North",
+        123162.66666666667
+       ],
+       [
+        "Grande'Anse",
+        122401.0
+       ],
+       [
+        "Artibonite",
+        121493.0
+       ],
+       [
+        "Nippes",
+        63987.666666666664
+       ],
+       [
+        "North-West",
+        18776.333333333332
+       ],
+       [
+        "North-East",
+        7488.0
+       ]
+      ],
+      "p_value": 0.0012286915663900278,
+      "kruskal_h": 27.33978494623655,
+      "max_obs": 3,
+      "first_period": "2025-06-30T00:00:00",
+      "last_period": "2025-12-31T00:00:00",
+      "value_unit": "people",
+      "resolution": "month",
+      "family": 3,
+      "tested": true,
+      "p_adjusted": 0.0036860746991700835,
+      "significant": true
+     }
+    }
+   ]
+  },
+  "sdn_all_tr": {
+   "language": "tr",
+   "allowed": "COMPUTED STATISTICAL FINDINGS (do not recompute — narrate only):\n\nPERIOD ANALYSED: 19 November 2021 to 19 November 2026 (no period was chosen: the last five years)\n\n## Gıda güvensizliği (IPC 3+, analiz edilen nüfusun yüzdesi) — Eğilim Analizi\nGıda güvensizliği (IPC 3+, analiz edilen nüfusun yüzdesi): latest value 41.0% (February 2026), against 20.0% in April 2022. Trend, April 2022 to February 2026: increasing, Sen slope 4.95 percentage points per year (95% CI -9.55 to 12.9 percentage points), Kendall tau 0.50, Mann-Kendall p=0.312, Holm-adjusted p=0.925 → NOT SIGNIFICANT (α=0.05); change along the trend line +19.0 percentage points; five observations.\n\n## Mülteciler (kişi) — Eğilim Analizi\nMülteciler (kişi): latest value 2.82 million people (2025), against 837,000 people in 2022. Trend, 2022 to 2025: increasing, Sen slope 661,000 people per year (95% CI: too few points), Kendall tau 1.00, Mann-Kendall p=0.089, Holm-adjusted p=0.358 → NOT SIGNIFICANT (α=0.05); relative change along the trend line +236.8%; four observations.\n\n## Geri dönenler (kişi) — Eğilim Analizi\nGeri dönenler (kişi): latest value 651,000 people (2025), against 12,300 people in 2022. Trend, 2022 to 2025: increasing, Sen slope 109,000 people per year (95% CI: too few points), Kendall tau 0.33, Mann-Kendall p=0.734, Holm-adjusted p=0.925 → NOT SIGNIFICANT (α=0.05); four observations.\n\n## Ülke içinde yerinden edilmiş kişiler (IDP) — Eğilim Analizi\nÜlke içinde yerinden edilmiş kişiler (IDP): latest value 8.59 million people (September 2026), against 7.07 million people in August 2023. Trend, August 2023 to September 2026: decreasing, Sen slope -931,000 people per year (95% CI -1.15 million people to -603,000 people), Kendall tau -0.34, Mann-Kendall p=0.002, Holm-adjusted p=0.012 → SIGNIFICANT (α=0.05); relative change along the trend line -24.9%; 40 observations.\n\n## Ülke içinde yerinden edilmiş kişiler (IDP) — Bölgesel Analiz\nÜlke içinde yerinden edilmiş kişiler (IDP): highest regions (mean per region, August 2023 to September 2026): South Darfur (1.79 million people), North Darfur (1.61 million people), Central Darfur (929,000 people); difference between regions Kruskal-Wallis H=561.26, p<0.001, Holm-adjusted p<0.001 → SIGNIFICANT (α=0.05).\n\n## İnsani yardım fonlaması (USD) — Eğilim Analizi\nİnsani yardım fonlaması (USD): latest value 1.78 billion USD (2025), against 1.19 billion USD in 2022. Trend, 2022 to 2025: increasing, Sen slope 251 million USD per year (95% CI: too few points), Kendall tau 0.67, Mann-Kendall p=0.308, Holm-adjusted p=0.925 → NOT SIGNIFICANT (α=0.05); relative change along the trend line +61.6%; four observations.\n\nDATA GAPS:\n- İnsani yardıma ihtiyaç duyan kişiler: too few observations for a trend test (n=3)\n\nDATA NOTES:\n- Ülke içinde yerinden edilmiş kişiler (IDP): only the DTM operation 'Armed Clashes in Sudan (Overview)' is used; 3 other operation(s) count displacement differently and are not mixed in\n\nMETHOD NOTES:\n- Trend: Mann-Kendall test; the slope is Sen's slope per year on the real dates of the periods; Kendall tau is the effect size.\n- Regions: Kruskal-Wallis test across admin-1 regions.\n- Multiple comparisons: Holm correction across all six tests in this report; significance is decided on the Holm-adjusted p-value at α=0.05.\n- Limitation: the series are short; the tests assume independent observations and serial correlation between consecutive periods is not corrected for, so the results are indicative.",
+   "note_items": [
+    {
+     "name": "Ülke içinde yerinden edilmiş kişiler (IDP)",
+     "window": null,
+     "kind": "dtm",
+     "operation": "Armed Clashes in Sudan (Overview)",
+     "other_operations": 3,
+     "incomplete_rounds": 0
+    }
+   ],
+   "sections": [
+    {
+     "heading": "Gıda güvensizliği (IPC 3+, analiz edilen nüfusun yüzdesi) — Eğilim Analizi",
+     "stat_result": {
+      "kind": "trend",
+      "indicator": "Gıda güvensizliği (IPC 3+, analiz edilen nüfusun yüzdesi)",
+      "direction": "increasing",
+      "slope": 4.954482985597732,
+      "p_value": 0.3122163883433191,
+      "pct_change": 67.78021913121862,
+      "n_points": 5,
+      "ci_low": -9.549019607843132,
+      "ci_high": 12.860915492957746,
+      "tau": 0.5,
+      "first_period": "2022-04-01T00:00:00",
+      "last_period": "2026-02-01T00:00:00",
+      "unit": "percentage points",
+      "look_back": null,
+      "chosen_from": "2021-11-19",
+      "latest_value": 41.0,
+      "latest_period": "2026-02-01T00:00:00",
+      "first_value": 20.0,
+      "periods": [
+       "2022-04-01T00:00:00",
+       "2023-06-01T00:00:00",
+       "2024-04-01T00:00:00",
+       "2025-09-01T00:00:00",
+       "2026-02-01T00:00:00"
+      ],
+      "values": [
+       20.0,
+       35.0,
+       45.0,
+       45.0,
+       41.0
+      ],
+      "line_change": 19.017618469015797,
+      "value_unit": "%",
+      "resolution": "month",
+      "family": 6,
+      "tested": true,
+      "p_adjusted": 0.9245386424011617,
+      "significant": false
+     }
+    },
+    {
+     "heading": "Mülteciler (kişi) — Eğilim Analizi",
+     "stat_result": {
+      "kind": "trend",
+      "indicator": "Mülteciler (kişi)",
+      "direction": "increasing",
+      "slope": 660609.5279987627,
+      "p_value": 0.08942935902899363,
+      "pct_change": 236.83819021335762,
+      "n_points": 4,
+      "ci_low": null,
+      "ci_high": null,
+      "tau": 1.0,
+      "first_period": "2022-01-01T00:00:00",
+      "last_period": "2025-01-01T00:00:00",
+      "unit": "",
+      "look_back": null,
+      "chosen_from": "2021-11-19",
+      "latest_value": 2820737.0,
+      "latest_period": "2025-01-01T00:00:00",
+      "first_value": 837188.0,
+      "periods": [
+       "2022-01-01T00:00:00",
+       "2023-01-01T00:00:00",
+       "2024-01-01T00:00:00",
+       "2025-01-01T00:00:00"
+      ],
+      "values": [
+       837188.0,
+       1496923.0,
+       2094373.0,
+       2820737.0
+      ],
+      "line_change": null,
+      "value_unit": "people",
+      "resolution": "year",
+      "family": 6,
+      "tested": true,
+      "p_adjusted": 0.3577174361159745,
+      "significant": false
+     }
+    },
+    {
+     "heading": "Geri dönenler (kişi) — Eğilim Analizi",
+     "stat_result": {
+      "kind": "trend",
+      "indicator": "Geri dönenler (kişi)",
+      "direction": "increasing",
+      "slope": 108963.72165752175,
+      "p_value": 0.7340951823194757,
+      "pct_change": null,
+      "n_points": 4,
+      "ci_low": null,
+      "ci_high": null,
+      "tau": 0.3333333333333333,
+      "first_period": "2022-01-01T00:00:00",
+      "last_period": "2025-01-01T00:00:00",
+      "unit": "",
+      "look_back": null,
+      "chosen_from": "2021-11-19",
+      "latest_value": 651456.0,
+      "latest_period": "2025-01-01T00:00:00",
+      "first_value": 12313.0,
+      "periods": [
+       "2022-01-01T00:00:00",
+       "2023-01-01T00:00:00",
+       "2024-01-01T00:00:00",
+       "2025-01-01T00:00:00"
+      ],
+      "values": [
+       12313.0,
+       17238.0,
+       6472.0,
+       651456.0
+      ],
+      "line_change": null,
+      "value_unit": "people",
+      "resolution": "year",
+      "family": 6,
+      "tested": true,
+      "p_adjusted": 0.9245386424011617,
+      "significant": false
+     }
+    },
+    {
+     "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Eğilim Analizi",
+     "stat_result": {
+      "kind": "trend",
+      "indicator": "Ülke içinde yerinden edilmiş kişiler (IDP)",
+      "direction": "decreasing",
+      "slope": -931170.9188654078,
+      "p_value": 0.0023585647255830455,
+      "pct_change": -24.866323626351424,
+      "n_points": 40,
+      "ci_low": -1153344.9215753425,
+      "ci_high": -603416.7808848079,
+      "tau": -0.33589743589743587,
+      "first_period": "2023-08-31T00:00:00",
+      "last_period": "2026-09-30T00:00:00",
+      "unit": "",
+      "look_back": null,
+      "chosen_from": "2021-11-19",
+      "latest_value": 8585611.0,
+      "latest_period": "2026-09-30T00:00:00",
+      "first_value": 7071674.0,
+      "periods": [
+       "2023-08-31T00:00:00",
+       "2023-12-31T00:00:00",
+       "2024-05-31T00:00:00",
+       "2024-06-11T00:00:00",
+       "2024-06-16T00:00:00",
+       "2024-07-03T00:00:00",
+       "2024-07-16T00:00:00",
+       "2024-07-31T00:00:00",
+       "2024-08-18T00:00:00",
+       "2024-08-31T00:00:00",
+       "2024-09-10T00:00:00",
+       "2024-09-30T00:00:00",
+       "2024-10-08T00:00:00",
+       "2024-10-22T00:00:00",
+       "2024-11-06T00:00:00",
+       "2024-11-21T00:00:00",
+       "2024-12-03T00:00:00",
+       "2024-12-17T00:00:00",
+       "2024-12-31T00:00:00",
+       "2025-01-14T00:00:00",
+       "2025-01-28T00:00:00",
+       "2025-03-31T00:00:00",
+       "2025-04-30T00:00:00",
+       "2025-05-28T00:00:00",
+       "2025-06-30T00:00:00",
+       "2025-07-31T00:00:00",
+       "2025-08-31T00:00:00",
+       "2025-09-30T00:00:00",
+       "2025-10-31T00:00:00",
+       "2025-11-30T00:00:00",
+       "2025-12-31T00:00:00",
+       "2026-01-31T00:00:00",
+       "2026-02-28T00:00:00",
+       "2026-03-31T00:00:00",
+       "2026-04-30T00:00:00",
+       "2026-05-31T00:00:00",
+       "2026-06-30T00:00:00",
+       "2026-07-31T00:00:00",
+       "2026-08-31T00:00:00",
+       "2026-09-30T00:00:00"
+      ],
+      "values": [
+       7071674.0,
+       9052822.0,
+       9957655.0,
+       10095054.0,
+       10540215.0,
+       10594576.0,
+       10703327.0,
+       10710015.0,
+       10763116.0,
+       10834382.0,
+       10878024.0,
+       10890722.0,
+       10916305.0,
+       11018231.0,
+       11188057.0,
+       11359005.0,
+       11519598.0,
+       11532774.0,
+       11559970.0,
+       11568286.0,
+       11585384.0,
+       11301340.0,
+       10538960.0,
+       10136005.0,
+       10065329.0,
+       9937444.0,
+       9819680.0,
+       9584349.0,
+       9338999.0,
+       9258273.0,
+       9139309.0,
+       9105467.0,
+       9044786.0,
+       8936175.0,
+       8877515.0,
+       8805506.0,
+       8685273.0,
+       8622801.0,
+       8583274.0,
+       8585611.0
+      ],
+      "line_change": null,
+      "value_unit": "people",
+      "resolution": "month",
+      "family": 6,
+      "tested": true,
+      "p_adjusted": 0.011792823627915228,
+      "significant": true
+     }
+    },
+    {
+     "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Bölgesel Analiz",
+     "stat_result": {
+      "kind": "region",
+      "indicator": "Ülke içinde yerinden edilmiş kişiler (IDP)",
+      "ranking": [
+       [
+        "South Darfur",
+        1794718.725
+       ],
+       [
+        "North Darfur",
+        1612799.325
+       ],
+       [
+        "Central Darfur",
+        929247.5
+       ],
+       [
+        "East Darfur",
+        784608.475
+       ],
+       [
+        "River Nile",
+        653410.7
+       ],
+       [
+        "Gedaref",
+        608478.125
+       ],
+       [
+        "White Nile",
+        524208.175
+       ],
+       [
+        "Northern",
+        463420.075
+       ],
+       [
+        "South Kordofan",
+        403472.85
+       ],
+       [
+        "West Kordofan",
+        382611.625
+       ],
+       [
+        "Blue Nile",
+        378912.475
+       ],
+       [
+        "West Darfur",
+        327702.0
+       ],
+       [
+        "Aj Jazirah",
+        219286.05
+       ],
+       [
+        "North Kordofan",
+        208491.1
+       ],
+       [
+        "Khartoum",
+        202616.25
+       ],
+       [
+        "Red Sea",
+        199372.825
+       ],
+       [
+        "Sennar",
+        191193.45
+       ],
+       [
+        "Kassala",
+        183082.475
+       ]
+      ],
+      "p_value": 2.2323356386487833e-108,
+      "kruskal_h": 561.2633735623749,
+      "max_obs": 40,
+      "first_period": "2023-08-31T00:00:00",
+      "last_period": "2026-09-30T00:00:00",
+      "value_unit": "people",
+      "resolution": "month",
+      "family": 6,
+      "tested": true,
+      "p_adjusted": 1.3394013831892699e-107,
+      "significant": true
+     }
+    },
+    {
+     "heading": "İnsani yardım fonlaması (USD) — Eğilim Analizi",
+     "stat_result": {
+      "kind": "trend",
+      "indicator": "İnsani yardım fonlaması (USD)",
+      "direction": "increasing",
+      "slope": 250895004.46342647,
+      "p_value": 0.3081795474670539,
+      "pct_change": 61.63067798743239,
+      "n_points": 4,
+      "ci_low": null,
+      "ci_high": null,
+      "tau": 0.6666666666666666,
+      "first_period": "2022-01-01T00:00:00",
+      "last_period": "2025-01-01T00:00:00",
+      "unit": "",
+      "look_back": null,
+      "chosen_from": "2021-11-19",
+      "latest_value": 1782902647.0,
+      "latest_period": "2025-01-01T00:00:00",
+      "first_value": 1194223678.0,
+      "periods": [
+       "2022-01-01T00:00:00",
+       "2023-01-01T00:00:00",
+       "2024-01-01T00:00:00",
+       "2025-01-01T00:00:00"
+      ],
+      "values": [
+       1194223678.0,
+       1499622946.0,
+       2038731400.0,
+       1782902647.0
+      ],
+      "line_change": null,
+      "value_unit": "USD",
+      "resolution": "year",
+      "family": 6,
+      "tested": true,
+      "p_adjusted": 0.9245386424011617,
+      "significant": false
+     }
+    }
+   ]
+  }
+ },
+ "sentences": [
+  {
+   "case": "afg_pro_en",
+   "heading": "SUMMARY",
+   "sentence": "Protection needs have climbed steadily over the past three plan cycles, which calls for a larger protection response.",
+   "expect": "drop",
+   "why": "change on not-comparable series, in summary"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "SUMMARY",
+   "sentence": "Taken together, the indicators point to a deteriorating displacement picture in Afghanistan.",
+   "expect": "drop",
+   "why": "trend claim in summary (deteriorating)"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "SUMMARY",
+   "sentence": "Refugee numbers have eased off while returns have picked up, so teams should plan for a shift in caseload.",
+   "expect": "drop",
+   "why": "change in summary, unusual verbs"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "SUMMARY",
+   "sentence": "The results in this report are statistically meaningful and can be relied on for planning.",
+   "expect": "drop",
+   "why": "significance claimed in paraphrase; none is significant"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "SUMMARY",
+   "sentence": "The earlier-year protection figures capture the entire protection caseload for Afghanistan.",
+   "expect": "drop",
+   "why": "plan line called whole caseload"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "SUMMARY",
+   "sentence": "Nearly fifteen million people need protection, which is roughly a third of the country.",
+   "expect": "drop",
+   "why": "spelled-out figure + invented fraction"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "SUMMARY",
+   "sentence": "The refugee and returnee figures describe the current year's situation on the ground.",
+   "expect": "drop",
+   "why": "wrong period: values are 2025, before the chosen period"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "SUMMARY",
+   "sentence": "Displacement inside the country is at an unprecedented level.",
+   "expect": "drop",
+   "why": "superlative/record"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "SUMMARY",
+   "sentence": "Roughly 15 million people need protection, up 5% on the previous year.",
+   "expect": "drop",
+   "why": "digits + change on not-comparable"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Protection: people in need — Latest Values",
+   "sentence": "The number of people needing protection edged up from the previous year, suggesting growing pressure on protection services.",
+   "expect": "drop",
+   "why": "change on not-comparable series"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Protection: people in need — Latest Values",
+   "sentence": "Protection needs dipped and then recovered, ending above where they started.",
+   "expect": "drop",
+   "why": "change on not-comparable series"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Protection: people in need — Latest Values",
+   "sentence": "Needs are higher than last year, so the protection response should be scaled accordingly.",
+   "expect": "drop",
+   "why": "comparative on not-comparable series"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Protection: people in need — Latest Values",
+   "sentence": "This is the highest protection caseload the plan has recorded.",
+   "expect": "drop",
+   "why": "record on not-comparable series"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Protection: people in need — Latest Values",
+   "sentence": "The earlier figures represent the full protection caseload of the plan, so they can be read as the sector's complete need.",
+   "expect": "drop",
+   "why": "plan line called complete need"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Refugees (people) — Trend Analysis",
+   "sentence": "Refugee numbers have surged over the look-back window, straining host capacity.",
+   "expect": "drop",
+   "why": "wrong direction (decreasing)"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Refugees (people) — Trend Analysis",
+   "sentence": "The decline in refugees is a robust, well-established pattern that planners can treat as settled.",
+   "expect": "drop",
+   "why": "not significant presented as established"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Refugees (people) — Trend Analysis",
+   "sentence": "The fall in refugee numbers is beyond what chance alone would produce.",
+   "expect": "drop",
+   "why": "significance claimed in paraphrase; p=0.734"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Refugees (people) — Trend Analysis",
+   "sentence": "Refugee numbers have shrunk to a third of where they started.",
+   "expect": "drop",
+   "why": "false fraction"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Refugees (people) — Trend Analysis",
+   "sentence": "The decrease in refugees is driven by large-scale returns from neighbouring countries.",
+   "expect": "drop",
+   "why": "invented cause"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Refugees (people) — Trend Analysis",
+   "sentence": "The latest refugee figure reflects the situation in the current year.",
+   "expect": "drop",
+   "why": "wrong period"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Returnees (people) — Trend Analysis",
+   "sentence": "Returns have tapered off across the window, easing pressure on reception areas.",
+   "expect": "drop",
+   "why": "wrong direction (increasing)"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Returnees (people) — Trend Analysis",
+   "sentence": "The evidence firmly establishes that returns are accelerating.",
+   "expect": "drop",
+   "why": "not significant presented as established"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Returnees (people) — Trend Analysis",
+   "sentence": "Returnee numbers ballooned many times over, a rise the test confirms.",
+   "expect": "drop",
+   "why": "multiplier + test confirms (it does not)"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Returnees (people) — Trend Analysis",
+   "sentence": "The rise in returnees explains the drop in refugee numbers.",
+   "expect": "drop",
+   "why": "invented relation"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Returnees (people) — Trend Analysis",
+   "sentence": "Returns grew three hundredfold over the window.",
+   "expect": "drop",
+   "why": "multiplier, spelled out"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Internally displaced people (IDPs) — Latest Values",
+   "sentence": "Internal displacement has crept up since the previous round.",
+   "expect": "drop",
+   "why": "wrong direction (down from May 2025)"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Internally displaced people (IDPs) — Latest Values",
+   "sentence": "Displacement keeps growing because of drought and forced returns.",
+   "expect": "drop",
+   "why": "wrong direction + invented cause"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Internally displaced people (IDPs) — Latest Values",
+   "sentence": "The slight dip in displacement is a proven downward trend.",
+   "expect": "drop",
+   "why": "untested presented as proven"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Internally displaced people (IDPs) — Regional Analysis",
+   "sentence": "Kabul hosts the largest displaced population in the country, ahead of Herat and Balkh.",
+   "expect": "drop",
+   "why": "wrong ranking (Herat is top)"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Internally displaced people (IDPs) — Regional Analysis",
+   "sentence": "Displacement in Herat has been rising faster than in any other province.",
+   "expect": "drop",
+   "why": "change under a regional ranking"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Internally displaced people (IDPs) — Regional Analysis",
+   "sentence": "The gap between Herat and the other provinces is statistically confirmed.",
+   "expect": "drop",
+   "why": "no test was possible"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Internally displaced people (IDPs) — Regional Analysis",
+   "sentence": "Kandahar and Nangarhar are the provinces with the heaviest displacement burden.",
+   "expect": "drop",
+   "why": "regions not in report"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Internally displaced people (IDPs) — Regional Analysis",
+   "sentence": "Herat accounts for the lion's share of displaced people.",
+   "expect": "drop",
+   "why": "majority claim, false"
+  },
+  {
+   "case": "afg_fn_en",
+   "heading": "SUMMARY",
+   "sentence": "Food security needs are on the rise while nutrition needs are receding.",
+   "expect": "drop",
+   "why": "change in summary"
+  },
+  {
+   "case": "afg_fn_en",
+   "heading": "SUMMARY",
+   "sentence": "Acute food insecurity has improved markedly since the Taliban takeover.",
+   "expect": "drop",
+   "why": "change in summary + invented framing"
+  },
+  {
+   "case": "afg_fn_en",
+   "heading": "SUMMARY",
+   "sentence": "The downward path in food insecurity is real and not a statistical artefact.",
+   "expect": "drop",
+   "why": "significance claimed in paraphrase; p=0.059 not significant"
+  },
+  {
+   "case": "afg_fn_en",
+   "heading": "SUMMARY",
+   "sentence": "A majority of Afghans are acutely food insecure.",
+   "expect": "drop",
+   "why": "majority, false (32%)"
+  },
+  {
+   "case": "afg_fn_en",
+   "heading": "SUMMARY",
+   "sentence": "Seventeen million people need food assistance, around forty percent of the population.",
+   "expect": "drop",
+   "why": "spelled-out figures, invented share"
+  },
+  {
+   "case": "afg_fn_en",
+   "heading": "Food security: people in need — Latest Values",
+   "sentence": "Food security needs have dropped compared with the previous year.",
+   "expect": "drop",
+   "why": "wrong direction (up)"
+  },
+  {
+   "case": "afg_fn_en",
+   "heading": "Food security: people in need — Latest Values",
+   "sentence": "Needs have been climbing year after year without interruption.",
+   "expect": "drop",
+   "why": "false: fell 2024 to 2025"
+  },
+  {
+   "case": "afg_fn_en",
+   "heading": "Food security: people in need — Latest Values",
+   "sentence": "The increase in food security needs reflects the collapse in humanitarian funding.",
+   "expect": "drop",
+   "why": "invented cause, indicator not in report"
+  },
+  {
+   "case": "afg_fn_en",
+   "heading": "Food security: people in need — Latest Values",
+   "sentence": "Food security needs are now at a record high.",
+   "expect": "drop",
+   "why": "record"
+  },
+  {
+   "case": "afg_fn_en",
+   "heading": "Nutrition: people in need — Latest Values",
+   "sentence": "Nutrition needs rose again this year, continuing an upward path.",
+   "expect": "drop",
+   "why": "wrong direction (down)"
+  },
+  {
+   "case": "afg_fn_en",
+   "heading": "Nutrition: people in need — Latest Values",
+   "sentence": "Nutrition needs are lower than they were two years ago.",
+   "expect": "drop",
+   "why": "false: latest above 2024"
+  },
+  {
+   "case": "afg_fn_en",
+   "heading": "Nutrition: people in need — Latest Values",
+   "sentence": "The reduction in nutrition needs shows that treatment programmes are working.",
+   "expect": "drop",
+   "why": "invented cause"
+  },
+  {
+   "case": "afg_fn_en",
+   "heading": "Food insecurity (IPC 3+, % of the analysed population) — Trend Analysis",
+   "sentence": "The share of the population in acute food insecurity has been worsening over the window.",
+   "expect": "drop",
+   "why": "wrong direction (decreasing), via 'worsening'"
+  },
+  {
+   "case": "afg_fn_en",
+   "heading": "Food insecurity (IPC 3+, % of the analysed population) — Trend Analysis",
+   "sentence": "The improvement in food insecurity is conclusive and holds up to statistical scrutiny.",
+   "expect": "drop",
+   "why": "not significant presented as proven"
+  },
+  {
+   "case": "afg_fn_en",
+   "heading": "Food insecurity (IPC 3+, % of the analysed population) — Trend Analysis",
+   "sentence": "Food insecurity has been cut in half over the window.",
+   "expect": "drop",
+   "why": "false fraction"
+  },
+  {
+   "case": "afg_fn_en",
+   "heading": "Food insecurity (IPC 3+, % of the analysed population) — Trend Analysis",
+   "sentence": "The decline is driven by better harvests and sustained food assistance.",
+   "expect": "drop",
+   "why": "invented cause"
+  },
+  {
+   "case": "afg_fn_en",
+   "heading": "Food insecurity (IPC 3+, % of the analysed population) — Trend Analysis",
+   "sentence": "About one in three Afghans faces acute food insecurity nationwide.",
+   "expect": "drop",
+   "why": "fraction; share is of the analysed population, not nationwide"
+  },
+  {
+   "case": "afg_fn_en",
+   "heading": "Food insecurity (IPC 3+, % of the analysed population) — Trend Analysis",
+   "sentence": "Malnutrition among children under five has also been falling.",
+   "expect": "drop",
+   "why": "indicator not in report"
+  },
+  {
+   "case": "hti_pro_en",
+   "heading": "SUMMARY",
+   "sentence": "Displacement in Haiti has begun to stabilise, while refugee numbers are falling back.",
+   "expect": "drop",
+   "why": "false + change/stability in summary"
+  },
+  {
+   "case": "hti_pro_en",
+   "heading": "SUMMARY",
+   "sentence": "The protection figure gives the total number of people needing protection in Haiti.",
+   "expect": "drop",
+   "why": "plan line called total"
+  },
+  {
+   "case": "hti_pro_en",
+   "heading": "SUMMARY",
+   "sentence": "Protection needs nearly doubled in a year.",
+   "expect": "drop",
+   "why": "multiplier on not-comparable, summary"
+  },
+  {
+   "case": "hti_pro_en",
+   "heading": "SUMMARY",
+   "sentence": "None of the findings in this report can be distinguished from random fluctuation.",
+   "expect": "drop",
+   "why": "significance denied; three are significant"
+  },
+  {
+   "case": "hti_pro_en",
+   "heading": "SUMMARY",
+   "sentence": "The findings are too weak to act on and should be set aside until more data arrive.",
+   "expect": "drop",
+   "why": "significant findings dismissed"
+  },
+  {
+   "case": "hti_pro_en",
+   "heading": "Protection: people in need — Latest Values",
+   "sentence": "The protection caseload swelled between the two plan years.",
+   "expect": "drop",
+   "why": "change on not-comparable"
+  },
+  {
+   "case": "hti_pro_en",
+   "heading": "Protection: people in need — Latest Values",
+   "sentence": "This figure captures the entire protection need across the sector.",
+   "expect": "drop",
+   "why": "plan line called whole sector"
+  },
+  {
+   "case": "hti_pro_en",
+   "heading": "Protection: people in need — Latest Values",
+   "sentence": "Protection needs are well above the prior year's level, driven by gang violence in the capital.",
+   "expect": "drop",
+   "why": "comparative on not-comparable + invented cause"
+  },
+  {
+   "case": "hti_pro_en",
+   "heading": "Protection: people in need — Latest Values",
+   "sentence": "The figure sums the child protection and gender-based violence lines into a single sector-wide count.",
+   "expect": "drop",
+   "why": "false: lines are not added; called sector-wide"
+  },
+  {
+   "case": "hti_pro_en",
+   "heading": "Refugees (people) — Trend Analysis",
+   "sentence": "Refugee numbers have been shrinking across the window.",
+   "expect": "drop",
+   "why": "wrong direction"
+  },
+  {
+   "case": "hti_pro_en",
+   "heading": "Refugees (people) — Trend Analysis",
+   "sentence": "The upward movement in refugees is unreliable and could easily be noise.",
+   "expect": "drop",
+   "why": "significant finding dismissed"
+  },
+  {
+   "case": "hti_pro_en",
+   "heading": "Refugees (people) — Trend Analysis",
+   "sentence": "The number of refugees has grown tenfold.",
+   "expect": "drop",
+   "why": "false multiplier"
+  },
+  {
+   "case": "hti_pro_en",
+   "heading": "Refugees (people) — Trend Analysis",
+   "sentence": "The rise is the result of deportations from the Dominican Republic.",
+   "expect": "drop",
+   "why": "invented cause"
+  },
+  {
+   "case": "hti_pro_en",
+   "heading": "Internally displaced people (IDPs) — Trend Analysis",
+   "sentence": "Internal displacement has receded since mid-2024.",
+   "expect": "drop",
+   "why": "wrong direction"
+  },
+  {
+   "case": "hti_pro_en",
+   "heading": "Internally displaced people (IDPs) — Trend Analysis",
+   "sentence": "There is no firm evidence that displacement is growing.",
+   "expect": "drop",
+   "why": "denies a significant finding"
+  },
+  {
+   "case": "hti_pro_en",
+   "heading": "Internally displaced people (IDPs) — Trend Analysis",
+   "sentence": "Displacement has more than tripled over the window.",
+   "expect": "drop",
+   "why": "false multiplier"
+  },
+  {
+   "case": "hti_pro_en",
+   "heading": "Internally displaced people (IDPs) — Trend Analysis",
+   "sentence": "Displacement is at an all-time high because armed groups have expanded their territory.",
+   "expect": "drop",
+   "why": "superlative + invented cause"
+  },
+  {
+   "case": "hti_pro_en",
+   "heading": "Internally displaced people (IDPs) — Regional Analysis",
+   "sentence": "The South hosts the largest number of displaced people, ahead of West.",
+   "expect": "drop",
+   "why": "wrong ranking"
+  },
+  {
+   "case": "hti_pro_en",
+   "heading": "Internally displaced people (IDPs) — Regional Analysis",
+   "sentence": "Differences between departments are small and may simply reflect chance.",
+   "expect": "drop",
+   "why": "denies a significant difference"
+  },
+  {
+   "case": "hti_pro_en",
+   "heading": "Internally displaced people (IDPs) — Regional Analysis",
+   "sentence": "Displacement in West has been climbing faster than elsewhere.",
+   "expect": "drop",
+   "why": "change under a regional ranking"
+  },
+  {
+   "case": "hti_pro_en",
+   "heading": "Internally displaced people (IDPs) — Regional Analysis",
+   "sentence": "Artibonite is among the three departments with the highest displacement.",
+   "expect": "drop",
+   "why": "region not in report's top three"
+  },
+  {
+   "case": "afg_all_en",
+   "heading": "SUMMARY",
+   "sentence": "Funding has dried up while returns have soared, leaving a widening gap.",
+   "expect": "drop",
+   "why": "change in summary, unusual verbs"
+  },
+  {
+   "case": "afg_all_en",
+   "heading": "SUMMARY",
+   "sentence": "All five findings are backed by solid statistical evidence.",
+   "expect": "drop",
+   "why": "false: only one is significant"
+  },
+  {
+   "case": "afg_all_en",
+   "heading": "SUMMARY",
+   "sentence": "The funding shortfall is the reason food insecurity remains high.",
+   "expect": "drop",
+   "why": "invented cause"
+  },
+  {
+   "case": "afg_all_en",
+   "heading": "Food insecurity (IPC 3+, % of the analysed population) — Trend Analysis",
+   "sentence": "Food insecurity ticked upward over the window.",
+   "expect": "drop",
+   "why": "wrong direction"
+  },
+  {
+   "case": "afg_all_en",
+   "heading": "Refugees (people) — Trend Analysis",
+   "sentence": "The refugee decline passes the usual evidential threshold.",
+   "expect": "drop",
+   "why": "significance claimed in paraphrase"
+  },
+  {
+   "case": "afg_all_en",
+   "heading": "Returnees (people) — Trend Analysis",
+   "sentence": "Returns have slowed to a trickle.",
+   "expect": "drop",
+   "why": "wrong direction"
+  },
+  {
+   "case": "afg_all_en",
+   "heading": "Internally displaced people (IDPs) — Regional Analysis",
+   "sentence": "Balkh carries the heaviest displacement load of any province.",
+   "expect": "drop",
+   "why": "wrong ranking"
+  },
+  {
+   "case": "afg_all_en",
+   "heading": "Internally displaced people (IDPs) — Regional Analysis",
+   "sentence": "The regional differences cannot be told apart from chance.",
+   "expect": "drop",
+   "why": "denies a significant difference"
+  },
+  {
+   "case": "afg_all_en",
+   "heading": "Humanitarian funding (USD) — Trend Analysis",
+   "sentence": "Humanitarian funding has grown over the window.",
+   "expect": "drop",
+   "why": "wrong direction"
+  },
+  {
+   "case": "afg_all_en",
+   "heading": "Humanitarian funding (USD) — Trend Analysis",
+   "sentence": "Funding has collapsed to a fraction of its earlier level, a drop that is proven beyond doubt.",
+   "expect": "drop",
+   "why": "fraction + not significant presented as proven"
+  },
+  {
+   "case": "afg_all_en",
+   "heading": "Humanitarian funding (USD) — Trend Analysis",
+   "sentence": "Funding has fallen because donors shifted resources to Ukraine and Gaza.",
+   "expect": "drop",
+   "why": "invented cause, countries not in report"
+  },
+  {
+   "case": "afg_all_en",
+   "heading": "Humanitarian funding (USD) — Trend Analysis",
+   "sentence": "Funding now covers less than half of the plan's requirements.",
+   "expect": "drop",
+   "why": "not in report + fraction"
+  },
+  {
+   "case": "afg_all_en",
+   "heading": "Humanitarian funding (USD) — Trend Analysis",
+   "sentence": "The latest funding figure is for the current year.",
+   "expect": "drop",
+   "why": "wrong period (2025)"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "SUMMARY",
+   "sentence": "Koruma ihtiyacı son yıllarda istikrarlı biçimde tırmandı ve müdahale kapasitesinin genişletilmesini gerektiriyor.",
+   "expect": "drop",
+   "why": "karşılaştırılamaz seride değişim, özet"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "SUMMARY",
+   "sentence": "Göstergeler birlikte ele alındığında Afganistan'da yerinden edilme tablosunun kötüleştiği görülüyor.",
+   "expect": "drop",
+   "why": "özette eğilim (kötüleşme)"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "SUMMARY",
+   "sentence": "Mülteci sayısı gerilerken geri dönüşler hız kazandı; ekipler bu kaymaya göre planlama yapmalıdır.",
+   "expect": "drop",
+   "why": "özette değişim"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "SUMMARY",
+   "sentence": "Rapordaki sonuçlar tesadüfle açıklanamayacak kadar güçlüdür.",
+   "expect": "drop",
+   "why": "anlamlılık iddiası; hiçbiri anlamlı değil"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "SUMMARY",
+   "sentence": "Önceki yıllara ait koruma rakamları planın bütün koruma ihtiyacını yansıtmaktadır.",
+   "expect": "drop",
+   "why": "plan satırı bütün ihtiyaç diye sunuluyor"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "SUMMARY",
+   "sentence": "Yaklaşık on beş milyon kişi korumaya ihtiyaç duyuyor; bu, nüfusun kabaca üçte biri demek.",
+   "expect": "drop",
+   "why": "yazıyla rakam + uydurma kesir"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "SUMMARY",
+   "sentence": "Mülteci ve geri dönen rakamları içinde bulunduğumuz yılın durumunu gösteriyor.",
+   "expect": "drop",
+   "why": "yanlış dönem"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "SUMMARY",
+   "sentence": "Ülke içinde yerinden edilme tarihinin en yüksek seviyesinde.",
+   "expect": "drop",
+   "why": "rekor"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "SUMMARY",
+   "sentence": "Koruma ihtiyacı 2025'e göre %5 arttı.",
+   "expect": "drop",
+   "why": "rakam + karşılaştırılamaz seride değişim"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Koruma: insani yardıma ihtiyaç duyan kişiler — Son Değerler",
+   "sentence": "Korumaya ihtiyaç duyan kişi sayısı geçen yıla göre daha yüksek, bu da hizmetler üzerindeki baskının arttığını gösteriyor.",
+   "expect": "drop",
+   "why": "karşılaştırılamaz seride karşılaştırma"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Koruma: insani yardıma ihtiyaç duyan kişiler — Son Değerler",
+   "sentence": "İhtiyaç önce geriledi, ardından yeniden toparlanarak başlangıç düzeyini aştı.",
+   "expect": "drop",
+   "why": "karşılaştırılamaz seride değişim"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Koruma: insani yardıma ihtiyaç duyan kişiler — Son Değerler",
+   "sentence": "Bu rakam planın bugüne kadar kaydettiği en yüksek koruma yüküdür.",
+   "expect": "drop",
+   "why": "rekor"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Koruma: insani yardıma ihtiyaç duyan kişiler — Son Değerler",
+   "sentence": "Önceki yılların rakamları sektörün tamamını kapsadığı için toplam koruma ihtiyacı olarak okunabilir.",
+   "expect": "drop",
+   "why": "plan satırı toplam diye"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Koruma: insani yardıma ihtiyaç duyan kişiler — Son Değerler",
+   "sentence": "Koruma ihtiyacındaki yükseliş, sınır dışı edilen Afganların dönüşünden kaynaklanıyor.",
+   "expect": "drop",
+   "why": "değişim + uydurma neden"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Mülteciler (kişi) — Eğilim Analizi",
+   "sentence": "Mülteci sayısı pencere boyunca fırladı ve ev sahibi toplulukların kapasitesini zorluyor.",
+   "expect": "drop",
+   "why": "yanlış yön"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Mülteciler (kişi) — Eğilim Analizi",
+   "sentence": "Mülteci sayısındaki düşüş kanıtlanmış, sağlam bir örüntüdür ve planlamada kesin kabul edilebilir.",
+   "expect": "drop",
+   "why": "anlamlı olmayan bulgu kanıtlanmış gibi"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Mülteciler (kişi) — Eğilim Analizi",
+   "sentence": "Mülteci sayısındaki gerileme istatistiksel olarak kanıtlanmıştır.",
+   "expect": "drop",
+   "why": "anlamlılık iddiası"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Mülteciler (kişi) — Eğilim Analizi",
+   "sentence": "Mülteci sayısı başlangıçtaki düzeyin üçte birine indi.",
+   "expect": "drop",
+   "why": "yanlış kesir"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Mülteciler (kişi) — Eğilim Analizi",
+   "sentence": "Azalışın nedeni komşu ülkelerden yapılan kitlesel geri dönüşlerdir.",
+   "expect": "drop",
+   "why": "uydurma neden"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Geri dönenler (kişi) — Eğilim Analizi",
+   "sentence": "Geri dönüşler pencere boyunca yavaşladı ve kabul bölgelerindeki baskı hafifledi.",
+   "expect": "drop",
+   "why": "yanlış yön"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Geri dönenler (kişi) — Eğilim Analizi",
+   "sentence": "Geri dönenlerin sayısı kat kat arttı; test de bu yükselişi doğruluyor.",
+   "expect": "drop",
+   "why": "çarpan + test doğruluyor (doğrulamıyor)"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Geri dönenler (kişi) — Eğilim Analizi",
+   "sentence": "Geri dönenlerdeki artış, mülteci sayısındaki düşüşü açıklıyor.",
+   "expect": "drop",
+   "why": "uydurma ilişki"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Geri dönenler (kişi) — Eğilim Analizi",
+   "sentence": "Veriler geri dönüşlerin hızlandığını kesin olarak ortaya koyuyor.",
+   "expect": "drop",
+   "why": "anlamlı olmayan bulgu kesin gibi"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Son Değerler",
+   "sentence": "Yerinden edilmiş kişi sayısı bir önceki tura göre yükseldi.",
+   "expect": "drop",
+   "why": "yanlış yön"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Son Değerler",
+   "sentence": "Yerinden edilme kuraklık ve zorunlu geri dönüşler yüzünden büyümeye devam ediyor.",
+   "expect": "drop",
+   "why": "yanlış yön + uydurma neden"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Son Değerler",
+   "sentence": "Yerinden edilmedeki hafif düşüş kesinleşmiş bir azalma eğilimidir.",
+   "expect": "drop",
+   "why": "test edilmemiş bulgu kesin gibi"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Bölgesel Analiz",
+   "sentence": "En fazla yerinden edilmiş kişiyi Kabil barındırıyor; Herat ve Belh onu izliyor.",
+   "expect": "drop",
+   "why": "yanlış sıralama"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Bölgesel Analiz",
+   "sentence": "Herat'ta yerinden edilme diğer vilayetlere kıyasla daha hızlı artıyor.",
+   "expect": "drop",
+   "why": "bölgesel sıralamada değişim"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Bölgesel Analiz",
+   "sentence": "Herat ile diğer vilayetler arasındaki fark istatistiksel olarak doğrulanmıştır.",
+   "expect": "drop",
+   "why": "test yapılamadı"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Bölgesel Analiz",
+   "sentence": "Yerinden edilmiş kişilerin çoğu Herat'ta yaşıyor.",
+   "expect": "drop",
+   "why": "çoğunluk, yanlış"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Bölgesel Analiz",
+   "sentence": "Kandahar ve Nangarhar yerinden edilme yükünün en ağır olduğu vilayetlerdir.",
+   "expect": "drop",
+   "why": "raporda olmayan bölgeler"
+  },
+  {
+   "case": "afg_fn_tr",
+   "heading": "SUMMARY",
+   "sentence": "Gıda güvenliği ihtiyacı yükselirken beslenme ihtiyacı geriliyor.",
+   "expect": "drop",
+   "why": "özette değişim"
+  },
+  {
+   "case": "afg_fn_tr",
+   "heading": "SUMMARY",
+   "sentence": "Gıda güvensizliğindeki düşüş gerçek bir iyileşmedir ve rastlantıya bağlanamaz.",
+   "expect": "drop",
+   "why": "anlamlılık iddiası; anlamlı değil"
+  },
+  {
+   "case": "afg_fn_tr",
+   "heading": "SUMMARY",
+   "sentence": "Afganların çoğunluğu akut gıda güvensizliği yaşıyor.",
+   "expect": "drop",
+   "why": "çoğunluk, yanlış"
+  },
+  {
+   "case": "afg_fn_tr",
+   "heading": "SUMMARY",
+   "sentence": "On yedi milyondan fazla kişi gıda yardımına muhtaç; bu, nüfusun yüzde kırkı demek.",
+   "expect": "drop",
+   "why": "yazıyla rakam + uydurma pay"
+  },
+  {
+   "case": "afg_fn_tr",
+   "heading": "Gıda güvenliği: insani yardıma ihtiyaç duyan kişiler — Son Değerler",
+   "sentence": "Gıda güvenliği ihtiyacı bir önceki yıla kıyasla azaldı.",
+   "expect": "drop",
+   "why": "yanlış yön"
+  },
+  {
+   "case": "afg_fn_tr",
+   "heading": "Gıda güvenliği: insani yardıma ihtiyaç duyan kişiler — Son Değerler",
+   "sentence": "İhtiyaç her yıl kesintisiz biçimde büyüdü.",
+   "expect": "drop",
+   "why": "yanlış"
+  },
+  {
+   "case": "afg_fn_tr",
+   "heading": "Gıda güvenliği: insani yardıma ihtiyaç duyan kişiler — Son Değerler",
+   "sentence": "Gıda güvenliği ihtiyacındaki artış, insani yardım fonlamasındaki çöküşü yansıtıyor.",
+   "expect": "drop",
+   "why": "uydurma neden, raporda olmayan gösterge"
+  },
+  {
+   "case": "afg_fn_tr",
+   "heading": "Gıda güvenliği: insani yardıma ihtiyaç duyan kişiler — Son Değerler",
+   "sentence": "Gıda güvenliği ihtiyacı tavan yaptı.",
+   "expect": "drop",
+   "why": "rekor"
+  },
+  {
+   "case": "afg_fn_tr",
+   "heading": "Beslenme: insani yardıma ihtiyaç duyan kişiler — Son Değerler",
+   "sentence": "Beslenme ihtiyacı bu yıl yine arttı.",
+   "expect": "drop",
+   "why": "yanlış yön"
+  },
+  {
+   "case": "afg_fn_tr",
+   "heading": "Beslenme: insani yardıma ihtiyaç duyan kişiler — Son Değerler",
+   "sentence": "Beslenme ihtiyacındaki azalma tedavi programlarının işe yaradığını gösteriyor.",
+   "expect": "drop",
+   "why": "uydurma neden"
+  },
+  {
+   "case": "afg_fn_tr",
+   "heading": "Beslenme: insani yardıma ihtiyaç duyan kişiler — Son Değerler",
+   "sentence": "Beslenme ihtiyacı iki yıl önceki düzeyin altına indi.",
+   "expect": "drop",
+   "why": "yanlış"
+  },
+  {
+   "case": "afg_fn_tr",
+   "heading": "Gıda güvensizliği (IPC 3+, analiz edilen nüfusun yüzdesi) — Eğilim Analizi",
+   "sentence": "Akut gıda güvensizliği yaşayanların payı pencere boyunca kötüleşti.",
+   "expect": "drop",
+   "why": "yanlış yön"
+  },
+  {
+   "case": "afg_fn_tr",
+   "heading": "Gıda güvensizliği (IPC 3+, analiz edilen nüfusun yüzdesi) — Eğilim Analizi",
+   "sentence": "Gıda güvensizliğindeki iyileşme kesindir ve istatistiksel sınamadan başarıyla geçmiştir.",
+   "expect": "drop",
+   "why": "anlamlı değil, kanıtlanmış gibi"
+  },
+  {
+   "case": "afg_fn_tr",
+   "heading": "Gıda güvensizliği (IPC 3+, analiz edilen nüfusun yüzdesi) — Eğilim Analizi",
+   "sentence": "Gıda güvensizliği yarı yarıya azaldı.",
+   "expect": "drop",
+   "why": "yanlış kesir"
+  },
+  {
+   "case": "afg_fn_tr",
+   "heading": "Gıda güvensizliği (IPC 3+, analiz edilen nüfusun yüzdesi) — Eğilim Analizi",
+   "sentence": "Düşüşün arkasında iyi geçen hasat mevsimleri ve kesintisiz gıda yardımı var.",
+   "expect": "drop",
+   "why": "uydurma neden"
+  },
+  {
+   "case": "afg_fn_tr",
+   "heading": "Gıda güvensizliği (IPC 3+, analiz edilen nüfusun yüzdesi) — Eğilim Analizi",
+   "sentence": "Beş yaş altı çocuklarda yetersiz beslenme de geriliyor.",
+   "expect": "drop",
+   "why": "raporda olmayan gösterge"
+  },
+  {
+   "case": "hti_pro_tr",
+   "heading": "SUMMARY",
+   "sentence": "Haiti'de yerinden edilme durulmaya başladı, mülteci sayısı da geriliyor.",
+   "expect": "drop",
+   "why": "yanlış + özette değişim"
+  },
+  {
+   "case": "hti_pro_tr",
+   "heading": "SUMMARY",
+   "sentence": "Koruma rakamı Haiti'de korumaya ihtiyaç duyan herkesi kapsıyor.",
+   "expect": "drop",
+   "why": "plan satırı toplam diye"
+  },
+  {
+   "case": "hti_pro_tr",
+   "heading": "SUMMARY",
+   "sentence": "Koruma ihtiyacı bir yılda neredeyse ikiye katlandı.",
+   "expect": "drop",
+   "why": "çarpan, karşılaştırılamaz"
+  },
+  {
+   "case": "hti_pro_tr",
+   "heading": "SUMMARY",
+   "sentence": "Rapordaki bulguların hiçbiri rastlantısal dalgalanmadan ayırt edilemiyor.",
+   "expect": "drop",
+   "why": "anlamlılık reddi; üçü anlamlı"
+  },
+  {
+   "case": "hti_pro_tr",
+   "heading": "Koruma: insani yardıma ihtiyaç duyan kişiler — Son Değerler",
+   "sentence": "Koruma yükü iki plan yılı arasında kabardı.",
+   "expect": "drop",
+   "why": "karşılaştırılamaz seride değişim"
+  },
+  {
+   "case": "hti_pro_tr",
+   "heading": "Koruma: insani yardıma ihtiyaç duyan kişiler — Son Değerler",
+   "sentence": "Bu rakam sektördeki koruma ihtiyacının bütününü veriyor.",
+   "expect": "drop",
+   "why": "plan satırı bütün diye"
+  },
+  {
+   "case": "hti_pro_tr",
+   "heading": "Koruma: insani yardıma ihtiyaç duyan kişiler — Son Değerler",
+   "sentence": "Rakam, çocuk koruma ve toplumsal cinsiyete dayalı şiddet satırlarının toplanmasıyla elde edilen sektör geneli sayıdır.",
+   "expect": "drop",
+   "why": "yanlış: satırlar toplanmadı"
+  },
+  {
+   "case": "hti_pro_tr",
+   "heading": "Mülteciler (kişi) — Eğilim Analizi",
+   "sentence": "Mülteci sayısı pencere boyunca eridi.",
+   "expect": "drop",
+   "why": "yanlış yön"
+  },
+  {
+   "case": "hti_pro_tr",
+   "heading": "Mülteciler (kişi) — Eğilim Analizi",
+   "sentence": "Mültecilerdeki yükseliş güvenilir değil ve kolaylıkla rastlantı olabilir.",
+   "expect": "drop",
+   "why": "anlamlı bulgu küçümseniyor"
+  },
+  {
+   "case": "hti_pro_tr",
+   "heading": "Mülteciler (kişi) — Eğilim Analizi",
+   "sentence": "Mülteci sayısı on katına çıktı.",
+   "expect": "drop",
+   "why": "yanlış çarpan"
+  },
+  {
+   "case": "hti_pro_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Eğilim Analizi",
+   "sentence": "Ülke içinde yerinden edilme geriledi.",
+   "expect": "drop",
+   "why": "yanlış yön"
+  },
+  {
+   "case": "hti_pro_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Eğilim Analizi",
+   "sentence": "Yerinden edilmenin büyüdüğüne dair sağlam bir kanıt yok.",
+   "expect": "drop",
+   "why": "anlamlı bulgu reddediliyor"
+  },
+  {
+   "case": "hti_pro_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Eğilim Analizi",
+   "sentence": "Yerinden edilme, silahlı grupların alan genişletmesi nedeniyle tüm zamanların zirvesine ulaştı.",
+   "expect": "drop",
+   "why": "rekor + uydurma neden"
+  },
+  {
+   "case": "hti_pro_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Bölgesel Analiz",
+   "sentence": "En çok yerinden edilmiş kişi South bölgesinde bulunuyor, West onu izliyor.",
+   "expect": "drop",
+   "why": "yanlış sıralama"
+  },
+  {
+   "case": "hti_pro_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Bölgesel Analiz",
+   "sentence": "Bölgeler arasındaki farklar küçük ve rastlantıdan ibaret olabilir.",
+   "expect": "drop",
+   "why": "anlamlı fark reddediliyor"
+  },
+  {
+   "case": "hti_pro_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Bölgesel Analiz",
+   "sentence": "Artibonite, yerinden edilmenin en yüksek olduğu üç bölgeden biri.",
+   "expect": "drop",
+   "why": "raporda olmayan bölge"
+  },
+  {
+   "case": "sdn_all_tr",
+   "heading": "SUMMARY",
+   "sentence": "Sudan'da gıda güvensizliği derinleşirken fonlama da artıyor.",
+   "expect": "drop",
+   "why": "özette değişim"
+  },
+  {
+   "case": "sdn_all_tr",
+   "heading": "SUMMARY",
+   "sentence": "Altı bulgunun tamamı sağlam istatistiksel kanıta dayanıyor.",
+   "expect": "drop",
+   "why": "yanlış: yalnız ikisi anlamlı"
+  },
+  {
+   "case": "sdn_all_tr",
+   "heading": "SUMMARY",
+   "sentence": "Fon açığı, gıda güvensizliğinin yüksek kalmasının başlıca nedenidir.",
+   "expect": "drop",
+   "why": "uydurma neden"
+  },
+  {
+   "case": "sdn_all_tr",
+   "heading": "Gıda güvensizliği (IPC 3+, analiz edilen nüfusun yüzdesi) — Eğilim Analizi",
+   "sentence": "Gıda güvensizliği pencere boyunca geriledi.",
+   "expect": "drop",
+   "why": "yanlış yön"
+  },
+  {
+   "case": "sdn_all_tr",
+   "heading": "Gıda güvensizliği (IPC 3+, analiz edilen nüfusun yüzdesi) — Eğilim Analizi",
+   "sentence": "Gıda güvensizliği ikiye katlandı ve bu artış kanıtlanmış durumda.",
+   "expect": "drop",
+   "why": "çarpan + anlamlı değil, kanıtlanmış gibi"
+  },
+  {
+   "case": "sdn_all_tr",
+   "heading": "Mülteciler (kişi) — Eğilim Analizi",
+   "sentence": "Mülteci sayısındaki artış rastlantıyla açıklanamayacak kadar belirgin.",
+   "expect": "drop",
+   "why": "anlamlılık iddiası; anlamlı değil"
+  },
+  {
+   "case": "sdn_all_tr",
+   "heading": "Mülteciler (kişi) — Eğilim Analizi",
+   "sentence": "Mülteci sayısı dibe vurdu.",
+   "expect": "drop",
+   "why": "yanlış yön / uç değer"
+  },
+  {
+   "case": "sdn_all_tr",
+   "heading": "Geri dönenler (kişi) — Eğilim Analizi",
+   "sentence": "Geri dönüşler azaldı.",
+   "expect": "drop",
+   "why": "yanlış yön"
+  },
+  {
+   "case": "sdn_all_tr",
+   "heading": "Geri dönenler (kişi) — Eğilim Analizi",
+   "sentence": "Geri dönüşlerdeki artış, çatışmaların durulduğunu gösteriyor.",
+   "expect": "drop",
+   "why": "uydurma neden"
+  },
+  {
+   "case": "sdn_all_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Eğilim Analizi",
+   "sentence": "Yerinden edilmiş kişi sayısı pencerenin tamamında yükseliş eğiliminde.",
+   "expect": "drop",
+   "why": "yanlış yön (eğilim azalış)"
+  },
+  {
+   "case": "sdn_all_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Eğilim Analizi",
+   "sentence": "Azalış eğilimi güvenilmez ve gürültüden ibaret olabilir.",
+   "expect": "drop",
+   "why": "anlamlı bulgu küçümseniyor"
+  },
+  {
+   "case": "sdn_all_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Eğilim Analizi",
+   "sentence": "Yerinden edilme şu anda serinin en yüksek seviyesinde.",
+   "expect": "drop",
+   "why": "yanlış: zirve Ocak 2025"
+  },
+  {
+   "case": "sdn_all_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Eğilim Analizi",
+   "sentence": "Azalış, insanların evlerine dönmesiyle açıklanıyor.",
+   "expect": "drop",
+   "why": "uydurma neden"
+  },
+  {
+   "case": "sdn_all_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Bölgesel Analiz",
+   "sentence": "En fazla yerinden edilmiş kişi Hartum'da bulunuyor.",
+   "expect": "drop",
+   "why": "raporda olmayan bölge / yanlış sıralama"
+  },
+  {
+   "case": "sdn_all_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Bölgesel Analiz",
+   "sentence": "North Darfur, South Darfur'un önünde ilk sırada yer alıyor.",
+   "expect": "drop",
+   "why": "yanlış sıralama"
+  },
+  {
+   "case": "sdn_all_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Bölgesel Analiz",
+   "sentence": "Bölgeler arasındaki fark tesadüfi olabilir.",
+   "expect": "drop",
+   "why": "anlamlı fark reddediliyor"
+  },
+  {
+   "case": "sdn_all_tr",
+   "heading": "İnsani yardım fonlaması (USD) — Eğilim Analizi",
+   "sentence": "Fonlama pencere boyunca daraldı.",
+   "expect": "drop",
+   "why": "yanlış yön"
+  },
+  {
+   "case": "sdn_all_tr",
+   "heading": "İnsani yardım fonlaması (USD) — Eğilim Analizi",
+   "sentence": "Fonlamadaki artış kesin ve kalıcıdır.",
+   "expect": "drop",
+   "why": "anlamlı değil, kesin gibi"
+  },
+  {
+   "case": "sdn_all_tr",
+   "heading": "İnsani yardım fonlaması (USD) — Eğilim Analizi",
+   "sentence": "Fonlama ihtiyacın yarısını bile karşılamıyor.",
+   "expect": "drop",
+   "why": "raporda yok + kesir"
+  },
+  {
+   "case": "sdn_all_tr",
+   "heading": "İnsani yardım fonlaması (USD) — Eğilim Analizi",
+   "sentence": "Son fonlama rakamı içinde bulunduğumuz yıla aittir.",
+   "expect": "drop",
+   "why": "yanlış dönem (2025)"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "SUMMARY",
+   "sentence": "The figures in this report are best read as indicative, because every series is short.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "SUMMARY",
+   "sentence": "Monitoring teams should check which protection line each year's figure refers to before using it for planning.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "SUMMARY",
+   "sentence": "The displacement and refugee indicators are worth reading side by side, since they describe different populations.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Protection: people in need — Latest Values",
+   "sentence": "Because the years are reported on different bases, this figure should not be used to judge how protection needs have moved over time.",
+   "expect": "keep",
+   "why": "true caution, negated change"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Protection: people in need — Latest Values",
+   "sentence": "Teams should confirm with the plan's authors which protection line the earlier figures correspond to.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Refugees (people) — Trend Analysis",
+   "sentence": "The data point to a decreasing direction, but with so few observations it should be treated as a tentative signal.",
+   "expect": "keep",
+   "why": "correct direction"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Refugees (people) — Trend Analysis",
+   "sentence": "This finding is best read alongside the returnee series, although the data do not show that one drives the other.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Refugees (people) — Trend Analysis",
+   "sentence": "Note that the latest refugee value predates the chosen period.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Returnees (people) — Trend Analysis",
+   "sentence": "The returnee series points upward across the window, though the short series means this should be read with caution.",
+   "expect": "keep",
+   "why": "correct direction"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Internally displaced people (IDPs) — Latest Values",
+   "sentence": "The latest value sits slightly below the previous round, but three observations are not enough to speak of a trend.",
+   "expect": "keep",
+   "why": "correct direction"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Internally displaced people (IDPs) — Latest Values",
+   "sentence": "Only one tracking operation feeds this indicator, so it should not be mixed with counts from other sources.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Internally displaced people (IDPs) — Regional Analysis",
+   "sentence": "Herat, Balkh and Kabul show the highest values, which can help decide where to look first.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "afg_pro_en",
+   "heading": "Internally displaced people (IDPs) — Regional Analysis",
+   "sentence": "With a single observation per region, the ranking is a snapshot and not a tested difference.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "afg_fn_en",
+   "heading": "SUMMARY",
+   "sentence": "Readers should check the food security and nutrition figures against the next plan update before relying on them.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "afg_fn_en",
+   "heading": "Food security: people in need — Latest Values",
+   "sentence": "Needs are up on the previous year, but the series is too short to say whether this will last.",
+   "expect": "keep",
+   "why": "correct direction"
+  },
+  {
+   "case": "afg_fn_en",
+   "heading": "Nutrition: people in need — Latest Values",
+   "sentence": "The latest value is below the previous year's, which is worth verifying against upcoming nutrition surveys.",
+   "expect": "keep",
+   "why": "correct direction"
+  },
+  {
+   "case": "afg_fn_en",
+   "heading": "Food insecurity (IPC 3+, % of the analysed population) — Trend Analysis",
+   "sentence": "The share points downward over the window, yet the coverage of the analyses changed between rounds, so caution is warranted.",
+   "expect": "keep",
+   "why": "correct direction"
+  },
+  {
+   "case": "afg_fn_en",
+   "heading": "Food insecurity (IPC 3+, % of the analysed population) — Trend Analysis",
+   "sentence": "Because the analyses covered different parts of the country, the share is a safer basis for comparison than the number of people.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "hti_pro_en",
+   "heading": "SUMMARY",
+   "sentence": "No returnee data were available for the period, which leaves a gap that monitoring teams should flag.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "hti_pro_en",
+   "heading": "Protection: people in need — Latest Values",
+   "sentence": "This figure is one of the plan's separate protection lines, so it should not be read as the sector-wide need.",
+   "expect": "keep",
+   "why": "true, negated total"
+  },
+  {
+   "case": "hti_pro_en",
+   "heading": "Refugees (people) — Trend Analysis",
+   "sentence": "The data show an increasing direction for refugees, which is worth tracking alongside internal displacement.",
+   "expect": "keep",
+   "why": "correct direction"
+  },
+  {
+   "case": "hti_pro_en",
+   "heading": "Internally displaced people (IDPs) — Trend Analysis",
+   "sentence": "Displacement shows an upward direction across the window, and teams should keep verifying new rounds as they arrive.",
+   "expect": "keep",
+   "why": "correct direction"
+  },
+  {
+   "case": "hti_pro_en",
+   "heading": "Internally displaced people (IDPs) — Trend Analysis",
+   "sentence": "Several incomplete rounds were left out, so the series reflects only rounds with broad regional coverage.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "hti_pro_en",
+   "heading": "Internally displaced people (IDPs) — Regional Analysis",
+   "sentence": "West, South and Centre show the highest averages, which can guide where field teams are placed first.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "afg_all_en",
+   "heading": "SUMMARY",
+   "sentence": "People-in-need data were too sparse for testing, so that indicator is missing from the findings.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "afg_all_en",
+   "heading": "Humanitarian funding (USD) — Trend Analysis",
+   "sentence": "Funding points downward over the window, but with so few yearly observations the pattern should be treated as provisional.",
+   "expect": "keep",
+   "why": "correct direction"
+  },
+  {
+   "case": "afg_all_en",
+   "heading": "Internally displaced people (IDPs) — Regional Analysis",
+   "sentence": "The ranking reflects a single tracking operation, so other displacement counts may show a different picture.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "SUMMARY",
+   "sentence": "Seriler kısa olduğu için bu rapordaki sonuçlar gösterge niteliğinde okunmalıdır.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "SUMMARY",
+   "sentence": "İzleme ekipleri, her yılın koruma rakamının planın hangi satırına karşılık geldiğini kaynaktan teyit etmelidir.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "SUMMARY",
+   "sentence": "Mülteci ve geri dönen rakamlarının seçilen dönemden önceki bir yıla ait olduğu unutulmamalıdır.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Koruma: insani yardıma ihtiyaç duyan kişiler — Son Değerler",
+   "sentence": "Yıllar farklı temelde raporlandığı için bu rakam zaman içindeki gidişatı değerlendirmek için kullanılmamalıdır.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Koruma: insani yardıma ihtiyaç duyan kişiler — Son Değerler",
+   "sentence": "Önceki yılların rakamının hangi koruma satırını yansıttığı plan sahipleriyle doğrulanmalıdır.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Mülteciler (kişi) — Eğilim Analizi",
+   "sentence": "Veriler azalış yönüne işaret ediyor, ancak gözlem sayısı az olduğu için bu ihtiyatla okunmalıdır.",
+   "expect": "keep",
+   "why": "doğru yön"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Mülteciler (kişi) — Eğilim Analizi",
+   "sentence": "Bu bulgu geri dönenler serisiyle birlikte okunabilir, ancak veriler ikisi arasında bir bağ göstermiyor.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Geri dönenler (kişi) — Eğilim Analizi",
+   "sentence": "Geri dönenler serisi pencere boyunca artış yönünde, fakat seri kısa olduğundan yeni gözlemler beklenmelidir.",
+   "expect": "keep",
+   "why": "doğru yön"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Son Değerler",
+   "sentence": "Son değer bir önceki turun altında, ancak üç gözlem bir eğilimden söz etmek için yeterli değil.",
+   "expect": "keep",
+   "why": "doğru yön"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Son Değerler",
+   "sentence": "Bu gösterge tek bir izleme operasyonuna dayanıyor ve başka kaynakların sayımlarıyla karıştırılmamalıdır.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Bölgesel Analiz",
+   "sentence": "Herat, Balkh ve Kabul en yüksek değerlere sahip; bu sıralama sahada ilk nereye bakılacağına dair fikir verir.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "afg_pro_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Bölgesel Analiz",
+   "sentence": "Her bölge için tek gözlem bulunduğundan sıralama sınanmış bir fark değil, anlık bir görüntüdür.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "afg_fn_tr",
+   "heading": "SUMMARY",
+   "sentence": "Gıda güvenliği ve beslenme rakamları bir sonraki plan güncellemesiyle karşılaştırılarak doğrulanmalıdır.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "afg_fn_tr",
+   "heading": "Gıda güvenliği: insani yardıma ihtiyaç duyan kişiler — Son Değerler",
+   "sentence": "İhtiyaç bir önceki yılın üzerinde, ancak seri bunun kalıcı olup olmadığını söylemek için çok kısa.",
+   "expect": "keep",
+   "why": "doğru yön"
+  },
+  {
+   "case": "afg_fn_tr",
+   "heading": "Beslenme: insani yardıma ihtiyaç duyan kişiler — Son Değerler",
+   "sentence": "Son değer bir önceki yılın altında; bu durum yaklaşan beslenme araştırmalarıyla teyit edilmelidir.",
+   "expect": "keep",
+   "why": "doğru yön"
+  },
+  {
+   "case": "afg_fn_tr",
+   "heading": "Gıda güvensizliği (IPC 3+, analiz edilen nüfusun yüzdesi) — Eğilim Analizi",
+   "sentence": "Pay pencere boyunca azalış yönünde, ancak analizlerin kapsamı dönemden döneme değiştiği için ihtiyatlı olunmalıdır.",
+   "expect": "keep",
+   "why": "doğru yön"
+  },
+  {
+   "case": "afg_fn_tr",
+   "heading": "Gıda güvensizliği (IPC 3+, analiz edilen nüfusun yüzdesi) — Eğilim Analizi",
+   "sentence": "Analizler ülkenin farklı bölümlerini kapsadığından, kişi sayısı yerine payın kullanılması daha güvenli bir karşılaştırma sağlar.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "hti_pro_tr",
+   "heading": "SUMMARY",
+   "sentence": "Dönem için geri dönen verisi bulunmuyor; izleme ekipleri bu boşluğu not etmelidir.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "hti_pro_tr",
+   "heading": "Koruma: insani yardıma ihtiyaç duyan kişiler — Son Değerler",
+   "sentence": "Bu rakam planın ayrı koruma satırlarından biridir ve sektörün bütün ihtiyacı olarak okunmamalıdır.",
+   "expect": "keep",
+   "why": "doğru, olumsuzlanmış toplam"
+  },
+  {
+   "case": "hti_pro_tr",
+   "heading": "Mülteciler (kişi) — Eğilim Analizi",
+   "sentence": "Veriler mülteciler için artış yönünü gösteriyor; bu bulgu ülke içinde yerinden edilme ile birlikte izlenmelidir.",
+   "expect": "keep",
+   "why": "doğru yön"
+  },
+  {
+   "case": "hti_pro_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Eğilim Analizi",
+   "sentence": "Yerinden edilme pencere boyunca artış yönünde ve ekipler yeni turları doğrulamayı sürdürmelidir.",
+   "expect": "keep",
+   "why": "doğru yön"
+  },
+  {
+   "case": "hti_pro_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Bölgesel Analiz",
+   "sentence": "West, South ve Centre en yüksek ortalamalara sahip; saha ekiplerinin ilk yerleşimi buna göre planlanabilir.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "sdn_all_tr",
+   "heading": "SUMMARY",
+   "sentence": "İhtiyaç sahibi kişilere ilişkin veri test için yetersiz kaldığından bu gösterge bulgular arasında yer almıyor.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "sdn_all_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Eğilim Analizi",
+   "sentence": "Son değer ilk değerin üzerinde olsa da pencerenin tamamında yön azalış; bu iki bilgi birlikte okunmalıdır.",
+   "expect": "keep",
+   "why": "doğru yön"
+  },
+  {
+   "case": "sdn_all_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Eğilim Analizi",
+   "sentence": "Bu seri tek bir izleme operasyonuna dayanıyor, bu nedenle diğer operasyonların sayımlarıyla doğrudan karşılaştırılmamalıdır.",
+   "expect": "keep",
+   "why": "true, useful"
+  },
+  {
+   "case": "sdn_all_tr",
+   "heading": "İnsani yardım fonlaması (USD) — Eğilim Analizi",
+   "sentence": "Fonlama artış yönünde görünüyor, ancak yalnızca dört yıllık gözlem olduğu için bu geçici bir işaret sayılmalıdır.",
+   "expect": "keep",
+   "why": "doğru yön"
+  },
+  {
+   "case": "sdn_all_tr",
+   "heading": "Gıda güvensizliği (IPC 3+, analiz edilen nüfusun yüzdesi) — Eğilim Analizi",
+   "sentence": "Gıda güvensizliği payı artış yönünde, fakat az sayıda gözlem nedeniyle yeni analiz dönemleriyle doğrulanmalıdır.",
+   "expect": "keep",
+   "why": "doğru yön"
+  },
+  {
+   "case": "sdn_all_tr",
+   "heading": "Ülke içinde yerinden edilmiş kişiler (IDP) — Bölgesel Analiz",
+   "sentence": "South Darfur ve North Darfur en yüksek ortalamalara sahip; kaynak dağılımı planlanırken bu sıralama göz önünde tutulabilir.",
+   "expect": "keep",
+   "why": "true, useful"
+  }
+ ]
+}

@@ -214,22 +214,29 @@ def test_all_report_prompts_forbid_corroboration_piling():
         assert "CORROBORATION IS NOT MULTI-FACT" in prompt, report_type
 
 
-def test_technical_prompt_registered_and_narrate_only():
+def test_technical_prompt_asks_for_interpretation_only():
+    """The report's facts are written in code (analytics.report_text); the model adds an
+    interpretation paragraph per heading and nothing else."""
     from rag.chain import _REPORT_PROMPTS
-    assert "technical_monitoring" in _REPORT_PROMPTS
     p = _REPORT_PROMPTS["technical_monitoring"]
-    low = p.lower()
-    # LLM'e hesaplama YASAK; yalnızca doğrulanmış sonuçları yorumlar.
-    assert "do not" in low and ("recompute" in low or "calculate" in low or "compute" in low)
-    assert "p-value" in low or "p=" in low
-    assert "α" in p or "alpha" in low or "0.05" in p
-    # Yetersiz veriyi anlamlıymış gibi sunma.
-    assert "insufficient" in low
-    # Bölüm başlıkları İngilizce (rule 2 dile çevirir); Türkçe sabit başlık kalmamalı.
-    assert "Data Coverage & Limitations" in p and "Methods" in p
-    assert "Veri Kapsamı" not in p and "Yöntem" not in p
-    # Başlıklar level-2 ('## ') olmalı — görsel/PDF pipeline yalnızca '## ' tanır.
-    assert "## " in p
+    assert "ALREADY been written in code" in p and "INTERPRETATION paragraph" in p
+    assert "It never restates the facts." in p
+    # The headings come from the instruction, verbatim; the code writes the other sections.
+    assert "Use exactly the headings listed in the instruction" in p and "## " in p
+    assert "Data Coverage, Methods and Sources are written in code" in p
+
+
+def test_technical_prompt_forbids_what_the_check_drops():
+    from rag.chain import _REPORT_PROMPTS
+    p = _REPORT_PROMPTS["technical_monitoring"]
+    assert "Write no number at all" in p and "A year may be named" in p
+    assert "Never say that something is or is not statistically significant" in p
+    assert "never present it as established, robust or proven" in p
+    assert "In the Executive Summary paragraph, do not describe any rise, fall" in p
+    assert "not comparable across years, a regional ranking or a correlation" in p
+    assert "'doubled', 'half', 'most of'" in p
+    assert "Never call a figure the plan's overall or total figure" in p
+    assert "do not speculate" in p and "never copy the Context's labels or codes" in p
 
 
 def test_technical_report_type_wired_in_service():
@@ -238,23 +245,6 @@ def test_technical_report_type_wired_in_service():
     d = build_report_directive("Afghanistan", None, None, None, 0, "en",
                                report_type="technical_monitoring")
     assert "technical monitoring" in d.lower()
-
-
-def test_technical_prompt_keeps_context_labels_out_of_the_prose():
-    # Live check 2026-11-16: the Turkish report copied "(direction=increasing)" and
-    # "DATA GAPS" from the context into its sentences.
-    from rag.chain import _REPORT_PROMPTS
-    p = _REPORT_PROMPTS["technical_monitoring"]
-    assert "never copy the Context's field labels" in p
-    assert "direction=increasing" in p and "DATA GAPS" in p
-
-
-def test_technical_prompt_formats_numbers_for_the_language():
-    # Live check 2026-11-16: "-927051.51 kişi", "yüzde %21.4" in a Turkish report.
-    from rag.chain import _REPORT_PROMPTS
-    p = _REPORT_PROMPTS["technical_monitoring"]
-    assert "requested language's format" in p and "'%21,4'" in p and "'-%24,1'" in p
-    assert "never '%' together with 'yüzde'" in p
 
 
 def test_indicator_table_values_come_from_the_originator_with_their_own_date():
@@ -275,55 +265,6 @@ def test_needs_assessment_citation_rule_has_the_examples():
     assert "right after the fact it supports" in p
 
 
-def test_technical_prompt_keeps_a_sector_report_on_its_sector():
-    # 2026-11-18: an Afghanistan "Food and Nutrition" technical report led with IDPs.
-    from rag.chain import _REPORT_PROMPTS
-    p = _REPORT_PROMPTS["technical_monitoring"]
-    assert "frame the Executive Summary around that sector" in p
-    assert "indicators that are not in the Context" in p
-
-
-def test_technical_prompt_gives_untested_findings_no_verdict():
-    # 2026-11-18: a regional ranking with one observation per region was narrated as
-    # "not statistically significant".
-    from rag.chain import _REPORT_PROMPTS
-    p = _REPORT_PROMPTS["technical_monitoring"]
-    assert "no statistical test was possible" in p
-    assert "never call it significant or not significant" in p
-
-
-def test_technical_prompt_names_the_window_of_a_look_back_trend():
-    # A one-year report's trends may cover five years: the window is named, once.
-    from rag.chain import _REPORT_PROMPTS
-    p = _REPORT_PROMPTS["technical_monitoring"]
-    assert "Explain the LOOK-BACK once" in p and "cover the look-back window" in p
-
-
-def test_technical_prompt_says_no_boilerplate_and_reader_form():
-    # Round 3: three sections of one report repeated the same look-back and no-test text.
-    from rag.chain import _REPORT_PROMPTS
-    p = _REPORT_PROMPTS["technical_monitoring"]
-    assert "Do not repeat boilerplate from section to section" in p
-    assert "'three observations: too few for a trend test'" in p
-    assert "never adds that no verdict of statistical significance applies" in p
-    assert "as the Context writes them" in p
-
-
-def test_technical_prompt_keeps_share_changes_in_percentage_points():
-    # Review 2026-11-18: "-48.3%" for a share that went from 47% to 32%.
-    from rag.chain import _REPORT_PROMPTS
-    p = _REPORT_PROMPTS["technical_monitoring"]
-    assert "percentage points" in p and "'halved'" in p
-    assert "percent change" not in p
-
-
-def test_technical_prompt_dates_values_from_before_the_period():
-    # A 2024 figure labelled "before the chosen period" must not read as current.
-    from rag.chain import _REPORT_PROMPTS
-    p = _REPORT_PROMPTS["technical_monitoring"]
-    assert "'before the chosen period'" in p and "state its date" in p
-
-
 def test_indicator_table_rows_cite_their_source_in_the_value_cell():
     # Round 2 (owner): "it would be good if the other reports had sources too".
     from rag.chain import _INDICATOR_SYSTEM_PROMPT
@@ -334,46 +275,9 @@ def test_indicator_table_rows_cite_their_source_in_the_value_cell():
     assert "no marker in the 'Indicator' or 'As of' cells" in p
 
 
-def test_technical_prompt_keeps_indicator_names_and_plan_line_notes():
-    # Round 2: an indicator's name is kept as given, and the note on the plan's separate
-    # lines must reach Data Coverage & Limitations.
-    from rag.chain import _REPORT_PROMPTS
-    p = _REPORT_PROMPTS["technical_monitoring"]
-    assert "Use every indicator's name exactly as the Context gives it" in p
-    assert "separate lines" in p
-
-
-def test_technical_prompt_forbids_a_rise_or_fall_across_non_comparable_years():
-    from rag.chain import _REPORT_PROMPTS
-    p = _REPORT_PROMPTS["technical_monitoring"]
-    assert "not comparable across years" in p
-    assert "never describe a rise or fall between those years" in p
-
-
-
-def test_technical_prompt_methods_come_from_the_notes_only():
-    from rag.chain import _REPORT_PROMPTS
-    p = _REPORT_PROMPTS["technical_monitoring"]
-    assert "do not describe a method the notes do not list" in p
-
-
-def test_technical_prompt_opens_the_summary_with_the_headline():
-    from rag.chain import _REPORT_PROMPTS
-    p = _REPORT_PROMPTS["technical_monitoring"]
-    assert "Open the Executive Summary with the HEADLINE figures" in p
-    assert "then the main tested result; then the main limitation" in p
-
-
 def test_indicator_prompt_cites_every_factual_paragraph():
     # Round 3: a live Health report's second Overview paragraph (Kandahar, Helmand, eastern
     # and northern provinces) carried no citation.
     from rag.chain import _INDICATOR_SYSTEM_PROMPT
     assert ("Every paragraph that states facts carries at least one [n] citation, the Overview "
             "included") in _INDICATOR_SYSTEM_PROMPT
-
-
-def test_technical_prompt_methods_restate_the_correction_the_notes_state():
-    from rag.chain import _REPORT_PROMPTS
-    p = _REPORT_PROMPTS["technical_monitoring"]
-    assert "the multiple-comparison handling the notes state" in p
-    assert "the Holm correction and the α=0.05 threshold" not in p

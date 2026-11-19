@@ -203,7 +203,7 @@ _REPORT_TYPE_DIRECTIVE_VERB = {
     "situation": "Generate the situation report.",
     "indicator_monitoring": "Generate the indicator monitoring report.",
     "needs_assessment": "Generate the needs assessment brief.",
-    "technical_monitoring": "Generate the technical monitoring report narrative.",
+    "technical_monitoring": "Write the interpretation paragraphs of the technical monitoring report.",
 }
 
 

@@ -51,14 +51,12 @@ def _client():
 
 
 def _findings_with_sections():
-    from analytics.technical_report import Findings, ReportSection
-    section = ReportSection(
-        heading="İnsani ihtiyaç — Eğilim Analizi",
-        stat_result={"kind": "trend"},
-        chart="data:image/png;base64,ZZZ",
-        findings_text="İnsani ihtiyaç: yön=artış, eğim=1.00/dönem, p=0.010, n=6.",
-    )
-    return Findings(sections=[section], gaps=[], indicators_covered=["humanitarian_needs"])
+    """One decreasing, untested-as-significant trend (refugees, 2.67 million in 2025)."""
+    from tests.analytics import samples
+    findings = samples.findings(samples.trend(heading="İnsani ihtiyaç — Eğilim Analizi"),
+                                indicators_covered=["humanitarian_needs"])
+    findings.sections[0].chart = "data:image/png;base64,ZZZ"
+    return findings
 
 
 class TestTechnicalMonitoringRoute:
@@ -145,53 +143,117 @@ class TestTechnicalMonitoringRoute:
             assert "Sudan" in content
 
 
-def test_technical_report_is_saved_after_the_narrative_check():
-    """A sentence whose number is not in the findings never reaches the saved report."""
-    async def mock_astream(*a, **k):
-        yield "## İnsani ihtiyaç — Eğilim Analizi\n\n"
-        yield "The trend has p=0.010 across 6 periods. Needs grew by 4,812 people per year."
+_HEADING = "İnsani ihtiyaç — Eğilim Analizi"
+_FACT = "The latest value is 2.67 million people (2025)"
 
-    mock_chain = MagicMock()
-    mock_chain.astream = mock_astream
+
+def _technical(mock_astream, language="en", **patches):
+    chain = MagicMock()
+    chain.astream = mock_astream
     with patch("api.routes.reports.technical_report.compute_findings",
                return_value=_findings_with_sections()), \
-         patch("api.routes.reports.build_report_chain", return_value=mock_chain):
+         patch("api.routes.reports.build_report_chain", return_value=chain):
         resp = _client().post("/reports/stream", json={
-            "country": "Afghanistan", "report_type": "technical_monitoring", "language": "en",
-        })
+            "country": "Afghanistan", "report_type": "technical_monitoring", "language": language})
     events = _parse_sse_events(resp.text)
-    rid = next(e for e in events if e["event"] == "saved")["data"]["report_id"]
-    content = _client().get(f"/reports/{rid}").json()["content"]
-    assert "p=0.010" in content
-    assert "4,812" not in content
-    assert "1 sentence(s) that could not be verified" in content
+    saved = next((e for e in events if e["event"] == "saved"), None)
+    content = _client().get(f"/reports/{saved['data']['report_id']}").json()["content"] if saved else None
+    return events, content
+
+
+def test_a_technical_report_is_its_computed_facts_plus_the_checked_interpretation():
+    """The saved report is assembled in code: the computed paragraph of every section,
+    then the model's paragraph without the sentences the check drops."""
+    async def mock_astream(*a, **k):
+        yield "## Executive Summary\n\nRead the findings together.\n\n"
+        yield f"## {_HEADING}\n\n"
+        yield "The series is short. Needs grew by 4,812 people per year. The decline is significant."
+
+    events, content = _technical(mock_astream)
+    assert content.startswith("## Executive Summary\n\nPeriod analysed:")
+    assert "*Interpretation:* Read the findings together." in content
+    assert f"## {_HEADING}\n\n{_FACT}" in content
+    assert "*Interpretation:* The series is short.\n\n## Data Coverage & Limitations" in content
+    assert "4,812" not in content and "The decline is significant" not in content
+    assert content.rstrip().endswith("are written by an AI model.")
+    assert "could not be verified" not in content        # nothing factual was removed: no footnote
+
+
+def test_the_model_cannot_drop_or_rename_a_finding():
+    """A finding the model skips, or writes under a heading of its own, keeps its
+    computed paragraph; a section the model invents is not used."""
+    async def mock_astream(*a, **k):
+        yield "## Summary of everything\n\nNeeds exploded.\n\n## Methods\n\nA Pearson test was run."
+
+    _, content = _technical(mock_astream)
+    assert f"## {_HEADING}\n\n{_FACT}" in content
+    assert "exploded" not in content and "Pearson" not in content
+    assert "*Interpretation:*" not in content
+
+
+def test_a_model_failure_still_saves_the_computed_report(caplog):
+    async def mock_astream(*a, **k):
+        yield "## Executive Summary\n\nRead the findings"
+        raise RuntimeError("upstream timeout")
+
+    with patch("api.routes.reports.get_settings") as settings:
+        settings.return_value.CHAT_LLM_MAX_RETRIES = 0
+        settings.return_value.MAX_REPORTS_PER_USER = 100
+        events, content = _technical(mock_astream)
+    kinds = [e["event"] for e in events]
+    assert "error" not in kinds and kinds[-2:] == ["saved", "done"]
+    assert f"## {_HEADING}\n\n{_FACT}" in content and "*Interpretation:*" not in content
+    assert any("commentary failed" in r.getMessage() and r.exc_info for r in caplog.records)
 
 
 def test_a_checker_error_never_loses_the_report(caplog):
-    """The narrative check raising must not fail the stream or the save: the report is kept as
-    generated, its footnote says the check did not run, and the error is logged with its trace."""
+    """The commentary check raising must not fail the stream or the save: the report keeps
+    its computed text, without interpretation paragraphs, and the error is logged."""
     async def mock_astream(*a, **k):
-        yield "## İnsani ihtiyaç — Eğilim Analizi\n\n"
-        yield "The trend has p=0.010 across 6 periods."
+        yield f"## {_HEADING}\n\nThe series is short."
 
-    mock_chain = MagicMock()
-    mock_chain.astream = mock_astream
-    with patch("api.routes.reports.technical_report.compute_findings",
-               return_value=_findings_with_sections()), \
-         patch("api.routes.reports.build_report_chain", return_value=mock_chain), \
-         patch("api.routes.reports.verify_narrative", side_effect=KeyError("mayis")):
-        resp = _client().post("/reports/stream", json={
-            "country": "Afghanistan", "report_type": "technical_monitoring", "language": "en",
-        })
-    events = _parse_sse_events(resp.text)
+    with patch("api.routes.reports.check_commentary", side_effect=KeyError("mayis")):
+        events, content = _technical(mock_astream)
     kinds = [e["event"] for e in events]
     assert "error" not in kinds and "saved" in kinds and kinds[-1] == "done"
-    rid = next(e for e in events if e["event"] == "saved")["data"]["report_id"]
-    content = _client().get(f"/reports/{rid}").json()["content"]
-    assert content.startswith("## İnsani ihtiyaç — Eğilim Analizi\n\nThe trend has p=0.010 across 6 periods.")
-    assert "could not run" in content
-    failed = [r for r in caplog.records if "Narrative check failed" in r.getMessage()]
+    assert f"## {_HEADING}\n\n{_FACT}" in content and "The series is short." not in content
+    failed = [r for r in caplog.records if "Commentary check failed" in r.getMessage()]
     assert failed and failed[0].exc_info is not None
+
+
+def test_the_stream_shows_the_facts_first_and_each_finding_under_its_heading():
+    """The waiting reader sees the summary's computed paragraph before the model writes
+    a word, then each finding's computed paragraph under its heading, the model's text
+    marked as interpretation, and the code-written closing sections."""
+    async def mock_astream(*a, **k):
+        for chunk in ("## Exec", "utive Summary\n\nRead the ", "findings together.\n\n## ",
+                      f"{_HEADING}\n", "\nThe series ", "is short."):
+            yield chunk
+
+    events, content = _technical(mock_astream)
+    tokens = [e["data"]["content"] for e in events if e["event"] == "token"]
+    assert tokens[0].startswith("## Executive Summary\n\nPeriod analysed:")
+    streamed = "".join(tokens)
+    assert streamed.count("## Executive Summary") == 1 and streamed.count(f"## {_HEADING}") == 1
+    order = [streamed.index(x) for x in (
+        "Period analysed:", "*Interpretation:* Read the findings together.", f"## {_HEADING}",
+        _FACT, "*Interpretation:* The series is short.", "## Data Coverage & Limitations",
+        "## Methods")]
+    assert order == sorted(order)
+    # The preview and the saved report say the same thing.
+    assert " ".join(streamed.split()) == " ".join(content.split())
+
+
+def test_a_turkish_report_is_written_in_turkish_by_the_code():
+    async def mock_astream(inputs, *a, **k):
+        assert "## Yönetici Özeti\n## İnsani ihtiyaç — Eğilim Analizi" in inputs["question"]
+        yield "## Yönetici Özeti\n\nBulgular birlikte okunmalı."
+
+    _, content = _technical(mock_astream, language="tr")
+    assert content.startswith("## Yönetici Özeti\n\nAnaliz edilen dönem:")
+    assert "*Yorum:* Bulgular birlikte okunmalı." in content
+    assert "Son değer 2,67 milyon kişi (2025)" in content
+    assert "## Veri Kapsamı ve Sınırlılıklar" in content and "## Yöntem" in content
 
 
 # --- Sector reports (2026-11-18): the chosen sector reaches the analysis, and a sector
@@ -278,7 +340,8 @@ def test_technical_stream_says_which_indicators_were_computed_before_the_narrati
         events = _parse_sse_events(resp.text)
         kinds = [e["event"] for e in events]
         assert kinds[0] == "status"
-        assert [k for k in kinds if k != "status"] == ["token", "token", "saved", "done"]
+        rest = [k for k in kinds if k != "status"]
+        assert rest[0] == "token" and rest[-2:] == ["saved", "done"]
         assert events[0]["data"] == {
             "stage": "computed",
             # In the order the report analyses them, named in the report language.

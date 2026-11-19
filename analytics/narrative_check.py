@@ -1,57 +1,52 @@
-"""Deterministic check of the technical report's narrative against the findings.
+"""Deterministic check of the model's interpretation paragraphs in a technical report.
 
-The model is told to narrate the code-computed findings only, but a prompt cannot
-enforce it. After generation this removes, sentence by sentence:
+The report's facts are written in code (analytics.report_text). The model adds one short
+paragraph under the Executive Summary and under each finding, and this module drops,
+sentence by sentence, what such a paragraph must not say. Every rule is a presence test:
+no scope, polarity or subject is parsed, because a dropped interpretation sentence costs
+nothing (the fact it would have restated is printed right above it), while a kept false
+one misleads. A sentence is dropped when it contains:
 
-1. a sentence with a number that is not in the findings or the report directive
-   (Turkish and English number formats, 'million'/'milyon' scale words and rounding
-   to fewer decimals are accepted; small counts up to 10 are exempt);
-2. a significance claim that contradicts the code's verdict in that finding's
-   section (any claim, either way, in a finding that was not tested), and, outside
-   the finding sections, a claim that something is significant when no finding is;
-3. a relative-change claim the code did not compute: a change stated in percent
-   ('fell by 32%', '%32 azaldı') is kept only when it is a count's computed relative
-   change, or a share's computed percentage-point change said in percentage points;
-   'halved' / 'doubled' / 'yarıya' / 'iki katına' and the like never about a share,
-   and about a count only when the observed latest/first ratio is within ±10% of the
-   factor; a fractional change ('fell by a third', 'üçte bir oranında azaldı') likewise.
-   A level ('to 32%', '%32'ye', '%32 düzeyinde', 'a third of the population') is checked
-   as a number only.
+1. a figure: anything but a year the findings name or a whole count up to ten;
+2. the vocabulary of statistics or of certainty ('significant', a test's name, 'proven',
+   'beyond chance', 'may be noise', 'kesin', 'tesadüf');
+3. a multiplier, fraction, majority, record or a figure in words ('doubled', 'a third',
+   'most of', 'millions'; 'iki katı', 'yarıya', 'çoğu', 'rekor');
+4. a cause or a link between findings ('driven by', 'explains'; 'nedeni', 'kaynaklanıyor');
+5. a capitalised name the model was not given (a region outside the ranking, another
+   country);
+6. the present ('currently', 'this year'; 'şu anda', 'güncel'): values carry their dates;
+7. a word of change (rise, fall, stable, worse …): always in the Executive Summary and
+   under a finding with no direction over time (a regional ranking, a correlation, years
+   that are not comparable, a single value); under a finding with a direction, a
+   sentence is kept only when it names that one direction and nothing else;
+8. 'overall', 'total', 'full' and the like, in a report whose figures are plan lines.
 
-Headings are kept. A finding section left empty gets a placeholder sentence, and a
-note at the end says how many sentences were removed. The check only deletes: it
-never rewords or adds a claim.
+The "What changed" section of a next-period report states figures by design: there rule
+1 becomes "every number is one the model was given", rules 6 and 7 do not apply, the
+others do.
+
+What no word list can catch stays possible and is the prompt's job alone: a wrong order
+among the regions the ranking names, an indicator the report does not have, a false
+detail on a correct direction.
+
+The check only deletes. Headings the report does not have are ignored with their text.
 """
 import logging
 import math
 import re
 from typing import NamedTuple
 
+from analytics.report_text import COMMENTARY_LABEL, HEADINGS
+
 logger = logging.getLogger(__name__)
 
 
-class NarrativeCheck(NamedTuple):
-    content: str
+class Commentary(NamedTuple):
+    by_heading: dict        # heading -> the checked paragraph (headings with none are absent)
+    comparison: str | None  # the checked "What changed" section, when the report has one
     removed: int
 
-
-_NOTE = {
-    "en": "_Note: {n} sentence(s) that could not be verified against the computed statistics "
-          "were removed from this report._",
-    "tr": "_Not: Hesaplanan istatistiklerle doğrulanamayan {n} cümle rapordan çıkarıldı._",
-}
-# When the check itself fails, the report keeps the narrative as generated and says so.
-UNCHECKED_NOTE = {
-    "en": "_Note: the automatic check of this narrative against the computed statistics could "
-          "not run; the text is shown as generated._",
-    "tr": "_Not: Bu anlatımın hesaplanan istatistiklerle otomatik denetimi çalıştırılamadı; metin "
-          "üretildiği gibi gösteriliyor._",
-}
-_PLACEHOLDER = {
-    "en": "The narrative for this finding could not be verified against the computed "
-          "statistics and was removed.",
-    "tr": "Bu bulgunun anlatımı hesaplanan istatistiklerle doğrulanamadığı için çıkarıldı.",
-}
 
 _NUMBER = re.compile(
     r"(?<![\w.,])(\d+(?:[.,]\d+)*)"
@@ -60,77 +55,15 @@ _NUMBER = re.compile(
 _SCALE = {"milyon": 1e6, "million": 1e6, "milyar": 1e9, "billion": 1e9,
           "bin": 1e3, "thousand": 1e3}
 _SMALL_COUNT = 10
-
-# The noun is a claim only with its verbs: "reached / achieved / attained (statistical)
-# significance", negated as usual ("did not reach", "failed to reach"); "anlamlılık düzeyine
-# ulaştı / ulaşmadı", "anlamlılığa ulaşmadı". "The 0.05 significance level", "the significance
-# threshold" and "anlamlılık düzeyi α=0,05" are not claims.
-_CLAIM = re.compile(
-    r"\bsignificant(?:ly)?\b|\banlaml[ıi](?!l[ıi]k)\w*|"
-    r"\b(?:reach\w*|achiev\w*|attain\w*)\s+(?:statistical\s+)?significance\b|"
-    r"\banlaml[ıi]l[ıi][kğ]\w*(?=\s+(?:(?:düzeyine|eşiğine|seviyesine)\s+)?ulaş)", re.IGNORECASE)
-_NEGATIVE_CLAIM = re.compile(
-    r"\b(?:in|non-?)significant\b|\banlams[ıi]z|"
-    r"\bf(?:all|alls|ell|alling)\s+(?:just\s+|well\s+|far\s+)?short\s+of\s+(?:statistical\s+)?significance\b|"
-    r"\bno\s+(?:statistical\s+)?significance\b", re.IGNORECASE)
-_EN_NEGATION = re.compile(
-    r"\b(?:not|cannot|no|non|never|neither|nor|without|lacks?|lacked|fails?|failed)\b|n['’]t\b",
-    re.IGNORECASE)
-_TR_NEGATION = re.compile(
-    r"de[ğg]il|olmay|\byok\b|m[ae]m[ae]kte|m[ae]m[ıiuü][şs]|m[ae]d[ıiuü]|m[ae]z\b", re.IGNORECASE)
-_WINDOW = 4   # words after a claim (Turkish) that can negate it
-_WINDOW_BEFORE = 6   # words before it, within its own clause ("was not found to be statistically significant")
-# A negation belongs to the claim's own clause: "Although not large, the decline is
-# significant" and "not just visible but significant" claim significance. A comma between
-# digits ("14,988,378", "15,0") is part of a number, and "not yet" is one negation.
-_STRONG_BREAK = re.compile(
-    r"[;:]|\b(?:but|although|though|while|whereas|ancak|fakat|ama|rağmen|karşın)\b|(?<!\bnot )\byet\b",
-    re.IGNORECASE)
-_CLAUSE_BREAK = re.compile(rf"(?<!\d),|,(?!\d)|{_STRONG_BREAK.pattern}", re.IGNORECASE)
-# A short comma aside right after a negation keeps it in scope: "was not, however,
-# significant", "was not found, at α=0.05, to be significant".
-_NEGATION_ASIDE = re.compile(r"\b(not|never)((?:\s+\w+)?)\s*,(?:\s*[^\s,;:]+){1,6}\s*,", re.IGNORECASE)
-# A clause whose subject is negated: "None of the trends was significant", "Neither (of
-# the) …", "Not one …", "No trend was …"; Turkish "hiçbiri", "hiçbir …".
-_SUBJECT_NEGATION = re.compile(r"^\s*(?:none|neither|not\s+one|no\s+\w+)\b|\bhiçbir", re.IGNORECASE)
-# The sentence's subject is negated and the claim is its predicate: "None of the four trends
-# (food insecurity, refugees, …) was significant", "Neither the decrease in refugees, nor
-# the increase in returnees, was significant", "No trend in this report, whether for …, is
-# significant". Parentheses and dash asides are dropped first; the subject reaches the claim
-# when no strong break comes between them and no comma-separated part before the claim's
-# own has a verb of its own ("No trend was significant, and the regional difference is").
-_ASIDE = re.compile(r"\([^()]*\)|\s[—–]\s[^—–]*?\s[—–]\s")
-_FINITE = re.compile(r"\b(?:is|are|was|were|remains?|remained|has|have|had|shows?|showed|does|did)\b",
-                     re.IGNORECASE)
-_PREDICATE_START = re.compile(
-    r"\s*(?:is|are|was|were|be|been|remains?|remained|has|have|had|shows?|showed|does|did|could|"
-    r"can|would|should|may|might|will|proved|appears?|appeared|seems?|seemed|reached|achieved)\b",
-    re.IGNORECASE)
-# A negated subject of a verb that itself negates is a double negation: "No partner disputes
-# that the increase is significant", "Neither … prevents the increase from being significant".
-_DOUBLE_NEGATION = re.compile(
-    r"\b(?:disput\w*|doubt\w*|den(?:y|ies|ied)|question\w*)\s+that\b|\b(?:prevent|stop)\w*\b.*\bfrom\b",
-    re.IGNORECASE)
-
-
-def _subject_negates(prefix: str) -> bool:
-    """The negated subject at the start of *prefix* (the sentence up to the claim) governs
-    the claim."""
-    prefix = _ASIDE.sub(" ", prefix)
-    if not re.match(r"\s*(?:none|neither|not\s+one|no\s+\w+)\b", prefix, re.IGNORECASE):
-        return False
-    if _STRONG_BREAK.search(prefix) or _DOUBLE_NEGATION.search(prefix):
-        return False
-    # A lone dash left after the asides separates clauses like a comma. With commas, the
-    # claim's own part must open with the subject's verb ("…, nor the increase in returnees,
-    # was significant"), not with a new subject ("No region stands out, and the difference …").
-    parts = re.split(r"(?<!\d),|,(?!\d)|\s[—–]\s", prefix)
-    return not any(_FINITE.search(part) for part in parts[:-1]) and (
-        len(parts) == 1 or bool(_PREDICATE_START.match(parts[-1])))
-
+_YEAR = re.compile(r"(?<!\d)((?:19|20)\d{2})(?!\d)")
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
 _LIST_ITEM = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s+")
+_LABEL = re.compile(
+    r"^\s*[*_]{0,2}(?:" + "|".join(re.escape(v.strip("*:")) for v in COMMENTARY_LABEL.values())
+    + r")\s*:?[*_]{0,2}\s*:?\s*", re.IGNORECASE)
 
+
+# --- numbers -----------------------------------------------------------------------------
 
 def _readings(token: str) -> list[tuple[float, int]]:
     """(value, decimals) for each way the token can be read: '.' or ',' as the
@@ -163,8 +96,6 @@ _ROUNDED_FROM = 10_000      # a figure this large may be quoted to 2-4 significa
 
 
 def _rounded(value: float) -> list[float]:
-    """*value* rounded to 2, 3 and 4 significant digits (349,999 -> 350,000; 1,611,291 ->
-    1,611,000), as a report quotes the full figures of the data notes."""
     if abs(value) < _ROUNDED_FROM:
         return []
     digits = int(math.floor(math.log10(abs(value))))
@@ -186,683 +117,297 @@ def _number_readings(m) -> list[tuple[float, float]]:
     return [(v * s, 0.5 * 10 ** -d * s) for v, d in _readings(m.group(1)) for s in {scale, 1.0}]
 
 
-def _numbers_ok(sentence: str, allowed: list[float]) -> bool:
-    for m in _NUMBER.finditer(sentence):
-        scale = _SCALE.get((m.group(2) or "").lower(), 1.0)
-        readings = _readings(m.group(1))
-        if any(d == 0 and scale == 1.0 and v <= _SMALL_COUNT for v, d in readings):
-            continue
-        if not _matches_value(_number_readings(m), allowed):
-            return False
-    return True
+def _small_count(m) -> bool:
+    return not m.group(2) and any(d == 0 and v <= _SMALL_COUNT for v, d in _readings(m.group(1)))
 
 
-def _claim(sentence: str) -> str | None:
-    """'significant' / 'not significant' / None (no claim, or claims that disagree)."""
-    polarities = set()
-    if _NEGATIVE_CLAIM.search(sentence):
-        polarities.add("not significant")
-    sentence = _NEGATION_ASIDE.sub(r"\1\2", sentence)
-    for m in _CLAIM.finditer(sentence):
-        prefix = sentence[:m.start()]
-        clause = _CLAUSE_BREAK.split(prefix)[-1]
-        before = " ".join(clause.split()[-_WINDOW_BEFORE:])
-        after = " ".join(sentence[m.start():].split()[:_WINDOW + 1])
-        subject = (_SUBJECT_NEGATION.search(clause) and not _DOUBLE_NEGATION.search(clause)) \
-            or _subject_negates(prefix)
-        negated = _EN_NEGATION.search(before) or subject or _TR_NEGATION.search(after)
-        polarities.add("not significant" if negated else "significant")
-    return polarities.pop() if len(polarities) == 1 else None
+def _numbers_given(sentence: str, allowed: list[float]) -> bool:
+    """Every number of the sentence is one the model was given (small counts exempt)."""
+    return all(_small_count(m) or _matches_value(_number_readings(m), allowed)
+               for m in _NUMBER.finditer(sentence))
 
 
-# --- Relative-change claims (owner feedback 2026-11-18). A share (IPC 3+, % of the
-# analysed population) changes in percentage points; "fell by 32%" or "halved" about it
-# is a relative claim the code never computed. A count's relative change is legitimate
-# only as computed (the trend's change along its line). ---
+def _has_figure(sentence: str, years: set[str]) -> bool:
+    """A number other than a small count or a year the findings name."""
+    return any(not _small_count(m) and not (not m.group(2) and m.group(1) in years)
+               for m in _NUMBER.finditer(sentence))
 
-_PCT_EN = re.compile(r"(?<![\w.,])(\d+(?:[.,]\d+)*)\s*(?:%|percent\b|per cent\b)", re.IGNORECASE)
-_PCT_TR = re.compile(r"(?:%\s*|\byüzde\s+)(\d+(?:[.,]\d+)*)(?![\d.,]*\s*(?:yüzde\s+)?puan)",
-                     re.IGNORECASE)
-_PP = re.compile(r"percentage[- ]points?|yüzde\s+puan|\bpuan", re.IGNORECASE)
-_QUALIFIER = {"about", "around", "nearly", "almost", "roughly", "approximately", "some",
-              "over", "under", "just", "more", "than", "less", "only", "a", "an", "the"}
-_EN_CHANGE_BEFORE = re.compile(
-    r"^(?:by|up|down|rose|risen|rise|rises|rising|increased?|increases|increasing|grew|grown|"
-    r"grows?|growing|fell|fallen|falls?|falling|dropped|drops?|dropping|declined?|declines|"
-    r"declining|decreased?|decreases|decreasing|shrank|shrunk|climbed|surged|jumped|plunged|"
-    r"slid|eased|gained|lost|cut|reduced|changed)$", re.IGNORECASE)
-# Whole words only: "cutoff", "uptake", "upon", "moreover" are not change words.
-_EN_CHANGE_AFTER = re.compile(
-    r"^(?:declines?|declined|drops?|dropped|falls?|fell|increases?|increased|rises?|rose|"
-    r"reductions?|decreases?|decreased|gains?|growth|jumps?|jumped|cuts?|lower|higher|fewer|more|"
-    r"less|down|up|surges?|surged|changes?|changed|improvements?|deteriorations?|worsening|"
-    r"loss(?:es)?)$", re.IGNORECASE)
-_EN_CHANGE_OF = re.compile(
-    r"\b(?:decline|drop|fall|increase|rise|reduction|decrease|growth|change|jump|cut)s?\s+of\s*$",
-    re.IGNORECASE)
-# Turkish: a level takes a case or 'düzey' word after the number ("%32'ye", "%32'den",
-# "%32 düzeyinde"); a change is followed by a change word ("%32 azaldı", "yüzde 32'lik
-# bir düşüş", "%32 oranında arttı").
-_TR_LEVEL_SUFFIX = re.compile(r"^['’](?:y?[ae]|[dt][ae]n?|s[ıi]|[ıiuü])\b", re.IGNORECASE)
-# Whole Turkish change words, by their verb forms: "artık" (any more), "düşük" (low),
-# "büyük" (big), "gerilim" (tension), "azami" (maximum), "insani" (humanitarian) are not.
-# A verb's forms, after its stem: past (arttı, düştüğü), evidential and perfect (artmış,
-# düşmüştür, azalmıştı), progressive (artıyor, büyüyor), aorist (artar, azalır), future
-# (artacak, büyüyecek), converbs (artarak, düşüp), verbal nouns that name the change
-# (artış, düşüş, azalma, gerileme, düşmektedir) and participles (artan, düşen). The
-# adjectives and nouns that share a stem are not among them: artık, artı, düşük, büyük,
-# gerilim, azami, insani, inanç.
+
+# --- vocabulary --------------------------------------------------------------------------
+# Word lists, deliberately wide: losing a fine interpretation sentence costs nothing.
+
+# Statistics, and how sure a finding is: the code states every verdict, so a paragraph
+# may neither claim certainty ("proven", "beyond chance") nor deny it ("may be noise").
+_STATISTICS = re.compile(
+    r"significan|anlaml[ıi]|anlams[ıi]z|\bp[- ]?values?\b|\bp[- ]?değer|\bp\s*[=<>≤≥]|"
+    r"mann[- ]kendall|\bkendall|\bsen(?:'s|['’]in)?\s+(?:slope|eğim)|kruskal|pearson|\bholm\b|"
+    r"bonferroni|confidence\s+interval|güven\s+aral[ıi]ğ|"
+    r"\bstatistic\w*|\bchance\b|\bnoise\b|\brandom\w*|\bartefacts?\b|\bartifacts?\b|\bprov(?:e[nsd]?|ing)\b|"
+    r"\bproof\b|\bconclusive\w*|\brobust\w*|\bsettled\b|\bbeyond\s+doubt\b|\bthreshold\w*|"
+    r"\bevidential\b|\bevidence\b|\b(?:un)?reliabl\w*|\bfirm(?:ly)?\b|\bsolid\w*|\bcertain\w*|"
+    r"\bdefinit\w*|\bundeniabl\w*|\bunquestionabl\w*|\bweak\w*|\bstrong\w*|\btests?\s+confirm\w*|"
+    r"\bistatisti\w*|\btesadüf\w*|\brastlant\w*|\bgürültü\w*|\bkanıt\w*|\bkesin\w*|\bsağlam\w*|"
+    r"\bgüvenil\w*|\bsınama\w*|\bşüphesiz\w*|\bkuşkusuz\w*|\bzayıf\w*|\bgüçlü\w*|\beşi[kğ]\w*|"
+    r"\bsonucu\s+(?:bunu\s+)?doğrul\w*", re.IGNORECASE)
+
+# Multipliers, fractions, majorities, records, and figures written as words.
+_PROPORTION = {
+    "en": re.compile(
+        r"\bhalv\w*|\bhalf\b|\bdoubl\w*|\btripl\w*|\bquadrupl\w*|\b\w+-?fold\b|\btwice\b|"
+        r"\b(?:two|three|four|five|six|ten|several|many)\s+times\b|"
+        r"\b(?:a|one|two|three)[- ](?:thirds?|quarters?|fourths?|fifths?|tenths?)\b|"
+        r"\bone\s+in\s+\w+\b|\bfraction\b|\bmillions?\b|\bbillions?\b|\bthousands?\b|\bhundreds?\b|"
+        r"\bpercent\w*|\bper\s+cent\b|"
+        r"\bmajority\b|\bmost\s+of\b|\bthe\s+bulk\b|\blion['’]s\s+share\b|\brecord(?:s|ed)?\b|"
+        r"\bunprecedented\b|\ball-time\b|\bever\b|\bon\s+record\b|"
+        r"\b(?:highest|lowest|largest|smallest)\s+(?:level|point|caseload|figure|value)\b",
+        re.IGNORECASE),
+    "tr": re.compile(
+        r"\bkat(?:[ıi]|[ıi]na|[ıi]ndan|l[ıi]k)?\b|\bkatla\w*|\byar[ıi](?:s[ıi]\w*|ya|dan)?\b|"
+        r"\b(?:üçte|dörtte|beşte|onda)\b|\bçoğu\w*|\bçoğunlu[ğk]\w*|\brekor\w*|"
+        r"\bmilyon\w*|\bmilyar\w*|\bbin(?:lerce)?\b|\byüzlerce\b|\byüzde\b|\bkişiden\b|"
+        r"\beşi\s+görülme\w*|\bbugüne\s+kadar\w*|\bşimdiye\s+kadar\w*|\btüm\s+zamanlar\w*|"
+        r"\bzirve\w*|\btavan\w*|\bdibe\b|\bdip\b|\ben\s+(?:yüksek|düşük)\s+(?:seviye|düzey|nokta|rakam|değer)\w*",
+        re.IGNORECASE),
+}
+
+# The whole of something, where the figures are lines of a plan.
+_TOTALS = {
+    "en": re.compile(
+        r"\b(?:overall|totals?|entire\w*|whole|altogether|combined|sums?|summ\w*|aggregat\w*|"
+        r"full|complete\w*|sector-wide|everyone|everybody|all\s+(?:people|those|persons))\b",
+        re.IGNORECASE),
+    "tr": re.compile(
+        r"\btoplam\w*|\btoplan\w*|\bgenel\s+(?!olarak\b)\w+|\bgenel(?:i|inde|ini)\b|\btamam[ıi]\w*|"
+        r"\btüm\w*|\bbütün\w*|\bherkes\w*|\bhepsi\w*", re.IGNORECASE),
+}
+
+# A cause, or a link between two findings: the findings state neither. (Plain 'because' /
+# 'nedeniyle' stay: "because the series is short" is the caution we want.)
+_CAUSE = {
+    "en": re.compile(
+        r"\bdriven\s+by\b|\bexplain\w*|\bresult(?:s|ed|ing)?\s+(?:of|from|in)\b|\breasons?\b|"
+        r"\bthanks\s+to\b|\bstems?\s+from\b|\bstemm\w*|\battribut\w*|\bshows?\s+that\b|"
+        r"\breflect(?:s|ed|ing)?\b|\bdue\s+to\b|\bcaus\w*|\bowing\s+to\b|\bas\s+a\s+result\b|"
+        r"\bleads?\s+to\b|\bled\s+to\b|\bbecause\s+of\b|\bconsequence\w*|\bfuell?ed\b|\bfuell?ing\b",
+        re.IGNORECASE),
+    "tr": re.compile(
+        r"\bneden(?:i|idir|leri|ler)\b|\bkaynaklan\w*|\baçıkl[ıa]\w*|\bsayesinde\b|\barkasında\b|"
+        r"\byüzünden\b|\byol\s+aç\w*|\byansıt(?:ıyor|makta|tı|ır)\w*|"
+        r"\w+[dt][ıiuü]ğ[ıiuü]n[ıiuü]\s+göster\w*|\bsonucudur\b|\bsonucunda\b|\btetikle\w*|\bbağlı\s+olarak\b",
+        re.IGNORECASE),
+}
+
+# The present: a latest value is dated in its fact sentence, and may be years old.
+_NOW = {
+    "en": re.compile(r"\bcurrent(?:ly)?\b|\bthis\s+year\b|\btoday\b|\bnow\b|\bat\s+present\b|"
+                     r"\bpresent(?:ly)?\b|\bso\s+far\b|\bto\s+date\b|\bongoing\b", re.IGNORECASE),
+    "tr": re.compile(r"\bbu\s+yıl\w*|\biçinde\s+bulunduğumuz\b|\bşu\s+an\w*|\bh[aâ]lihaz[ıi]r\w*|"
+                     r"\bbugün\w*|\bgüncel\w*|\bmevcut\s+durum\w*|\bhalen\b|\bhâlen\b", re.IGNORECASE),
+}
+
+_EN_RISE = re.compile(
+    r"\b(?:ris(?:e|es|en|ing)|rose|increas\w*|grow(?:s|n|ing|th)?|grew|climb\w*|surg\w*|"
+    r"jump\w*|gain(?:s|ed|ing)?|soar\w*|spik\w*|expand\w*|escalat\w*|mount(?:s|ed|ing)?|"
+    r"swell\w*|balloon\w*|accelerat\w*|crept|creep\w*|higher|above|upward\w*|upturn|upswing|"
+    r"uptick|up)\b", re.IGNORECASE)
+_EN_FALL = re.compile(
+    r"\b(?:fall(?:s|en|ing)?|fell|drop(?:s|ped|ping)?|declin\w*|decreas\w*|shr[aiu]nk\w*|"
+    r"eas(?:ed|ing)|plung\w*|slid(?:e|es|ing)?|reduc\w*|lower(?:ed|ing|s)?|fewer|less|"
+    r"dwindl\w*|contract(?:s|ed|ing|ion)|reced\w*|slow(?:s|ed|ing)?|trickle|taper\w*|"
+    r"evaporat\w*|collaps\w*|dip(?:s|ped|ping)?|below|downward\w*|downturn|down)\b", re.IGNORECASE)
+# Change whose direction the check cannot read (is "worse" up or down?), or no change at
+# all: never kept, whatever the finding.
+_EN_OTHER_CHANGE = re.compile(
+    r"\b(?:stabl\w*|stabili[sz]\w*|steady|steadily|unchanged|constant|flat|plateau\w*|"
+    r"worse\w*|deteriorat\w*|improv\w*|better|recover\w*|rebound\w*|peak\w*|revers\w*|"
+    r"chang(?:e|es|ed|ing)|shift(?:s|ed|ing)?|fluctuat\w*|uninterrupted|"
+    r"year\s+after\s+year|without\s+interruption)\b", re.IGNORECASE)
+
+# Turkish verb forms after a stem: past (arttı), evidential (artmış), progressive
+# (artıyor), aorist (artar), future (artacak), converbs (artarak, düşüp), verbal nouns
+# (artış, azalma) and participles (artan). "artık" (any more), "düşük" (low), "büyük"
+# (big) and "insani" (humanitarian) are not among them. A stem ending in a vowel narrows
+# before -yor: gerile- -> geriliyor.
 _TR_SUFFIXES = (r"[dt][ıiuü]\w*|m[ıiuü]ş\w*|[ıiuü]?yor\w*|(?:[ae]|[ıiuü])?r(?:l[ae]r|ken|d[ıi]r)?|"
-                r"y?[ae]c[ae][kğ]\w*|y?[ae]r[ae]k|y?[ıiuü]p|m[ae]\w*|y?[ıiuü]ş\w*")
-_TR_PARTICIPLE = r"|y?[ae]n(?:l[ae]r\w*)?"
+                r"y?[ae]c[ae][kğ]\w*|y?[ae]r[ae]k|y?[ıiuü]p|m[ae]\w*|y?[ıiuü]ş\w*|y?[ae]n(?:l[ae]r\w*)?")
 
 
-def _tr_verbs(*stems: str, participle: bool = True) -> str:
-    suffixes = _TR_SUFFIXES + (_TR_PARTICIPLE if participle else "")
-    return "|".join(f"{stem}(?:{suffixes})" for stem in stems)
+def _tr_verbs(*stems: str) -> str:
+    forms = [f"{stem}(?:{_TR_SUFFIXES})" for stem in stems]
+    forms += [f"{stem[:-1]}[ıiuü]yor\\w*" for stem in stems if stem[-1] in "ae"]
+    return "|".join(forms)
 
 
-# "in-" (to come down) takes no participle: "inan…" is to believe.
-_TR_RISE_VERBS = _tr_verbs("art", "yüksel", "büyü", "çık", "katlan")
-_TR_FALL_VERBS = (_tr_verbs("azal", "düş", "gerile", "eksil", "küçül", "kaybet", "kaybed")
-                  + "|" + _tr_verbs("in", participle=False) + r"|geriliyor\w*")
-_TR_CHANGE = re.compile(rf"^(?:{_TR_RISE_VERBS}|{_TR_FALL_VERBS})$", re.IGNORECASE)
-_TR_FILLER = {"bir", "oranında", "civarında", "kadar", "dolayında", "lik", "lık", "luk", "lük"}
-
-# Multiplicative words, with the factor they claim. Supported for a count when the
-# observed latest/first ratio is within ±10% of the factor (halved: 0.45–0.55,
-# doubled: 1.8–2.2, tripled: 2.7–3.3, quadrupled: 3.6–4.4); never for a share.
-_MULTIPLIERS = [
-    # "by half of the partners" is a level; "to (about) half" needs a fall verb before it.
-    (0.5, re.compile(r"\bhalv(?:ed|es|ing|e)\b|\bin half\b|\bby half\b(?!\s+(?:of|the)\b)|"
-                     r"\bhalf as\b|\b(?:fell|fallen|dropped|declined|decreased|shrank|shrunk|cut|"
-                     r"reduced|down)\s+(?:by|to)\s+(?:(?:about|around|nearly|almost|roughly|some|"
-                     r"just over|just under|more than|less than)\s+)?(?:a\s+)?half\b|"
-                     r"\bhalf\s+(?:of\s+)?what\s+it\s+was\b|\b(?:now|only|just)\s+half\b",
-                     re.IGNORECASE)),
-    (2.0, re.compile(r"\bdoubl(?:ed|es|ing)\b|\btwo-?fold\b|\btwice as\b|"
-                     r"\bikiye\s+katla\w*|\biki\s+kat\w*", re.IGNORECASE)),
-    (3.0, re.compile(r"\btripl(?:ed|es|ing)\b|\bthree-?fold\b|\bthree times\b|\büç\s+kat\w*",
-                     re.IGNORECASE)),
-    (4.0, re.compile(r"\bquadrupl\w*\b|\bfour-?fold\b|\bfour times\b|\bdört\s+kat\w*",
-                     re.IGNORECASE)),
-]
-_FACTOR_TOLERANCE = 0.10
-
-# Fractions. Only a fraction used as a change counts ("fell by a third", "a quarter
-# fewer", "üçte bir oranında azaldı"), not a level ("a third of the population",
-# "nüfusun üçte biri"). Supported for a count when the observed latest/first ratio
-# within ±10% of the fraction matches either reading: changed BY it (ratio 1 ± f) or
-# changed TO it (ratio f); never for a share.
-_FRACTIONS = [
-    (1 / 3, r"(?:a|one)[- ]third", r"üçte\s+bir\w*"),
-    (2 / 3, r"two[- ]thirds", r"üçte\s+iki\w*"),
-    (1 / 4, r"(?:a|one)[- ](?:quarter|fourth)", r"dörtte\s+bir\w*"),
-    (3 / 4, r"three[- ]quarters", r"dörtte\s+üç\w*"),
-    (1 / 5, r"(?:a|one)[- ]fifth", r"beşte\s+bir\w*"),
-]
-_EN_FRACTION_CHANGE = [
-    (f, re.compile(rf"\bby\s+(?:(?:about|around|nearly|almost|roughly|some|more than|over|"
-                   rf"under|less than|just)\s+)*{en}\b|\b{en}\s+(?:fewer|lower|less|more|higher|"
-                   rf"smaller|larger|greater)\b|\b(?:fell|dropped|declined|decreased|shrank|"
-                   rf"rose|grew|increased|climbed)\s+(?:to\s+)?(?:about\s+|nearly\s+|almost\s+)?"
-                   rf"{en}\b", re.IGNORECASE))
-    for f, en, _ in _FRACTIONS]
-# Turkish fractions and halves count only when a change word follows: "üçte bir
-# oranında azaldı", "yarısına indi"; not "nüfusun üçte biri", "yarısına yakını".
-_TR_FRACTION_CHANGE = [
-    (f, re.compile(rf"\b{tr}(?:\s+(?:oranında|kadar|civarında|dolayında))?\s+(\w+)",
-                   re.IGNORECASE))
-    for f, _, tr in _FRACTIONS + [(0.5, "", r"(?:yar[ıi]\s+yar[ıi]ya|yar[ıi]ya|yar[ıi]s[ıi]na)")]]
+_TR_RISE = re.compile(
+    rf"^(?:{_tr_verbs('art', 'yüksel', 'büyü', 'çık', 'katlan', 'tırman', 'sıçra', 'genişle', 'fırla', 'kabar', 'hızlan')}"
+    r"|yukarı(?!da)\w*|üzerinde|üstünde)$", re.IGNORECASE)
+_TR_FALL = re.compile(
+    rf"^(?:{_tr_verbs('azal', 'düş', 'gerile', 'eksil', 'küçül', 'daral', 'hafifle', 'eri', 'yavaşla', 'durul')}"
+    r"|in(?:d[ıi]\w*|iyor\w*|miş\w*|erek|ip|ecek\w*)|iniş\w*|aşağı\w*|altında|altına)$", re.IGNORECASE)
+_TR_OTHER_CHANGE = re.compile(
+    rf"^(?:{_tr_verbs('değiş', 'kötüleş', 'iyileş', 'toparlan', 'dalgalan')}"
+    r"|sabit\w*|istikrar\w*|durağan\w*|aynı|kesintisiz\w*)$", re.IGNORECASE)
+# "daha yüksek / daha az": a comparison. ("En yüksek bölgeler" is the ranking's own wording.)
+_TR_COMPARATIVE = re.compile(r"\bdaha\s+(?:(yüksek|fazla|çok|büyük)|(düşük|az|küçük))\w*", re.IGNORECASE)
 
 
-def _is_en_change(sentence: str, start: int, end: int) -> bool:
-    before = [w.strip("(),;:").lower() for w in sentence[:start].split()]
-    while before and before[-1] in _QUALIFIER:
-        before.pop()
-    if before and _EN_CHANGE_BEFORE.match(before[-1]):
-        return True
-    if _EN_CHANGE_OF.search(" ".join(before)):
-        return True
-    after = [w.strip("(),;:.") for w in sentence[end:].split()]
-    if len(after) > 1 and after[0].lower() in ("up", "down") and (
-            after[1].lower() == "from" or _readings(after[1].lstrip("+-"))):
-        return False        # "32.0% (down from 47.0%)", "32.0%, down 21.0 points": not this one
-    return bool(after) and bool(_EN_CHANGE_AFTER.match(after[0]))
+# The prompt's own way of pointing at the computed paragraph is not a comparison.
+_POINTER = re.compile(
+    r"\b(?:results?|facts?|paragraphs?|verdicts?|values?|figures?|findings?|rankings?|text|stated|given|"
+    r"shown|noted|described)\s+above\b|\babove[- ]mentioned\b|\byukarıda\w*", re.IGNORECASE)
 
 
-def _is_tr_change(sentence: str, end: int) -> bool:
-    rest = sentence[end:]
-    if _TR_LEVEL_SUFFIX.match(rest):
-        return False
-    words = [w.strip("(),;:.'’").lower() for w in re.split(r"[\s'’]+", rest) if w.strip("'’")]
-    while words and words[0] in _TR_FILLER:
-        words.pop(0)
-    return bool(words) and bool(_TR_CHANGE.match(words[0]))
+def _tr_words(sentence: str) -> list[str]:
+    return [w.strip("(),;:.!?“”\"'’") for w in re.split(r"[\s'’]+", sentence)]
 
 
-def _percent_changes(sentence: str, language: str) -> list[float]:
-    """The values of the percentages the sentence states as a change ('fell by 32%',
-    'a 32% decline', '%32 azaldı', "yüzde 32'lik bir düşüş"), not as a level. The change
-    words are those of the report's language."""
-    out = []
-    if language != "tr":
-        for m in _PCT_EN.finditer(sentence):
-            if _is_en_change(sentence, m.start(), m.end()):
-                out += [v for v, _ in _readings(m.group(1))[:1]]
-    else:
-        for m in _PCT_TR.finditer(sentence):
-            if _is_tr_change(sentence, m.end()):
-                out += [v for v, _ in _readings(m.group(1))[-1:]]
-    return out
-
-
-def _matches(value: float, computed: list[float], direction: int | None = None) -> bool:
-    """*value* as written equals a computed figure rounded to its decimals (or to a
-    whole number), and, when the sentence says which way it moved (+1 rise, -1 fall),
-    a figure moving that way."""
-    def close(c):
-        return (abs(value - abs(c)) <= 0.5 + 1e-9 if value == int(value)
-                else abs(value - abs(c)) <= 0.05 + 1e-9)
-    return any(close(c) and (direction is None or c == 0 or (c > 0) == (direction > 0))
-               for c in computed)
-
-
-_EN_RISE = re.compile(r"\b(?:rose|risen|rises|rising|increased?|increases|increasing|grew|grown|"
-                      r"grows|growing|climbed|surged|jumped|gained|up|higher)\b", re.IGNORECASE)
-_EN_FALL = re.compile(r"\b(?:fell|fallen|falls|falling|dropped|drops|dropping|declined?|declines|"
-                      r"declining|decreased?|decreases|decreasing|shrank|shrunk|reduced|reduction|"
-                      r"down|lower|fewer|eased|plunged|slid|lost|cut)\b", re.IGNORECASE)
-_TR_RISE = re.compile(rf"^(?:{_TR_RISE_VERBS})$", re.IGNORECASE)
-_TR_FALL = re.compile(rf"^(?:{_TR_FALL_VERBS})$", re.IGNORECASE)
-_PP_NUMBER = re.compile(r"(?<![\w.,])(\d+(?:[.,]\d+)*)\s*(?:percentage[- ]points?|yüzde\s+puan|puan)",
-                        re.IGNORECASE)
-
-
-_SAYS_NOT_COMPARABLE = re.compile(
-    r"not comparable|cannot be compared|can't be compared|not be compared|different basis|"
-    r"karşılaştırılam|kıyaslanam|karşılaştırılabilir değil|karşılaştırılması mümkün değil|"
-    r"farklı bir temel", re.IGNORECASE)
-# Words that say a figure moved between years: verbs and nouns of change, multipliers,
-# "went from … to", "stable". Not "higher"/"lower"/"up to" on their own: comparing a year's
-# figure with a sub-line or with the unpublished overall figure is not a change.
-_EN_CROSS_YEAR = re.compile(
-    r"\b(?:rose(?!-)|risen|rises?|rising|increase[ds]?|increasing|grew|grown|grows?|growing|"
-    r"climb(?:ed|s|ing)?|surge[ds]?|jump(?:ed|s)?|gained|fell|fallen|falls?|falling|"
-    r"drop(?:ped|s|ping)?|decline[ds]?|declining|decrease[ds]?|decreasing|shr[ai]nk|shrunk|"
-    r"eas(?:ed|ing)|plunged|slid|halv\w*|doubl\w*|twice|tripl\w*|quadrupl\w*|two-?fold|"
-    r"three-?fold|stable|steady|unchanged|reach(?:ed|es|ing)?|went\s+from|gone\s+from)\b",
-    re.IGNORECASE)
-# "greater/more/fewer/less/higher/lower … than <year or value>" compares two years.
-_EN_COMPARATIVE = re.compile(
-    r"\b(?:greater|more|fewer|less|higher|lower|larger|smaller|bigger)\b.*?\bthan\s+"
-    r"(?:in\s+|those\s+of\s+|that\s+of\s+|the\s+figure\s+(?:for|of)\s+|the\s+)?"
-    r"(?P<what>[\d.,]+(?:\s*(?:million|thousand|billion))?)", re.IGNORECASE)
-_TR_COMPARATIVE = re.compile(
-    r"(?:19|20)\d{2}['’]\w*\s+(?:göre|kıyasla|oranla)\b.*?\bdaha\s+(?:fazla|az|yüksek|düşük|çok)",
-    re.IGNORECASE)
-_TR_MULTIPLE = re.compile(r"\b(?:iki|üç|dört)\s+kat\w*|\byarı\s+yarıya\b|\byarısına\b",
-                          re.IGNORECASE)
-_YEAR = re.compile(r"(?<!\d)((?:19|20)\d{2})(?!\d)")
-
-
-def _tr_change_word(sentence: str) -> bool:
-    words = [w.strip("(),;:.'’").lower() for w in re.split(r"[\s'’]+", sentence)]
-    return any(_TR_CHANGE.match(w) and not (i and words[i - 1] == "ortaya")   # "ortaya çıkan"
-               for i, w in enumerate(words))
-
-
-# Phrases that set a figure against another year even without a change verb next to it.
-_CHANGE_PHRASE = re.compile(
-    r"\b(?:up|down)\s+from\b|\b(?:highest|lowest)\b.*\bsince\b|\bbu\s+yana\b|"
-    # "exceeded the 2025 figure", "below the 2024 level"; not "above the 2025 Gender Based
-    # Violence line", a sub-line of the plan.
-    r"\b(?:exceed\w*|surpass\w*|above|below|(?:higher|lower|more|less)\s+than)\s+(?:the\s+|its\s+)?"
-    r"(?:19|20)\d{2}\s+(?:figure|level|value|total|number)\b|"
-    r"\ben\s+(?:yüksek|düşük)\b.*\b(?:beri|bu\s+yana)\b", re.IGNORECASE)
-# "from 14.8 to 15.0 million": the scale word after the last number applies to the first.
-_RANGE = re.compile(
-    r"(\d+(?:[.,]\d+)?)(\s+(?:to|and|-|–|ile|ila)\s+\d+(?:[.,]\d+)?\s*"
-    r"(million|milyon|billion|milyar|thousand|bin))", re.IGNORECASE)
-
-
-# --- A series value with the wrong period ("fell to 14.8 million in 2026" when 14.8
-# million is 2025's figure). Conservative: one year (and at most one month) named, no
-# range or "since". ---
-_MONTH_NUMBER = {name: i + 1 for i, name in enumerate(
-    ["january", "february", "march", "april", "may", "june", "july", "august", "september",
-     "october", "november", "december"])}
-_MONTH_NUMBER.update({name: i + 1 for i, name in enumerate(
-    ["ocak", "şubat", "mart", "nisan", "mayıs", "haziran", "temmuz", "ağustos", "eylül",
-     "ekim", "kasım", "aralık"])})
-# A month only as a date, followed by its year ("may be" is not May): "March 2022", "Ocak 2026".
-_MONTH = re.compile(r"\b(" + "|".join(_MONTH_NUMBER) + r")\s+(?:19|20)\d{2}", re.IGNORECASE)
-
-
-def _fold_i(name: str) -> str:
-    """Python's re matches i, I, ı and İ alike under IGNORECASE, so "Mayis", "MAYIS" and
-    "KASIM" match "mayıs"/"kasım": all four fold to "i" for the lookup."""
-    return name.replace("İ", "i").replace("I", "i").lower().replace("ı", "i")
-
-
-_MONTH_BY_FOLD = {_fold_i(name): number for name, number in _MONTH_NUMBER.items()}
-_AMBIGUOUS_TIME = re.compile(
-    r"\bsince\b|\bbetween\b|\bfrom\b.*\bto\b|\bbu\s+yana\b|\bberi\b|arasında|\bile\b.*\barası",
-    re.IGNORECASE)
-
-
-def _series_points(findings) -> list[tuple[float, str, str, str]]:
-    """(value, 'YYYY-MM-DD', resolution, heading) for every value the code wrote about a
-    series."""
-    points = []
-    for s in findings.sections:
-        r = s.stat_result
-        res = r.get("resolution", "month")
-        if r.get("periods") and r.get("values"):
-            points += [(float(v), str(p)[:10], res, s.heading) for p, v in zip(r["periods"], r["values"])]
-        for v, p in ((r.get("first_value"), r.get("first_period")),
-                     (r.get("latest_value"), r.get("latest_period"))):
-            if v is not None and p:
-                points.append((float(v), str(p)[:10], res, s.heading))
-    return points
-
-
-def _wrong_period(sentence: str, points: list) -> bool:
-    """The sentence names one year (and at most one month) and quotes a value of a series
-    for it, but none of the values it quotes of that series belongs to that period. A
-    second value of the series beside the period's own is a comparison ("17.4 million in
-    2026, up from 14.8 million"), not a wrong period."""
-    years = set(_YEAR.findall(sentence))
-    found = [_MONTH_BY_FOLD.get(_fold_i(m)) for m in _MONTH.findall(sentence)]
-    if None in found:
-        return False                # a spelling the table does not know: the rule is skipped
-    months = set(found)
-    if len(years) != 1 or len(months) > 1 or _AMBIGUOUS_TIME.search(sentence):
-        return False
-    year, month = years.pop(), (months.pop() if months else None)
-
-    def fits(p, res):
-        if p[:4] != year:
-            return False
-        return month is None or res == "year" or int(p[5:7]) == month
-    fitting: set[str] = set()          # series with a quoted value of the stated period
-    misplaced: list[set[str]] = []     # per quoted value of another period: its series
-    for m in _NUMBER.finditer(sentence):
-        token = m.group(1)
-        if not m.group(2) and _YEAR.fullmatch(token):
-            continue                                    # a year, not a value
-        readings = _number_readings(m)
-        matched = [(p, res, h) for v, p, res, h in points if _matches_value(readings, [v])]
-        if any(fits(p, res) for p, res, _ in matched):
-            fitting |= {h for p, res, h in matched if fits(p, res)}
-        elif matched:
-            misplaced.append({h for _, _, h in matched})
-    return any(not (series & fitting) for series in misplaced)
-
-
-# A comma-detached phrase that completes the clause before it: "increased in 2026, to
-# 14,988,378", "stood at 15.0 million, up from 2025", "…, the highest since 2024".
-_ATTACHED = re.compile(r"^\s*(?:up|down|to|from|by|the\s+(?:highest|lowest))\b", re.IGNORECASE)
-_AND = re.compile(r"\b(?:and|ve)\b", re.IGNORECASE)
-# Turkish "while" is a converb on the verb: "korurken", "artarken", "azalmazken".
-_TR_WHILE = re.compile(r"(?<=[rz]ken)\s", re.IGNORECASE)
-
-
-def _has_figure(text: str) -> bool:
-    """A number other than a year."""
-    return any(m.group(2) or not _YEAR.fullmatch(m.group(1)) for m in _NUMBER.finditer(text))
-
-
-def _change_clauses(sentence: str) -> list[str]:
-    """The sentence's clauses for the one-value change rule. Breaks: ';', ':', a comma
-    (not one between digits), 'but', 'while', 'although' and the like, and a Turkish verb in
-    '-rken'/'-zken' ("korurken", while keeping); a comma piece that
-    starts with 'up', 'down', 'to', 'from', 'by' or 'the highest/lowest' stays with the
-    clause before it. 'and' ('ve') separates two clauses only when the text on each side
-    of it quotes a figure other than a year ("IDPs fell to 3.06 million and protection
-    needs stood at 15.0 million"), not in "rose in 2026 and stood at 15.0 million"."""
-    clauses: list[str] = []
-    for piece in (p for chunk in _CLAUSE_BREAK.split(sentence) for p in _TR_WHILE.split(chunk)):
-        if clauses and _ATTACHED.match(piece):
-            clauses[-1] += "," + piece
-        else:
-            clauses.append(piece)
-    out = []
-    for clause in clauses:
-        parts = _AND.split(clause)
-        start = 0
-        for i in range(1, len(parts)):
-            left, right = " and ".join(parts[start:i]), " and ".join(parts[i:])
-            if _has_figure(left) and _has_figure(right):
-                out.append(left)
-                start = i
-        out.append(" and ".join(parts[start:]))
-    return [c for c in out if c.strip()]
-
-
-# The not-comparable caveat: a change word governed by a negation in its own clause is not a
-# change claim ("the figures should not be read as a rise or fall", "they do not show an
-# increase or a decrease", "cannot be interpreted as a rise", "no rise or fall can be stated";
-# "bir artış ya da düşüş olarak yorumlanmamalıdır", "… okunamaz", "bir artış göstermez",
-# "artış anlamına gelmez"). Only that phrase is masked: a change claim elsewhere in the
-# sentence still counts.
-_CHANGE_NOUN = r"(?:rise|fall|increase|decrease|decline|drop|growth|reduction|change|jump|surge)s?"
-_CHANGE_LIST = (rf"(?:(?:an?|any)\s+)?{_CHANGE_NOUN}"
-                rf"(?:\s*(?:,|or|and|nor)\s+(?:(?:an?|any)\s+)?{_CHANGE_NOUN})*")
-_EN_CAVEAT = re.compile(
-    r"\b(?:should\s+not|shouldn['’]t|must\s+not|mustn['’]t|cannot|can\s+not|can['’]t|could\s+not|"
-    r"couldn['’]t|do\s+not|does\s+not|did\s+not|don['’]t|doesn['’]t|didn['’]t|need\s+not|is\s+not|"
-    r"are\s+not)\s+(?:be\s+)?(?:read|interpreted|understood|taken|seen|treated|regarded|viewed|"
-    r"shows?|shown|reflects?|indicates?|represents?|describes?|means?|impl(?:y|ies)|signals?)\s+"
-    rf"(?:as\s+)?{_CHANGE_LIST}|"
-    rf"\bno\s+{_CHANGE_NOUN}(?:\s+(?:or|and|nor)\s+{_CHANGE_NOUN})*\s+(?:\w+\s+){{0,3}}?"
-    r"can\s+be\s+(?:stated|inferred|drawn|claimed|read|shown)\b", re.IGNORECASE)
-_TR_CAVEAT = re.compile(
-    r"(?:\bbir\s+)?\w+(?:\s+(?:ya\s+da|veya|ve|yahut)\s+(?:bir\s+)?\w+)*\s+(?:"
-    r"olarak\s+(?:yorumlan|okun|değerlendiril|görül|algılan|kabul\s+edil)\w*?"
-    r"(?:mamalı|memeli|amaz|emez|mamak|memek|maz|mez)\w*|"
-    r"göstermez\w*|göstermemekte\w*|anlamına\s+gelmez\w*)", re.IGNORECASE)
-
-
-def _mask_caveats(sentence: str, language: str) -> str:
-    return (_TR_CAVEAT if language == "tr" else _EN_CAVEAT).sub(" ", sentence)
-
-
-def _says_change(sentence: str, language: str) -> bool:
-    """A word of change between years, in the report's language: Turkish stems on English
-    words ("in-" + "-di": indicator, individuals) are not change words."""
+def _change(sentence: str, language: str) -> tuple[bool, bool, bool]:
+    """(rise, fall, other change), in the report's language."""
+    sentence = _POINTER.sub(" ", sentence)
     if language == "tr":
-        return bool(_TR_MULTIPLE.search(sentence) or _tr_change_word(sentence))
-    return bool(_EN_CROSS_YEAR.search(sentence))
+        words = _tr_words(sentence)
+        comparative = [m for m in _TR_COMPARATIVE.finditer(sentence)]
+        return (any(_TR_RISE.match(w) for w in words) or any(m.group(1) for m in comparative),
+                any(_TR_FALL.match(w) for w in words) or any(m.group(2) for m in comparative),
+                any(_TR_OTHER_CHANGE.match(w) for w in words))
+    return (bool(_EN_RISE.search(sentence)), bool(_EN_FALL.search(sentence)),
+            bool(_EN_OTHER_CHANGE.search(sentence)))
 
 
-def _series_values_in(sentence: str, values: list[float]) -> int:
-    """How many different numbers of the sentence are values of the series (rounded quotes
-    count). Counted per number: one "15.0 million" matching both 14,988,378 and, rounded to
-    two digits, 14,809,904 is still one value."""
-    hit = set()
-    sentence = _RANGE.sub(r"\1 \3\2", sentence)
-    for m in _NUMBER.finditer(sentence):
-        if _matches_value(_number_readings(m), values):
-            hit.add(m.group(0).strip())
-    return len(hit)
+def _direction(r: dict) -> int | None:
+    """The one direction over time a sentence about this finding may state (+1 up, -1
+    down): the tested direction of a trend, the move from the previous value to the latest
+    of a short series. None when the finding has none (a ranking, a correlation, years that
+    are not comparable, one value, no trend, values that do not move)."""
+    if r["kind"] == "trend":
+        return {"increasing": 1, "decreasing": -1}.get(r.get("direction"))
+    if r["kind"] == "snapshot" and not r.get("not_comparable") and len(r.get("values") or []) > 1:
+        previous, latest = r["values"][-2], r["values"][-1]
+        return None if latest == previous else (1 if latest > previous else -1)
+    return None
 
 
-def _compares_years(sentence: str, years: set, values: list[float]) -> bool:
-    """A comparison between two years of the series: '… than (in) 2025', '… than 14.2
-    million', "2025'e göre … daha fazla"."""
-    if _TR_COMPARATIVE.search(sentence):
-        return True
-    for m in _EN_COMPARATIVE.finditer(sentence):
-        what = m.group("what").rstrip(".,")
-        if what in years:
-            return True
-        token = _NUMBER.match(what)
-        if token and _series_values_in(what, values):
-            return True
-    return False
+# A name the model was not given: a region outside the ranking, another country, an agency.
+_NAME = re.compile(r"(?<![.!?:]\s)(?<!^)\b([A-ZÇĞİÖŞÜ][a-zçğıöşüâîû]{2,})")
 
 
-def _direction(sentence: str, language: str) -> int | None:
-    """+1 when the sentence only says something rose, -1 when it only says something
-    fell, None when it says neither or both (in the report's language)."""
-    if language == "tr":
-        words = [w.strip("(),;:.'’") for w in re.split(r"[\s'’]+", sentence)]
-        rise = any(_TR_RISE.match(w) for w in words)
-        fall = any(_TR_FALL.match(w) for w in words)
-    else:
-        rise, fall = bool(_EN_RISE.search(sentence)), bool(_EN_FALL.search(sentence))
-    return (1 if rise else -1) if rise != fall else None
+def _unknown_names(sentence: str, known: set[str]) -> bool:
+    return any(m.group(1).casefold() not in known and m.group(1).lower() not in known
+               for m in _NAME.finditer(sentence))
 
 
-def _ratio(r: dict) -> float | None:
-    """Observed latest / first value of a finding, or None."""
-    if r.get("kind") == "snapshot" and r.get("values"):
-        first, last = r["values"][0], r["values"][-1]
-    else:
-        first, last = r.get("first_value"), r.get("latest_value")
-    return last / first if first and last is not None else None
+# --- the check ---------------------------------------------------------------------------
 
-
-def _profile(stat_results: list[dict]) -> dict:
-    """What relative claims a stretch of text may make: the computed relative changes
-    of counts, the percentage-point changes of shares, the observed count ratios, and
-    whether it is about a share."""
-    shares = [r for r in stat_results
-              if r.get("unit") == "percentage points" or r.get("value_unit") == "%"]
-    counts = [r for r in stat_results if r not in shares]
-    return {
-        "share": bool(shares) and not counts,
-        "relative": [r["pct_change"] for r in counts if r.get("pct_change") is not None],
-        "pp": [r["line_change"] for r in shares if r.get("line_change") is not None]
-              + [r["slope"] for r in shares if r.get("slope") is not None],
-        "ratios": [x for x in (_ratio(r) for r in counts) if x],
-    }
-
-
-def _relative_claim_ok(sentence: str, profile: dict, language: str) -> bool:
-    direction = _direction(sentence, language)
-    for value in _percent_changes(sentence, language):
-        if profile["share"] or not _matches(value, profile["relative"], direction):
-            # A share's change is in percentage points, and only as computed.
-            if not (_PP.search(sentence) and _matches(value, profile["pp"], direction)):
-                return False
-    if direction is not None:
-        # A change in percentage points said the wrong way round ("rose by 21.0
-        # percentage points" for a computed -21.0): removed, when it matches only that.
-        for m in _PP_NUMBER.finditer(sentence):
-            values = [v for v, _ in _readings(m.group(1))]
-            if (any(_matches(v, profile["pp"]) for v in values)
-                    and not any(_matches(v, profile["pp"], direction) for v in values)):
-                return False
-    for factor, pattern in _MULTIPLIERS:
-        if pattern.search(sentence):
-            if profile["share"] or not any(
-                    abs(x - factor) <= _FACTOR_TOLERANCE * factor for x in profile["ratios"]):
-                return False
-    if language == "tr":
-        claims = [f for f, pattern in _TR_FRACTION_CHANGE
-                  if any(_TR_CHANGE.match(m.group(1)) for m in pattern.finditer(sentence))]
-    else:
-        claims = [f for f, pattern in _EN_FRACTION_CHANGE if pattern.search(sentence)]
-    for fraction in claims:
-        near = _FACTOR_TOLERANCE * fraction
-        if profile["share"] or not any(
-                abs(abs(1 - x) - fraction) <= near or abs(x - fraction) <= near
-                for x in profile["ratios"]):
-            return False
-    return True
-
-
-def _blocks(text: str) -> list[tuple[str, list[str]]]:
-    """('heading', [line]) | ('para', [sentences]) | ('list', [items]) in order."""
-    blocks: list[tuple[str, list[str]]] = []
+def _sections(text: str) -> list[tuple[str, list[str]]]:
+    """(heading, sentences) for each '## ' section of the model's text, in order; list
+    items count as sentences. Text before the first heading is ignored."""
+    out: list[tuple[str, list[str]]] = []
     para: list[str] = []
 
     def flush():
-        if not para:
-            return
-        if any(_LIST_ITEM.match(line) for line in para):
-            blocks.append(("list", list(para)))
-        else:
-            joined = " ".join(line.strip() for line in para)
-            blocks.append(("para", [s for s in _SENTENCE_END.split(joined) if s]))
+        if para and out:
+            if any(_LIST_ITEM.match(line) for line in para):
+                out[-1][1].extend(_LIST_ITEM.sub("", line).strip() for line in para)
+            else:
+                joined = " ".join(line.strip() for line in para)
+                out[-1][1].extend(s for s in _SENTENCE_END.split(joined) if s)
         para.clear()
 
     for line in text.splitlines():
         if line.lstrip().startswith("#"):
             flush()
-            blocks.append(("heading", [line]))
+            out.append((line.lstrip("#").strip().strip("*").strip(), []))
         elif not line.strip():
             flush()
         else:
             para.append(line)
     flush()
-    return blocks
+    return out
 
 
-def _heading_text(line: str) -> str:
-    return line.lstrip("#").strip().strip("*").strip()
+def _key(heading: str) -> str:
+    return " ".join(heading.casefold().split())
 
 
-# The tests a Methods section may name, by family; English and Turkish spellings.
-_METHODS = {
-    "trend": re.compile(r"mann[- ]kendall|\bkendall|\bsen(?:'s|['’]in)?\s+(?:slope|eğim)", re.IGNORECASE),
-    "region": re.compile(r"kruskal", re.IGNORECASE),
-    "correlation": re.compile(r"pearson", re.IGNORECASE),
-    "holm": re.compile(r"\bholm\b|bonferroni", re.IGNORECASE),
-}
-_METHODS_HEADING = re.compile(r"method|yöntem|metodoloji", re.IGNORECASE)
-# A method named only to say it was not applied or not needed ("no Holm correction was
-# applied", "Kruskal-Wallis was not applicable", "Holm düzeltmesi uygulanmadı") is not a
-# claim that it was used. The negation must govern the method's application in the clause
-# that names it: "did not find a significant difference" or "…, and no Holm correction was
-# needed" after another method do not exempt that method.
-_APPLIED = (r"appl(?:y|ies|ied|icable)|needed|necessary|required|used|run|computed|performed|"
-            r"conducted|tested|carried\s+out|done|made|warranted")
-_NOT_APPLIED = re.compile(
-    rf"\b(?:not|never)\s+(?:\w+\s+)?(?:{_APPLIED})\b|n't\s+(?:\w+\s+)?(?:{_APPLIED})\b|"
-    rf"\b(?:no|none|neither)\b.*\b(?:{_APPLIED})\b|\bwithout\b|\bunnecessary\b|"
-    r"\b(?:was|were)\s+not\s*\.?\s*$|"      # elliptical: "…; Kruskal-Wallis and Pearson were not."
-    r"uygulanma\w*|uygulanam\w*|gerekme\w*|gereksiz\w*|gerek\s+(?:yok|duyulma\w*|kalma\w*)|"
-    r"kullanılma\w*|yapılma\w*", re.IGNORECASE)
-
-
-def _listed_methods(allowed_text: str) -> set | None:
-    """The test families the context's METHOD NOTES list (None: the context has none)."""
-    if "METHOD NOTES:" not in allowed_text:
-        return None
-    # Only the note lines themselves: the directive and, for a next-period report, the
-    # previous report's whole text follow them, and name every method there is.
-    lines = []
-    for line in allowed_text.split("METHOD NOTES:", 1)[1].splitlines()[1:]:
-        if not line.startswith("- "):
-            break
-        lines.append(line)
-    notes = "\n".join(lines)
-    return {family for family, pattern in _METHODS.items() if pattern.search(notes)}
-
-
-_RELATIVE_ASIDE = re.compile(r",\s*(?:which|that|who)\b[^,;:]*,", re.IGNORECASE)
-
-
-def _names_unlisted_method(sentence: str, listed: set) -> bool:
-    # "A Holm correction, which adjusts for several tests, was not needed": the relative
-    # aside is dropped so the method and its "not needed" stay in one clause.
-    sentence = _RELATIVE_ASIDE.sub("", sentence)
-    return any(pattern.search(clause) and not _NOT_APPLIED.search(clause)
-               for clause in _CLAUSE_BREAK.split(sentence)
-               for family, pattern in _METHODS.items() if family not in listed)
-
-
-def verify_narrative(text: str, findings, allowed_text: str, language: str,
-                     label: str = "") -> NarrativeCheck:
-    """*allowed_text*: the context and directive the model was given (its numbers are
-    the only numbers the narrative may use). *label* names the report in the log of
-    removed sentences ("Afghanistan / Health / technical_monitoring"); the sentences
-    are model-written report text, not user data."""
+def check_commentary(text: str, findings, allowed_text: str, language: str,
+                     comparison_heading: str | None = None, label: str = "") -> Commentary:
+    """The model's paragraphs, by the report's headings, without the sentences the rules
+    above drop. *allowed_text*: the context and directive the model was given (the only
+    source of the years a paragraph may name, and of the "What changed" section's
+    numbers). *label* names the report in the log of dropped sentences; the sentences are
+    model-written report text, not user data."""
+    lang = "tr" if language == "tr" else "en"
+    years = set(_YEAR.findall(allowed_text))
+    names = {w.casefold() for w in re.findall(r"[^\W\d_]{3,}", allowed_text)}
+    names |= {w.lower() for w in re.findall(r"[^\W\d_]{3,}", allowed_text)}
     allowed = _allowed_values(allowed_text)
-    # None: the finding was not tested (no p-value), so it has no verdict at all.
-    verdicts = {s.heading: (None if s.stat_result.get("tested") is False
-                            else bool(s.stat_result.get("significant")))
-                for s in findings.sections}
-    any_significant = any(verdicts.values())
-    # A finding section may claim its own computed changes; any other section (the
-    # Executive Summary, the coverage and methods notes) those of the whole report.
-    profiles = {s.heading: _profile([s.stat_result]) for s in findings.sections}
-    whole = _profile([s.stat_result for s in findings.sections])
-    whole["share"] = False
-    # Sections whose years are not comparable (different plan lines): a sentence there may
-    # give each year's value, but not a rise, fall or change between them.
-    points = _series_points(findings)
-    not_comparable = {s.heading: ({str(p)[:4] for p in s.stat_result.get("periods") or []},
-                                  [float(v) for v in s.stat_result.get("values") or []])
-                      for s in findings.sections if s.stat_result.get("not_comparable")}
+    summary = HEADINGS[lang]["summary"]
+    plan_lines = any(n.get("kind") == "plan_line" for n in findings.note_items) or any(
+        s.stat_result.get("not_comparable") for s in findings.sections)
+    known = {_key(summary): (summary, "summary", None)}
+    known.update({_key(s.heading): (s.heading, "finding", s.stat_result) for s in findings.sections})
+    if comparison_heading:
+        known[_key(comparison_heading)] = (comparison_heading, "comparison", None)
 
-    def across_years(sentence: str, section: str | None) -> bool:
-        """The sentence states a change, or a comparison, between two years of a series
-        whose years are not comparable, without saying they are not comparable."""
-        if _SAYS_NOT_COMPARABLE.search(sentence):
-            return False
-        sentence = _mask_caveats(sentence, language)    # "should not be read as a rise or fall"
-        for heading, (years, values) in not_comparable.items():
-            # One value of the series, narrated as a change ("rose to 15.0 million in 2026",
-            # "artarak 15,0 milyona ulaştı", "…, up from 2025"): the change word, or a phrase
-            # that sets the value against a year, must sit in the clause that quotes it.
-            if any(_series_values_in(c, values) and (_CHANGE_PHRASE.search(c) or _says_change(c, language))
-                   for c in _change_clauses(sentence)):
-                return True
-            own = section == heading
-            two_years = len(years & set(_YEAR.findall(sentence))) >= 2
-            two_values = _series_values_in(sentence, values) >= 2
-            if own and _says_change(sentence, language):
-                return True     # in its own section, any change of the figure is across years
-            if (two_values or (own and two_years)) and (
-                    _says_change(sentence, language) or _compares_years(sentence, years, values)):
-                return True
-        return False
-
-    listed_methods = _listed_methods(allowed_text)
-
-    def bad(sentence: str, section: str | None) -> str | None:
+    def broken(sentence: str, mode: str, stat: dict | None) -> str | None:
         """The rule the sentence breaks, or None."""
-        if not _numbers_ok(sentence, allowed):
-            return "a number not in the findings"
-        if _wrong_period(sentence, points):
-            return "a series value given for another period"
-        if listed_methods is not None and section and _METHODS_HEADING.search(section.casefold()) and \
-                _names_unlisted_method(sentence, listed_methods):
-            return "a test the method notes do not list"
-        if not _relative_claim_ok(sentence, profiles.get(section or "", whole), language):
-            return "a relative change the findings do not support"
-        if across_years(sentence, section):
-            return "a change or comparison between years that are not comparable"
-        claim = _claim(sentence)
-        if claim is None:
+        # Under a regional ranking no region is named again: a wrong order cannot be read
+        # by a word list, and the ranking with its values is printed right above.
+        ranked = [re.escape(str(n)) for n, _ in (stat or {}).get("ranking") or []] \
+            if stat and stat.get("kind") == "region" else []
+        regions = re.compile(r"\b(?:" + "|".join(ranked) + r")\b", re.IGNORECASE) if ranked else None
+        if mode == "comparison":
+            if not _numbers_given(sentence, allowed):
+                return "a number the model was not given"
+        elif _has_figure(sentence, years):
+            return "a figure"
+        if _STATISTICS.search(sentence):
+            return "statistical vocabulary"
+        # In "What changed" a scale word after a checked number is part of that number.
+        if _PROPORTION[lang].search(_NUMBER.sub(" ", sentence) if mode == "comparison" else sentence):
+            return "a multiplier, fraction, majority or record"
+        if plan_lines and _TOTALS[lang].search(sentence):
+            return "a total, in a report of plan lines"
+        if _CAUSE[lang].search(sentence):
+            return "a cause or a link between findings"
+        if _unknown_names(sentence, names):
+            return "a name the findings do not give"
+        if mode == "comparison":
             return None
-        if section in verdicts:
-            if verdicts[section] is None:
-                return "a significance claim about an untested finding"
-            if claim != ("significant" if verdicts[section] else "not significant"):
-                return "a significance claim against the computed verdict"
+        if regions and regions.search(sentence):
+            return "a region, under a ranking the code already gives"
+        if _NOW[lang].search(sentence):
+            return "the present, for a dated value"
+        rise, fall, other = _change(sentence, lang)
+        if other:
+            return "a change the check cannot read"
+        if not (rise or fall):
             return None
-        if claim == "significant" and not any_significant:
-            return "a significance claim when no finding is significant"
+        supported = _direction(stat) if stat else None
+        if supported is None:
+            return "a change where the finding gives none"
+        if rise and fall or (1 if rise else -1) != supported:
+            return "a direction against the finding"
         return None
 
-    out: list[str] = []
+    kept: dict[str, list[str]] = {}
     removed = 0
-    section = None
-    kept_here = removed_here = 0
-
-    def close_section():
-        # A finding the model did narrate, all of whose sentences failed the check.
-        if section in verdicts and kept_here == 0 and removed_here:
-            out.append(_PLACEHOLDER.get(language, _PLACEHOLDER["en"]))
-
-    for kind, items in _blocks(text):
-        if kind == "heading":
-            close_section()
-            section = _heading_text(items[0])
-            kept_here = removed_here = 0
-            out.append(items[0])
-            continue
-        kept = []
-        for item in items:
-            rule = bad(item, section)
-            if rule:
-                removed_here += 1
-                logger.info("Narrative check removed a sentence [%s] (%s) under '%s': %s",
-                            label or "report", rule, section or "(no heading)", item)
-            else:
-                kept.append(item)
-        removed += len(items) - len(kept)
-        kept_here += len(kept)
-        if kept:
-            out.append(("\n" if kind == "list" else " ").join(kept))
-    close_section()
-
-    if not removed:
-        return NarrativeCheck(text, 0)
-    out.append(_NOTE.get(language, _NOTE["en"]).format(n=removed))
-    return NarrativeCheck("\n\n".join(out), removed)
+    for heading, sentences in _sections(text):
+        if _key(heading) not in known:
+            continue                # a section the report does not have: not used at all
+        name, mode, stat = known[_key(heading)]
+        for i, sentence in enumerate(sentences):
+            if i == 0:
+                sentence = _LABEL.sub("", sentence)     # the label is added in code
+            rule = broken(sentence, mode, stat) if sentence.strip() else "empty"
+            if rule is None:
+                kept.setdefault(name, []).append(sentence.strip())
+            elif rule != "empty":
+                removed += 1
+                logger.info("Commentary check dropped a sentence [%s] (%s) under '%s': %s",
+                            label or "report", rule, name, sentence)
+    comparison = None
+    if comparison_heading and comparison_heading in kept:
+        comparison = " ".join(kept.pop(comparison_heading))
+    return Commentary({h: " ".join(s) for h, s in kept.items()}, comparison, removed)

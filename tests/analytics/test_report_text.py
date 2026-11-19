@@ -138,7 +138,7 @@ def test_the_summary_gives_period_headline_latest_values_tests_and_limitation():
         "Period analysed: 19 November 2025 to 19 November 2026. Food security: people in need: "
         "17.4 million people (2026). Latest values: Refugees (people): 2.67 million people "
         "(2025); Food insecurity (IPC 3+, % of the analysed population): 32.0% (September 2026). "
-        "This report ran two statistical tests; none is statistically significant at the 0.05 level "
+        "This report ran two statistical tests; neither is statistically significant at the 0.05 level "
         "after the Holm correction. The series are short, so the results are indicative.")
     tr = report_text.summary_facts(f, "tr")
     assert tr.startswith("Analiz edilen dönem: 19 Kasım 2025 – 19 Kasım 2026. Food security: "
@@ -206,7 +206,8 @@ def test_coverage_lists_gaps_and_notes_in_the_report_language():
              "lines": [("Child Protection", 1611291.0)], "figure": 466589.0, "below": True,
              "sector_en": "protection", "sector_tr": "koruma"}])
     en = report_text.coverage_text(f, "en")
-    assert en.startswith("Data gaps:\n\n- Returnees (people): no data in the period\n\nData notes:\n\n- ")
+    assert en.startswith("Data gaps:\n\n- Geri dönenler (kişi): no data in the period\n- Koruma: too "
+                         "few observations for a trend test (n=3)\n\nData notes:\n\n- ")
     assert en.endswith("so the results are indicative.")
     tr = report_text.coverage_text(f, "tr")
     assert "- Geri dönenler (kişi): dönemde veri yok" in tr
