@@ -1792,9 +1792,9 @@ function onCiteClick(e) {
   padding: var(--space-6) var(--space-8);
 }
 
-/* Claude's reading column: 736px, whatever the window width. */
+/* The reading column: about 75 characters of 15px Geist, whatever the window width. */
 .report-column {
-  max-width: 736px;
+  max-width: 680px;
   margin: 0 auto;
   font-size: var(--text-base);
 }
@@ -1804,8 +1804,8 @@ function onCiteClick(e) {
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-3) var(--space-4);
-  margin-bottom: var(--space-5);
-  padding-bottom: var(--space-4);
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-5);
   border-bottom: 1px solid var(--color-border);
 }
 /* Title takes the room it needs; on a narrow column the actions wrap below it
@@ -1817,10 +1817,10 @@ function onCiteClick(e) {
 /* Document title: one clear step above the report's own section heads (xl). */
 .report-title-h {
   font-family: var(--font-display);
-  font-size: var(--text-2xl);
+  font-size: 1.75rem;
   font-weight: 700;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
   color: var(--color-text);
   text-wrap: balance;
   margin: 0;
@@ -1832,9 +1832,10 @@ function onCiteClick(e) {
   display: flex;
   flex-direction: column;
   row-gap: 2px;
-  margin: 6px 0 0;
+  margin: 10px 0 0;
   font-family: var(--font-body);
-  font-size: 12px;
+  font-size: 13px;
+  line-height: 1.45;
   font-variant-numeric: tabular-nums;
   color: var(--color-text-secondary);
 }
@@ -1870,11 +1871,13 @@ function onCiteClick(e) {
   color: var(--color-muted);
   font-style: italic;
 }
+/* A chart is a panel of its own: hairline frame, card radius, room around it. */
 .report-content :deep(.section-img) {
   display: block;
   width: 100%;
-  margin: 0.4em 0 1em;
-  border-radius: var(--radius-md);
+  margin: 0.9em 0 1.4em;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
 }
 /* Technical-report charts are drawn for each theme; the dark one is hidden here and
    swapped in by the unscoped dark-theme rules at the end of this file. */
@@ -1936,54 +1939,71 @@ function onCiteClick(e) {
   color: var(--color-error);
 }
 
-/* Report text reads like Claude's answers: the reading serif at 15px / 21px. */
+/* Report text: Geist at 15px / 1.65. Headings sit closer to the text they open than to
+   the text before them; figures in tables line up. */
 .report-content {
-  font-family: var(--font-serif);
+  font-family: var(--font-body);
   font-size: 15px;
-  line-height: 21px;
+  line-height: 1.65;
   color: var(--color-text);
 }
 .report-content :deep(h1) {
   font-family: var(--font-display);
   font-size: var(--text-2xl);
+  letter-spacing: -0.02em;
   margin: 0 0 0.5em;
 }
 .report-content :deep(h2) {
   font-family: var(--font-display);
-  font-size: var(--text-xl);
-  margin: 1.1em 0 0.4em;
+  font-size: 1.1875rem;
+  font-weight: 650;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+  margin: 2.1em 0 0.5em;
+}
+.report-content :deep(h2:first-child) {
+  margin-top: 0;
 }
 .report-content :deep(h3) {
-  font-size: var(--text-lg);
-  font-weight: 700;
-  margin: 0.9em 0 0.3em;
+  font-size: var(--text-base);
+  font-weight: 650;
+  margin: 1.5em 0 0.35em;
 }
 .report-content :deep(p) {
-  margin: 0 0 0.7em;
+  margin: 0 0 0.9em;
 }
 .report-content :deep(ul),
 .report-content :deep(ol) {
-  margin: 0.4em 0 0.8em;
-  padding-left: 1.4em;
+  margin: 0.3em 0 1em;
+  padding-left: 1.25em;
 }
 .report-content :deep(li) {
-  margin-bottom: 0.35em;
+  margin-bottom: 0.4em;
 }
+.report-content :deep(li::marker) {
+  color: var(--color-muted);
+}
+/* Tables: ruled rows on the page ground, the header on Cloud Ground. */
 .report-content :deep(table) {
   width: 100%;
   border-collapse: collapse;
-  margin: 0.6em 0 1em;
+  margin: 0.8em 0 1.4em;
   font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
 }
 .report-content :deep(th),
 .report-content :deep(td) {
-  border: 1px solid var(--color-border);
-  padding: 6px 10px;
+  border-bottom: 1px solid var(--color-border);
+  padding: 8px 12px;
   text-align: left;
+  vertical-align: top;
 }
 .report-content :deep(th) {
-  background-color: var(--color-surface-container);
+  background-color: var(--color-surface-container-low);
+  border-bottom-color: var(--color-border-strong);
   font-weight: 600;
+  color: var(--color-text-secondary);
 }
 
 .report-loading {
