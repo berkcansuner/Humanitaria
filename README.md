@@ -18,10 +18,10 @@ quiet period can take up to a minute while the server wakes up)
   Reports use the same citations, are saved to your account and export to PDF.
 - **Statistics computed in code, not by the model.** The technical monitoring report pulls
   indicator series from HDX HAPI and runs the trend and comparison tests in Python (Sen's
-  slope, Holm correction). Every fact in that report (values, dates, test results, caveats,
-  methods) is a sentence written by code, in English or Turkish. The model adds only a short
-  interpretation paragraph per section, marked as such, and a check drops any of its
-  sentences that states a figure, a significance claim or a change the data does not show.
+  slope, Holm correction). The report's text is written by code as well, in English or
+  Turkish, so every sentence traces to a dataset in its source list and no model can reword
+  a figure. A model writes only the "What changed" section of a follow-up report, and that
+  section is checked against the numbers it was given.
 - **A rolling 12-month index.** A scheduled GitHub Actions workflow triggers an incremental
   ingest of new ReliefWeb reports, and reports older than a year are pruned.
 - **Accounts.** Email and password or Google sign-in. Deleting an account removes its

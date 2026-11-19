@@ -184,8 +184,11 @@ def test_methods_name_only_the_tests_that_ran():
     assert "Kruskal-Wallis" in en and "Pearson" in en and "Holm correction across all three tests" in en
     assert "üç testin tümüne birlikte Holm düzeltmesi" in tr
     # Who wrote what is said in the report itself.
-    assert "paragraphs marked “Interpretation” are written by an AI model" in en
-    assert "“Yorum” olarak işaretlenen paragrafları bir yapay zekâ modeli yazdı" in tr
+    assert "its text is generated from them in code; no part of it is written by an AI model." in en
+    assert "metin koddan üretildi; hiçbir bölümü yapay zekâ modeli yazmadı." in tr
+    with_comparison = report_text.methods_text(three, "en", "What changed since the last report")
+    assert ("only the section “What changed since the last report” is written by an AI model, "
+            "comparing this report with the previous one.") in with_comparison
 
 
 def test_coverage_lists_gaps_and_notes_in_the_report_language():
@@ -223,21 +226,21 @@ def test_coverage_lists_gaps_and_notes_in_the_report_language():
     assert "Sınırlılık: seriler kısadır" in tr
 
 
-def test_the_report_is_assembled_in_a_fixed_order_with_or_without_commentary():
+def test_the_report_is_assembled_in_a_fixed_order():
     f = samples.findings(samples.snapshot(), samples.trend())
     bare = report_text.assemble(f, "en")
     order = [bare.index(f"## {h}") for h in (
         "Executive Summary", f.sections[0].heading, f.sections[1].heading,
         "Data Coverage & Limitations", "Methods")]
     assert order == sorted(order)
-    assert "*Interpretation:*" not in bare
-    full = report_text.assemble(
-        f, "en", {"Executive Summary": "Read together.", f.sections[1].heading: "Watch this."},
-        ("What changed since the last report", "Needs are new."))
-    assert "\n\n*Interpretation:* Read together.\n\n## What changed since the last report\n\nNeeds are new.\n\n" in full
-    assert "*Interpretation:* Watch this.\n\n## Data Coverage" in full
-    # A finding the model wrote nothing for keeps its computed paragraph.
-    assert f"## {f.sections[0].heading}\n\nThe latest value is 17.4 million people (2026)" in full
-    tr = report_text.assemble(f, "tr", {"Yönetici Özeti": "Birlikte okunmalı."})
+    assert "AI model." in bare and "no part of it is written by an AI model" in bare
+    # A next-period report's "What changed" section sits right after the summary, and the
+    # Methods then name it as the model-written part.
+    full = report_text.assemble(f, "en", ("What changed since the last report", "Needs are new."))
+    assert ("indicative.\n\n## What changed since the last report\n\nNeeds are new.\n\n"
+            f"## {f.sections[0].heading}") in full
+    assert "only the section “What changed since the last report” is written by an AI model" in full
+    assert report_text.assemble(f, "en", ("What changed since the last report", " ")) == bare
+    tr = report_text.assemble(f, "tr")
     assert tr.startswith("## Yönetici Özeti\n\nAnaliz edilen dönem:")
-    assert "*Yorum:* Birlikte okunmalı." in tr and "## Veri Kapsamı ve Sınırlılıklar" in tr and "## Yöntem" in tr
+    assert "## Veri Kapsamı ve Sınırlılıklar" in tr and "## Yöntem" in tr

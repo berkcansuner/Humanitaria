@@ -1,10 +1,11 @@
 """The technical report's own text, written in code in the report's language.
 
-Every fact of a technical monitoring report (values, dates, directions, test results,
-verdicts, caveats, data gaps, methods) is a sentence built here from the computed
-findings, in English or Turkish. The model adds only a short interpretation paragraph
-under the Executive Summary and under each finding (analytics.narrative_check drops what
-it must not say); nothing the model writes can remove or change a fact.
+Every sentence of a technical monitoring report (values, dates, directions, test results,
+verdicts, caveats, data gaps, methods) is built here from the computed findings, in
+English or Turkish: no model writes or rewords any of it, so every statement traces to an
+HDX HAPI dataset in the report's source list. The one exception is the "What changed"
+section a next-period report adds, which a model writes and analytics.narrative_check and
+rag.report_compare check; the Methods say so when it is there.
 
 Turkish sentences keep figures and dates out of case-suffix positions ("Son değer 17,4
 milyon kişi (2026)"), so no vowel harmony is ever computed.
@@ -21,8 +22,6 @@ HEADINGS = {
     "tr": {"summary": "Yönetici Özeti", "coverage": "Veri Kapsamı ve Sınırlılıklar",
            "methods": "Yöntem"},
 }
-# What marks the model's paragraph apart from the computed text.
-COMMENTARY_LABEL = {"en": "*Interpretation:*", "tr": "*Yorum:*"}
 
 _SWAP = str.maketrans(",.", ".,")
 _FIGURE = re.compile(r"\d[\d.,]*\d|\d")
@@ -495,8 +494,9 @@ def coverage_text(findings, language: str) -> str:
     return "\n\n".join(out)
 
 
-def methods_text(findings, language: str) -> str:
-    """The methods this report used (and only those), and who wrote what."""
+def methods_text(findings, language: str, comparison_heading: str | None = None) -> str:
+    """The methods this report used (and only those), and who wrote what.
+    *comparison_heading*: the model-written section's heading, when the report has one."""
     lang = _lang(language)
     tr_ = lang == "tr"
     kinds = [s.stat_result["kind"] for s in _tested(findings)]
@@ -533,19 +533,21 @@ def methods_text(findings, language: str) -> str:
                    if tr_ else
                    "One statistical test was run, so no multiple-comparison correction applies; "
                    "significance is decided on its p-value at the 0.05 level.")
-    out.append("Veriler HDX HAPI'den (Humanitarian Data Exchange'in veri API'si) alındı. Bu "
-               "rapordaki değerler, testler ve sonuçlar kodla hesaplandı; “Yorum” olarak "
-               "işaretlenen paragrafları bir yapay zekâ modeli yazdı." if tr_ else
-               "The data come from HDX HAPI (the Humanitarian Data Exchange's data API). The "
-               "values, tests and verdicts in this report are computed in code; the paragraphs "
-               "marked “Interpretation” are written by an AI model.")
+    if tr_:
+        out.append("Veriler HDX HAPI'den (Humanitarian Data Exchange'in veri API'si) alındı; "
+                   "kullanılan veri setleri kaynak listesindedir. Bu rapordaki değerler, testler "
+                   "ve sonuçlar kodla hesaplandı ve metin koddan üretildi"
+                   + (f"; yalnızca “{comparison_heading}” bölümünü, bu rapor ile önceki raporu "
+                      f"karşılaştıran bir yapay zekâ modeli yazdı." if comparison_heading
+                      else "; hiçbir bölümü yapay zekâ modeli yazmadı."))
+    else:
+        out.append("The data come from HDX HAPI (the Humanitarian Data Exchange's data API); the "
+                   "datasets used are in the source list. The values, tests and verdicts in this "
+                   "report are computed in code, and its text is generated from them in code"
+                   + (f"; only the section “{comparison_heading}” is written by an AI model, "
+                      f"comparing this report with the previous one." if comparison_heading
+                      else "; no part of it is written by an AI model."))
     return " ".join(out)
-
-
-def headings(findings, language: str) -> list[str]:
-    """The headings the model writes a paragraph under, in order: the summary, then
-    every finding."""
-    return [HEADINGS[_lang(language)]["summary"]] + [s.heading for s in findings.sections]
 
 
 def opening(findings, language: str) -> str:
@@ -557,30 +559,20 @@ def section_block(section, language: str) -> str:
     return f"## {section.heading}\n\n{section_facts(section.stat_result, language)}"
 
 
-def closing(findings, language: str) -> str:
+def closing(findings, language: str, comparison_heading: str | None = None) -> str:
     """Data Coverage & Limitations and Methods."""
     h = HEADINGS[_lang(language)]
     return (f"## {h['coverage']}\n\n{coverage_text(findings, language)}\n\n"
-            f"## {h['methods']}\n\n{methods_text(findings, language)}")
+            f"## {h['methods']}\n\n{methods_text(findings, language, comparison_heading)}")
 
 
-def assemble(findings, language: str, commentary: dict | None = None,
-             comparison: tuple[str, str] | None = None) -> str:
-    """The whole report. *commentary*: heading -> the model's checked paragraph (a heading
-    without one gets none). *comparison*: (heading, text) of a next-period report's "What
+def assemble(findings, language: str, comparison: tuple[str, str] | None = None) -> str:
+    """The whole report. *comparison*: (heading, text) of a next-period report's "What
     changed" section, placed right after the Executive Summary."""
-    lang = _lang(language)
-    commentary = commentary or {}
-    label = COMMENTARY_LABEL[lang]
-
-    def with_commentary(block: str, heading: str) -> list[str]:
-        text = (commentary.get(heading) or "").strip()
-        return [block, f"{label} {text}"] if text else [block]
-
-    parts = with_commentary(opening(findings, language), HEADINGS[lang]["summary"])
-    if comparison and comparison[1].strip():
+    has_comparison = bool(comparison and comparison[1] and comparison[1].strip())
+    parts = [opening(findings, language)]
+    if has_comparison:
         parts.append(f"## {comparison[0]}\n\n{comparison[1].strip()}")
-    for s in findings.sections:
-        parts += with_commentary(section_block(s, language), s.heading)
-    parts.append(closing(findings, language))
+    parts += [section_block(s, language) for s in findings.sections]
+    parts.append(closing(findings, language, comparison[0] if has_comparison else None))
     return "\n\n".join(parts)

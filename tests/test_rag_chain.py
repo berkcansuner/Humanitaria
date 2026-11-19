@@ -214,29 +214,19 @@ def test_all_report_prompts_forbid_corroboration_piling():
         assert "CORROBORATION IS NOT MULTI-FACT" in prompt, report_type
 
 
-def test_technical_prompt_asks_for_interpretation_only():
-    """The report's facts are written in code (analytics.report_text); the model adds an
-    interpretation paragraph per heading and nothing else."""
+def test_technical_prompt_writes_only_the_comparison_section():
+    """The technical report is written in code (analytics.report_text); the model is called
+    only for a next-period report's "What changed" section."""
     from rag.chain import _REPORT_PROMPTS
     p = _REPORT_PROMPTS["technical_monitoring"]
-    assert "ALREADY been written in code" in p and "INTERPRETATION paragraph" in p
-    assert "It never restates the facts." in p
-    # The headings come from the instruction, verbatim; the code writes the other sections.
-    assert "Use exactly the headings listed in the instruction" in p and "## " in p
-    assert "Data Coverage, Methods and Sources are written in code" in p
-
-
-def test_technical_prompt_forbids_what_the_check_drops():
-    from rag.chain import _REPORT_PROMPTS
-    p = _REPORT_PROMPTS["technical_monitoring"]
-    assert "Write no number at all" in p and "A year may be named" in p
+    assert "ALREADY been written in code" in p and "You write ONE section of it and nothing else" in p
+    assert "Output only that '## ' heading, copied exactly" in p
+    assert "Every current value comes verbatim from the Context findings" in p
+    assert "Calculate nothing" in p and "'doubled', 'half'" in p
     assert "Never say that something is or is not statistically significant" in p
-    assert "never present it as established, robust or proven" in p
-    assert "In the Executive Summary paragraph, do not describe any rise, fall" in p
-    assert "not comparable across years, a regional ranking or a correlation" in p
-    assert "'doubled', 'half', 'most of'" in p
+    assert "not comparable across years, do not describe a rise" in p
     assert "Never call a figure the plan's overall or total figure" in p
-    assert "do not speculate" in p and "never copy the Context's labels or codes" in p
+    assert "State no cause, event or background the Context does not state" in p
 
 
 def test_technical_report_type_wired_in_service():

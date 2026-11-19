@@ -201,31 +201,57 @@ def test_technical_comparative_report_is_checked(verify):
     assert stored.endswith("<!-- checked -->")
 
 
-def test_technical_what_changed_section_sits_after_the_summary_with_given_figures_only():
-    """The model's "What changed" section keeps the figures it was given (the previous
-    report's included) and loses any other; it is placed right after the summary."""
+def _technical_next(astream):
     from tests.analytics import samples
     findings = samples.findings(samples.trend(heading="Needs — Trend"), indicators_covered=["needs"])
     _save_previous(country="Afghanistan", theme=None, report_type="technical_monitoring",
                    content="## Executive Summary\nRefugees stood at 3.10 million people.")
-
-    async def mock_astream(inputs, *a, **k):
-        yield ("## Executive Summary\nRead the findings together.\n\n"
-               "## What changed since the last report\n"
-               "Refugees went from 3.10 million to 2.67 million people. Needs hit 9.9 million.\n\n"
-               "## Needs — Trend\nThe series is short.")
     chain = MagicMock()
-    chain.astream = mock_astream
+    chain.astream = astream
     with patch("api.routes.reports.technical_report.compute_findings", return_value=findings), \
          patch("api.routes.reports.build_report_chain", return_value=chain):
         resp = _client().post("/reports/stream", json={
             "country": "Afghanistan", "report_type": "technical_monitoring", "language": "en",
             "date_from": "2026-07-01", "date_to": "2026-09-30", "previous_report_id": "r-prev"})
-    stored = _client().get(f"/reports/{_saved_id(resp)}").json()["content"]
-    assert ("*Interpretation:* Read the findings together.\n\n"
-            "## What changed since the last report\n\n"
-            "Refugees went from 3.10 million to 2.67 million people.\n\n## Needs — Trend") in stored
-    assert "9.9 million" not in stored
+    return resp, _client().get(f"/reports/{_saved_id(resp)}").json()["content"]
+
+
+def test_technical_what_changed_section_sits_after_the_summary_with_given_figures_only():
+    """The only model-written part of a technical report: it keeps the figures the model
+    was given (the previous report's included), loses any other sentence, and anything the
+    model writes outside it is not used."""
+    seen = {}
+
+    async def mock_astream(inputs, *a, **k):
+        seen.update(inputs)
+        yield ("## Executive Summary\nNeeds exploded.\n\n"
+               "## What changed since the last report\n"
+               "Refugees went from 3.10 million to 2.67 million people. Needs hit 9.9 million.\n\n"
+               "## Needs — Trend\nThe series is short.")
+
+    _, stored = _technical_next(mock_astream)
+    assert "Write the comparison section" in seen["question"]
+    assert "COMPUTED STATISTICAL FINDINGS" in seen["context"]
+    assert ("indicative.\n\n## What changed since the last report\n\n"
+            "Refugees went from 3.10 million to 2.67 million people.\n\n## Needs — Trend\n\n"
+            "The latest value is 2.67 million people (2025)") in stored
+    assert "9.9 million" not in stored and "exploded" not in stored
+    assert "The series is short." not in stored
+    assert "only the section “What changed since the last report” is written by an AI model" in stored
+
+
+def test_a_model_failure_still_saves_the_technical_report(caplog):
+    async def mock_astream(*a, **k):
+        yield "## What changed since the last report\nRefugees went"
+        raise RuntimeError("upstream timeout")
+
+    resp, stored = _technical_next(mock_astream)
+    kinds = [e["event"] for e in _parse_sse_events(resp.text)]
+    assert "error" not in kinds and "saved" in kinds
+    assert "## What changed since the last report" not in stored
+    assert "## Needs — Trend\n\nThe latest value is 2.67 million people (2025)" in stored
+    assert "no part of it is written by an AI model" in stored
+    assert any("comparison failed" in r.getMessage() and r.exc_info for r in caplog.records)
 
 
 # The stream's status events also include the "reading" stage before the first
