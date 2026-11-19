@@ -37,3 +37,18 @@ const paths = [
   'M19.5 9.5c.9-.9 1.5-1.6 1.5-2.7A2.3 2.3 0 0 0 18.7 4.5c-.9 0-1.4.4-1.9.9-.5-.5-1-.9-1.9-.9a2.3 2.3 0 0 0-2.3 2.3c0 1.1.6 1.8 1.5 2.7L16.8 12z',
 ]
 </script>
+
+<style>
+/* Not scoped: the mark is one element, used on the landing page and in the app bar. */
+.mark {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: var(--color-accent);
+  background: color-mix(in oklch, var(--color-accent) 16%, transparent);
+}
+.mark.solid {
+  color: var(--color-on-accent);
+  background: var(--color-accent-container);
+}
+</style>

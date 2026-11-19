@@ -126,19 +126,6 @@ html:has(.mkt-scope) {
   scroll-padding-top: 80px;
 }
 
-/* hand mark */
-.mkt-scope .mark {
-  display: inline-grid;
-  place-items: center;
-  flex-shrink: 0;
-  color: var(--color-accent);
-  background: color-mix(in oklch, var(--color-accent) 16%, transparent);
-}
-.mkt-scope .mark.solid {
-  color: var(--color-on-accent);
-  background: var(--color-accent-container);
-}
-
 /* ---------- nav ---------- */
 .mkt-scope .nav {
   position: sticky;

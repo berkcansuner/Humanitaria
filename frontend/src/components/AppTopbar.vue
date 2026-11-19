@@ -5,7 +5,7 @@
   <header class="app-topbar">
     <slot name="start" />
     <router-link class="brand" to="/app" :title="t('chat.topbar.home')">
-      <HelpingHandLogo :size="28" :radius="8" />
+      <HandMark :size="30" :radius="9" solid />
       <div class="brand-text">
         <h1 class="brand-title">Humanitaria</h1>
         <span v-if="context" class="brand-sub">{{ context }}</span>
@@ -32,7 +32,7 @@
 <script setup>
 import { useI18n } from 'vue-i18n'
 import { House } from 'lucide-vue-next'
-import HelpingHandLogo from './HelpingHandLogo.vue'
+import HandMark from '../marketing/HandMark.vue'
 import UserMenu from './UserMenu.vue'
 import LanguageSwitcher from './LanguageSwitcher.vue'
 
@@ -45,13 +45,16 @@ const { t } = useI18n()
 </script>
 
 <style scoped>
-/* About Claude's 41px top bar: 6px vertical padding around 28px controls. */
+/* The landing nav's language at app density: a 56px bar on the page ground with a
+   hairline under it, the solid hand mark, pill tabs. */
 .app-topbar {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: 6px var(--space-4);
+  height: 56px;
+  padding: 0 var(--space-4);
   background-color: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
 }
 
@@ -74,7 +77,7 @@ const { t } = useI18n()
 .brand-title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: var(--text-base);
+  font-size: 17px;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--color-text);
@@ -83,9 +86,7 @@ const { t } = useI18n()
 
 .brand-sub {
   font-family: var(--font-body);
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: var(--text-xs);
   color: var(--color-muted);
   white-space: nowrap;
   overflow: hidden;
@@ -100,12 +101,15 @@ const { t } = useI18n()
 }
 
 .app-nav-link {
-  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 14px;
   font-size: var(--text-sm);
   font-weight: 500;
   color: var(--color-text-secondary);
   text-decoration: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
   transition:
     background-color 0.15s,
     color 0.15s;
@@ -116,11 +120,11 @@ const { t } = useI18n()
   background-color: var(--color-surface-container);
 }
 
-/* Same treatment as the active conversation row: Shelf Gray Deep, Field Green. */
+/* The current screen: Teal Mist under Brand Teal text. */
 .app-nav-link.router-link-exact-active {
   color: var(--color-accent);
   font-weight: 600;
-  background-color: var(--color-surface-container-high);
+  background-color: var(--color-accent-soft);
 }
 
 /* Home page: the language button's quiet 28px shape (icon, then label) in muted
@@ -131,13 +135,13 @@ const { t } = useI18n()
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 28px;
-  padding: 0 8px;
+  height: 32px;
+  padding: 0 10px;
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
   text-decoration: none;
   white-space: nowrap;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
   transition:
     background-color 0.15s,
     color 0.15s;
@@ -175,7 +179,7 @@ const { t } = useI18n()
 
 @media (max-width: 640px) {
   .app-topbar {
-    padding: 6px var(--space-3);
+    padding: 0 var(--space-3);
   }
   .brand-sub {
     display: none;
@@ -208,13 +212,13 @@ const { t } = useI18n()
      side padding step down one notch, the tabs keep their 28px height. */
   .app-topbar {
     gap: var(--space-2);
-    padding: 6px var(--space-2);
+    padding: 0 var(--space-2);
   }
   .app-nav {
     margin-left: 0;
   }
   .app-nav-link {
-    padding: 4px 8px;
+    padding: 0 10px;
   }
 }
 </style>
