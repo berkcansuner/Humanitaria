@@ -40,6 +40,13 @@ _NOTE = {
           "were removed from this report._",
     "tr": "_Not: Hesaplanan istatistiklerle doğrulanamayan {n} cümle rapordan çıkarıldı._",
 }
+# When the check itself fails, the report keeps the narrative as generated and says so.
+UNCHECKED_NOTE = {
+    "en": "_Note: the automatic check of this narrative against the computed statistics could "
+          "not run; the text is shown as generated._",
+    "tr": "_Not: Bu anlatımın hesaplanan istatistiklerle otomatik denetimi çalıştırılamadı; metin "
+          "üretildiği gibi gösteriliyor._",
+}
 _PLACEHOLDER = {
     "en": "The narrative for this finding could not be verified against the computed "
           "statistics and was removed.",
@@ -416,6 +423,15 @@ _MONTH_NUMBER.update({name: i + 1 for i, name in enumerate(
      "ekim", "kasım", "aralık"])})
 # A month only as a date, followed by its year ("may be" is not May): "March 2022", "Ocak 2026".
 _MONTH = re.compile(r"\b(" + "|".join(_MONTH_NUMBER) + r")\s+(?:19|20)\d{2}", re.IGNORECASE)
+
+
+def _fold_i(name: str) -> str:
+    """Python's re matches i, I, ı and İ alike under IGNORECASE, so "Mayis", "MAYIS" and
+    "KASIM" match "mayıs"/"kasım": all four fold to "i" for the lookup."""
+    return name.replace("İ", "i").replace("I", "i").lower().replace("ı", "i")
+
+
+_MONTH_BY_FOLD = {_fold_i(name): number for name, number in _MONTH_NUMBER.items()}
 _AMBIGUOUS_TIME = re.compile(
     r"\bsince\b|\bbetween\b|\bfrom\b.*\bto\b|\bbu\s+yana\b|\bberi\b|arasında|\bile\b.*\barası",
     re.IGNORECASE)
@@ -443,7 +459,10 @@ def _wrong_period(sentence: str, points: list) -> bool:
     second value of the series beside the period's own is a comparison ("17.4 million in
     2026, up from 14.8 million"), not a wrong period."""
     years = set(_YEAR.findall(sentence))
-    months = {_MONTH_NUMBER[m.lower()] for m in _MONTH.findall(sentence)}
+    found = [_MONTH_BY_FOLD.get(_fold_i(m)) for m in _MONTH.findall(sentence)]
+    if None in found:
+        return False                # a spelling the table does not know: the rule is skipped
+    months = set(found)
     if len(years) != 1 or len(months) > 1 or _AMBIGUOUS_TIME.search(sentence):
         return False
     year, month = years.pop(), (months.pop() if months else None)

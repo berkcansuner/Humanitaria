@@ -167,6 +167,33 @@ def test_technical_report_is_saved_after_the_narrative_check():
     assert "1 sentence(s) that could not be verified" in content
 
 
+def test_a_checker_error_never_loses_the_report(caplog):
+    """The narrative check raising must not fail the stream or the save: the report is kept as
+    generated, its footnote says the check did not run, and the error is logged with its trace."""
+    async def mock_astream(*a, **k):
+        yield "## İnsani ihtiyaç — Eğilim Analizi\n\n"
+        yield "The trend has p=0.010 across 6 periods."
+
+    mock_chain = MagicMock()
+    mock_chain.astream = mock_astream
+    with patch("api.routes.reports.technical_report.compute_findings",
+               return_value=_findings_with_sections()), \
+         patch("api.routes.reports.build_report_chain", return_value=mock_chain), \
+         patch("api.routes.reports.verify_narrative", side_effect=KeyError("mayis")):
+        resp = _client().post("/reports/stream", json={
+            "country": "Afghanistan", "report_type": "technical_monitoring", "language": "en",
+        })
+    events = _parse_sse_events(resp.text)
+    kinds = [e["event"] for e in events]
+    assert "error" not in kinds and "saved" in kinds and kinds[-1] == "done"
+    rid = next(e for e in events if e["event"] == "saved")["data"]["report_id"]
+    content = _client().get(f"/reports/{rid}").json()["content"]
+    assert content.startswith("## İnsani ihtiyaç — Eğilim Analizi\n\nThe trend has p=0.010 across 6 periods.")
+    assert "could not run" in content
+    failed = [r for r in caplog.records if "Narrative check failed" in r.getMessage()]
+    assert failed and failed[0].exc_info is not None
+
+
 # --- Sector reports (2026-11-18): the chosen sector reaches the analysis, and a sector
 # without HDX HAPI series is answered with a clear error, never with unrelated figures. ---
 

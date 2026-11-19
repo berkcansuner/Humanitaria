@@ -21,7 +21,7 @@ from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 from analytics import technical_report
 from analytics.countries import iso3_for
 from analytics.indicators import indicators_for
-from analytics.narrative_check import verify_narrative
+from analytics.narrative_check import UNCHECKED_NOTE, verify_narrative
 from config import get_settings
 from ingestion import analytics
 from rag import report_images
@@ -373,10 +373,17 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
 
                 # Numbers and significance claims are checked against what the model
                 # was given; unverifiable sentences never reach the saved report.
-                full = verify_narrative(full, findings, f"{context}\n{directive}",
-                                        req.language,
-                                        label=f"{req.country} / {req.theme or 'All sectors'} / "
-                                              f"{req.report_type}").content
+                label = f"{req.country} / {req.theme or 'All sectors'} / {req.report_type}"
+                try:
+                    full = verify_narrative(full, findings, f"{context}\n{directive}",
+                                            req.language, label=label).content
+                except Exception:
+                    # A checker error must never lose the report: it is kept as generated,
+                    # and its footnote says the check did not run.
+                    logger.exception("Narrative check failed [%s]; the report is saved unchecked",
+                                     label)
+                    full = (f"{full.rstrip()}\n\n"
+                            f"{UNCHECKED_NOTE.get(req.language, UNCHECKED_NOTE['en'])}")
                 if previous:
                     yield _checking_event()
                     checked = await _checked(full, req)
