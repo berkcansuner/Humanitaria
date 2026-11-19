@@ -153,10 +153,12 @@ const router = useRouter()
 const question = ref('')
 const signedIn = computed(() => isAuthenticated())
 
+// An empty field asks the sample question it shows, so the button always does something.
 function ask() {
-  const target = askTarget(question.value)
+  const text = question.value.trim() || t('landing.hero.askPlaceholder')
+  const target = askTarget(text)
   if (!target) return
-  stashQuestion(question.value)
+  stashQuestion(text)
   router.push(target)
 }
 

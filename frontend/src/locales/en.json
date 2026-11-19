@@ -68,7 +68,7 @@
       "titleAccent": "answered and cited.",
       "lede": "Ask about any crisis, generate M&E situation and technical reports, and see the indicators behind them. Every claim links to the report it came from.",
       "askLabel": "Ask about any crisis",
-      "askPlaceholder": "Who has returned to Syria?",
+      "askPlaceholder": "How many people have returned to Syria?",
       "ask": "Ask",
       "startFree": "Start free",
       "howItWorks": "See how it works",
@@ -99,14 +99,14 @@
       },
       "report": {
         "title": "M&E reports",
-        "lede": "Pick a country, sector, period and language; get a structured, cited brief.",
+        "lede": "Pick a country, sector, period and language, and get a structured, cited brief.",
         "panel": "Sample report",
         "findings": "Key findings",
         "credit": "Sample report · generated {date}"
       },
       "tech": {
         "title": "Technical monitoring",
-        "lede": "Indicator trends and regional comparisons, tested in code, narrated by the model.",
+        "lede": "Indicator trends and regional comparisons, computed and written up in code from the data.",
         "head": "{country} · Technical monitoring · Refugees",
         "window": "{start} – {end}, from the {start} peak",
         "trend": {
@@ -123,7 +123,7 @@
         "slope": "Sen's slope",
         "perYear": "/ year",
         "p": "Mann-Kendall p",
-        "points": "Points"
+        "points": "Years of data"
       }
     },
     "dash": {
@@ -141,7 +141,7 @@
       "chart": "Syrian refugees abroad, {range}",
       "bars": "Syrian refugees by host country, top 5 · {year}",
       "source": "Source for both charts: {credit}",
-      "foot": "Preview built from real HDX HAPI figures for Syria; the dashboard feature itself is planned."
+      "foot": "Preview built from real HDX HAPI figures for Syria. The dashboard feature itself is planned."
     },
     "coverage": {
       "title": "Built on the last year of ReliefWeb.",
@@ -155,7 +155,6 @@
         "AFG": "Afghanistan",
         "COD": "DR Congo",
         "LBN": "Lebanon",
-        "PSE": "oPt",
         "SDN": "Sudan",
         "SSD": "South Sudan",
         "SYR": "Syria",
@@ -380,7 +379,7 @@
       "outline": "This report will have these sections",
       "compared": "compared with {period}",
       "computing": "Computing the statistics from HDX HAPI data. The report is written from them, usually within a minute.",
-      "slow": "This is taking longer than usual. The report is still being prepared; you can keep waiting or stop it.",
+      "slow": "This is taking longer than usual. The report is still being prepared. You can keep waiting or stop it.",
       "writing": "Writing the report.",
       "writingTechnical": "Writing the report from the computed statistics.",
       "checking": "Checking what changed against the previous report.",
@@ -440,7 +439,7 @@
       "previousMismatch": "The settings no longer match the report this one continues. Generate again without the comparison.",
       "generate": "Could not generate the report. Please try again.",
       "stream": "Something went wrong.",
-      "connection": "Couldn't reach the server. It may be waking up (about 30 seconds); generate again."
+      "connection": "Couldn't reach the server. It may be waking up, which takes about 30 seconds. Generate the report again."
     },
     "types": {
       "situation": "Situation Report",
@@ -571,7 +570,7 @@
       },
       "l4": {
         "lead": "Pinecone",
-        "text": "ranks the retrieved report excerpts by relevance. Your question and those excerpts are sent to its ranking service; we keep no data there."
+        "text": "ranks the retrieved report excerpts by relevance. Your question and those excerpts are sent to its ranking service. We keep no data there."
       },
       "after": "The application also writes short technical logs (for example, sign-in events with your user ID) to help us find and fix errors."
     },

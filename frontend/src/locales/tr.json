@@ -68,7 +68,7 @@
       "titleAccent": "kaynağıyla yanıt alın.",
       "lede": "Herhangi bir kriz hakkında soru sorun, İzleme ve Değerlendirme (M&E) için durum ve teknik izleme raporları hazırlayın, dayandıkları göstergeleri görün. Her bilginin yanında, alındığı raporun bağlantısı yer alır.",
       "askLabel": "Bir kriz hakkında sorun",
-      "askPlaceholder": "Suriye'ye kimler döndü?",
+      "askPlaceholder": "Suriye'ye kaç kişi geri döndü?",
       "ask": "Sor",
       "startFree": "Ücretsiz başla",
       "howItWorks": "Nasıl çalıştığını gör",
@@ -83,30 +83,30 @@
     },
     "trend": {
       "title": "Yurt dışındaki Suriyeli mülteciler",
-      "summary": "{title}: {last} itibarıyla {value}; {phrase} (zirve: {peak}). Seri {first} ile {last} arasını kapsar."
+      "summary": "{title}: {last} itibarıyla {value}, {phrase} (zirve: {peak}). Seri {first} ile {last} arasını kapsar."
     },
     "window": {
-      "summary": "{label}. {firstPeriod}: {first}; {lastPeriod}: {last}; {n} gözlem."
+      "summary": "{label}. {firstPeriod}: {first}. {lastPeriod}: {last}. {n} gözlem."
     },
     "flows": {
       "title": "Hızlı bir sorudan teslim edeceğiniz rapora kadar.",
-      "lede": "Bir krizin son durumunu sohbetten öğrenin, birçok kaynağı tek bir raporda birleştirin; teknik izlemede istatistikler kodla hesaplanır.",
+      "lede": "Bir krizin son durumunu sohbetten öğrenin, birçok kaynağı tek bir raporda birleştirin. Teknik izlemede istatistikler kodla hesaplanır.",
       "chat": {
         "title": "Atıflı sohbet",
-        "lede": "Yanıtlar yalnızca bulunan raporlardan gelir; her bilginin kaynağı bir tık uzakta.",
+        "lede": "Yanıtlar yalnızca bulunan raporlardan gelir. Her bilginin kaynağı bir tık uzakta.",
         "panel": "Örnek yanıttan bir bölüm",
         "credit": "Yukarıdaki Suriye yanıtından"
       },
       "report": {
         "title": "M&E raporları",
-        "lede": "Ülke, sektör, dönem ve dil seçin; bölümlere ayrılmış, atıflı bir rapor alın.",
+        "lede": "Ülke, sektör, dönem ve dil seçin, bölümlere ayrılmış ve atıflı bir rapor alın.",
         "panel": "Örnek rapor",
         "findings": "Temel bulgular",
         "credit": "Örnek rapor · {date} tarihinde oluşturuldu"
       },
       "tech": {
         "title": "Teknik izleme",
-        "lede": "Gösterge eğilimleri ve bölge karşılaştırmaları kodla test edilir; model sonuçları yazıya döker.",
+        "lede": "Gösterge eğilimleri ve bölge karşılaştırmaları kodla hesaplanır, rapor metni de aynı veriden kodla yazılır.",
         "head": "{country} · Teknik izleme · Mülteciler",
         "window": "{start} – {end}, {start} zirvesinden itibaren",
         "trend": {
@@ -123,12 +123,12 @@
         "slope": "Sen eğimi",
         "perYear": "/ yıl",
         "p": "Mann-Kendall p",
-        "points": "Gözlem"
+        "points": "Veri yılı"
       }
     },
     "dash": {
       "title": "Her raporun dayandığı göstergeleri görün.",
-      "lede": "Teknik raporların kullandığı verilerle hazırlanmış bir ülke görünümü; her rakamın kaynağı yanında yazar.",
+      "lede": "Teknik raporların kullandığı verilerle hazırlanmış bir ülke görünümü. Her rakamın kaynağı yanında yazar.",
       "label": "Örnek gösterge paneli · veri: HDX HAPI",
       "returnees": "Geri dönen mülteciler, {year}",
       "refugees": "Yurt dışındaki Suriyeli mülteciler",
@@ -145,17 +145,16 @@
     },
     "coverage": {
       "title": "ReliefWeb'in son bir yılı üzerine kurulu.",
-      "lede": "Her yanıt ve rapor aynı dizinden beslenir; arkasında ne kadar kayıt olduğunu görebilirsiniz.",
+      "lede": "Her yanıt ve rapor aynı dizinden beslenir. Arkasında ne kadar kayıt olduğunu burada görebilirsiniz.",
       "countries": "raporu bulunan ülke ve bölge",
       "reports": "dizinlenmiş rapor, yenileri her gün ekleniyor",
       "publishers": "yayıncı kuruluş",
-      "caption": "Her nokta bir ülke; boyutu dizindeki rapor sayısını gösterir.",
+      "caption": "Her nokta bir ülkedir, boyutu dizindeki rapor sayısını gösterir.",
       "asOf": "ReliefWeb · {date} itibarıyla",
       "mapNames": {
         "AFG": "Afganistan",
         "COD": "KDC",
         "LBN": "Lübnan",
-        "PSE": "Filistin",
         "SDN": "Sudan",
         "SSD": "Güney Sudan",
         "SYR": "Suriye",
@@ -176,7 +175,7 @@
       },
       "research": {
         "title": "Araştırmacılar ve analistler",
-        "body": "Ülkeler ve dönemler arasındaki eğilimleri izleyin; atıfları olduğu gibi kendi analizinize taşıyın."
+        "body": "Ülkeler ve dönemler arasındaki eğilimleri izleyin, atıfları olduğu gibi kendi analizinize taşıyın."
       },
       "press": {
         "title": "Gazeteciler",
@@ -209,7 +208,7 @@
       "stop": "Yanıtı durdur"
     },
     "errors": {
-      "connection": "Sunucuya ulaşılamadı. Sunucu uyku modundan çıkıyor olabilir; bu yaklaşık 30 saniye sürebilir.",
+      "connection": "Sunucuya ulaşılamadı. Sunucu uyku modundan çıkıyor olabilir. Bu yaklaşık 30 saniye sürer.",
       "streamInterrupted": "Yanıt yarıda kesildi. Bazı bölümler eksik olabilir.",
       "emptyResponse": "Yanıt gelmedi.",
       "sseParse": "Yanıt hazırlanırken bir sorun oluştu."
@@ -263,7 +262,7 @@
     },
     "empty": {
       "title": "İnsani yardım kayıtlarına danışın.",
-      "lede": "Her yanıt dayandığı ReliefWeb raporlarını kaynak olarak gösterir; böylece yanıtı doğrulayabilir ve alıntılayabilirsiniz.",
+      "lede": "Her yanıt dayandığı ReliefWeb raporlarını kaynak olarak gösterir. Böylece yanıtı doğrulayabilir ve alıntılayabilirsiniz.",
       "examples": "Örnek sorular",
       "prompts": {
         "p1": "Sudan için en güncel IPC gıda güvensizliği verileri neler?",
@@ -339,7 +338,7 @@
       "series": "{name} ({period}) raporunun devamı. Yeni rapor o dönemden bu yana değişenlerle başlar.",
       "endClamped": "Dönem henüz bitmediği için bitiş tarihi bugün.",
       "startClamped": "Başlangıç tarihi {date} olarak değiştirildi: Daha eski belgeler artık dizinde değil.",
-      "differs": "Bu ayarlar {name} raporundan farklı; bu yüzden yeni rapor onunla karşılaştırılmayacak.",
+      "differs": "Bu ayarlar {name} raporundan farklı olduğu için yeni rapor onunla karşılaştırılmayacak.",
       "clear": "Önceki raporla karşılaştırmayı kaldır"
     },
     "saved": {
@@ -380,7 +379,7 @@
       "outline": "Bu raporda şu bölümler yer alacak",
       "compared": "{period} ile karşılaştırmalı",
       "computing": "İstatistikler HDX HAPI verilerinden hesaplanıyor. Rapor bu hesaplardan yazılır ve genellikle bir dakika içinde hazır olur.",
-      "slow": "Bu işlem her zamankinden uzun sürüyor. Rapor hâlâ hazırlanıyor; bekleyebilir ya da raporu durdurabilirsiniz.",
+      "slow": "Bu işlem her zamankinden uzun sürüyor. Rapor hâlâ hazırlanıyor. Bekleyebilir ya da raporu durdurabilirsiniz.",
       "writing": "Rapor yazılıyor.",
       "writingTechnical": "Rapor, hesaplanan istatistiklerden yazılıyor.",
       "checking": "Değişenler önceki raporla karşılaştırılarak denetleniyor.",
@@ -417,7 +416,7 @@
     },
     "empty": {
       "title": "İnsani yardım kayıtlarından bir İzleme ve Değerlendirme (M&E) raporu hazırlayın.",
-      "lede": "Her rapor aynı anda birçok ReliefWeb raporundan yararlanır ve hepsini kaynak olarak gösterir; böylece raporu doğrulayabilir ve alıntılayabilirsiniz.",
+      "lede": "Her rapor aynı anda birçok ReliefWeb raporundan yararlanır ve hepsini kaynak olarak gösterir. Böylece raporu doğrulayabilir ve alıntılayabilirsiniz.",
       "pickSeries": "Bir rapor serisine kaldığı yerden devam edin.",
       "pickRecent": "Son raporlarınızdan birini açın.",
       "seriesLabel": "Rapor serileriniz",
@@ -440,7 +439,7 @@
       "previousMismatch": "Ayarlar, bu raporun devamı olduğu raporla artık eşleşmiyor. Raporu karşılaştırma olmadan yeniden oluşturun.",
       "generate": "Rapor oluşturulamadı. Lütfen yeniden deneyin.",
       "stream": "Bir sorun oluştu.",
-      "connection": "Sunucuya ulaşılamadı. Sunucu uyku modundan çıkıyor olabilir (yaklaşık 30 saniye); raporu yeniden oluşturun."
+      "connection": "Sunucuya ulaşılamadı. Sunucu uyku modundan çıkıyor olabilir, bu yaklaşık 30 saniye sürer. Raporu yeniden oluşturun."
     },
     "types": {
       "situation": "Durum raporu",
@@ -489,7 +488,7 @@
     "model_busy": "Model şu anda yoğun. Biraz sonra yeniden deneyin.",
     "quota_exhausted": "Yapay zekâ hizmetinin kullanım kotası doldu. Lütfen yöneticiyle iletişime geçin.",
     "report_failed": "Rapor oluşturulamadı. Lütfen yeniden deneyin.",
-    "no_sector_data": "HDX HAPI'de bu ülke için bu sektöre ait sayısal veri yok; bu nedenle teknik izleme raporu oluşturulamıyor. “Tüm sektörler”i ya da başka bir rapor türünü seçin.",
+    "no_sector_data": "HDX HAPI'de bu ülke için bu sektöre ait sayısal veri olmadığından teknik izleme raporu oluşturulamıyor. “Tüm sektörler”i ya da başka bir rapor türünü seçin.",
     "chat_failed": "Yanıt hazırlanırken bir sorun oluştu. Lütfen yeniden deneyin.",
     "body_too_large": "İstek gönderilemeyecek kadar büyük.",
     "validation_failed": "Bazı bilgiler geçerli değil. Kontrol edip yeniden deneyin.",
@@ -507,7 +506,7 @@
     },
     "signup": {
       "title": "Hesabınızı oluşturun",
-      "sub": "İnsani yardım kayıtlarına soru sormaya başlayın; kaynak gösterebileceğiniz yanıtlar alın.",
+      "sub": "İnsani yardım kayıtlarına soru sormaya başlayın ve kaynak gösterebileceğiniz yanıtlar alın.",
       "submit": "Hesap oluştur",
       "switchPrompt": "Zaten hesabınız var mı?",
       "switchLink": "Giriş yap"
@@ -538,17 +537,17 @@
       },
       "l2": {
         "lead": "Sohbetleriniz.",
-        "text": "Sorduğunuz sorular, yanıtlar ve her yanıtla birlikte gösterilen kaynakların listesi; böylece sohbetlerinize geri dönebilirsiniz."
+        "text": "Sorduğunuz sorular, yanıtlar ve her yanıtla birlikte gösterilen kaynakların listesi. Böylece sohbetlerinize geri dönebilirsiniz."
       },
       "l3": {
         "lead": "Raporlarınız.",
-        "text": "Oluşturduğunuz durum raporları; seçtiğiniz ülke, sektör, dönem ve dil bilgisiyle birlikte."
+        "text": "Oluşturduğunuz durum raporları ve bunlar için seçtiğiniz ülke, sektör, dönem ve dil bilgisi."
       },
       "l4": {
         "lead": "Giriş çerezi.",
         "text": "Tek bir çerez ({cookie}) oturumunuzu en fazla 24 saat açık tutar. Çerez rastgele bir belirteç (token) içerir ve biz bu belirtecin yalnızca özetini saklarız."
       },
-      "after": "Analitik, reklam ya da izleme çerezleri kullanmayız; verilerinizi kimseye satmayız veya kiralamayız."
+      "after": "Analitik, reklam ya da izleme çerezleri kullanmayız. Verilerinizi kimseye satmayız veya kiralamayız."
     },
     "s2": {
       "title": "Google ile giriş",
@@ -567,11 +566,11 @@
       },
       "l3": {
         "lead": "Google Gemini API",
-        "text": "yanıtları ve raporları yazar. Sorunuz ve bu soru için getirdiğimiz rapor alıntıları Gemini'ye gönderilir. Ücretli katmanı kullanıyoruz; bu katmanda Google bu içeriği ürünlerini iyileştirmek için kullanmaz."
+        "text": "yanıtları ve raporları yazar. Sorunuz ve bu soru için getirdiğimiz rapor alıntıları Gemini'ye gönderilir. Ücretli katmanı kullanıyoruz. Bu katmanda Google bu içeriği ürünlerini iyileştirmek için kullanmaz."
       },
       "l4": {
         "lead": "Pinecone",
-        "text": "getirilen rapor alıntılarını alaka düzeyine göre sıralar. Sorunuz ve bu alıntılar Pinecone'un sıralama hizmetine gönderilir; orada hiçbir veri tutmayız."
+        "text": "getirilen rapor alıntılarını alaka düzeyine göre sıralar. Sorunuz ve bu alıntılar Pinecone'un sıralama hizmetine gönderilir. Orada hiçbir veri tutmayız."
       },
       "after": "Uygulama ayrıca hataları bulup düzeltmemize yardımcı olması için kısa teknik günlükler (örneğin kullanıcı kimliğinizle birlikte giriş olayları) yazar."
     },
@@ -586,7 +585,7 @@
     },
     "s6": {
       "title": "Çocuklar",
-      "p1": "Humanitaria 16 yaşın altındaki çocuklara yönelik değildir; bu yaş grubuna bilerek hizmet vermeyiz."
+      "p1": "Humanitaria 16 yaşın altındaki çocuklara yönelik değildir. Bu yaş grubuna bilerek hizmet vermeyiz."
     },
     "s7": {
       "title": "Değişiklikler",
@@ -662,7 +661,7 @@
     },
     "run": {
       "title": "Veri alımını çalıştır",
-      "text": "ReliefWeb'de son çalıştırmadan bu yana yayımlanan belgeleri getirir ve arama dizinine ekler. Gece çalıştırması da aynı işlemi kullanır; bu yüzden aynı anda yalnızca biri çalışabilir.",
+      "text": "ReliefWeb'de son çalıştırmadan bu yana yayımlanan belgeleri getirir ve arama dizinine ekler. Gece çalıştırması da aynı işlemi kullandığı için aynı anda yalnızca biri çalışabilir.",
       "button": "Veri alımını şimdi çalıştır",
       "inProgress": "Veri alımı sürüyor…",
       "lastFailed": "Son çalıştırma başarısız oldu: {error}",
