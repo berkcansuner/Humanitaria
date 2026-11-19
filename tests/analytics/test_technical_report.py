@@ -1220,3 +1220,38 @@ def test_a_period_ending_tomorrow_utc_is_kept_and_later_ones_are_capped(_mock):
     assert f.date_to == tomorrow.isoformat()
     assert f"to {_day(tomorrow.isoformat())}" in findings_to_context(f)
     assert compute_findings("AFG", "2025-01-01", later.isoformat(), language="en").date_to == today.isoformat()
+
+
+# --- Round 3, read as an editor: the live contexts' remaining rough edges. ---
+
+def test_a_headline_figure_from_before_the_period_says_so(monkeypatch):
+    # Sudan Food and Nutrition: the latest HNO figure is 2025, before a 2026 period.
+    def rows(ep, params):
+        if params.get("sector_code") != "FSC":
+            return []
+        return [{"population": v, "category": "", "reference_period_start": f"{y}-01-01",
+                 "reference_period_end": f"{y}-12-31"} for y, v in ((2024, 19_325_222), (2025, 25_080_572))]
+    monkeypatch.setattr("analytics.technical_report.fetch_rows", _recording_fetch([], rows))
+    f = compute_findings("SDN", "2026-01-01", "2026-06-30", language="en", theme="Food and Nutrition")
+    assert ("Food security: people in need: 25.1 million people (2025, before the chosen "
+            "period).") in findings_to_context(f)
+
+
+@patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _afg_ipc_rows(ep))
+def test_a_share_interval_names_its_unit_once(_mock):
+    tr = next(s for s in compute_findings("AFG", "2022-01-01", "2026-11-18", language="en").sections
+              if s.stat_result["kind"] == "trend")
+    assert "percentage points to" not in tr.findings_text
+    assert " percentage points)" in tr.findings_text
+
+
+def test_a_trend_without_a_relative_change_does_not_print_n_a():
+    from analytics.technical_report import _trend_text
+    text = _trend_text({
+        "indicator": "Returnees (people)", "direction": "increasing", "slope": 477_000.0,
+        "ci_low": None, "ci_high": None, "tau": 1.0, "p_value": 0.089, "p_adjusted": 0.179,
+        "significant": False, "family": 2, "pct_change": None, "line_change": None,
+        "first_period": "2022-01-01", "last_period": "2025-01-01", "n_points": 4, "unit": "",
+        "first_value": 6510.0, "latest_value": 1_950_000.0, "value_unit": "people",
+        "resolution": "year"})
+    assert "n/a" not in text and "relative change" not in text

@@ -254,8 +254,9 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
             caveats = [c for c in (
                 "earlier years are reported on a different basis and are not comparable"
                 if not_comparable else None, latest_caveat) if c]
+            before = ", before the chosen period" if look_back and not look_back["chosen_points"] else ""
             headline.append(f"{name}: {_amount(t_values[-1], _value_unit(ind))} "
-                            f"({_when(t_periods[-1], ind.resolution)})"
+                            f"({_when(t_periods[-1], ind.resolution)}{before})"
                             + (f"; {'; '.join(caveats)}" if caveats else "") + ".")
 
     # İndikatörler-arası korelasyon: ortak dönemi olan indikatör çiftleri.
@@ -617,16 +618,21 @@ def _trend_text(r: dict) -> str:
     before = ", before the chosen period" if lb and not lb["chosen_points"] else ""
     window = "Trend over the look-back window" if lb else "Trend"
     if r.get("line_change") is not None:
-        change = f"change along the trend line {r['line_change']:+.1f} percentage points"
+        change = f"; change along the trend line {r['line_change']:+.1f} percentage points"
+    elif r["pct_change"] is not None:
+        change = f"; relative change along the trend line {r['pct_change']:+.1f}%"
     else:
-        pct = "n/a" if r["pct_change"] is None else f"{r['pct_change']:+.1f}%"
-        change = f"relative change along the trend line {pct}"
-    ci = ("95% CI: too few points" if r["ci_low"] is None
-          else f"95% CI {_rate(r['ci_low'], r)} to {_rate(r['ci_high'], r)}")
+        change = ""         # no relative change from a start at or below zero
+    if r["ci_low"] is None:
+        ci = "95% CI: too few points"
+    elif r.get("unit") == "percentage points":
+        ci = f"95% CI {_plain(r['ci_low'])} to {_plain(r['ci_high'])} percentage points"
+    else:
+        ci = f"95% CI {_rate(r['ci_low'], r)} to {_rate(r['ci_high'], r)}"
     return (f"{r['indicator']}: latest value {_amount(r['latest_value'], r['value_unit'])} "
             f"({last}{before}), against {_amount(r['first_value'], r['value_unit'])} in {first}. "
             f"{window}, {first} to {last}: {r['direction']}, Sen slope {_rate(r['slope'], r)} per "
-            f"year ({ci}), Kendall tau {r['tau']:.2f}, Mann-Kendall {_verdict(r)}; {change}; "
+            f"year ({ci}), Kendall tau {r['tau']:.2f}, Mann-Kendall {_verdict(r)}{change}; "
             f"{_count(r['n_points'])} observations.")
 
 
