@@ -22,16 +22,17 @@ logger = logging.getLogger(__name__)
 _FIGSIZE = (8, 4.5)
 _DPI = 120
 
-# The app's "Quiet Archive" colours, light and dark (frontend/src/style.css): page
-# background, text, secondary text and border tokens. `series` is the accent green;
-# `reference` (the Sen trend line) is an orange chosen to stay distinct from it under
-# colour-vision deficiency. Both pairs pass the dataviz palette validator (lightness
-# band, chroma, CVD and normal-vision separation, 3:1 contrast) on their own surface.
+# The app's colours, light and dark (frontend/src/style.css): page ground, text, muted
+# text and hairline tokens. `series` is Chart Teal, the only hue that plots data.
+# `reference` (the Sen trend line) is a neutral slate, dashed: an annotation of the series,
+# not a second series, so it carries no hue of its own (dataviz validator: CVD separation
+# from the teal 14.7 light / 12.4 dark, normal vision 17.3 / 18.2; the dash and the legend
+# are its second encoding). `latest` is coral, used for the newest observation only.
 _THEMES = {
-    "light": {"bg": "#faf9f6", "text": "#1a1c1a", "muted": "#5f5e5e", "grid": "#e3e2e0",
-              "series": "#036a34", "reference": "#eb6834"},
-    "dark": {"bg": "#0f1412", "text": "#e6edea", "muted": "#a9b2ad", "grid": "#28302c",
-             "series": "#2fae6c", "reference": "#c4501a"},
+    "light": {"bg": "#ffffff", "text": "#0b1d2e", "muted": "#56657a", "grid": "#e3e8ef",
+              "series": "#0a8f88", "reference": "#44546a", "latest": "#d9452a"},
+    "dark": {"bg": "#0b1d2e", "text": "#e8eef5", "muted": "#aebdcd", "grid": "#22394f",
+             "series": "#16a196", "reference": "#aebdcd", "latest": "#e8553a"},
 }
 
 # Legend text in the report language (the report itself is "tr" or "en").
@@ -139,8 +140,10 @@ def _label_colors(ax, theme) -> None:
 
 def trend_chart(periods, values, slope, intercept, unit: str = "", times=None,
                 language: str = "tr", percent: bool = False, mode: str = "light",
-                source: str = "") -> str:
-    """*times*: each period's position (years since the first); evenly spaced when
+                source: str = "", connect: bool = True) -> str:
+    """*connect*: False draws the observations as separate points, with no line between
+    them (years that are not comparable must not read as a movement).
+    *times*: each period's position (years since the first); evenly spaced when
     omitted. slope/intercept use the same unit (Sen's slope per year). The x axis
     is a real date axis when the periods are ISO dates. No title: the report's section
     heading sits right above the chart. *unit* labels the value axis ("people")."""
@@ -156,10 +159,13 @@ def trend_chart(periods, values, slope, intercept, unit: str = "", times=None,
     # A dot on every period while they can be told apart; on a dense series only the
     # latest period gets one, so the line does not break up into dots.
     marks = None if len(values) <= 12 else [len(values) - 1]
-    ax.plot(x, values, color=theme["series"], linewidth=2, solid_capstyle="round",
+    ax.plot(x, values, color=theme["series"], linewidth=2 if connect else 0, solid_capstyle="round",
             solid_joinstyle="round", marker="o", markersize=6, markevery=marks,
             markeredgecolor=theme["bg"], markeredgewidth=1.5,
             label=legend["observed"], zorder=3)
+    # The newest observation, and only it, in coral.
+    ax.plot([x[-1]], [values[-1]], marker="o", markersize=7, linestyle="none",
+            color=theme["latest"], markeredgecolor=theme["bg"], markeredgewidth=1.5, zorder=4)
     if slope is not None and intercept is not None:
         handles, names = ax.get_legend_handles_labels()
         ax.legend(handles[::-1], names[::-1], frameon=False, labelcolor=theme["text"],

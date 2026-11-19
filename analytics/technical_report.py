@@ -205,7 +205,8 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                 chart, chart_dark = _both_modes(
                     trend_chart, t_periods, t_values, None, None,
                     unit=_axis_unit(ind, language), times=times,
-                    language=language, percent=percent, source=source)
+                    language=language, percent=percent, source=source,
+                    connect=not not_comparable)
                 sections.append(ReportSection(
                     heading=headings["snapshot"].format(name=name),
                     stat_result={"kind": "snapshot", "indicator": name, "p_value": None,
