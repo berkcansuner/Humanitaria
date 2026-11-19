@@ -65,7 +65,8 @@ watch(
   progress,
   () => {
     // The element is gone once the visitor leaves mid-stream (the ask field navigates).
-    if (streaming.value && follow && answer.value) answer.value.scrollTop = answer.value.scrollHeight
+    if (streaming.value && follow && answer.value)
+      answer.value.scrollTop = answer.value.scrollHeight
   },
   { flush: 'post' },
 )
@@ -125,7 +126,6 @@ function finish() {
 }
 
 defineExpose({ intro, finish })
-
 </script>
 
 <template>
