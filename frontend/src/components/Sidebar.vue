@@ -53,14 +53,14 @@ const groups = computed(() =>
 .sidebar {
   display: flex;
   flex-direction: column;
-  /* Claude's sidebar metrics: 288px wide, 8px side padding, 32px rows. */
+  /* 288px of Cloud Ground beside the white content, 12px padding, 32px rows. */
   width: 288px;
   flex-shrink: 0;
   height: 100%;
   background-color: var(--color-surface-container-low);
   border-right: 1px solid var(--color-border);
-  padding: var(--space-2);
-  gap: var(--space-2);
+  padding: var(--space-3);
+  gap: var(--space-3);
 }
 
 .sidebar-header {
@@ -73,8 +73,8 @@ const groups = computed(() =>
   justify-content: center;
   gap: var(--space-2);
   width: 100%;
-  min-height: 32px;
-  padding: 0 var(--space-3);
+  min-height: 38px;
+  padding: 0 var(--space-4);
   font-family: var(--font-body);
   font-size: var(--text-sm);
   line-height: 21px;
@@ -82,13 +82,13 @@ const groups = computed(() =>
   color: var(--color-on-accent);
   background-color: var(--color-accent-container);
   border: none;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-full);
   cursor: pointer;
   transition: background-color 0.2s;
 }
 
 .new-chat-btn:hover {
-  background-color: var(--color-accent);
+  background-color: color-mix(in srgb, var(--color-accent-container) 86%, #000);
 }
 
 /* Prominent nav entry to the M&E Reports page, just under New chat. */
@@ -97,12 +97,24 @@ const groups = computed(() =>
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: 32px;
-  padding: 0 10px;
+  min-height: 36px;
+  padding: 0 12px;
   background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-lg);
   color: var(--color-muted);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+/* The field takes the ring; the borderless input inside draws none of its own. */
+.conv-search:focus-within {
+  border-color: var(--color-accent);
+  box-shadow: var(--focus-ring);
+}
+.conv-search input:focus-visible {
+  box-shadow: none;
 }
 
 .conv-search input {

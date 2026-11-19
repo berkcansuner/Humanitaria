@@ -117,7 +117,7 @@ function cancelRename() {
   overflow-y: auto;
 }
 
-/* Section headings as in Claude's sidebar ("Recents"): 12px, medium, sentence case. */
+/* Section headings: 12px, medium, sentence case. */
 .conv-section-label {
   font-family: var(--font-body);
   font-size: var(--text-xs);
@@ -164,7 +164,7 @@ function cancelRename() {
   display: flex;
   align-items: center;
   min-height: 32px;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   transition: background-color 0.15s;
 }
 
