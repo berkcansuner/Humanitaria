@@ -2,7 +2,13 @@
 import { onMounted, onBeforeUnmount, ref } from 'vue'
 import coverage from './data/coverage.json'
 import land from './data/land.json'
-import { project, pulseRadius, prefersReducedMotion, drawablePoints } from './landingKit.js'
+import {
+  project,
+  pulseRadius,
+  prefersReducedMotion,
+  drawablePoints,
+  mapCountries,
+} from './landingKit.js'
 
 const BASE = '#C9D3DE'
 const LAND = '#D5DDE7' // quieter than BASE so country points stay the foreground
@@ -15,7 +21,7 @@ const props = defineProps({ figure: { type: Boolean, default: false } })
 const RING_SCALE = 2.2
 
 const canvas = ref(null)
-const points = drawablePoints(coverage.points)
+const points = drawablePoints(mapCountries(coverage.points))
 const maxReports = Math.max(1, ...points.map((p) => p.reports))
 // Stable phase offset per country so rings never pulse in unison.
 const phases = points.map((p) => {

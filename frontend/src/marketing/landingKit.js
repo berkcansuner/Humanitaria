@@ -69,6 +69,13 @@ export function linePath(points, w, h, yMin, yMax) {
     .join(' ')
 }
 
+// The points the coverage map draws and names: countries only, so the occupied
+// Palestinian territory (ReliefWeb's "oPt") is left off the map. The corpus counts
+// beside the map still include its reports.
+export function mapCountries(points) {
+  return points.filter((p) => p.iso3 !== 'PSE')
+}
+
 export function prefersReducedMotion() {
   return (
     typeof window !== 'undefined' &&

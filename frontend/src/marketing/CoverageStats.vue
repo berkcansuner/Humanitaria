@@ -8,6 +8,7 @@ import {
   countUp,
   dayLabel,
   formatNumber,
+  mapCountries,
   mapLabels,
   onVisible,
   prefersReducedMotion,
@@ -25,10 +26,7 @@ const STATS = [
 
 // The highest-volume countries named on the map, placed in percent of its box. Short
 // names per language live in landing.coverage.mapNames; others keep the data's name.
-// Only countries are named: the occupied Palestinian territory keeps its dot, unlabelled.
-const NOT_NAMED = new Set(['PSE'])
-const named = coverage.points.filter((p) => !NOT_NAMED.has(p.iso3))
-const points = mapLabels(named, { count: 4 }).map((p) => {
+const points = mapLabels(mapCountries(coverage.points), { count: 4 }).map((p) => {
   const { x, y } = project(p.lat, p.lon, 100, 100)
   return { ...p, style: { left: `${x}%`, top: `${y}%` } }
 })
