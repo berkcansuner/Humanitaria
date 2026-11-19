@@ -237,7 +237,8 @@ def test_technical_what_changed_section_sits_after_the_summary_with_given_figure
             "The latest value is 2.67 million people (2025)") in stored
     assert "9.9 million" not in stored and "exploded" not in stored
     assert "The series is short." not in stored
-    assert "only the section “What changed since the last report” is written by an AI model" in stored
+    assert ("Only the section “What changed since the last report” is written by an AI model, "
+            "comparing this report with the previous one.") in stored
 
 
 def test_a_model_failure_still_saves_the_technical_report(caplog):
@@ -250,7 +251,7 @@ def test_a_model_failure_still_saves_the_technical_report(caplog):
     assert "error" not in kinds and "saved" in kinds
     assert "## What changed since the last report" not in stored
     assert "## Needs — Trend\n\nThe latest value is 2.67 million people (2025)" in stored
-    assert "no part of it is written by an AI model" in stored
+    assert "No part of it is written by an AI model." in stored
     assert any("comparison failed" in r.getMessage() and r.exc_info for r in caplog.records)
 
 

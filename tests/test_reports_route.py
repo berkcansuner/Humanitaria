@@ -167,7 +167,7 @@ def test_a_technical_report_is_written_in_code_without_calling_a_model():
     assert content.startswith("## Executive Summary\n\nPeriod analysed:")
     assert f"## {_HEADING}\n\n{_FACT}" in content
     assert "## Data Coverage & Limitations" in content
-    assert content.rstrip().endswith("no part of it is written by an AI model.")
+    assert content.rstrip().endswith("its text is generated from them in code. No part of it is written by an AI model.")
     kinds = [e["event"] for e in events]
     assert "error" not in kinds and kinds[-2:] == ["saved", "done"]
 
@@ -184,7 +184,7 @@ def test_a_turkish_report_is_written_in_turkish_by_the_code():
     assert content.startswith("## Yönetici Özeti\n\nAnaliz edilen dönem:")
     assert "Son değer 2,67 milyon kişi (2025)" in content
     assert "## Veri Kapsamı ve Sınırlılıklar" in content and "## Yöntem" in content
-    assert "hiçbir bölümü yapay zekâ modeli yazmadı" in content
+    assert content.rstrip().endswith("metin koddan üretildi. Hiçbir bölümü yapay zekâ modeli yazmadı.")
 
 
 # --- Sector reports (2026-11-18): the chosen sector reaches the analysis, and a sector
