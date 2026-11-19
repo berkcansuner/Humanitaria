@@ -800,7 +800,7 @@ describe('ReportsView in two languages', () => {
       })
       await flush()
       expect(stage()).toBe(
-        'Statistics computed from HDX HAPI data: 3 indicators. The narrative is being prepared.',
+        'Statistics computed from HDX HAPI data: 3 indicators. The report is being written.',
       )
       expect(text('.progress-read .read-caption')).toBe('Indicators with data')
       expect(
