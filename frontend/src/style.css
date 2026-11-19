@@ -1,26 +1,29 @@
 :root {
-  /* Stitch Humanitarian Editorial Colors */
-  --color-bg: #faf9f6;
+  /* The Working Record (DESIGN.md): white and cloud-gray grounds, deep ink text,
+     hairline borders, one teal. The same values the landing page uses. */
+  --color-bg: #ffffff;
   --color-surface: #ffffff;
-  --color-surface-container: #efeeeb;
-  --color-surface-container-low: #f4f3f1;
-  --color-surface-container-high: #e9e8e5;
-  --color-text: #1a1c1a;
-  --color-text-secondary: #5f5e5e;
-  --color-accent: oklch(0.46 0.12 152); /* başlık · bağlantı · atıf · odak */
-  --color-accent-container: oklch(0.52 0.11 152); /* birincil butonlar (gönder, yeni sohbet) */
-  --color-accent-soft: oklch(0.93 0.03 152); /* atıf rozetleri · flash zemini */
+  --color-surface-container: #eef1f5; /* hover fill on the cloud ground */
+  --color-surface-container-low: #f5f7fa; /* Cloud Ground: sidebar, panels */
+  --color-surface-container-high: #e3e8ef; /* selected row, active tab */
+  --color-text: #0b1d2e; /* Deep Ink */
+  --color-text-secondary: #44546a; /* Slate Ink */
+  --color-accent: #0b6f6a; /* Brand Teal: links, actions, selection, focus */
+  --color-accent-container: #0b6f6a; /* primary buttons */
+  --color-accent-soft: #e6f4f3; /* Teal Mist: lit source row, selection */
+  --color-chart: #0a8f88; /* Chart Teal: plotted marks only, never text */
   --color-on-accent: #ffffff;
-  --color-muted: #6b7470; /* Margin Gray: nötr yeşil-gri, metinde AA (4.58:1 kâğıt zeminde) */
-  --color-border: #e3e2e0;
-  --color-outline: #6b7470;
-  --color-tertiary: #2b2d2d;
+  --color-muted: #56657a; /* Muted Slate: metadata, placeholders (5.9:1 on white) */
+  --color-border: #e3e8ef; /* Hairline */
+  --color-border-strong: #cfd7e2; /* Hairline Strong: field and ghost-button outlines */
+  --color-outline: #56657a;
+  --color-tertiary: #0b1d2e; /* the user's question bubble */
   --color-on-tertiary: #ffffff;
-  --color-error: #ba1a1a;
-  --color-error-bg: #ffdad6;
-  --color-error-accent: #ba1a1a;
-  --color-success: #2e7d32;
-  --color-code-bg: #f4f4f5;
+  --color-error: #b3261e;
+  --color-error-bg: #fdecea;
+  --color-error-accent: #b3261e;
+  --color-success: #17795a;
+  --color-code-bg: #f5f7fa;
 
   /* Spacing — 8px base grid */
   --space-base: 8px;
@@ -34,24 +37,24 @@
   --space-10: 64px;
   --space-12: 80px;
 
-  /* Radii */
-  --radius-sm: 2px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-xl: 12px;
+  /* Radii: chips 6, rows 8, inputs 10, cards 16, pills for buttons. */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 16px;
   --radius-full: 9999px;
 
-  /* Shadows — low opacity, wide blur (Stitch elevation spec) */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.06);
+  /* Shadows: only things that float above the page (menus, popovers, drawers). */
+  --shadow-sm: 0 1px 2px rgb(11 29 46 / 0.06);
+  --shadow-md: 0 1px 2px rgb(11 29 46 / 0.06), 0 10px 24px -12px rgb(11 29 46 / 0.22);
+  --shadow-lg: 0 1px 2px rgb(11 29 46 / 0.06), 0 18px 40px -18px rgb(11 29 46 / 0.32);
 
-  /* Typography */
-  --font-display: 'DM Sans Variable', system-ui, -apple-system, sans-serif;
-  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
-  /* Reading text (answers, reports), sized like Claude's: 15px / 21px. */
-  --font-serif: 'Source Serif 4 Variable', Georgia, 'Times New Roman', serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, monospace;
+  /* Typography: one family. Geist Mono only for figures, dates and citation chips. */
+  --font-display: 'Geist Variable', system-ui, -apple-system, sans-serif;
+  --font-body: 'Geist Variable', system-ui, -apple-system, sans-serif;
+  /* Reading text (answers, reports): the same family, at 15px / 1.6. */
+  --font-serif: 'Geist Variable', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, 'Cascadia Code', Menlo, monospace;
 
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
@@ -65,33 +68,38 @@
   --content-max-width: 1280px;
 
   /* Keyboard focus ring (applied via :focus-visible) */
-  --focus-ring: 0 0 0 3px color-mix(in oklch, var(--color-accent) 30%, transparent);
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-accent) 24%, transparent);
 }
 
-/* Dark theme — overrides color tokens only; spacing/radii/typography unchanged.
+/* Dark theme: the night values of DESIGN.md. Overrides color tokens only.
    Activated by setTheme() setting data-theme="dark" on <html>. */
 :root[data-theme='dark'] {
-  --color-bg: oklch(0.185 0.01 165);
-  --color-surface: oklch(0.228 0.012 167);
-  --color-surface-container: oklch(0.25 0.013 167);
-  --color-surface-container-low: oklch(0.207 0.011 167);
-  --color-surface-container-high: oklch(0.278 0.014 168);
-  --color-text: oklch(0.94 0.008 165);
-  --color-text-secondary: oklch(0.755 0.012 165);
-  --color-accent: oklch(0.8 0.13 158); /* aydınlık yeşil — metin/bağlantı/atıf */
-  --color-accent-container: oklch(0.73 0.15 154); /* canlı yeşil — butonlar */
-  --color-accent-soft: oklch(0.3 0.05 152);
-  --color-on-accent: oklch(0.22 0.04 156); /* aksan üstündeki koyu metin */
-  --color-muted: oklch(0.63 0.013 165);
-  --color-border: oklch(0.3 0.013 167);
-  --color-outline: oklch(0.5 0.014 165);
-  --color-tertiary: oklch(0.865 0.01 165); /* kullanıcı balonu zemini */
-  --color-on-tertiary: oklch(0.205 0.012 165);
+  --color-bg: #0b1d2e; /* Night */
+  --color-surface: #12283d; /* Night Raised */
+  --color-surface-container: #172f47;
+  --color-surface-container-low: #0f2436; /* sidebar, panels */
+  --color-surface-container-high: #22394f;
+  --color-text: #e8eef5;
+  --color-text-secondary: #aebdcd;
+  --color-accent: #2bb5a9; /* Night Teal, lifted for text (7.2:1 on Night) */
+  --color-accent-container: #16a196;
+  --color-accent-soft: #123a44;
+  --color-chart: #16a196;
+  --color-on-accent: #0b1d2e;
+  --color-muted: #93a5b8; /* 6.6:1 on Night */
+  --color-border: #22394f; /* Night Line */
+  --color-border-strong: #2e4a63;
+  --color-outline: #6f8399;
+  --color-tertiary: #22394f;
+  --color-on-tertiary: #e8eef5;
   --color-error: #ffb4ab;
-  --color-error-bg: #5c1310;
+  --color-error-bg: #4a1512;
   --color-error-accent: #ffb4ab;
-  --color-success: #81c784;
-  --color-code-bg: oklch(0.228 0.012 167);
+  --color-success: #6fcf97;
+  --color-code-bg: #12283d;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-md: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 24px -12px rgb(0 0 0 / 0.6);
+  --shadow-lg: 0 1px 2px rgb(0 0 0 / 0.3), 0 18px 40px -18px rgb(0 0 0 / 0.7);
 }
 
 * {
@@ -115,8 +123,8 @@ body {
   min-height: 100%;
 }
 
-/* Browser surfaces carry the palette too: selection in Citation Mist, a quiet
-   Margin Gray scrollbar (scrollbar-color is inherited), the caret in Field Green. */
+/* Browser surfaces carry the palette too: selection in Teal Mist, a quiet slate
+   scrollbar (scrollbar-color is inherited), the caret in Brand Teal. */
 ::selection {
   background-color: var(--color-accent-soft);
   color: var(--color-text);
