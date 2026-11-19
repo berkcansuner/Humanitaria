@@ -48,7 +48,7 @@ class TestPdfLabels:
         assert "Teknik İzleme Raporu" in text and "Tüm sektörler" in text
         assert "All sectors" not in text
 
-    def test_turkish_pdf_spells_the_generation_date_with_a_turkish_month(self):
+    def test_the_generation_date_is_day_month_year_in_both_languages(self):
         import datetime as real
 
         class Fixed(real.datetime):
@@ -57,8 +57,13 @@ class TestPdfLabels:
                 return cls(2026, 11, 18, 12, 0, tzinfo=tz)
 
         with patch("rag.report_pdf.datetime", Fixed):
-            assert "18 Kasım 2026" in _pdf_text(_report("tr"))
-            assert "18 Nov 2026" in _pdf_text(_report("en"))
+            for language in ("tr", "en"):
+                text = _pdf_text(_report(language))
+                assert "18.11.2026" in text
+                assert "2026-08-01" not in text and "01.08.2026" in text      # the period too
+            technical = _pdf_text({**_report("en"), "report_type": "technical_monitoring"})
+            assert "Generated from HDX HAPI data by Humanitaria" in technical
+            assert "Generated from ReliefWeb reports by Humanitaria" in _pdf_text(_report("en"))
 
     def test_english_pdf_keeps_its_english_labels(self):
         text = _pdf_text(_report("en", content="## Summary\n\nText [1]."))

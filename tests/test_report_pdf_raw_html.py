@@ -47,7 +47,7 @@ def test_pdf_lists_a_technical_report_data_source():
                            "source": "OCHA HNO", "date": "2026-01-01", "doctype": "dataset",
                            "period": "2024-01-01 – 2026-01-01", "retrieved": "2026-11-18"}])
     assert "Food security: people in need" in rows
-    assert "OCHA HNO · 2024-01-01 – 2026-01-01 · retrieved 2026-11-18" in rows
+    assert "OCHA HNO · 01.01.2024 – 01.01.2026 · retrieved 18.11.2026" in rows
     assert "https://data.humdata.org/dataset/global-hpc-hno" in rows
 
 
@@ -56,7 +56,7 @@ def test_a_turkish_pdf_names_the_retrieval_day_in_turkish():
     rows = _sources_rows([{"index": 1, "title": "t", "url": "https://data.humdata.org/dataset/x",
                            "source": "IPC", "doctype": "dataset", "period": "2022-03-01 – 2026-09-01",
                            "retrieved": "2026-11-18"}], "tr")
-    assert "IPC · 2022-03-01 – 2026-09-01 · erişim tarihi 2026-11-18" in rows
+    assert "IPC · 01.03.2022 – 01.09.2026 · erişim tarihi 18.11.2026" in rows
 
 
 

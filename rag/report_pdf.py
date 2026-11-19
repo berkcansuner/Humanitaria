@@ -41,12 +41,14 @@ def _block_external_resources(uri, rel=None):
 
 
 # Brand green (site --color-accent ≈ oklch(0.46 0.12 152)); print palette = dark ink on white.
-_GREEN = "#2e7d4e"
-_GREEN_DARK = "#21603a"
-_GREEN_SOFT = "#eaf3ee"
-_INK = "#1a1c1a"
-_MUTED = "#5f5e5e"
-_BORDER = "#d6e2da"
+# The product palette (DESIGN.md): Brand Teal, Deep Ink, Teal Mist, hairline. The
+# names keep "GREEN" from the palette these replaced.
+_GREEN = "#0b6f6a"
+_GREEN_DARK = "#0b1d2e"
+_GREEN_SOFT = "#f5f7fa"
+_INK = "#0b1d2e"
+_MUTED = "#56657a"
+_BORDER = "#e3e8ef"
 
 _REPORT_TYPE_LABELS = {
     "situation": "M&E Situation Report",
@@ -64,8 +66,9 @@ _LABELS = {
         "period": "Period", "sectors": "Sectors", "source_reports": "Source reports",
         "generated": "Generated", "sources": "Sources",
         "widths": ("32%", "30%", "20%", "18%"),
-        "footer": "Generated from ReliefWeb reports by Humanitaria &middot; {date} &middot; "
+        "footer": "Generated from {basis} by Humanitaria &middot; {date} &middot; "
                   "Page <pdf:pagenumber> of <pdf:pagecount>",
+        "basis": {"technical_monitoring": "HDX HAPI data", None: "ReliefWeb reports"},
     },
     "tr": {
         "types": {
@@ -79,8 +82,9 @@ _LABELS = {
         "generated": "Oluşturma tarihi", "sources": "Kaynaklar",
         # "Oluşturma tarihi" is twice "Generated": its column takes the room.
         "widths": ("31%", "27%", "20%", "22%"),
-        "footer": "Humanitaria tarafından ReliefWeb raporlarından oluşturuldu &middot; {date} "
+        "footer": "Humanitaria tarafından {basis} oluşturuldu &middot; {date} "
                   "&middot; Sayfa <pdf:pagenumber> / <pdf:pagecount>",
+        "basis": {"technical_monitoring": "HDX HAPI verilerinden", None: "ReliefWeb raporlarından"},
     },
 }
 
@@ -109,10 +113,6 @@ _SECTORS_TR = {
     "Water Sanitation Hygiene": "Su, sanitasyon ve hijyen",
 }
 
-_MONTHS_TR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos",
-              "Eylül", "Ekim", "Kasım", "Aralık"]
-
-
 def _language(report: dict) -> str:
     lang = str(report.get("language") or "en").strip().lower()
     return lang if lang in _LABELS else "en"
@@ -136,18 +136,24 @@ def _sector(theme: str | None, language: str) -> str:
     return _SECTORS_TR.get(theme, theme) if language == "tr" else theme
 
 
-def _day(iso: str, language: str) -> str:
-    """A period end as the report's language writes it: ISO in English (unchanged),
-    day.month.year in Turkish ("2026-11-18" → "18.11.2026")."""
+_ISO_DAY = re.compile(r"(?<!\d)(\d{4})-(\d{2})-(\d{2})(?!\d)")
+
+
+def _day(iso: str, language: str = "en") -> str:
+    """A date as every screen and report writes it, in both languages: day.month.year
+    ("2026-11-18" → "18.11.2026"). Anything that is not an ISO day is kept as given."""
     m = re.fullmatch(r"(\d{4})-(\d{2})-(\d{2})", iso or "")
-    return f"{m[3]}.{m[2]}.{m[1]}" if m and language == "tr" else iso
+    return f"{m[3]}.{m[2]}.{m[1]}" if m else iso
 
 
-def _generated_date(now: datetime, language: str) -> str:
-    """'18 Nov 2026' in English (unchanged), '18 Kasım 2026' in Turkish."""
-    if language == "tr":
-        return f"{now.day} {_MONTHS_TR[now.month - 1]} {now.year}"
-    return now.strftime("%d %b %Y")
+def _days(text: str) -> str:
+    """Every ISO day inside *text* (a period "2024-01-01 – 2026-01-01") as day.month.year."""
+    return _ISO_DAY.sub(lambda m: f"{m[3]}.{m[2]}.{m[1]}", text or "")
+
+
+def _generated_date(now: datetime, language: str = "en") -> str:
+    """'18.11.2026', in both languages."""
+    return now.strftime("%d.%m.%Y")
 
 
 _FONT_DIR = os.path.join(os.path.dirname(reportlab.__file__), "fonts")
@@ -188,7 +194,7 @@ body {{ font-family: "Vera"; font-size: 10pt; color: {_INK}; line-height: 1.4; }
 table.brandbar {{ background-color: {_GREEN}; }}
 table.brandbar td {{ padding: 11pt 12pt; }}
 table.brandbar .brand {{ font-size: 15pt; font-weight: bold; color: #ffffff; }}
-table.brandbar .brandsub {{ font-size: 8.5pt; color: #d8ece0; }}
+table.brandbar .brandsub {{ font-size: 8.5pt; color: #d5ecea; }}
 
 h1.reporttitle {{ font-size: 16pt; color: {_GREEN_DARK}; margin: 14pt 0 2pt 0; }}
 .titlerule {{ border-bottom: 2pt solid {_GREEN}; margin-bottom: 10pt; }}
@@ -197,7 +203,7 @@ table.scopebox {{ background-color: {_GREEN_SOFT}; border: 0.5pt solid {_BORDER}
 table.scopebox td {{ padding: 7pt 9pt; font-size: 8.5pt; color: {_INK}; }}
 table.scopebox .lbl {{ color: {_GREEN_DARK}; font-weight: bold; font-size: 7pt; text-transform: uppercase; }}
 
-.body h2 {{ font-size: 12.5pt; color: {_GREEN_DARK}; border-bottom: 0.75pt solid {_BORDER}; padding-bottom: 2pt; margin: 14pt 0 6pt 0; }}
+.body h2 {{ font-size: 12.5pt; color: {_GREEN_DARK}; border-bottom: 0.75pt solid {_BORDER}; padding-bottom: 2pt; margin: 14pt 0 6pt 0; -pdf-keep-with-next: true; }}
 .body h3 {{ font-size: 10.5pt; color: {_GREEN}; margin: 10pt 0 3pt 0; }}
 .body p {{ margin: 0 0 6pt 0; text-align: justify; }}
 .body ul {{ margin: 2pt 0 8pt 0; }}
@@ -238,10 +244,11 @@ def _sources_rows(sources, language: str = "en") -> str:
             # A technical report's data source: who publishes it, the period it covers,
             # and when it was read from HDX HAPI.
             word = "erişim tarihi" if language == "tr" else "retrieved"
-            retrieved = f"{word} {s['retrieved']}" if s.get("retrieved") else None
-            meta_bits = [b for b in (s.get("source"), s.get("period"), retrieved) if b]
+            retrieved = f"{word} {_days(str(s['retrieved']))}" if s.get("retrieved") else None
+            meta_bits = [b for b in (s.get("source"), _days(str(s.get("period") or "")), retrieved)
+                         if b]
         else:
-            meta_bits = [b for b in (s.get("source"), s.get("date")) if b]
+            meta_bits = [b for b in (s.get("source"), _days(str(s.get("date") or ""))) if b]
         meta = html.escape(" · ".join(str(b) for b in meta_bits))
         url = html.escape(str(s.get("url", "")))
         rows.append(
@@ -295,6 +302,8 @@ def render_report_pdf(report: dict) -> bytes:
     source_count = len(_valid_sources(report.get("sources")))
     generated = _generated_date(datetime.now(timezone.utc), language)
     type_label = _type_label(report.get("report_type"), language)
+    # A technical report is built from HDX HAPI data, not from ReliefWeb reports.
+    basis = labels["basis"].get(report.get("report_type"), labels["basis"][None])
     cover_image = report.get("cover_image")
     section_images = report.get("section_images")
     cover_html = (
@@ -323,7 +332,7 @@ def render_report_pdf(report: dict) -> bytes:
 <h2 class="sources-h">{labels["sources"]}</h2>
 <table class="sources" width="100%">{_sources_rows(report.get("sources"), language)}</table>
 
-<div id="footerContent">{labels["footer"].format(date=html.escape(generated))}</div>
+<div id="footerContent">{labels["footer"].format(basis=basis, date=html.escape(generated))}</div>
 </body></html>"""
 
     _register_fonts()
