@@ -347,6 +347,20 @@ def _tr_change_word(sentence: str) -> bool:
                for i, w in enumerate(words))
 
 
+# Phrases that set a figure against another year even without a change verb next to it.
+_CHANGE_PHRASE = re.compile(
+    r"\b(?:up|down)\s+from\b|\b(?:highest|lowest)\b.*\bsince\b|\bbu\s+yana\b|"
+    r"\ben\s+(?:yüksek|düşük)\b.*\b(?:beri|bu\s+yana)\b", re.IGNORECASE)
+# "from 14.8 to 15.0 million": the scale word after the last number applies to the first.
+_RANGE = re.compile(
+    r"(\d+(?:[.,]\d+)?)(\s+(?:to|and|-|–|ile|ila)\s+\d+(?:[.,]\d+)?\s*"
+    r"(million|milyon|billion|milyar|thousand|bin))", re.IGNORECASE)
+
+
+def _clauses(sentence: str) -> list[str]:
+    return [c for c in _CLAUSE_BREAK.split(sentence) if c.strip()]
+
+
 def _says_change(sentence: str) -> bool:
     """A word of change between years, in English or Turkish."""
     return bool(_EN_CROSS_YEAR.search(sentence) or _TR_MULTIPLE.search(sentence)
@@ -358,6 +372,7 @@ def _series_values_in(sentence: str, values: list[float]) -> int:
     count). Counted per number: one "15.0 million" matching both 14,988,378 and, rounded to
     two digits, 14,809,904 is still one value."""
     hit = set()
+    sentence = _RANGE.sub(r"\1 \3\2", sentence)
     for m in _NUMBER.finditer(sentence):
         if _matches_value(_number_readings(m), values):
             hit.add(m.group(0).strip())
@@ -542,6 +557,14 @@ def verify_narrative(text: str, findings, allowed_text: str, language: str,
         if _SAYS_NOT_COMPARABLE.search(sentence):
             return False
         for heading, (years, values) in not_comparable.items():
+            # One value of the series, narrated as a change ("rose to 15.0 million in 2026",
+            # "artarak 15,0 milyona ulaştı", "…, up from 2025"): the change word must sit in
+            # the clause that quotes the value, or be a phrase that sets it against a year.
+            if _series_values_in(sentence, values) and (
+                    _CHANGE_PHRASE.search(sentence)
+                    or any(_series_values_in(c, values) and _says_change(c)
+                           for c in _clauses(sentence))):
+                return True
             own = section == heading
             two_years = len(years & set(_YEAR.findall(sentence))) >= 2
             two_values = _series_values_in(sentence, values) >= 2
