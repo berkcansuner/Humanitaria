@@ -60,7 +60,8 @@ _EN_NEGATION = re.compile(
     r"\b(?:not|no|non|neither|nor|without|lacks?|lacked|fails?|failed)\b|n't\b", re.IGNORECASE)
 _TR_NEGATION = re.compile(
     r"de[ğg]il|olmay|\byok\b|m[ae]m[ae]kte|m[ae]m[ıiuü][şs]|m[ae]d[ıiuü]|m[ae]z\b", re.IGNORECASE)
-_WINDOW = 4   # words before (English) / after (Turkish) a claim that can negate it
+_WINDOW = 4   # words after a claim (Turkish) that can negate it
+_WINDOW_BEFORE = 6   # words before it, within its own clause ("was not found to be statistically significant")
 # A negation belongs to the claim's own clause: "Although not large, the decline is
 # significant" and "not just visible but significant" claim significance.
 _CLAUSE_BREAK = re.compile(
@@ -146,7 +147,7 @@ def _claim(sentence: str) -> str | None:
         polarities.add("not significant")
     for m in _CLAIM.finditer(sentence):
         clause = _CLAUSE_BREAK.split(sentence[:m.start()])[-1]
-        before = " ".join(clause.split()[-_WINDOW:])
+        before = " ".join(clause.split()[-_WINDOW_BEFORE:])
         after = " ".join(sentence[m.start():].split()[:_WINDOW + 1])
         negated = (_EN_NEGATION.search(before) or _SUBJECT_NEGATION.search(clause)
                    or _TR_NEGATION.search(after))

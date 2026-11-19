@@ -270,6 +270,9 @@ from analytics.narrative_check import _claim  # noqa: E402
     ("No regional data exist for refugees, but the refugee increase is significant.", "significant"),
     ("Test edilen eğilimlerin hiçbiri istatistiksel olarak anlamlı değildir.", "not significant"),
     ("Hiçbir eğilim istatistiksel olarak anlamlı değildir.", "not significant"),
+    # A negation up to six words back, within the claim's own clause.
+    ("The decline was not found to be statistically significant (p=0.059).", "not significant"),
+    ("Neither tested trend is statistically significant after the Holm correction.", "not significant"),
 ])
 def test_a_negation_counts_only_in_the_claims_own_clause(sentence, claim):
     assert _claim(sentence) == claim
