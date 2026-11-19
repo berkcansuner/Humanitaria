@@ -472,8 +472,8 @@ async function confirmDelete() {
   font-size: var(--text-sm);
   color: var(--color-text);
   background-color: var(--color-surface);
-  border: 1px solid var(--color-outline);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
 }
 
 .field input:focus {
@@ -492,7 +492,7 @@ async function confirmDelete() {
   color: var(--color-on-accent);
   background-color: var(--color-accent-container);
   border: none;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-full);
   cursor: pointer;
   align-self: flex-start;
 }
@@ -568,7 +568,7 @@ async function confirmDelete() {
   color: var(--color-error);
   background: transparent;
   border: 1px solid color-mix(in oklch, var(--color-error) 45%, transparent);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-full);
   cursor: pointer;
   transition: background-color 0.15s;
 }
@@ -586,7 +586,7 @@ async function confirmDelete() {
   color: #fff;
   background-color: var(--color-error);
   border: none;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-full);
   cursor: pointer;
 }
 
@@ -602,7 +602,7 @@ async function confirmDelete() {
   color: var(--color-text-secondary);
   background: transparent;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-full);
   cursor: pointer;
 }
 

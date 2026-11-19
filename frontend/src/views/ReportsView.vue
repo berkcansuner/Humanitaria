@@ -1428,7 +1428,7 @@ function onCiteClick(e) {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  padding: var(--space-3) var(--space-2);
+  padding: var(--space-3);
   gap: var(--space-5);
 }
 
@@ -1451,7 +1451,7 @@ function onCiteClick(e) {
   color: var(--color-text);
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-full);
   cursor: pointer;
   transition:
     color 0.15s,
@@ -1502,8 +1502,8 @@ function onCiteClick(e) {
   font-size: var(--text-sm);
   color: var(--color-text);
   background-color: var(--color-surface);
-  border: 1px solid var(--color-outline);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
   outline: none;
 }
 .field select:focus,
@@ -1525,7 +1525,7 @@ function onCiteClick(e) {
   color: var(--color-on-accent);
   background-color: var(--color-accent-container);
   border: none;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-full);
   cursor: pointer;
   transition:
     background-color 0.2s,
@@ -1912,7 +1912,7 @@ function onCiteClick(e) {
   color: var(--color-text-secondary);
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
   cursor: pointer;
   text-decoration: none;
   transition:
@@ -2129,7 +2129,7 @@ function onCiteClick(e) {
   color: var(--color-error);
   background: transparent;
   border: 1px solid color-mix(in oklch, var(--color-error) 45%, transparent);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
   cursor: pointer;
 }
 .retry-btn:hover {

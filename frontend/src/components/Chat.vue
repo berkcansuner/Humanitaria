@@ -849,7 +849,7 @@ watch(locale, () => decorateCodeBlocks(messagesContainer.value), { flush: 'post'
   padding: var(--space-2) var(--space-3);
   font-family: var(--font-body);
   font-size: var(--text-sm);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
   cursor: pointer;
   border: 1px solid var(--color-border);
 }
@@ -857,6 +857,7 @@ watch(locale, () => decorateCodeBlocks(messagesContainer.value), { flush: 'post'
 .edit-cancel {
   background-color: var(--color-surface);
   color: var(--color-text-secondary);
+  border-radius: var(--radius-full);
 }
 
 .edit-save {
@@ -901,7 +902,7 @@ watch(locale, () => decorateCodeBlocks(messagesContainer.value), { flush: 'post'
   color: var(--color-error);
   background: transparent;
   border: 1px solid color-mix(in oklch, var(--color-error) 45%, transparent);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
   cursor: pointer;
 }
 
@@ -999,6 +1000,7 @@ watch(locale, () => decorateCodeBlocks(messagesContainer.value), { flush: 'post'
 .stop-btn {
   background-color: var(--color-tertiary);
   color: var(--color-on-tertiary);
+  border-radius: var(--radius-full);
 }
 
 .stop-btn:hover {

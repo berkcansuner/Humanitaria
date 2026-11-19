@@ -559,7 +559,7 @@ onUnmounted(() => {
   color: var(--color-on-accent);
   background-color: var(--color-accent-container);
   border: none;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-full);
   cursor: pointer;
   text-decoration: none;
   transition: background-color 0.2s;
@@ -747,7 +747,7 @@ onUnmounted(() => {
   color: var(--color-text);
   background-color: var(--color-surface-container-high);
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
   cursor: pointer;
 }
 
