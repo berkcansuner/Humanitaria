@@ -1,6 +1,8 @@
 <script setup>
-import { computed, shallowRef } from 'vue'
+import { computed, onBeforeUnmount, onMounted, shallowRef, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { formatCompact, linePath, nearestIndex, periodLabel } from './landingKit.js'
 
 const props = defineProps({
@@ -10,6 +12,8 @@ const props = defineProps({
   // Calendar-year data: label points by year, not month.
   annual: { type: Boolean, default: false },
 })
+
+gsap.registerPlugin(ScrollTrigger)
 
 const { t, locale } = useI18n()
 const period = (iso) => periodLabel(iso, locale.value, { annual: props.annual })
@@ -70,10 +74,35 @@ const summary = computed(() =>
     n: props.series.length,
   }),
 )
+
+// The line draws from left to right when the chart itself scrolls into view (a wipe of
+// the SVG, which does not depend on stroke units), then the latest point lands. Reduced
+// motion never runs it, so the chart renders complete.
+const root = useTemplateRef('root')
+let mm = null
+onMounted(() => {
+  mm = gsap.matchMedia()
+  mm.add(
+    '(prefers-reduced-motion: no-preference)',
+    () => {
+      const q = gsap.utils.selector(root.value)
+      gsap
+        .timeline({ scrollTrigger: { trigger: root.value, start: 'top 85%', once: true } })
+        .fromTo(
+          q('.wc-svg'),
+          { clipPath: 'inset(-10px 100% -10px -10px)' },
+          { clipPath: 'inset(-10px 0% -10px -10px)', duration: 1.6, ease: 'power2.inOut' },
+        )
+        .from(q('.wc-dot'), { scale: 0, autoAlpha: 0, duration: 0.45, ease: 'back.out(2.4)' })
+    },
+    root.value,
+  )
+})
+onBeforeUnmount(() => mm?.revert())
 </script>
 
 <template>
-  <figure class="wc">
+  <figure ref="root" class="wc">
     <p class="wc-readout" aria-hidden="true">{{ readout }}</p>
     <div class="wc-chart" @pointermove="onHover" @pointerleave="hovered = null">
       <svg

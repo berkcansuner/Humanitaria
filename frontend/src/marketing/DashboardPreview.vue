@@ -166,8 +166,11 @@ const regions = computed(() => {
 
 const root = useTemplateRef('root')
 
-// On first view: tiles and panels rise in, figures count up, the line draws and
-// the bars grow. Reduced motion never runs it, so everything renders final.
+// On first view: tiles and panels rise in and figures count up. The line draws and the
+// bars grow when their own panel scrolls into view (it sits below the tiles, so tying
+// them to the dashboard's top played them before anyone saw the chart). The line is
+// revealed by a wipe of the SVG, which does not depend on stroke units. Reduced motion
+// never runs any of it, so everything renders final.
 let mm = null
 onMounted(() => {
   mm = gsap.matchMedia()
@@ -194,9 +197,24 @@ onMounted(() => {
         })
         .from(q('.kpi, .panel'), { y: 24, autoAlpha: 0, stagger: 0.07 }, 0)
         .call(() => ctx.count(), null, 0.05)
-        .from(q('.dp-line'), { strokeDashoffset: 1, duration: 1.8, ease: 'power2.inOut' }, 0.45)
-        .from(q('.dp-dot'), { scale: 0, autoAlpha: 0, duration: 0.5, ease: 'back.out(2.4)' }, 2.1)
-        .from(q('.dp-bar'), { scaleX: 0, transformOrigin: '0 50%', stagger: 0.08 }, 0.5)
+      gsap
+        .timeline({ scrollTrigger: { trigger: q('.dp-svg')[0], start: 'top 80%', once: true } })
+        .fromTo(
+          q('.dp-svg'),
+          { clipPath: 'inset(-10px 100% -10px -10px)' },
+          { clipPath: 'inset(-10px 0% -10px -10px)', duration: 1.8, ease: 'power2.inOut' },
+          0.3,
+        )
+        .from(q('.dp-dot'), { scale: 0, autoAlpha: 0, duration: 0.5, ease: 'back.out(2.4)' })
+      gsap.from(q('.dp-bar'), {
+        scaleX: 0,
+        transformOrigin: '0 50%',
+        stagger: 0.08,
+        duration: 0.9,
+        ease: 'expo.out',
+        delay: 0.3,
+        scrollTrigger: { trigger: q('.dp-bars')[0], start: 'top 85%', once: true },
+      })
       // Reduced motion switched on mid-count: show the final figures.
       return () => kpiValues.forEach((el, i) => (el.textContent = kpis.value[i].text))
     },
@@ -261,7 +279,7 @@ onBeforeUnmount(() => mm?.revert())
                   role="img"
                   :aria-label="chartSummary"
                 >
-                  <path class="dp-line" :d="line" pathLength="1" />
+                  <path class="dp-line" :d="line" />
                 </svg>
                 <span class="dp-dot" :style="latestDot" aria-hidden="true"></span>
                 <template v-if="readout">
@@ -455,8 +473,6 @@ onBeforeUnmount(() => mm?.revert())
   stroke-width: 2;
   stroke-linejoin: round;
   stroke-linecap: round;
-  stroke-dasharray: 1;
-  stroke-dashoffset: 0;
   vector-effect: non-scaling-stroke;
 }
 .dp-dot,
