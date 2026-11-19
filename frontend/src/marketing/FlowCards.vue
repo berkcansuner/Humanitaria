@@ -5,13 +5,7 @@ import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import syria from './data/syria.json'
 import { sampleAnswer, samplePassage, sampleReport } from './samples.js'
-import {
-  citedParts,
-  dayLabel,
-  formatNumber,
-  monthLabel,
-  passageSources,
-} from './landingKit.js'
+import { citedParts, dayLabel, formatNumber, monthLabel, passageSources } from './landingKit.js'
 import { ledgerDate, revealSource } from '../utils/sources.js'
 import WindowChart from './WindowChart.vue'
 
