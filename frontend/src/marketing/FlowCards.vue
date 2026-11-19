@@ -8,7 +8,6 @@ import { sampleAnswer, samplePassage, sampleReport } from './samples.js'
 import {
   citedParts,
   dayLabel,
-  formatCompact,
   formatNumber,
   monthLabel,
   passageSources,
@@ -50,10 +49,7 @@ const tech = computed(() => {
     test.p_value < 0.001
       ? `< ${formatNumber(0.001, l)}`
       : formatNumber(test.p_value, l, { maximumSignificantDigits: 3 })
-  const sign = test.slope_per_year < 0 ? '−' : '+'
   return {
-    slope: `${sign}${formatCompact(Math.abs(test.slope_per_year), l)}`,
-    p,
     sentence: t(`landing.flows.tech.trend.${trendKey}`, { peak: peakYear, end: endYear, p }),
   }
 })
@@ -254,22 +250,6 @@ onBeforeUnmount(() => mm?.revert())
               {{ t('landing.flows.tech.window', { start: peakYear, end: endYear }) }}
             </p>
             <p class="fu-finding">{{ tech.sentence }}</p>
-            <dl class="fu-test">
-              <div>
-                <dt>{{ t('landing.flows.tech.slope') }}</dt>
-                <dd>
-                  {{ tech.slope }} <small>{{ t('landing.flows.tech.perYear') }}</small>
-                </dd>
-              </div>
-              <div>
-                <dt>{{ t('landing.flows.tech.p') }}</dt>
-                <dd>{{ tech.p }}</dd>
-              </div>
-              <div>
-                <dt>{{ t('landing.flows.tech.points') }}</dt>
-                <dd>{{ test.n_points }}</dd>
-              </div>
-            </dl>
             <WindowChart :series="testSeries" annual :label="t('landing.trend.title')" />
             <p class="fu-credit">{{ trendCredit }}</p>
           </div>
@@ -399,34 +379,6 @@ onBeforeUnmount(() => mm?.revert())
 }
 .fu-head:first-child {
   margin-top: 0;
-}
-.fu-test {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 22px;
-  margin: 14px 0 0;
-}
-.fu-test dt {
-  font-size: 12px;
-  white-space: nowrap;
-  color: var(--color-muted);
-}
-.fu-test dd {
-  margin: 2px 0 0;
-  font-family: var(--font-mono);
-  font-size: 18px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  color: var(--color-text);
-}
-.fu-test small {
-  font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0;
-  color: var(--color-text-secondary);
 }
 .fu-date {
   white-space: nowrap;

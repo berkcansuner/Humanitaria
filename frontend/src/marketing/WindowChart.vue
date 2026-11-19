@@ -140,7 +140,7 @@ onBeforeUnmount(() => mm?.revert())
 }
 .wc-chart {
   position: relative;
-  height: 64px;
+  height: 120px;
   margin-top: 8px;
   cursor: crosshair;
 }

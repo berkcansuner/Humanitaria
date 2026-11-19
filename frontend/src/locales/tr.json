@@ -119,11 +119,7 @@
             "notSignificant": "{peak} zirvesinden {end} yılına kadar yurt dışındaki Suriyeli mülteci sayısında bir artış eğilimi görülüyor, ancak bu eğilim istatistiksel olarak anlamlı değil (p {p})."
           },
           "none": "{peak} zirvesinden {end} yılına kadar yurt dışındaki Suriyeli mülteci sayısında belirgin bir eğilim görülmüyor (p {p})."
-        },
-        "slope": "Sen eğimi",
-        "perYear": "/ yıl",
-        "p": "Mann-Kendall p",
-        "points": "Veri yılı"
+        }
       }
     },
     "dash": {

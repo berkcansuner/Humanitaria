@@ -119,11 +119,7 @@
             "notSignificant": "From its {peak} peak to {end}, the number of Syrian refugees abroad shows an increasing trend that is not statistically significant (p {p})."
           },
           "none": "From its {peak} peak to {end}, the number of Syrian refugees abroad shows no clear trend (p {p})."
-        },
-        "slope": "Sen's slope",
-        "perYear": "/ year",
-        "p": "Mann-Kendall p",
-        "points": "Years of data"
+        }
       }
     },
     "dash": {
