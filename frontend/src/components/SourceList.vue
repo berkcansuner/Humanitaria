@@ -60,7 +60,7 @@
               </button>
             </td>
             <td class="col-date">
-              <time v-if="ledgerDate(src.date)" :datetime="ledgerDate(src.date)">{{
+              <time v-if="ledgerDay(src.date)" :datetime="ledgerDay(src.date)">{{
                 ledgerDate(src.date, locale)
               }}</time>
             </td>
@@ -80,6 +80,7 @@ import {
   isValidSource,
   summarizePublishers,
   ledgerDate,
+  ledgerDay,
   isDataSource,
   dataPeriod,
 } from '../utils/sources.js'

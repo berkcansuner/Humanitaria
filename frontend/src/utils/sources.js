@@ -30,19 +30,19 @@ export function summarizePublishers(sources, max = 3) {
   return seen.length > max ? `${shown} +${seen.length - max}` : shown
 }
 
-/** The YYYY-MM-DD part of an ISO date for the ledger's Date column (a Turkish day-month-year for tr); '' otherwise. */
-export function ledgerDate(iso, locale = 'en') {
+/** The YYYY-MM-DD part of an ISO date ('' when there is none): the machine form, for `datetime`. */
+export function ledgerDay(iso) {
   const m = /^(\d{4}-\d{2}-\d{2})/.exec(iso || '')
-  if (!m) return ''
-  const date = new Date(m[1])
-  // A calendar overflow (2026-02-30) would roll into the next month: keep it as written.
-  if (locale !== 'tr' || isNaN(date) || date.toISOString().slice(0, 10) !== m[1]) return m[1]
-  return new Intl.DateTimeFormat('tr-TR', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }).format(date)
+  return m ? m[1] : ''
+}
+
+/**
+ * A date as every screen shows it, in both languages: day.month.year ('17.03.2026').
+ * '' when the value has no date. (Callers may still pass a locale; it is not used.)
+ */
+export function ledgerDate(iso) {
+  const day = ledgerDay(iso)
+  return day ? `${day.slice(8, 10)}.${day.slice(5, 7)}.${day.slice(0, 4)}` : ''
 }
 
 /** A technical monitoring report's data source (an HDX HAPI dataset), not a document. */

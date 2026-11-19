@@ -60,9 +60,9 @@ describe('SourceList', () => {
     await mount(DATASETS)
     expect(host.querySelector('.sources-summary').textContent).toContain('2 sources')
     expect(metas()).toEqual([
-      'OCHA HNO · Global Humanitarian Programme Cycle, Humanitarian Needs · 2024-01-01 – 2026-01-01 · retrieved 2026-11-18',
+      'OCHA HNO · Global Humanitarian Programme Cycle, Humanitarian Needs · 01.01.2024 – 01.01.2026 · retrieved 18.11.2026',
       // The IOM DTM credit line is shown whole, exactly as given.
-      `${IOM_CREDIT} · 2026-01-31 · retrieved 2026-11-18`,
+      `${IOM_CREDIT} · 31.01.2026 · retrieved 18.11.2026`,
     ])
     const link = host.querySelector('.source-link')
     expect(link.getAttribute('href')).toBe('https://data.humdata.org/dataset/global-hpc-hno')
@@ -77,12 +77,12 @@ describe('SourceList', () => {
     expect(summary).not.toContain('International Organization for Migration')
   })
 
-  it('writes dates in the interface language and never translates names', async () => {
+  it('writes the same day.month.year dates in Turkish and never translates names', async () => {
     setLocale('tr')
     await mount(DATASETS)
     expect(host.querySelector('.sources-summary').textContent).toContain('2 kaynak')
     expect(metas()[0]).toBe(
-      'OCHA HNO · Global Humanitarian Programme Cycle, Humanitarian Needs · 1 Oca 2024 – 1 Oca 2026 · erişim tarihi 18 Kas 2026',
+      'OCHA HNO · Global Humanitarian Programme Cycle, Humanitarian Needs · 01.01.2024 – 01.01.2026 · erişim tarihi 18.11.2026',
     )
     expect(metas()[1].startsWith(IOM_CREDIT)).toBe(true)
   })

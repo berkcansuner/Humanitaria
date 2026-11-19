@@ -47,17 +47,20 @@ describe('summarizePublishers', () => {
 })
 
 describe('ledgerDate', () => {
-  it('keeps the YYYY-MM-DD part of an ISO date', () => {
-    expect(ledgerDate('2026-11-03')).toBe('2026-11-03')
-    expect(ledgerDate('2026-11-03T08:15:00+00:00')).toBe('2026-11-03')
+  it('writes the date part of an ISO date as day.month.year', () => {
+    expect(ledgerDate('2026-11-03')).toBe('03.11.2026')
+    expect(ledgerDate('2026-11-03T08:15:00+00:00')).toBe('03.11.2026')
   })
 
-  it('writes the date with a Turkish month name for tr', () => {
-    expect(ledgerDate('2026-11-03T08:15:00+00:00', 'tr')).toBe('3 Kas 2026')
+  it('writes the same day.month.year for tr', () => {
+    expect(ledgerDate('2026-11-03T08:15:00+00:00', 'tr')).toBe('03.11.2026')
+    expect(ledgerDate('2026-11-03T08:15:00+00:00', 'tr')).toBe(
+      ledgerDate('2026-11-03T08:15:00+00:00', 'en'),
+    )
     expect(ledgerDate('Nov 2026', 'tr')).toBe('')
-    expect(ledgerDate('2026-13-45', 'tr')).toBe('2026-13-45')
-    // A day the month does not have stays as written, as in English (no shift to March).
-    expect(ledgerDate('2026-02-30', 'tr')).toBe('2026-02-30')
+    expect(ledgerDate('2026-13-45', 'tr')).toBe('45.13.2026')
+    // A day the month does not have keeps its own digits, as in English (no shift to March).
+    expect(ledgerDate('2026-02-30', 'tr')).toBe('30.02.2026')
   })
 
   it('returns an empty string for a missing or malformed date', () => {
@@ -160,9 +163,9 @@ describe('returnToCite', () => {
 })
 
 describe('citeLabel', () => {
-  it('names the source with title, publisher and ISO date', () => {
+  it('names the source with title, publisher and day.month.year date', () => {
     expect(citeLabel('3', { title: 'Bulletin', source: 'WHO', date: '2026-10-09T00:00:00Z' })).toBe(
-      'Source 3: Bulletin, WHO, 2026-10-09',
+      'Source 3: Bulletin, WHO, 09.10.2026',
     )
   })
 
@@ -181,7 +184,7 @@ describe('citeLabel', () => {
       setLocale('tr')
       expect(
         citeLabel('3', { title: 'Bulletin', source: 'WHO', date: '2026-10-09T00:00:00Z' }),
-      ).toBe('Kaynak 3: Bulletin, WHO, 9 Eki 2026')
+      ).toBe('Kaynak 3: Bulletin, WHO, 09.10.2026')
       expect(citeLabel('4', null)).toBe('Kaynak 4')
     })
   })
@@ -191,18 +194,18 @@ describe('citeLabel', () => {
 // ("2024-01-01 – 2026-01-01"), one date, or (older) "… to …".
 describe('dataPeriod', () => {
   it('shows both ends of the period, joined by an en dash', () => {
-    expect(dataPeriod('2024-01-01 – 2026-01-01')).toBe('2024-01-01 – 2026-01-01')
-    expect(dataPeriod('2024-01-01 – 2026-01-01', 'tr')).toBe('1 Oca 2024 – 1 Oca 2026')
+    expect(dataPeriod('2024-01-01 – 2026-01-01')).toBe('01.01.2024 – 01.01.2026')
+    expect(dataPeriod('2024-01-01 – 2026-01-01', 'tr')).toBe('01.01.2024 – 01.01.2026')
   })
 
   it('reads the older "to" form and a spaced hyphen the same way', () => {
-    expect(dataPeriod('2022-03-01 to 2026-09-01', 'tr')).toBe('1 Mar 2022 – 1 Eyl 2026')
-    expect(dataPeriod('2022-03-01 - 2026-09-01')).toBe('2022-03-01 – 2026-09-01')
+    expect(dataPeriod('2022-03-01 to 2026-09-01', 'tr')).toBe('01.03.2022 – 01.09.2026')
+    expect(dataPeriod('2022-03-01 - 2026-09-01')).toBe('01.03.2022 – 01.09.2026')
   })
 
   it('never splits inside an ISO date', () => {
-    expect(dataPeriod('2026-01-31')).toBe('2026-01-31')
-    expect(dataPeriod('2026-01-31', 'tr')).toBe('31 Oca 2026')
+    expect(dataPeriod('2026-01-31')).toBe('31.01.2026')
+    expect(dataPeriod('2026-01-31', 'tr')).toBe('31.01.2026')
   })
 
   it('shows a period it cannot read exactly as received', () => {

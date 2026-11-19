@@ -351,7 +351,7 @@ describe('ReportsView in two languages', () => {
       await mount()
       const head = host.querySelector('.saved-series-head')
       // The period sits on its own line under the type: no leading "·".
-      expect(head.querySelector('.saved-period').textContent.trim()).toBe('to 2026-10-31')
+      expect(head.querySelector('.saved-period').textContent.trim()).toBe('to 31.10.2026')
       // A wrap may only fall after a separator, never just before one: each "·" is
       // glued to the word in front of it by a no-break space.
       for (const meta of host.querySelectorAll('.saved-meta')) {
@@ -414,7 +414,7 @@ describe('ReportsView in two languages', () => {
       await mount('/reports?report=r1')
       expect(text('.sources-summary')).toMatch(/^1 source/)
       expect(text('.source-meta')).toBe(
-        'OCHA HNO · Global Humanitarian Programme Cycle, Humanitarian Needs · 2024-01-01 – 2026-01-01 · retrieved 2026-11-18',
+        'OCHA HNO · Global Humanitarian Programme Cycle, Humanitarian Needs · 01.01.2024 – 01.01.2026 · retrieved 18.11.2026',
       )
       setLocale('tr')
       await flush()
@@ -701,8 +701,8 @@ describe('ReportsView in two languages', () => {
       expect(stage()).toBe('Reading 14 sources. The first words usually appear within two minutes.')
       expect(text('.progress-read .read-caption')).toBe("Sources in this report's reading list")
       expect(rows()).toEqual([
-        ['Sudan: Humanitarian Access Snapshot', 'OCHA · 2026-10-11'],
-        ['IPC Acute Food Insecurity Analysis', 'IPC · 2026-10-02'],
+        ['Sudan: Humanitarian Access Snapshot', 'OCHA · 11.10.2026'],
+        ['IPC Acute Food Insecurity Analysis', 'IPC · 02.10.2026'],
         ['WFP Sudan Situation Report #42', 'WFP'],
       ])
       // All rows are in the page at once: the row-by-row reveal is CSS only, so
@@ -783,7 +783,7 @@ describe('ReportsView in two languages', () => {
         '14 kaynak okunuyor. İlk sözcükler genellikle iki dakika içinde görünür.',
       )
       expect(text('.progress-read .read-caption')).toBe('Bu raporun okuma listesindeki kaynaklar')
-      expect(rows()[0]).toEqual(['Sudan: Humanitarian Access Snapshot', 'OCHA · 11 Eki 2026'])
+      expect(rows()[0]).toEqual(['Sudan: Humanitarian Access Snapshot', 'OCHA · 11.10.2026'])
       expect(text('.progress-read .read-more')).toBe('ve 11 kaynak daha')
       expect(text('.progress-elapsed')).toBe('Geçen süre: 0:20')
     })
@@ -839,7 +839,7 @@ describe('ReportsView in two languages', () => {
       expect(
         [...host.querySelectorAll('.source-index')].map((el) => el.textContent.trim()),
       ).toEqual(['1', '3'])
-      expect(text('.source-meta')).toBe('OCHA HNO · 2024-01-01 – 2026-01-01 · retrieved 2026-11-18')
+      expect(text('.source-meta')).toBe('OCHA HNO · 01.01.2024 – 01.01.2026 · retrieved 18.11.2026')
     })
 
     it('outlines "What changed" for the next period of a series', async () => {

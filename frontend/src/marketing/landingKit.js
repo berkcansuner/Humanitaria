@@ -219,9 +219,11 @@ export function monthLabel(iso, locale = 'en') {
   return `${monthFormat(locale).format(d)} ${d.getUTCFullYear()}`
 }
 
-// '27 Jan 2026' for an ISO date, read in UTC.
-export function dayLabel(iso, locale = 'en') {
-  return `${new Date(iso).getUTCDate()} ${monthLabel(iso, locale)}`
+// '27.01.2026' for an ISO date, read in UTC: the one form every full date takes.
+export function dayLabel(iso) {
+  const d = new Date(iso)
+  const two = (n) => String(n).padStart(2, '0')
+  return `${two(d.getUTCDate())}.${two(d.getUTCMonth() + 1)}.${d.getUTCFullYear()}`
 }
 
 // A series point's period: 'Feb 2025' for monthly data, '2021' for annual (calendar-year) data.

@@ -51,7 +51,7 @@ describe('renderMarkdown citation names', () => {
     const html = renderMarkdown('Needs [1].', [
       { index: 1, url: 'https://x/1', title: 'Access Update', source: 'OCHA', date: '2026-10-21' },
     ])
-    expect(html).toContain('aria-label="Source 1: Access Update, OCHA, 2026-10-21"')
+    expect(html).toContain('aria-label="Source 1: Access Update, OCHA, 21.10.2026"')
   })
 
   it('falls back to the number while sources are still streaming', () => {

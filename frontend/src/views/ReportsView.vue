@@ -764,9 +764,9 @@ function languageLabel(r) {
   return t('reports.saved.language', { name })
 }
 
-// A single day in a list line: ISO in English as before, day.month.year in Turkish.
+// A single day in a list line: day.month.year in both languages.
 function shownDay(iso) {
-  return locale.value === 'tr' ? formatPeriod(iso) : iso
+  return formatPeriod(iso)
 }
 
 // Each delete button names its report: a list of identical "Delete report"
