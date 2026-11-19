@@ -14,8 +14,8 @@ import requests
 
 from analytics.charts import comparison_chart, correlation_chart, trend_chart
 from analytics.datasets import (
-    competing_totals_note, consistent_snapshots, ipc_coverage_note, national_series,
-    regional_series, sub_sector_lines,
+    competing_totals, competing_totals_note, consistent_snapshots, ipc_coverage,
+    ipc_coverage_note, national_series, regional_series, snapshot_selection, sub_sector_lines,
 )
 from analytics.hapi_client import HapiError, fetch_rows, resource_metadata
 from analytics.indicators import indicators_for
@@ -54,6 +54,11 @@ class Findings:
     # A sector report's own figures (its people-in-need series), each with the short caveat
     # a summary sentence must carry: what the Executive Summary opens with.
     headline: list = field(default_factory=list)
+    # The same gaps, notes and headline figures as data, for the report's own text in its
+    # language (analytics.report_text); the strings above are the model's English context.
+    gap_items: list = field(default_factory=list)       # {"name", "code", "n"}
+    note_items: list = field(default_factory=list)      # {"name", "window", "kind", …}
+    headline_items: list = field(default_factory=list)
 
 
 # Section headings are copied verbatim by the model and matched back to their charts,
@@ -103,6 +108,9 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
     failed: list[str] = []
     used: list[dict] = []
     headline: list[str] = []
+    gap_items: list[dict] = []
+    note_items: list[dict] = []
+    headline_items: list[dict] = []
 
     for ind in indicators_for(theme):
         name = ind.name(language)
@@ -118,6 +126,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
             # iptal olur; burada geniş tutup yalnızca bu indikatörü gaps'e düşürüyoruz.
             logger.warning("HAPI %s başarısız (%s): %s", ind.key, iso3, exc)
             gaps.append(f"{name}: could not be retrieved from HDX HAPI")
+            gap_items.append({"name": name, "code": "not_retrieved"})
             failed.append(ind.key)
             continue
 
@@ -127,7 +136,8 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
         # indikatör gap'e düşer — diğer indikatörler işlenmeye devam eder.
         try:
             all_rows = rows
-            rows, series_notes, periods, values = _series(all_rows, ind, date_from, date_to, today)
+            rows, series_notes, series_items, periods, values = _series_detail(
+                all_rows, ind, date_from, date_to, today)
             # Too few points in the chosen period for a trend: the trend looks back over
             # the default window ending at the chosen end (most HAPI series are yearly or
             # half-yearly, so a one-year period held one observation). Only the trend
@@ -135,7 +145,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
             look_back = None
             t_periods, t_values = periods, values
             if len(values) < min_pts and look_back_from < date_from:
-                _, lb_notes, lb_periods, lb_values = _series(
+                _, lb_notes, lb_items, lb_periods, lb_values = _series_detail(
                     all_rows, ind, look_back_from, date_to, today)
                 if len(lb_values) > len(values):
                     look_back = {"date_from": look_back_from, "date_to": date_to,
@@ -143,6 +153,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                     t_periods, t_values = lb_periods, lb_values
             name, line_notes, not_comparable, latest_caveat = _plan_line(
                 ind, all_rows, t_periods, t_values, language)
+            plan = _plan_line_detail(ind, all_rows, t_periods, t_values)
             # The look-back's notes only when a section will show its values (a series
             # too short for a trend under "All sectors" is a gap line, its values unshown).
             shows_look_back = look_back and (
@@ -153,11 +164,16 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                 # period, the trend covers the look-back.
                 notes += [f"{name} (chosen period): {n}" for n in series_notes]
                 notes += [f"{name} (look-back window): {n}" for n in lb_notes]
+                note_items += [{"name": name, "window": "chosen", **i} for i in series_items]
+                note_items += [{"name": name, "window": "look_back", **i} for i in lb_items]
             else:
                 notes += [f"{name}: {n}" for n in series_notes]
+                note_items += [{"name": name, "window": None, **i} for i in series_items]
             notes += line_notes
+            note_items += [{"name": name, "window": None, **i} for i in plan["notes"]]
             if not t_values:
                 gaps.append(f"{name}: no data in the period")
+                gap_items.append({"name": name, "code": "no_data"})
                 continue
             covered.append(ind.key)
             if look_back is None:
@@ -178,9 +194,11 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
             tr = trend(t_values, indicator=name, min_points=min_pts, times=times)
             if tr.direction == "insufficient_data":
                 gaps.append(f"{name}: too few observations for a trend test (n={tr.n_points})")
+                gap_items.append({"name": name, "code": "too_few", "n": tr.n_points})
             elif not_comparable:
                 # Years that are different plan lines: no trend is tested across them.
                 gaps.append(f"{name}: years not comparable, so no trend was tested")
+                gap_items.append({"name": name, "code": "not_comparable"})
             if (tr.direction == "insufficient_data" and theme is not None) or not_comparable:
                 # The values are still the sector's figures: reported as they are, untested.
                 # ("All sectors" keeps such a series as a gap only, as it always did.)
@@ -195,6 +213,8 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                                  "value_unit": _value_unit(ind), "min_points": min_pts,
                                  "look_back": look_back, "chosen_from": date_from,
                                  "not_comparable": not_comparable,
+                                 "not_comparable_years": plan["years"] if not_comparable else None,
+                                 "sector_en": ind.sector_en, "sector_tr": ind.sector_tr,
                                  "resolution": ind.resolution, "exact": bool(line_notes)},
                     chart=chart,
                     chart_dark=chart_dark,
@@ -219,6 +239,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                                  "chosen_from": date_from,
                                  "latest_value": t_values[-1], "latest_period": t_periods[-1],
                                  "first_value": t_values[0],
+                                 "periods": t_periods, "values": t_values,
                                  # A share changes in percentage points along the line,
                                  # never as a relative percent of a percent.
                                  "line_change": (tr.slope * times[-1]
@@ -253,6 +274,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
         except Exception as exc:
             logger.warning("%s indikatörü analiz hatası (%s): %s", ind.key, iso3, exc)
             gaps.append(f"{name}: analysis error")
+            gap_items.append({"name": name, "code": "analysis_error"})
             used[:] = [u for u in used if u["key"] != ind.key]   # not in the report: no source
             continue
         if len(sections) == sections_before:
@@ -270,6 +292,11 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
             headline.append(f"{name}: {figure} "
                             f"({_when(t_periods[-1], ind.resolution)}{before})"
                             + (f"; {'; '.join(caveats)}" if caveats else "") + ".")
+            headline_items.append({
+                "name": name, "value": t_values[-1], "unit": _value_unit(ind),
+                "period": t_periods[-1], "resolution": ind.resolution, "exact": bool(line_notes),
+                "before": bool(before), "not_comparable": bool(not_comparable),
+                "caveat": plan["caveat"], "sector_en": ind.sector_en, "sector_tr": ind.sector_tr})
 
     # İndikatörler-arası korelasyon: ortak dönemi olan indikatör çiftleri.
     labels = list(national_by_label.keys())
@@ -305,7 +332,8 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
     return Findings(sections=sections, gaps=gaps, indicators_covered=covered,
                     date_from=date_from, date_to=date_to, default_years=default_years,
                     notes=notes, look_backs=look_backs, failed=failed, data_sources=used,
-                    headline=headline)
+                    headline=headline, gap_items=gap_items, note_items=note_items,
+                    headline_items=headline_items)
 
 
 def _full(value: float) -> str:
@@ -359,6 +387,36 @@ def _plan_line(ind, rows: list[dict], periods: list, values: list,
         caveat = (f"it is not the plan's overall {sector} figure" if below(latest)
                   else f"it may not be the plan's overall {sector} figure")
     return name, notes, _not_comparable(by_period, lines, below, sector), caveat
+
+
+def _plan_line_detail(ind, rows: list[dict], periods: list, values: list) -> dict:
+    """What _plan_line says, as data: "notes" (one per period with plan lines: {"kind":
+    "plan_line", "year", "lines", "figure", "below", "sector_en", "sector_tr"}), "years"
+    (which of the series' years are "below" a sub-line, possibly a "line", or the plan's
+    "single" figure) and "caveat" for the latest figure ("not_overall", "maybe_not_overall"
+    or None)."""
+    lines = sub_sector_lines(rows, ind)
+    by_period = {str(p)[:10]: v for p, v in zip(periods, values)}
+    lines = {p: subs for p, subs in lines.items() if p in by_period}
+    if not lines:
+        return {"notes": [], "years": None, "caveat": None}
+
+    def below(period):
+        return any(v > by_period[period] for _, v in lines.get(period, []))
+
+    notes = [{"kind": "plan_line", "year": period[:4], "lines": subs,
+              "figure": by_period[period], "below": below(period),
+              "sector_en": ind.sector_en or "the sector", "sector_tr": ind.sector_tr or "sektör"}
+             for period, subs in lines.items()]
+    years: dict[str, list[str]] = {}
+    for period in sorted(by_period):
+        kind = "single" if period not in lines else ("below" if below(period) else "line")
+        years.setdefault(kind, []).append(period[:4])
+    latest = str(periods[-1])[:10]
+    caveat = None
+    if latest in lines:
+        caveat = "not_overall" if below(latest) else "maybe_not_overall"
+    return {"notes": notes, "years": years, "caveat": caveat}
 
 
 def _not_comparable(by_period: dict, lines: dict, below, sector: str) -> str | None:
@@ -415,14 +473,25 @@ def data_sources(findings: Findings, country: str, retrieved: str | None = None)
 def _series(rows: list[dict], ind, date_from: str, date_to: str, today: date):
     """The indicator's rows and national series for one window, with the notes on
     what was left out of it: (rows, notes, periods, values)."""
+    rows, notes, _, periods, values = _series_detail(rows, ind, date_from, date_to, today)
+    return rows, notes, periods, values
+
+
+def _series_detail(rows: list[dict], ind, date_from: str, date_to: str, today: date):
+    """_series with the notes also as data: (rows, notes, items, periods, values). Each
+    item is {"kind": "dtm" | "ipc" | "totals", …}, in the notes' order."""
     rows = _filter_period(rows, date_from, date_to)
     if ind.complete_periods_only:
         rows = _completed(rows, today)
+    _, left_out = snapshot_selection(rows)
     rows, note = consistent_snapshots(rows)
-    coverage = ipc_coverage_note(rows)
+    coverage, span = ipc_coverage_note(rows), ipc_coverage(rows)
     periods, values = national_series(rows, ind)
-    totals = competing_totals_note(rows, ind, fmt=_full)
-    return rows, [n for n in (note, coverage, totals) if n], periods, values
+    totals, years = competing_totals_note(rows, ind, fmt=_full), competing_totals(rows, ind)
+    items = (([{"kind": "dtm", **left_out}] if left_out else [])
+             + ([{"kind": "ipc", "low": span[0], "high": span[1]}] if span else [])
+             + ([{"kind": "totals", "years": years}] if years else []))
+    return rows, [n for n in (note, coverage, totals) if n], items, periods, values
 
 
 def _value_unit(ind) -> str:

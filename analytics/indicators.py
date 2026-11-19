@@ -37,6 +37,7 @@ class Indicator:
     credit: str = ""
     # A sector's people in need: the sector in plain English, for the findings' notes.
     sector_en: str = ""
+    sector_tr: str = ""      # the same in Turkish, for the report's own text
     # How the series' reference periods are written in the findings: "year" (HNO, UNHCR,
     # FTS: one figure a year → "2026") or "month" (IPC analyses, DTM rounds → "March 2022").
     resolution: str = "month"
@@ -91,7 +92,8 @@ def _sector_pin(key: str, sector_code: str, label_tr: str, label_en: str) -> Ind
                      "affected-people/humanitarian-needs", "population", "sum", 0,
                      {"population_status": "INN", "sector_code": sector_code},
                      label_en=f"{label_en}: people in need", source="OCHA HNO",
-                     sector_en=f"{label_en[0].lower()}{label_en[1:]}", resolution="year")
+                     sector_en=f"{label_en[0].lower()}{label_en[1:]}",
+                     sector_tr=f"{label_tr[0].lower()}{label_tr[1:]}", resolution="year")
 
 
 # HNO sector codes as HDX HAPI serves them (checked 2026-11-18 for AFG, SDN, SYR, YEM;

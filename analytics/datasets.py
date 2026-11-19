@@ -141,6 +141,17 @@ def two_totals_periods(rows: list[dict], indicator: Indicator) -> dict[str, dict
     return out
 
 
+def competing_totals(rows: list[dict], indicator: Indicator) -> list[dict]:
+    """One entry per year whose two totals differ: {"year", "blank", "total", "used"}
+    ("used": '' or 'total', the row _published_total picks)."""
+    out = []
+    for period, totals in two_totals_periods(rows, indicator).items():
+        chosen, _ = _published_total(totals, totals["beside_sub_lines"])
+        out.append({"year": period[:4], "blank": totals[""], "total": totals["total"],
+                    "used": chosen})
+    return out
+
+
 def competing_totals_note(rows: list[dict], indicator: Indicator,
                           fmt=lambda v: str(int(v))) -> str | None:
     """HNO rows carry a sector's total twice per year: the undisaggregated row
@@ -150,12 +161,11 @@ def competing_totals_note(rows: list[dict], indicator: Indicator,
     (Haiti protection 2025: migrants 349,999, general protection 466,589, protection
     total 2,160,007) HAPI keeps two sub-lines and neither is the sector figure."""
     years = []
-    for period, totals in two_totals_periods(rows, indicator).items():
-        chosen, _ = _published_total(totals, totals["beside_sub_lines"])
-        blank = f"{fmt(totals[''])} without a breakdown" + (" (used)" if chosen == "" else "")
-        total = f"{fmt(totals['total'])} as the total of its breakdown" + (
-            " (used)" if chosen == "total" else "")
-        years.append(f"{period[:4]}: {blank} and {total}")
+    for t in competing_totals(rows, indicator):
+        blank = f"{fmt(t['blank'])} without a breakdown" + (" (used)" if t["used"] == "" else "")
+        total = f"{fmt(t['total'])} as the total of its breakdown" + (
+            " (used)" if t["used"] == "total" else "")
+        years.append(f"{t['year']}: {blank} and {total}")
     if not years:
         return None
     return (f"HDX HAPI holds two totals for {'; '.join(years)}; the HNO's published sector "
@@ -192,8 +202,9 @@ def sub_sector_lines(rows: list[dict], indicator: Indicator) -> dict[str, list[t
 _COMPLETE_SHARE = 0.8  # a snapshot must cover at least this share of the operation's regions
 
 
-def consistent_snapshots(rows: list[dict]) -> tuple[list[dict], str | None]:
-    """One DTM operation, complete rounds only (IDPs).
+def snapshot_selection(rows: list[dict]) -> tuple[list[dict], dict | None]:
+    """One DTM operation, complete rounds only (IDPs), and what was left out:
+    {"operation", "other_operations", "incomplete_rounds"} (None when nothing was).
 
     HAPI returns several displacement-tracking operations for a country, each
     counting differently (a countrywide overview, an event's new displacement, an
@@ -201,8 +212,7 @@ def consistent_snapshots(rows: list[dict]) -> tuple[list[dict], str | None]:
     Summing all of it per date mixed definitions and coverage. Kept: the operation
     covering the most regions in one snapshot, then the most recent, then the one
     with the most snapshots; within it, snapshots covering at least 80% of its
-    regions. Rows without an operation are returned unchanged. The note (None when
-    nothing was left out) tells the report what was used."""
+    regions. Rows without an operation are returned unchanged."""
     if not any(r.get("operation") for r in rows):
         return rows, None
     snapshots: dict[str, dict[str, set]] = {}          # operation -> date -> regions
@@ -224,25 +234,44 @@ def consistent_snapshots(rows: list[dict]) -> tuple[list[dict], str | None]:
     dropped_rounds = len(snapshots[chosen]) - len(complete)
     if not dropped_ops and not dropped_rounds:
         return rows, None
-    parts = [f"only the DTM operation '{chosen}' is used"]
-    if dropped_ops:
-        parts.append(f"{dropped_ops} other operation(s) count displacement differently and are not mixed in")
-    if dropped_rounds:
-        parts.append(f"{dropped_rounds} incomplete round(s) covering under 80% of its regions are left out")
+    return kept, {"operation": chosen, "other_operations": dropped_ops,
+                  "incomplete_rounds": dropped_rounds}
+
+
+def consistent_snapshots(rows: list[dict]) -> tuple[list[dict], str | None]:
+    """snapshot_selection with its note in English (None when nothing was left out)."""
+    kept, left_out = snapshot_selection(rows)
+    if left_out is None:
+        return kept, None
+    parts = [f"only the DTM operation '{left_out['operation']}' is used"]
+    if left_out["other_operations"]:
+        parts.append(f"{left_out['other_operations']} other operation(s) count displacement "
+                     f"differently and are not mixed in")
+    if left_out["incomplete_rounds"]:
+        parts.append(f"{left_out['incomplete_rounds']} incomplete round(s) covering under 80% "
+                     f"of its regions are left out")
     return kept, "; ".join(parts)
 
 
 _COVERAGE_CHANGE = 1.2   # analysed population varying more than this factor is noted
 
 
-def ipc_coverage_note(rows: list[dict]) -> str | None:
-    """A note when IPC analyses covered very different populations across periods
-    (people in phase / share in phase = population analysed) — why the series uses
-    the share. None when coverage is stable or the rows are not IPC rows."""
+def ipc_coverage(rows: list[dict]) -> tuple[float, float] | None:
+    """(smallest, largest) analysed population when IPC analyses covered very different
+    populations across periods (people in phase / share in phase = population analysed);
+    None when coverage is stable or the rows are not IPC rows."""
     analysed = [r["population_in_phase"] / r["population_fraction_in_phase"] for r in rows
                 if r.get("population_in_phase") and r.get("population_fraction_in_phase")]
     if not analysed or max(analysed) <= _COVERAGE_CHANGE * min(analysed):
         return None
+    return min(analysed), max(analysed)
+
+
+def ipc_coverage_note(rows: list[dict]) -> str | None:
+    """Why the IPC series uses the share, in English (None when coverage is stable)."""
+    span = ipc_coverage(rows)
+    if span is None:
+        return None
     return (f"IPC analyses covered different parts of the country in different periods "
-            f"(analysed population {min(analysed) / 1e6:.1f} to {max(analysed) / 1e6:.1f} million), "
+            f"(analysed population {span[0] / 1e6:.1f} to {span[1] / 1e6:.1f} million), "
             f"so the share of the analysed population is used, not the number of people")
