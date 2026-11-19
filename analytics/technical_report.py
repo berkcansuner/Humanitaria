@@ -8,7 +8,7 @@ findings_to_context, hesaplanmış sayıları LLM'e 'context' olarak verilecek m
 import logging
 import math
 from dataclasses import dataclass, field
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import requests
 
@@ -66,6 +66,11 @@ _HEADINGS = {
 }
 
 
+def _today() -> date:
+    """Today in UTC: the day the period is capped at, and the retrieval day."""
+    return datetime.now(timezone.utc).date()
+
+
 def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                      language: str = "tr", theme: str | None = None) -> Findings:
     """*language* ("tr" or "en") names the indicators, section headings and chart
@@ -83,7 +88,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
     source_by_label: dict[str, str] = {}                   # credit, for the chart's source line
     # Dönem: seçilmediyse son N yıl; bitiş en geç bugün (HAPI gelecek yılların plan
     # kayıtlarını da döndürür — son nokta olarak sahte bir düşüş üretiyordu).
-    today = date.today()
+    today = _today()
     default_years = None if date_from else settings.TECHNICAL_REPORT_DEFAULT_YEARS
     if default_years:
         date_from = _years_before(today, default_years).isoformat()
@@ -138,7 +143,12 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                     t_periods, t_values = lb_periods, lb_values
             name, line_notes, not_comparable, latest_caveat = _plan_line(
                 ind, all_rows, t_periods, t_values, language)
-            if look_back and lb_notes != series_notes:
+            # The look-back's notes only when a section will show its values (a series
+            # too short for a trend under "All sectors" is a gap line, its values unshown).
+            shows_look_back = look_back and (
+                theme is not None or not_comparable
+                or (len(t_values) >= min_pts and len(set(t_values)) > 1))
+            if shows_look_back and lb_notes != series_notes:
                 # Each window's notes, named: the regional ranking stays on the chosen
                 # period, the trend covers the look-back.
                 notes += [f"{name} (chosen period): {n}" for n in series_notes]
@@ -185,7 +195,7 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                                  "value_unit": _value_unit(ind), "min_points": min_pts,
                                  "look_back": look_back, "chosen_from": date_from,
                                  "not_comparable": not_comparable,
-                                 "resolution": ind.resolution},
+                                 "resolution": ind.resolution, "exact": bool(line_notes)},
                     chart=chart,
                     chart_dark=chart_dark,
                     findings_text="",
@@ -255,7 +265,9 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
                 "earlier years are reported on a different basis and are not comparable"
                 if not_comparable else None, latest_caveat) if c]
             before = ", before the chosen period" if look_back and not look_back["chosen_points"] else ""
-            headline.append(f"{name}: {_amount(t_values[-1], _value_unit(ind))} "
+            figure = (f"{_full(t_values[-1])} {_value_unit(ind)}" if line_notes
+                      else _amount(t_values[-1], _value_unit(ind)))
+            headline.append(f"{name}: {figure} "
                             f"({_when(t_periods[-1], ind.resolution)}{before})"
                             + (f"; {'; '.join(caveats)}" if caveats else "") + ".")
 
@@ -303,7 +315,7 @@ def _full(value: float) -> str:
 
 
 def _plan_line(ind, rows: list[dict], periods: list, values: list,
-               language: str) -> tuple[str, list[str], str | None]:
+               language: str) -> tuple[str, list[str], str | None, str | None]:
     """The indicator's name, a note for every period whose plan reports the sector in
     separate lines (HAPI returns the sub-sectors beside it: PRO-CPN, PRO-GBV …), and,
     when the series' years are not all the plan's only figure, why they are not
@@ -377,7 +389,7 @@ def data_sources(findings: Findings, country: str, retrieved: str | None = None)
     report's document sources (index, title, url, source, date, country) with
     doctype "dataset" and the period covered and the day retrieved. The url is the HDX
     dataset page (never a HAPI request, which would carry the app identifier)."""
-    retrieved = retrieved or date.today().isoformat()
+    retrieved = retrieved or _today().isoformat()
     out = []
     looked_up: dict[str, dict | None] = {}    # one lookup per resource, failed or not
     for i, used in enumerate(findings.data_sources, start=1):
@@ -590,17 +602,28 @@ def _amount(value: float, unit: str) -> str:
     '443,000 people', '6,510 people', '1.16 billion USD', '32.0%'."""
     if unit == "%":
         return f"{_plain(value)}%"
+    if value and abs(value) < 0.5:
+        return f"about 0 {unit}"            # never "-0 people per year"
     sign, a = ("-" if value < 0 else ""), abs(value)
-    for scale, word in ((1e9, "billion"), (1e6, "million")):
+    if a >= 1000:
+        a = round(a, 2 - int(math.floor(math.log10(a))))   # three significant digits first:
+    for scale, word in ((1e9, "billion"), (1e6, "million")):   # 999,600 -> 1.00 million
         if a >= scale:
             m = a / scale
             decimals = max(0, 2 - int(math.floor(math.log10(m))))
             text = f"{m:.{decimals}f} {word}"
             break
     else:
-        whole = int(round(a, 2 - int(math.floor(math.log10(a))))) if a >= 1000 else int(round(a))
-        text = f"{whole:,}"
+        text = f"{int(round(a)):,}"
     return f"{sign}{text} {unit}"
+
+
+def _amounts(values: list[float], unit: str, exact: bool = False) -> list[str]:
+    """The values in reader form, or in full when the reader form would print two
+    different values alike (or the series has plan lines to tell apart)."""
+    if unit != "%" and (exact or len({_amount(v, unit) for v in values}) < len(set(values))):
+        return [f"{_full(v)} {unit}" for v in values]
+    return [_amount(v, unit) for v in values]
 
 
 def _rate(value: float, r: dict) -> str:
@@ -641,7 +664,7 @@ def _region_text(r: dict) -> str:
     top = ", ".join(f"{name} ({_amount(val, unit)})" for name, val in r["ranking"][:3])
     res = r.get("resolution", "month")
     first, last = _when(r["first_period"], res), _when(r["last_period"], res)
-    when = f"as of {first}" if first == last else f"mean per region, {first} to {last}"
+    when = f"as of {first}" if first == last else f"(mean per region, {first} to {last})"
     if r["p_value"] is None:
         # Not tested: a ranking for the stated date, never a "not significant" result.
         why = ("one observation per region" if r["max_obs"] <= 1
@@ -668,19 +691,20 @@ def _snapshot_text(r: dict) -> str:
     lb = r.get("look_back")
     name = f"{r['indicator']} (look-back window)" if lb else r["indicator"]
     before = ", before the chosen period" if lb and not lb["chosen_points"] else ""
-    (lp, lv) = points[-1]
-    text = f"{name}: latest value {_amount(lv, unit)} ({_when(lp, res)}{before})"
+    shown = _amounts([v for _, v in points], unit, r.get("exact", False))
+    (lp, lv), latest = points[-1], shown[-1]
+    text = f"{name}: latest value {latest} ({_when(lp, res)}{before})"
     if n > 1:
         if not r.get("not_comparable"):
-            pp, pv = points[-2]
+            (pp, pv), previous = points[-2], shown[-2]
             move = "up from" if lv > pv else ("down from" if lv < pv else "the same as")
-            text += f", {move} {_amount(pv, unit)} in {_when(pp, res)}"
-            earlier = points[:-2]
+            text += f", {move} {previous} in {_when(pp, res)}"
+            earlier = list(zip(points, shown))[:-2]
         else:
-            earlier = points[:-1]
+            earlier = list(zip(points, shown))[:-1]
         if earlier:
             text += "; earlier " + ", ".join(
-                f"{_amount(v, unit)} in {_when(p, res)}" for p, v in reversed(earlier))
+                f"{a} in {_when(p, res)}" for (p, _), a in reversed(earlier))
     text += "."
     if r.get("not_comparable"):
         text += (f" The values are not comparable across years ({r['not_comparable']}), "

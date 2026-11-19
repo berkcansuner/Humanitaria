@@ -331,3 +331,33 @@ def test_the_route_labels_the_narrative_check_log_with_the_report(caplog):
             "country": "Afghanistan", "report_type": "technical_monitoring", "language": "en"})
     assert any("Afghanistan / All sectors / technical_monitoring" in r.getMessage()
                for r in caplog.records if r.name == "analytics.narrative_check")
+
+
+
+def test_an_impossible_date_is_a_validation_error():
+    resp = _client().post("/reports/stream", json={
+        "country": "Afghanistan", "report_type": "technical_monitoring", "date_from": "2026-02-30"})
+    assert resp.status_code == 422 and resp.json()["code"] == "validation_failed"
+
+
+def test_a_capped_period_end_is_the_one_in_the_directive_and_title():
+    from analytics.technical_report import Findings
+    findings = _findings_with_sections()
+    findings.date_from, findings.date_to = "2025-01-01", "2026-11-18"
+    seen = {}
+
+    async def mock_astream(inputs, *a, **k):
+        seen["directive"] = inputs["question"]
+        yield "## İnsani ihtiyaç — Eğilim Analizi\n\nText."
+
+    chain = MagicMock()
+    chain.astream = mock_astream
+    with patch("api.routes.reports.technical_report.compute_findings", return_value=findings), \
+         patch("api.routes.reports.build_report_chain", return_value=chain):
+        resp = _client().post("/reports/stream", json={
+            "country": "Afghanistan", "report_type": "technical_monitoring", "language": "en",
+            "date_from": "2025-01-01", "date_to": "2030-12-31"})
+    events = _parse_sse_events(resp.text)
+    title = next(e for e in events if e["event"] == "saved")["data"]["title"]
+    assert "2026-11-18" in seen["directive"] and "2030-12-31" not in seen["directive"]
+    assert "2026-11-18" in title and "2030" not in title

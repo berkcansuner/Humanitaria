@@ -9,6 +9,7 @@ from analytics.technical_report import (
     Findings, ReportSection,
 )
 from analytics.indicators import INDICATORS
+from analytics.technical_report import _today
 
 
 def _rows_for(key):
@@ -258,7 +259,7 @@ def _funding_rows(ep):
     if not ep.endswith("funding"):
         return []
     from datetime import date
-    y = date.today().year
+    y = _today().year
     rows = [{"funding_usd": 100 + 10 * i, "reference_period_start": f"{y - 4 + i}-01-01",
              "reference_period_end": f"{y - 4 + i}-12-31"} for i in range(4)]   # 4 complete years
     rows.append({"funding_usd": 5, "reference_period_start": f"{y}-01-01",
@@ -291,7 +292,7 @@ def test_context_states_the_period_analysed(_mock):
     from datetime import date, timedelta
     f = compute_findings("SDN", None, None)
     ctx = findings_to_context(f)
-    today = date.today()
+    today = _today()
     from analytics.technical_report import _day
     assert (f"PERIOD ANALYSED: {_day(today.replace(year=today.year - 5).isoformat())} to "
             f"{_day(today.isoformat())}") in ctx
@@ -301,11 +302,11 @@ def test_context_states_the_period_analysed(_mock):
 @patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _funding_rows(ep))
 def test_a_chosen_period_is_kept_but_capped_at_today(_mock):
     from datetime import date
-    y = date.today().year
+    y = _today().year
     f = compute_findings("SDN", f"{y - 10}-01-01", f"{y + 5}-12-31")
     ctx = findings_to_context(f)
     from analytics.technical_report import _day
-    assert f"PERIOD ANALYSED: 1 January {y - 10} to {_day(date.today().isoformat())}" in ctx
+    assert f"PERIOD ANALYSED: 1 January {y - 10} to {_day(_today().isoformat())}" in ctx
     tr = next(s for s in f.sections if s.stat_result["kind"] == "trend")
     assert tr.stat_result["n_points"] == 5                  # the 999 year joins; future/partial do not
 
@@ -316,7 +317,7 @@ def _sudan_like_idp_rows(ep):
     if not ep.endswith("idps"):
         return []
     from datetime import date
-    y = date.today().year
+    y = _today().year
     regions = [f"R{i}" for i in range(10)]
     rows = []
     for m, (overview, event) in enumerate([(800, 600), (810, 610), (820, 620), (830, 630)], start=1):
@@ -350,7 +351,7 @@ def _yemen_ipc_rows(ep):
     if "food-security" not in ep:
         return []
     from datetime import date
-    y = date.today().year
+    y = _today().year
     data = [(y - 4, 17365500, 0.55), (y - 3, 3234000, 0.34), (y - 2, 4647925, 0.46),
             (y - 1, 17145484, 0.49), (y, 4980505, 0.47)]
     return [{"reference_period_start": f"{yr}-01-01", "reference_period_end": f"{yr}-03-31",
@@ -522,7 +523,7 @@ def _yearly_ipc_rows(ep, years_back=4):
     if "food-security" not in ep:
         return []
     from datetime import date
-    y = date.today().year
+    y = _today().year
     return [{"reference_period_start": f"{y - k}-01-01", "reference_period_end": f"{y - k}-03-31",
              "population_in_phase": 1000, "population_fraction_in_phase": 0.40 - 0.02 * k}
             for k in range(years_back, -1, -1)]
@@ -530,7 +531,7 @@ def _yearly_ipc_rows(ep, years_back=4):
 
 def _last_year():
     from datetime import date
-    today = date.today()
+    today = _today()
     return today.replace(year=today.year - 1).isoformat(), today.isoformat()
 
 
@@ -538,7 +539,7 @@ def _last_year():
 def test_a_short_period_takes_its_trend_from_a_longer_look_back(_mock):
     from datetime import date
     date_from, date_to = _last_year()
-    today = date.today()
+    today = _today()
     f = compute_findings("AFG", date_from, date_to, language="en")
     tr = next(s for s in f.sections if s.stat_result["kind"] == "trend")
     look_back_from = today.replace(year=today.year - 5).isoformat()
@@ -567,7 +568,7 @@ def test_a_short_period_takes_its_trend_from_a_longer_look_back(_mock):
 @patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _yearly_ipc_rows(ep))
 def test_a_period_with_enough_points_is_not_extended(_mock):
     from datetime import date
-    y = date.today().year
+    y = _today().year
     f = compute_findings("AFG", f"{y - 4}-01-01", None, language="en")
     tr = next(s for s in f.sections if s.stat_result["kind"] == "trend")
     assert tr.stat_result["look_back"] is None and f.look_backs == []
@@ -588,7 +589,7 @@ def _ten_year_idp_rows(ep):
     if not ep.endswith("idps"):
         return []
     from datetime import date
-    y = date.today().year
+    y = _today().year
     return [{"population": base + 10 * k, "admin1_name": region, "operation": "Overview",
              "reference_period_start": f"{y - 9 + k}-01-01"}
             for k in range(10) for region, base in (("North", 1000), ("South", 500))]
@@ -603,8 +604,8 @@ def test_the_regional_ranking_stays_on_the_chosen_period(_mock):
 
 
 @patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _two_indicator_rows(
-    ep, [f"{y}-{m:02d}-01" for y in range(__import__('datetime').date.today().year - 4,
-                                           __import__('datetime').date.today().year + 1)
+    ep, [f"{y}-{m:02d}-01" for y in range(_today().year - 4,
+                                           _today().year + 1)
          for m in (1, 2)]))
 def test_look_back_series_are_not_correlated(_mock):
     # Correlations need eight common periods inside the chosen period; a look-back
@@ -623,7 +624,7 @@ def _three_year_pin_rows(ep, params):
     if params.get("sector_code") != "FSC":
         return []
     from datetime import date
-    y = date.today().year
+    y = _today().year
     return [{"population": v, "category": "", "reference_period_start": f"{y - k}-01-01",
              "reference_period_end": f"{y - k}-12-31"}
             for k, v in ((2, 15_823_677), (1, 14_764_729), (0, 17_412_653))]
@@ -631,7 +632,7 @@ def _three_year_pin_rows(ep, params):
 
 def test_a_series_too_short_for_a_trend_is_reported_as_its_values(monkeypatch):
     from datetime import date
-    y = date.today().year
+    y = _today().year
     monkeypatch.setattr("analytics.technical_report.fetch_rows",
                         _recording_fetch([], _three_year_pin_rows))
     date_from, date_to = _last_year()
@@ -680,7 +681,7 @@ def _one_round_idp_rows(ep):
     if not ep.endswith("idps"):
         return []
     from datetime import date
-    y = date.today().year
+    y = _today().year
     return [{"population": v, "admin1_name": r, "reference_period_start": f"{y}-03-31"}
             for r, v in (("Herat", 443_000), ("Balkh", 363_000), ("Kabul", 310_000),
                          ("Kandahar", 120_000))]
@@ -689,7 +690,7 @@ def _one_round_idp_rows(ep):
 @patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _one_round_idp_rows(ep))
 def test_an_untestable_regional_comparison_is_a_ranking_snapshot(_mock):
     from datetime import date
-    y = date.today().year
+    y = _today().year
     f = compute_findings("AFG", f"{y}-01-01", None, language="en")
     region = next(s for s in f.sections if s.stat_result["kind"] == "region")
     text = region.findings_text
@@ -707,7 +708,7 @@ def test_a_partly_testable_regional_comparison_names_why():
     text = _region_text({"indicator": "IDPs", "ranking": [("A", 10.0), ("B", 5.0)],
                          "p_value": None, "kruskal_h": None, "max_obs": 2,
                          "first_period": "2025-01-01", "last_period": "2025-07-01"})
-    assert text == ("IDPs: highest regions mean per region, January 2025 to July 2025: A (10 "
+    assert text == ("IDPs: highest regions (mean per region, January 2025 to July 2025): A (10 "
                     "people), B (5 people); a statistical comparison between regions was not "
                     "possible: fewer than two regions have two or more observations.")
 
@@ -813,7 +814,7 @@ def _dtm_rows_with_an_old_partial_round(ep):
     if not ep.endswith("idps"):
         return []
     from datetime import date
-    y = date.today().year
+    y = _today().year
     regions = [f"R{i}" for i in range(10)]
     rows = [{"operation": "Overview", "admin1_name": r, "population": 100 + k,
              "reference_period_start": f"{y - 4 + k}-01-01"} for k in range(5) for r in regions]
@@ -982,8 +983,9 @@ def test_haiti_2025_prints_466589_and_its_look_back_is_not_comparable():
     f = _real_protection("HTI", with_hti_2024=True)
     sec = _protection_section(f)
     assert sec.heading == "Protection: people in need — Latest Values"
+    # A series with plan lines keeps its full figures (two lines must not print alike).
     assert sec.findings_text.startswith("Protection: people in need (look-back window): latest "
-                                        "value 467,000 people (2025); earlier 250,000 people in 2024.")
+                                        "value 466,589 people (2025); earlier 250,000 people in 2024.")
     assert ("The values are not comparable across years (2024, 2025: one of the plan's separate "
             "protection lines, not its overall figure; HDX HAPI does not say which line each "
             "year's figure is), so no trend is tested.") in sec.findings_text
@@ -1004,7 +1006,7 @@ def test_sudan_2025_is_not_called_general_and_claims_nothing_about_an_unpublishe
         f = _real_protection("SDN", language=language)
         assert _protection_section(f).heading == heading
     f = _real_protection("SDN")
-    assert "latest value 11.7 million people (2025)" in _protection_section(f).findings_text
+    assert "latest value 11,725,110 people (2025)" in _protection_section(f).findings_text
     note = next(n for n in f.notes if "separate lines" in n)
     assert ("this figure (11,725,110) is below one of the plan's protection lines, so it is not the "
             "plan's overall protection figure; HDX HAPI does not say which of the plan's lines it "
@@ -1013,7 +1015,7 @@ def test_sudan_2025_is_not_called_general_and_claims_nothing_about_an_unpublishe
 
 
 def test_afghanistan_and_congo_2025_may_be_one_of_the_lines():
-    for iso3, figure, full in (("AFG", "14.2 million", "14,213,777"), ("COD", "7.87 million", "7,870,319")):
+    for iso3, figure, full in (("AFG", "14,213,777", "14,213,777"), ("COD", "7,870,319", "7,870,319")):
         f = _real_protection(iso3)
         sec = _protection_section(f)
         assert sec.heading == "Protection: people in need — Latest Values", iso3
@@ -1050,8 +1052,8 @@ def test_a_series_mixing_plan_lines_and_single_figures_says_so_in_its_section(mo
     sec = f.sections[0]
     assert sec.stat_result["kind"] == "snapshot" and sec.stat_result["p_value"] is None
     assert sec.findings_text == (
-        "Protection: people in need: latest value 15.0 million people (2026); earlier 14.2 million "
-        "people in 2025, 14.8 million people in 2024. The values are not comparable across years "
+        "Protection: people in need: latest value 14,988,378 people (2026); earlier 14,213,777 "
+        "people in 2025, 14,809,904 people in 2024. The values are not comparable across years "
         "(2024, 2025: possibly one of the plan's separate protection lines rather than its overall "
         "figure; 2026: the plan's only protection figure; HDX HAPI does not say which line each "
         "year's figure is), so no trend is tested.")
@@ -1179,13 +1181,13 @@ _HEADLINE = "HEADLINE (the sector's own figures; open the Executive Summary with
 def test_a_sector_report_has_a_headline_with_its_caveat(monkeypatch):
     monkeypatch.setattr("analytics.technical_report.fetch_rows", _recording_fetch([], _afg_like_rows()))
     f = compute_findings("AFG", None, None, language="en", theme="Protection and Human Rights")
-    assert (_HEADLINE + "Protection: people in need: 15.0 million people (2026); earlier years are "
+    assert (_HEADLINE + "Protection: people in need: 14,988,378 people (2026); earlier years are "
             "reported on a different basis and are not comparable.") in findings_to_context(f)
 
 
 def test_a_headline_says_when_the_latest_figure_is_not_the_overall_one():
     f = _real_protection("HTI", with_hti_2024=True)
-    assert (_HEADLINE + "Protection: people in need: 467,000 people (2025); earlier years are "
+    assert (_HEADLINE + "Protection: people in need: 466,589 people (2025); earlier years are "
             "reported on a different basis and are not comparable; it is not the plan's overall "
             "protection figure.") in findings_to_context(f)
 
@@ -1198,7 +1200,7 @@ def test_food_and_nutrition_headline_lists_both_people_in_need_figures(monkeypat
     monkeypatch.setattr("analytics.technical_report.fetch_rows", _recording_fetch([], rows))
     f = compute_findings("AFG", None, None, language="en", theme="Food and Nutrition")
     from datetime import date
-    y = date.today().year
+    y = _today().year
     assert (_HEADLINE + f"Food security: people in need: 17.4 million people ({y}). Nutrition: "
             f"people in need: 17.4 million people ({y}).") in findings_to_context(f)
 
@@ -1214,7 +1216,7 @@ def test_all_sectors_has_no_headline(_mock):
 def test_a_period_ending_tomorrow_utc_is_kept_and_later_ones_are_capped(_mock):
     from datetime import date, timedelta
     from analytics.technical_report import _day
-    today = date.today()
+    today = _today()
     tomorrow, later = today + timedelta(days=1), today + timedelta(days=2)
     f = compute_findings("AFG", "2025-01-01", tomorrow.isoformat(), language="en")
     assert f.date_to == tomorrow.isoformat()
@@ -1255,3 +1257,58 @@ def test_a_trend_without_a_relative_change_does_not_print_n_a():
         "first_value": 6510.0, "latest_value": 1_950_000.0, "value_unit": "people",
         "resolution": "year"})
     assert "n/a" not in text and "relative change" not in text
+
+
+
+# --- Round 3 review: figures that must stay distinct, and other minors. ---
+
+def test_a_series_with_plan_lines_prints_its_figures_in_full():
+    # AFG 2025: the protection figure 14,213,777 and the GBV line 14,173,291 both read
+    # "14.2 million" when rounded; a series with plan lines keeps its full figures.
+    f = _real_protection("AFG")
+    sec = _protection_section(f)
+    assert "latest value 14,213,777 people (2025)" in sec.findings_text
+    assert "14.2 million" not in sec.findings_text
+    assert "Protection: people in need: 14,213,777 people (2025" in findings_to_context(f)
+
+
+def test_amounts_at_the_edges_read_correctly():
+    from analytics.technical_report import _amount
+    assert _amount(999_600, "people") == "1.00 million people"
+    assert _amount(999_600_000, "USD") == "1.00 billion USD"
+    assert _amount(0.4, "people") == "about 0 people"
+    assert _amount(-0.4, "people") == "about 0 people"
+    assert _amount(0, "people") == "0 people"
+    assert _amount(17_420_000, "people") == "17.4 million people"
+
+
+def test_two_values_that_round_alike_are_not_written_as_up_from_the_same():
+    from analytics.technical_report import _snapshot_text
+    text = _snapshot_text({"indicator": "X", "periods": ["2025-01-01", "2026-01-01"],
+                           "values": [17_380_000, 17_420_000], "value_unit": "people",
+                           "min_points": 4, "resolution": "year"})
+    assert "17,420,000 people (2026), up from 17,380,000 people in 2025" in text
+
+
+def test_a_slope_under_half_a_person_reads_about_zero():
+    from analytics.technical_report import _trend_text
+    text = _trend_text({"indicator": "Y", "direction": "no trend", "slope": 0.3, "ci_low": -12.0,
+                        "ci_high": 40.0, "tau": 0.1, "p_value": 0.8, "p_adjusted": 0.8,
+                        "significant": False, "family": 1, "pct_change": 0.5, "line_change": None,
+                        "first_period": "2022-01-01", "last_period": "2025-01-01", "n_points": 13,
+                        "unit": "", "first_value": 6510.0, "latest_value": 6520.0,
+                        "value_unit": "people", "resolution": "month"})
+    assert "Sen slope about 0 people per year" in text and "-0" not in text
+
+
+@patch("analytics.technical_report.fetch_rows", side_effect=lambda ep, iso3, **k: _dtm_rows_with_an_old_partial_round(ep))
+def test_a_look_back_note_only_for_an_indicator_the_look_back_line_lists(_mock):
+    # All sectors: IDPs too short for a trend under the look-back show no look-back values,
+    # so their DTM note is not labelled "(look-back window)".
+    date_from, date_to = _last_year()
+    f = compute_findings("AFG", date_from, date_to, language="en")
+    ctx = findings_to_context(f)
+    listed = ctx.split("LOOK-BACK:", 1)[1].split("\n", 1)[0] if "LOOK-BACK:" in ctx else ""
+    for note in f.notes:
+        if "(look-back window)" in note:
+            assert note.split(" (look-back window)")[0] in listed

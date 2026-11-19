@@ -8,6 +8,7 @@ in rag.report_service, the LLM chain in rag.chain, persistence in rag.reports.
 import json
 import logging
 import re
+from datetime import date
 from uuid import uuid4
 
 import anyio
@@ -123,6 +124,14 @@ class ReportRequest(BaseModel):
     # Set by "Run next period": the saved report this one continues. The new
     # report compares against it ("What changed since the last report").
     previous_report_id: Optional[str] = Field(default=None, min_length=1, max_length=64)
+
+    @field_validator("date_from", "date_to")
+    @classmethod
+    def _real_date(cls, v: Optional[str]) -> Optional[str]:
+        # The pattern lets "2026-02-30" through; it would crash the analysis.
+        if v is not None:
+            date.fromisoformat(v)
+        return v
 
     @field_validator("theme")
     @classmethod
@@ -337,14 +346,16 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
 
                 yield _computed_event(findings, req)
                 context = technical_report.findings_to_context(findings)
+                # The period the analysis used: a requested end in the future is capped.
+                date_to = findings.date_to if req.date_to else req.date_to
                 directive = build_report_directive(
-                    req.country, req.theme, req.date_from, req.date_to,
+                    req.country, req.theme, req.date_from, date_to,
                     len(findings.indicators_covered), req.language,
                     report_type=req.report_type,
                 )
                 if previous:
                     directive += build_comparison_block(
-                        previous, req.language, req.report_type, req.date_from, req.date_to
+                        previous, req.language, req.report_type, req.date_from, date_to
                     )
                 chain = build_report_chain(req.report_type)
 
@@ -380,12 +391,12 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                     logger.warning("Technical report sources failed: %s", exc)
                     data_sources = []
                 report_id = str(uuid4())
-                title = report_title(req.country, req.theme, req.date_from, req.date_to,
+                title = report_title(req.country, req.theme, req.date_from, date_to,
                                      report_type=req.report_type)
                 await anyio.to_thread.run_sync(
                     lambda: report_store.create_report(
                         report_id, user["id"], country=req.country, theme=req.theme,
-                        date_from=req.date_from, date_to=req.date_to, language=req.language,
+                        date_from=req.date_from, date_to=date_to, language=req.language,
                         title=title, content=full, sources=data_sources or None,
                         doc_count=len(findings.indicators_covered),
                         report_type=req.report_type,
