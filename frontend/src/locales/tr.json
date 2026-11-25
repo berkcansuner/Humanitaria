@@ -411,7 +411,6 @@
       "removed": "Önceki raporla karşılaştırıldı: Eski ya da tarihsiz bilgiyi yeniymiş gibi sunan {n} ifade çıkarıldı. | Önceki raporla karşılaştırıldı: Eski ya da tarihsiz bilgiyi yeniymiş gibi sunan {n} ifade çıkarıldı."
     },
     "empty": {
-      "title": "İnsani yardım kayıtlarından bir İzleme ve Değerlendirme (M&E) raporu hazırlayın.",
       "lede": "Her rapor aynı anda birçok ReliefWeb raporundan yararlanır ve hepsini kaynak olarak gösterir. Böylece raporu doğrulayabilir ve alıntılayabilirsiniz.",
       "pickSeries": "Bir rapor serisine kaldığı yerden devam edin.",
       "pickRecent": "Son raporlarınızdan birini açın.",
@@ -442,6 +441,12 @@
       "indicator_monitoring": "Gösterge izleme raporu",
       "needs_assessment": "İhtiyaç değerlendirmesi özeti",
       "technical_monitoring": "Teknik izleme raporu"
+    },
+    "typeDescriptions": {
+      "situation": "ReliefWeb raporlarından özet, temel bulgular ve genel görünüm. Her bilgi kaynak gösterilerek yazılır.",
+      "indicator_monitoring": "Kaynaklarıyla birlikte temel rakamlar tablosu, ardından veri eksikleri ve son gelişmeler.",
+      "needs_assessment": "Sektörlere göre öncelikli ihtiyaçlar, etkilenen gruplar, eksikler ve önerilen sonraki adımlar.",
+      "technical_monitoring": "HDX HAPI veri serileri üzerinde eğilimler ve istatistiksel testler, grafiklerle."
     },
     "sectors": {
       "agriculture": "Tarım",

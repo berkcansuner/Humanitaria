@@ -411,7 +411,6 @@
       "removed": "Checked against the previous report: {n} statement removed because it presented older or undated information as new. | Checked against the previous report: {n} statements removed because they presented older or undated information as new."
     },
     "empty": {
-      "title": "Build an M&E report from the record.",
       "lede": "Each report draws on many ReliefWeb reports at once and cites every one, so you can check it and quote it.",
       "pickSeries": "Pick up a series where it left off.",
       "pickRecent": "Open a recent report.",
@@ -442,6 +441,12 @@
       "indicator_monitoring": "Indicator Monitoring Report",
       "needs_assessment": "Needs Assessment Brief",
       "technical_monitoring": "Technical Monitoring Report"
+    },
+    "typeDescriptions": {
+      "situation": "Summary, key findings and outlook from ReliefWeb reports, with every claim cited.",
+      "indicator_monitoring": "A table of key figures with their sources, then data gaps and recent developments.",
+      "needs_assessment": "Priority needs by sector, affected groups, gaps and recommended next steps.",
+      "technical_monitoring": "Trends and statistical tests on HDX HAPI data series, with charts."
     },
     "sectors": {
       "agriculture": "Agriculture",

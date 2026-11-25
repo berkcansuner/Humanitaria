@@ -66,6 +66,11 @@ const flush = async () => {
   }
 }
 const text = (sel) => host.querySelector(sel)?.textContent.trim()
+// The report type is a radio group; country, sector and language are selects.
+const chooseType = async (value) => {
+  host.querySelector(`.type-radio[value="${value}"]`).click()
+  await flush()
+}
 
 describe('ReportsView in two languages', () => {
   beforeEach(() => {
@@ -103,10 +108,25 @@ describe('ReportsView in two languages', () => {
     const language = [...host.querySelectorAll('.report-form select')].at(-1)
     expect(language.value).toBe('tr')
     // Report types and sectors are named in the interface language.
-    const types = [...host.querySelectorAll('.report-form select')[0].options].map((o) => o.text)
+    const types = [...host.querySelectorAll('.type-name')].map((o) => o.textContent.trim())
     expect(types).toEqual(Object.values(tr.reports.types))
-    const sectors = [...host.querySelectorAll('.report-form select')[2].options].map((o) => o.text)
+    const descriptions = [...host.querySelectorAll('.type-desc')].map((o) => o.textContent.trim())
+    expect(descriptions).toEqual(Object.values(tr.reports.typeDescriptions))
+    const sectors = [...host.querySelectorAll('.report-form select')[1].options].map((o) => o.text)
     expect(sectors).toEqual([tr.reports.form.allSectors, tr.reports.sectors.health])
+  })
+
+  it('"New report" closes the open report and puts the form in its place', async () => {
+    vi.mocked(listReports).mockResolvedValue({ reports: [SAVED] })
+    vi.mocked(getReport).mockResolvedValue({ ...SAVED, content: '## Summary\n\nText.' })
+    await mount('/reports?report=r1')
+    expect(host.querySelector('.report-form')).toBeNull()
+    host.querySelector('.new-report-btn').click()
+    await flush()
+    expect(host.querySelector('.report-content')).toBeNull()
+    expect(host.querySelector('.report-main .report-form')).toBeTruthy()
+    expect(router.currentRoute.value.query.report).toBeUndefined()
+    expect(document.activeElement.classList.contains('form-title')).toBe(true)
   })
 
   it("keeps the open report's tab title through a language switch", async () => {
@@ -151,8 +171,10 @@ describe('ReportsView in two languages', () => {
     run.click()
     await flush()
     delete Element.prototype.scrollIntoView
-    // Wide screens keep the report open and bring the Generate button into view.
-    expect(host.querySelector('.report-content')).toBeTruthy()
+    // The form takes the report's place in the main column, Generate in view.
+    expect(host.querySelector('.report-content')).toBeNull()
+    expect(host.querySelector('.report-form')).toBeTruthy()
+    expect(router.currentRoute.value.query.report).toBeUndefined()
     expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center' })
     expect(text('.continues p')).toBe(
       'Continues Sudan · Health, 01.05.2026 - 31.07.2026. The new report opens with what changed since then.',
@@ -472,7 +494,7 @@ describe('ReportsView in two languages', () => {
     }
     // [label, disabled, optgroup label or null] for each sector option.
     const sectorOptions = () =>
-      [...selects()[2].options].map((o) => [
+      [...selects()[1].options].map((o) => [
         o.text,
         o.disabled,
         o.parentElement.tagName === 'OPTGROUP' ? o.parentElement.label : null,
@@ -489,9 +511,9 @@ describe('ReportsView in two languages', () => {
 
     it('disables the sectors without data under a labelled group, and resets one chosen', async () => {
       await mount()
-      await choose(selects()[2], 'Agriculture')
-      await choose(selects()[0], 'technical_monitoring')
-      expect(selects()[2].value).toBe('')
+      await choose(selects()[1], 'Agriculture')
+      await chooseType('technical_monitoring')
+      expect(selects()[1].value).toBe('')
       expect(sectorOptions()).toEqual([
         ['All sectors', false, null],
         ['Health', false, null],
@@ -501,10 +523,10 @@ describe('ReportsView in two languages', () => {
       await flush()
       expect(sectorOptions().at(-1)).toEqual(['Tarım', true, 'Sayısal veri yok'])
       // A covered sector stays chosen across a type switch.
-      await choose(selects()[2], 'Health')
-      await choose(selects()[0], 'situation')
-      await choose(selects()[0], 'technical_monitoring')
-      expect(selects()[2].value).toBe('Health')
+      await choose(selects()[1], 'Health')
+      await chooseType('situation')
+      await chooseType('technical_monitoring')
+      expect(selects()[1].value).toBe('Health')
     })
 
     it('restricts nothing when the server does not say which sectors have data', async () => {
@@ -513,9 +535,9 @@ describe('ReportsView in two languages', () => {
         themes: ['Agriculture', 'Health'],
       })
       await mount()
-      await choose(selects()[2], 'Agriculture')
-      await choose(selects()[0], 'technical_monitoring')
-      expect(selects()[2].value).toBe('Agriculture')
+      await choose(selects()[1], 'Agriculture')
+      await chooseType('technical_monitoring')
+      expect(selects()[1].value).toBe('Agriculture')
       expect(sectorOptions().every(([, disabled]) => !disabled)).toBe(true)
     })
 
@@ -566,7 +588,7 @@ describe('ReportsView in two languages', () => {
       runNext().click()
       await flush()
       delete Element.prototype.scrollIntoView
-      expect(selects()[2].value).toBe('Health')
+      expect(selects()[1].value).toBe('Health')
       expect(host.querySelector('.continues')).toBeTruthy()
     })
   })
@@ -605,9 +627,8 @@ describe('ReportsView in two languages', () => {
       }
     }
     async function start({ type = 'situation', theme = 'Health' } = {}) {
-      const [typeSel, country, sector] = host.querySelectorAll('.report-form select')
-      typeSel.value = type
-      typeSel.dispatchEvent(new Event('change'))
+      await chooseType(type)
+      const [country, sector] = host.querySelectorAll('.report-form select')
       country.value = 'Sudan'
       country.dispatchEvent(new Event('change'))
       sector.value = theme
@@ -907,7 +928,7 @@ describe('ReportsView in two languages', () => {
       }),
     )
     await mount()
-    const country = host.querySelectorAll('.report-form select')[1]
+    const country = host.querySelectorAll('.report-form select')[0]
     country.value = 'Sudan'
     country.dispatchEvent(new Event('change'))
     await flush()
@@ -940,7 +961,7 @@ describe('ReportsView in two languages', () => {
     )
     setLocale('tr')
     await mount()
-    const country = host.querySelectorAll('.report-form select')[1]
+    const country = host.querySelectorAll('.report-form select')[0]
     country.value = 'Sudan'
     country.dispatchEvent(new Event('change'))
     await flush()

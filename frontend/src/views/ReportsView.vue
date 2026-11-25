@@ -2,148 +2,14 @@
   <div class="reports-app">
     <AppTopbar :context="t('reports.topbar')" />
 
-    <div :class="['reports-body', { 'has-report': !!(current || openingId) }]">
+    <div :class="['reports-body', { 'has-main': mainPane }]">
       <aside class="reports-aside">
-        <!-- With saved reports, the form waits behind one button so the library
-             is in view; Run next period and generation open it. -->
-        <button
-          v-if="!showForm"
-          ref="newReportBtn"
-          type="button"
-          class="new-report-btn"
-          @click="openForm"
-        >
+        <!-- The form lives in the main column. While a report streams, the button
+             waits like the saved rows. -->
+        <button type="button" class="new-report-btn" :disabled="generating" @click="openForm">
           <Plus :size="16" aria-hidden="true" />
           {{ t('reports.newReport') }}
         </button>
-        <form v-else class="report-form" @submit.prevent="generate">
-          <h2 ref="formTitle" class="form-title" tabindex="-1">{{ t('reports.form.title') }}</h2>
-
-          <label class="field">
-            <span>{{ t('reports.form.type') }}</span>
-            <select v-model="form.report_type" :disabled="generating">
-              <option v-for="rt in REPORT_TYPES" :key="rt.value" :value="rt.value">
-                {{ reportTypeLabel(rt.value, t) }}
-              </option>
-            </select>
-          </label>
-
-          <label class="field">
-            <span>{{ t('reports.form.country') }}</span>
-            <select v-model="form.country" required :disabled="generating">
-              <option value="" disabled>{{ t('reports.form.countryPlaceholder') }}</option>
-              <option v-for="c in countries" :key="c" :value="c">{{ c }}</option>
-            </select>
-          </label>
-
-          <label class="field">
-            <span>{{ t('reports.form.sector') }}</span>
-            <!-- A technical monitoring report needs HDX HAPI series for its sector:
-                 the others stay listed, disabled, under a group that says why. -->
-            <select v-model="form.theme" :disabled="generating">
-              <option value="">{{ t('reports.form.allSectors') }}</option>
-              <option v-for="th in sectorChoices.open" :key="th" :value="th">
-                {{ sectorLabel(th, t) }}
-              </option>
-              <optgroup v-if="sectorChoices.closed.length" :label="t('reports.form.noData')">
-                <option v-for="th in sectorChoices.closed" :key="th" :value="th" disabled>
-                  {{ sectorLabel(th, t) }}
-                </option>
-              </optgroup>
-            </select>
-          </label>
-
-          <div class="field-row">
-            <label class="field">
-              <span>{{ t('reports.form.from') }}</span>
-              <input
-                v-model="form.date_from"
-                type="date"
-                :min="minDate"
-                :max="form.date_to || maxDate"
-                :disabled="generating"
-              />
-            </label>
-            <label class="field">
-              <span>{{ t('reports.form.to') }}</span>
-              <input
-                v-model="form.date_to"
-                type="date"
-                :min="form.date_from || minDate"
-                :max="maxDate"
-                :disabled="generating"
-              />
-            </label>
-          </div>
-
-          <label class="field">
-            <span>{{ t('reports.form.language') }}</span>
-            <!-- The report's own language, named in the interface language. -->
-            <select v-model="form.language" :disabled="generating">
-              <option value="en">{{ t('lang.names.en') }}</option>
-              <option value="tr">{{ t('lang.names.tr') }}</option>
-            </select>
-          </label>
-
-          <!-- "Run next period": the new report continues a saved one and opens
-               with what changed since then. -->
-          <div v-if="continuation && !generating" class="continues" role="status">
-            <template v-if="continuesSeries">
-              <i18n-t keypath="reports.continues.series" tag="p" scope="global">
-                <template #name>
-                  <strong>{{ savedName(continuation.report) }}</strong>
-                </template>
-                <template #period>
-                  <span class="continues-period">{{ savedPeriod(continuation.report) }}</span>
-                </template>
-              </i18n-t>
-              <p v-if="continuationNotes.endClamped" class="form-hint">
-                {{ t('reports.continues.endClamped') }}
-              </p>
-              <p v-if="continuationNotes.startClamped" class="form-hint">
-                {{ t('reports.continues.startClamped', { date: shownDay(minDate) }) }}
-              </p>
-            </template>
-            <i18n-t v-else keypath="reports.continues.differs" tag="p" scope="global">
-              <template #name>
-                <strong>{{ savedName(continuation.report) }}</strong>
-              </template>
-            </i18n-t>
-            <button type="button" class="continues-clear" @click="continuation = null">
-              {{ continuesSeries ? t('reports.continues.clear') : t('common.dismiss') }}
-            </button>
-          </div>
-
-          <!-- While a report streams, Generate becomes Stop (Chat's Charcoal Stop). -->
-          <button
-            v-if="generating"
-            ref="stopBtn"
-            type="button"
-            class="generate-btn stop-gen"
-            @click="stopGeneration"
-          >
-            <Square :size="14" aria-hidden="true" />
-            {{ t('reports.form.stop') }}
-          </button>
-          <button
-            v-else
-            ref="generateBtn"
-            type="submit"
-            class="generate-btn"
-            :disabled="!form.country"
-          >
-            <FileText :size="16" />
-            {{ t('reports.form.generate') }}
-          </button>
-
-          <p v-if="optionsError" class="form-hint">{{ t('reports.form.optionsError') }}</p>
-          <p v-else-if="!countries.length" class="form-hint">
-            {{ t('reports.form.loadingCountries') }}
-          </p>
-          <p v-else-if="!form.country && !generating" class="form-hint">
-            {{ t('reports.form.chooseCountry') }}
-          </p>
-        </form>
 
         <div class="saved">
           <h3 class="saved-title-h">{{ t('reports.saved.title') }}</h3>
@@ -300,13 +166,8 @@
       </aside>
 
       <main ref="viewer" class="report-main" @click="onCiteClick">
-        <!-- Phones show the library or one report, never both stacked. -->
-        <button
-          v-if="current || openingId"
-          type="button"
-          class="back-to-list"
-          @click="generating ? stopAndShowList() : closeReport()"
-        >
+        <!-- Phones show the library, the form or one report, never two stacked. -->
+        <button v-if="showBack" type="button" class="back-to-list" @click="backToList">
           <ArrowLeft :size="15" aria-hidden="true" />
           {{ generating ? t('reports.viewer.stopAndBack') : t('reports.viewer.back') }}
         </button>
@@ -322,6 +183,13 @@
           </div>
         </div>
         <div v-else-if="current" class="report-column">
+          <!-- While a report streams, Stop sits above it (Chat's Charcoal Stop). -->
+          <div v-if="generating" class="gen-bar">
+            <button ref="stopBtn" type="button" class="stop-gen" @click="stopGeneration">
+              <Square :size="13" aria-hidden="true" />
+              {{ t('reports.form.stop') }}
+            </button>
+          </div>
           <img v-if="current.cover_image" class="cover-img" :src="current.cover_image" alt="" />
           <p v-if="imagesStatusText" class="images-status">{{ imagesStatusText }}</p>
           <header v-if="reportHeading || current.id" class="report-head">
@@ -485,40 +353,166 @@
           </div>
           <SourceList v-if="shown.sources" :sources="shown.sources" />
         </div>
-        <!-- Nothing open: Chat's empty pattern (left-aligned promise, coverage line,
-             hairline rows), with the user's series as the starting points. -->
-        <div v-else class="report-empty">
-          <div class="empty-inner">
-            <h2 class="empty-title">{{ t('reports.empty.title') }}</h2>
-            <p class="empty-lede">{{ t('reports.empty.lede') }}</p>
-            <template v-if="emptyRows.length">
-              <p class="empty-pick">
-                {{
-                  emptyRows[0].series
-                    ? t('reports.empty.pickSeries')
-                    : t('reports.empty.pickRecent')
-                }}
-              </p>
-              <ul
-                class="empty-list"
-                :aria-label="
-                  emptyRows[0].series
-                    ? t('reports.empty.seriesLabel')
-                    : t('reports.empty.recentLabel')
-                "
-              >
-                <li v-for="row in emptyRows" :key="row.report.id">
-                  <button type="button" class="empty-row" @click="openReport(row.report.id)">
-                    <span class="empty-row-text">
-                      <span class="empty-row-name">{{ savedName(row.report) }}</span>
-                      <span class="empty-row-meta">{{ row.meta }}</span>
-                    </span>
-                    <ArrowRight :size="15" class="empty-row-arrow" aria-hidden="true" />
-                  </button>
-                </li>
-              </ul>
-            </template>
-          </div>
+        <!-- Nothing open: the new-report form, then the user's series to pick up. -->
+        <div v-else class="report-compose">
+          <form class="report-form" @submit.prevent="generate">
+            <h2 ref="formTitle" class="form-title" tabindex="-1">{{ t('reports.form.title') }}</h2>
+            <p class="form-lede">{{ t('reports.empty.lede') }}</p>
+
+            <div class="form-card">
+              <fieldset class="type-field" :disabled="generating">
+                <legend class="field-label">{{ t('reports.form.type') }}</legend>
+                <div class="type-grid">
+                  <label
+                    v-for="rt in REPORT_TYPES"
+                    :key="rt.value"
+                    :class="['type-option', { selected: form.report_type === rt.value }]"
+                  >
+                    <input
+                      v-model="form.report_type"
+                      type="radio"
+                      name="report-type"
+                      class="type-radio"
+                      :value="rt.value"
+                    />
+                    <span class="type-name">{{ reportTypeLabel(rt.value, t) }}</span>
+                    <span class="type-desc">{{ t('reports.typeDescriptions.' + rt.value) }}</span>
+                  </label>
+                </div>
+              </fieldset>
+
+              <div class="field-grid">
+                <label class="field">
+                  <span class="field-label">{{ t('reports.form.country') }}</span>
+                  <select v-model="form.country" required :disabled="generating">
+                    <option value="" disabled>{{ t('reports.form.countryPlaceholder') }}</option>
+                    <option v-for="c in countries" :key="c" :value="c">{{ c }}</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span class="field-label">{{ t('reports.form.sector') }}</span>
+                  <!-- A technical monitoring report needs HDX HAPI series for its sector:
+                       the others stay listed, disabled, under a group that says why. -->
+                  <select v-model="form.theme" :disabled="generating">
+                    <option value="">{{ t('reports.form.allSectors') }}</option>
+                    <option v-for="th in sectorChoices.open" :key="th" :value="th">
+                      {{ sectorLabel(th, t) }}
+                    </option>
+                    <optgroup v-if="sectorChoices.closed.length" :label="t('reports.form.noData')">
+                      <option v-for="th in sectorChoices.closed" :key="th" :value="th" disabled>
+                        {{ sectorLabel(th, t) }}
+                      </option>
+                    </optgroup>
+                  </select>
+                </label>
+              </div>
+
+              <div class="field-grid field-grid--period">
+                <label class="field">
+                  <span class="field-label">{{ t('reports.form.from') }}</span>
+                  <input
+                    v-model="form.date_from"
+                    type="date"
+                    :min="minDate"
+                    :max="form.date_to || maxDate"
+                    :disabled="generating"
+                  />
+                </label>
+                <label class="field">
+                  <span class="field-label">{{ t('reports.form.to') }}</span>
+                  <input
+                    v-model="form.date_to"
+                    type="date"
+                    :min="form.date_from || minDate"
+                    :max="maxDate"
+                    :disabled="generating"
+                  />
+                </label>
+                <label class="field field--language">
+                  <span class="field-label">{{ t('reports.form.language') }}</span>
+                  <!-- The report's own language, named in the interface language. -->
+                  <select v-model="form.language" :disabled="generating">
+                    <option value="en">{{ t('lang.names.en') }}</option>
+                    <option value="tr">{{ t('lang.names.tr') }}</option>
+                  </select>
+                </label>
+              </div>
+
+              <!-- "Run next period": the new report continues a saved one and opens
+                   with what changed since then. -->
+              <div v-if="continuation && !generating" class="continues" role="status">
+                <template v-if="continuesSeries">
+                  <i18n-t keypath="reports.continues.series" tag="p" scope="global">
+                    <template #name>
+                      <strong>{{ savedName(continuation.report) }}</strong>
+                    </template>
+                    <template #period>
+                      <span class="continues-period">{{ savedPeriod(continuation.report) }}</span>
+                    </template>
+                  </i18n-t>
+                  <p v-if="continuationNotes.endClamped" class="form-hint">
+                    {{ t('reports.continues.endClamped') }}
+                  </p>
+                  <p v-if="continuationNotes.startClamped" class="form-hint">
+                    {{ t('reports.continues.startClamped', { date: shownDay(minDate) }) }}
+                  </p>
+                </template>
+                <i18n-t v-else keypath="reports.continues.differs" tag="p" scope="global">
+                  <template #name>
+                    <strong>{{ savedName(continuation.report) }}</strong>
+                  </template>
+                </i18n-t>
+                <button type="button" class="continues-clear" @click="continuation = null">
+                  {{ continuesSeries ? t('reports.continues.clear') : t('common.dismiss') }}
+                </button>
+              </div>
+
+              <div class="form-foot">
+                <button
+                  ref="generateBtn"
+                  type="submit"
+                  class="generate-btn"
+                  :disabled="!form.country || generating"
+                >
+                  <FileText :size="16" aria-hidden="true" />
+                  {{ t('reports.form.generate') }}
+                </button>
+                <p v-if="optionsError" class="form-hint">{{ t('reports.form.optionsError') }}</p>
+                <p v-else-if="!countries.length" class="form-hint">
+                  {{ t('reports.form.loadingCountries') }}
+                </p>
+                <p v-else-if="!form.country" class="form-hint">
+                  {{ t('reports.form.chooseCountry') }}
+                </p>
+              </div>
+            </div>
+          </form>
+
+          <template v-if="emptyRows.length">
+            <p class="empty-pick">
+              {{
+                emptyRows[0].series ? t('reports.empty.pickSeries') : t('reports.empty.pickRecent')
+              }}
+            </p>
+            <ul
+              class="empty-list"
+              :aria-label="
+                emptyRows[0].series
+                  ? t('reports.empty.seriesLabel')
+                  : t('reports.empty.recentLabel')
+              "
+            >
+              <li v-for="row in emptyRows" :key="row.report.id">
+                <button type="button" class="empty-row" @click="openReport(row.report.id)">
+                  <span class="empty-row-text">
+                    <span class="empty-row-name">{{ savedName(row.report) }}</span>
+                    <span class="empty-row-meta">{{ row.meta }}</span>
+                  </span>
+                  <ArrowRight :size="15" class="empty-row-arrow" aria-hidden="true" />
+                </button>
+              </li>
+            </ul>
+          </template>
         </div>
       </main>
     </div>
@@ -601,6 +595,9 @@ const optionsError = ref(false)
 const reports = ref([])
 const loadingList = ref(false)
 const openingId = ref(null) // saved report being fetched for the viewer
+const listLoaded = ref(false)
+// The form was asked for (New report, Run next period): phones show it, not the list.
+const composing = ref(false)
 const route = useRoute()
 const router = useRouter()
 
@@ -911,6 +908,7 @@ function stopAndShowList() {
 
 async function openReport(id, { fromRoute = false } = {}) {
   if (generating.value) return
+  composing.value = false
   openingId.value = id
   if (!fromRoute) syncUrl(id, { push: true })
   try {
@@ -1070,22 +1068,35 @@ const continuationNotes = computed(() => {
   return { endClamped: same && c.endClamped, startClamped: same && c.startClamped }
 })
 
-// The "New report" form: open for a first-time user (no saved reports), while a
-// next period is being set up or generated, or once the user asks for it.
-const formOpen = ref(false)
-const listLoaded = ref(false)
-const newReportBtn = ref(null)
+// The main column holds the open report, else the new-report form. Phones show one
+// pane: the library, or the main column once a report or the form is asked for (or
+// at once when there is nothing saved to list).
 const formTitle = ref(null)
-const showForm = computed(
+const mainPane = computed(
   () =>
-    formOpen.value ||
-    !!continuation.value ||
-    generating.value ||
+    !!(current.value || openingId.value) ||
+    composing.value ||
     (listLoaded.value && !reports.value.length),
 )
+const showBack = computed(
+  () => !!(current.value || openingId.value) || (composing.value && reports.value.length > 0),
+)
+function backToList() {
+  composing.value = false
+  if (generating.value) stopAndShowList()
+  else if (current.value || openingId.value) closeReport()
+}
 function openForm() {
-  formOpen.value = true
+  if (generating.value) return
+  composing.value = true
+  continuation.value = null
+  genError.value = null
   form.value.language = locale.value
+  // A saved report closes through the URL; an unsaved one (stopped, failed) has none.
+  if (current.value) {
+    current.value = null
+    closeReport()
+  }
   nextTick(() => formTitle.value && formTitle.value.focus())
 }
 
@@ -1106,7 +1117,6 @@ function runNextPeriod() {
   const rep = seriesLatest.value
   const s = nextSuggestion.value
   if (!rep || !s || s.notStarted || generating.value || nextNoData.value) return
-  formOpen.value = true // stays open if the user then makes it a one-off
   form.value = {
     report_type: rep.report_type || 'situation',
     country: rep.country || '',
@@ -1125,8 +1135,10 @@ function runNextPeriod() {
     endClamped: s.endClamped,
     startClamped: s.startClamped,
   }
-  // Phones show one pane: go back to the form. Wide screens keep the report open.
-  if (window.matchMedia('(max-width: 760px)').matches) closeReport()
+  // The form takes the report's place in the main column.
+  composing.value = true
+  current.value = null
+  closeReport()
   nextTick(() => {
     if (generateBtn.value) {
       generateBtn.value.scrollIntoView({ block: 'center' })
@@ -1209,9 +1221,7 @@ function scrollViewerBottom() {
 async function generate() {
   if (!form.value.country || generating.value) return
   generating.value = true
-  formOpen.value = true // the form stays put when the report is saved
-  // Generate is replaced by Stop; keep keyboard focus on the control that is there.
-  nextTick(() => stopBtn.value && stopBtn.value.focus())
+  composing.value = false
   genError.value = null
   // Clear the open report from the URL BEFORE the request: the route watcher
   // closes the viewer when ?report= disappears and nothing is generating, so a
@@ -1237,6 +1247,8 @@ async function generate() {
     // The period this report is compared with, for the note under "What changed".
     comparedPeriod: continuesSeries.value ? savedPeriod(continuation.value.report) : null,
   }
+  // The form gives way to the report; keyboard focus moves to its Stop button.
+  nextTick(() => stopBtn.value && stopBtn.value.focus())
   controller.value = new AbortController()
   try {
     const res = await fetch('/reports/stream', {
@@ -1441,19 +1453,16 @@ function onCiteClick(e) {
   gap: var(--space-5);
 }
 
-.report-form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-/* The collapsed form: DESIGN's secondary button, full rail width. */
+/* The rail's primary action, as Chat's New chat. */
 .new-report-btn {
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
   width: 100%;
-  padding: 10px;
+  min-height: 38px;
+  padding: 0 var(--space-4);
   font-family: var(--font-body);
   font-size: var(--text-sm);
   font-weight: 600;
@@ -1466,47 +1475,147 @@ function onCiteClick(e) {
     color 0.15s,
     border-color 0.15s;
 }
-.new-report-btn:hover {
+.new-report-btn:hover:not(:disabled) {
   color: var(--color-accent);
   border-color: var(--color-accent);
+}
+.new-report-btn:disabled {
+  color: var(--color-muted);
+  cursor: not-allowed;
 }
 .new-report-btn:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
+
+/* The new-report form: the main column's own 680px measure, heading on the ground,
+   the controls on one hairline card. */
+.report-compose {
+  max-width: 680px;
+  margin: 0 auto;
+}
+.form-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+  text-wrap: balance;
+}
 .form-title:focus {
   outline: none;
 }
-.form-title {
-  font-family: var(--font-display);
-  font-size: var(--text-base);
-  font-weight: 700;
+.form-lede {
+  margin: var(--space-2) 0 var(--space-5);
+  max-width: 56ch;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--color-text-secondary);
 }
-
-.field {
+.form-card {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-5);
+  padding: var(--space-5);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
 }
-/* Same label as Settings and Admin. Small text on the Reading Room rail uses
-   Graphite: Margin Gray is 4.35:1 there, just under AA. */
-.field > span {
-  font-size: 12px;
+
+.field-label {
+  font-size: 13px;
   font-weight: 600;
   color: var(--color-text-secondary);
 }
-.field-row {
-  display: flex;
+
+/* Report type: four described options, a radio group drawn as 10px controls. */
+.type-field {
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-width: 0;
+}
+.type-field legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+}
+.type-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-2);
 }
-.field-row .field {
-  flex: 1;
+.type-option {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  column-gap: 10px;
+  row-gap: 3px;
+  align-items: start;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background-color 0.15s;
+}
+.type-option:hover {
+  border-color: color-mix(in srgb, var(--color-accent) 55%, var(--color-border-strong));
+}
+.type-option.selected {
+  border-color: var(--color-accent);
+  background-color: var(--color-accent-soft);
+}
+.type-option:has(.type-radio:focus-visible) {
+  border-color: var(--color-accent);
+  box-shadow: var(--focus-ring);
+}
+.type-field:disabled .type-option {
+  cursor: not-allowed;
+}
+.type-radio {
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  accent-color: var(--color-accent);
+}
+.type-radio:focus-visible {
+  outline: none;
+}
+.type-name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--color-text);
+}
+.type-desc {
+  grid-column: 2;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
 }
 
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4) var(--space-3);
+}
+.field-grid--period {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
 .field select,
 .field input {
   width: 100%;
-  padding: 8px 10px;
+  min-height: 40px;
+  padding: 8px 12px;
   font-family: var(--font-body);
   font-size: var(--text-sm);
   color: var(--color-text);
@@ -1514,20 +1623,34 @@ function onCiteClick(e) {
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-lg);
   outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.field input[type='date'] {
+  font-variant-numeric: tabular-nums;
 }
 .field select:focus,
 .field input:focus {
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-accent) 16%, transparent);
+  box-shadow: var(--focus-ring);
 }
 
+.form-foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
 .generate-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  margin-top: var(--space-1);
-  padding: 10px;
+  min-height: 40px;
+  padding: 0 20px;
   font-family: var(--font-body);
   font-size: var(--text-sm);
   font-weight: 600;
@@ -1541,25 +1664,50 @@ function onCiteClick(e) {
     transform 0.15s;
 }
 .generate-btn:hover:not(:disabled) {
-  background-color: var(--color-accent);
+  background-color: color-mix(in srgb, var(--color-accent-container) 86%, #000);
 }
 .generate-btn:active:not(:disabled) {
   transform: scale(0.98);
 }
-/* Disabled reads as off in both themes: a neutral shelf fill, not a faded green
-   (dark theme's bright green at 55% still looked live). */
+.generate-btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+/* Disabled reads as off in both themes: a neutral shelf fill, not a faded teal. */
 .generate-btn:disabled {
   color: var(--color-muted);
   background-color: var(--color-surface-container-high);
   cursor: not-allowed;
 }
-/* Stop while a report streams: Chat's Charcoal Stop (DESIGN, Buttons). */
-.generate-btn.stop-gen {
+
+/* Stop while a report streams: Chat's Charcoal Stop, above the report. */
+.gen-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-4);
+}
+.stop-gen {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 36px;
+  padding: 0 16px;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
   color: var(--color-on-tertiary);
   background-color: var(--color-tertiary);
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: background-color 0.15s;
 }
-.generate-btn.stop-gen:hover {
+.stop-gen:hover {
   background-color: var(--color-text-secondary);
+}
+.stop-gen:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 .saved-open[aria-disabled='true'] {
   cursor: not-allowed;
@@ -2037,34 +2185,7 @@ function onCiteClick(e) {
   color: var(--color-text-secondary);
 }
 
-/* Nothing open: Chat's empty pattern (EmptyState.vue), left-aligned at 560px. */
-.report-empty {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-6) var(--space-4);
-}
-.empty-inner {
-  width: 100%;
-  max-width: 560px;
-}
-.empty-title {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: var(--text-2xl);
-  font-weight: 700;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-  color: var(--color-text);
-}
-.empty-lede {
-  margin: var(--space-2) 0 0;
-  max-width: 48ch;
-  font-size: 15px;
-  line-height: 1.55;
-  color: var(--color-text-secondary);
-}
+/* Under the form: the user's series (or recent reports) to pick up. */
 .empty-pick {
   margin: var(--space-6) 0 var(--space-2);
   font-size: var(--text-sm);
@@ -2192,10 +2313,10 @@ function onCiteClick(e) {
     width: 100%;
     border-right: none;
   }
-  .reports-body.has-report .reports-aside {
+  .reports-body.has-main .reports-aside {
     display: none;
   }
-  .reports-body:not(.has-report) .report-main {
+  .reports-body:not(.has-main) .report-main {
     display: none;
   }
   .report-main {
@@ -2203,6 +2324,22 @@ function onCiteClick(e) {
   }
   .back-to-list {
     display: inline-flex;
+  }
+  .type-grid,
+  .field-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .field-grid--period {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .field--language {
+    grid-column: 1 / -1;
+  }
+  .form-card {
+    padding: var(--space-4);
+  }
+  .generate-btn {
+    width: 100%;
   }
 }
 </style>
