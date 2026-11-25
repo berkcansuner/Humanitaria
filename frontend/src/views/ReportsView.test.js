@@ -173,6 +173,8 @@ describe('ReportsView in two languages', () => {
       report_type: 'needs_assessment',
       country: 'Yemen',
       theme: 'Shelter and Non-Food Items',
+      date_from: '2026-07-01',
+      date_to: '2026-09-30',
       title:
         'Needs Assessment Brief — Yemen · Shelter and Non-Food Items · 2026-07-01 – 2026-09-30',
     }
@@ -191,12 +193,34 @@ describe('ReportsView in two languages', () => {
     expect(tooltip()).toBe(yemen.title)
   })
 
+  it('names a saved report from its fields when its title has no period', async () => {
+    const sudan = {
+      ...SAVED,
+      id: 't0',
+      report_type: 'technical_monitoring',
+      theme: null,
+      date_from: '2021-11-19',
+      date_to: '2026-11-19',
+      title: 'Technical Monitoring Report — Sudan · All sectors',
+    }
+    vi.mocked(listReports).mockResolvedValue({ reports: [sudan] })
+    vi.mocked(getReport).mockResolvedValue({ ...sudan, content: '## Summary\n\nText.' })
+    await mount('/reports?report=t0')
+    expect(text('.saved-name')).toBe('Sudan')
+    expect(text('.saved-period')).toBe('19.11.2021 - 19.11.2026')
+    expect(text('.report-title-h')).toBe('Sudan')
+    const meta = [...host.querySelectorAll('.report-meta .meta-part')].map((m) => m.textContent)
+    expect(meta).toEqual(['Technical Monitoring Report', '19.11.2021 - 19.11.2026'])
+  })
+
   describe("the saved list shows each report's language", () => {
     const syria = {
       ...SAVED,
       report_type: 'technical_monitoring',
       country: 'Syrian Arab Republic',
       theme: null,
+      date_from: '2023-11-18',
+      date_to: '2026-11-18',
       title:
         'Technical Monitoring Report — Syrian Arab Republic · All sectors · 2023-11-18 – 2026-11-18',
     }

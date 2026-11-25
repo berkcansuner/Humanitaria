@@ -324,9 +324,9 @@
         <div v-else-if="current" class="report-column">
           <img v-if="current.cover_image" class="cover-img" :src="current.cover_image" alt="" />
           <p v-if="imagesStatusText" class="images-status">{{ imagesStatusText }}</p>
-          <header v-if="titleParts.heading || current.id" class="report-head">
+          <header v-if="reportHeading || current.id" class="report-head">
             <div class="report-head-text">
-              <h2 v-if="titleParts.heading" class="report-title-h">{{ titleParts.heading }}</h2>
+              <h2 v-if="reportHeading" class="report-title-h">{{ reportHeading }}</h2>
               <p v-if="metaParts.length" class="report-meta">
                 <span v-for="(part, i) in metaParts" :key="i" class="meta-part">{{ part }}</span>
               </p>
@@ -713,19 +713,23 @@ function setDefaultDates() {
   form.value.date_to = localIsoDay(to)
 }
 
-// Titles carry "[Type —] Country · Sector · period"; the country leads, the rest
-// moves to a small meta line (type as text, not a pill). The stored title is data
-// (English labels); the type and sector shown come from the report's codes, in the
-// interface language.
-function shownSector(r, titleSector) {
-  if (!titleSector || titleSector === 'All sectors') return ''
-  return r.theme ? sectorLabel(r.theme, t) : titleSector
+// A report is named from its own fields (country, theme, dates), in the interface
+// language. The stored title ("[Type —] Country · Sector · period", English labels)
+// is only the fallback for a row that lacks them.
+function shownCountry(r) {
+  return (r && r.country) || splitReportTitle(r && r.title).heading
+}
+
+// The sector in the interface language; none ("All sectors") shows nothing.
+function shownSector(r) {
+  if (r && r.theme) return sectorLabel(r.theme, t)
+  const { sector } = splitReportTitle(r && r.title)
+  return sector && sector !== 'All sectors' ? sector : ''
 }
 
 function savedName(r) {
-  const { heading, sector } = splitReportTitle(r.title)
-  const name = shownSector(r, sector)
-  return name ? `${heading} · ${name}` : heading
+  const sector = shownSector(r)
+  return sector ? `${shownCountry(r)} · ${sector}` : shownCountry(r)
 }
 
 // The type in full ("Situation Report"), as under the open report's title.
@@ -777,9 +781,12 @@ function deleteLabel(r) {
   return period ? t('reports.saved.deleteWithPeriod', params) : t('reports.saved.delete', params)
 }
 
-// Periods read "17.11.2025 - 17.11.2026" wherever a saved report is named.
+// Periods read "17.11.2025 - 17.11.2026" wherever a saved report is named. A report
+// with only an end date reads "to 17.11.2026".
 function savedPeriod(r) {
-  return formatPeriod(splitReportTitle(r.title).period)
+  if (r && r.date_from && r.date_to) return formatPeriod(`${r.date_from} – ${r.date_to}`)
+  if (r && r.date_to) return t('reports.saved.until', { date: shownDay(r.date_to) })
+  return formatPeriod(splitReportTitle(r && r.title).period)
 }
 
 // Copy the report text with its numbered Sources list (the PDF stays separate).
@@ -800,18 +807,20 @@ async function copyReport() {
   copiedTimer = setTimeout(() => (reportCopied.value = false), 1500)
 }
 
-const titleParts = computed(() => splitReportTitle(current.value && current.value.title))
+// The open report's heading: its country (the whole stored title if it has none).
+const reportHeading = computed(() =>
+  current.value && current.value.title ? shownCountry(current.value) : '',
+)
 // Type · sector · period, each kept whole: the line only wraps between parts,
 // and a part carries its leading "·" so no separator is left at a line end.
 // Under the report title, one per line: its type, its sector unless it covers all
 // sectors, and its period (17.11.2025 - 17.11.2026).
 const metaParts = computed(() => {
   if (!current.value || !current.value.title) return []
-  const { sector, period } = titleParts.value
   return [
     reportTypeLabel(current.value.report_type, t),
-    shownSector(current.value, sector),
-    formatPeriod(period),
+    shownSector(current.value),
+    savedPeriod(current.value),
   ].filter(Boolean)
 })
 
@@ -846,7 +855,7 @@ watch(
 // The locale is a source too: on a language switch the router re-applies the
 // route's own title synchronously, and this watcher runs after it.
 watch(
-  () => [titleParts.value.heading, current.value && current.value.report_type, locale.value],
+  () => [reportHeading.value, current.value && current.value.report_type, locale.value],
   ([heading, type]) => {
     document.title = heading
       ? t('reports.docTitle', { heading, type: reportTypeLabel(type, t) })
