@@ -104,3 +104,34 @@ def test_hashed_assets_are_not_marked_no_cache(client):
     r = client.get("/assets/index-abc123.js")
     assert r.status_code == 200
     assert r.headers.get("cache-control") != "no-cache"
+
+
+# A route with its own prerendered page (dist/privacy.html: the shell plus the page's
+# text in <noscript>, for readers that do not run JavaScript, like Google's OAuth
+# brand check) gets that page, with the same revalidation as the shell.
+_PRIVACY = _SHELL + "<noscript>Privacy policy</noscript>"
+
+
+@pytest.fixture
+def client_with_page(client, tmp_path):
+    (tmp_path / "privacy.html").write_text(_PRIVACY, encoding="utf-8")
+    return client
+
+
+def test_route_with_its_own_page_gets_that_page(client_with_page):
+    r = client_with_page.get("/privacy")
+    assert r.status_code == 200
+    assert r.text == _PRIVACY
+    assert r.headers.get("cache-control") == "no-cache"
+    etag = r.headers["etag"]
+    assert client_with_page.get("/privacy", headers={"If-None-Match": etag}).status_code == 304
+
+
+def test_routes_without_a_page_still_get_the_shell(client_with_page):
+    assert client_with_page.get("/app").text == _SHELL
+    assert client_with_page.get("/privacy/x").text == _SHELL
+
+
+def test_page_lookup_cannot_escape_dist(client_with_page, tmp_path):
+    (tmp_path.parent / "secret.html").write_text("secret", encoding="utf-8")
+    assert client_with_page.get("/..%2fsecret").text == _SHELL

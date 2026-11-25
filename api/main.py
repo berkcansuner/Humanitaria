@@ -288,8 +288,11 @@ def mount_spa(target_app: FastAPI, dist: Path) -> None:
         target = _safe_spa_file(full_path, dist)       # None → traversal/miss → SPA shell
         if target is not None and target != shell.resolve():
             return FileResponse(target, headers=no_cache)
+        # A route with its own prerendered page (/privacy → privacy.html: the shell
+        # plus the page's text for readers that do not run JavaScript) gets it.
+        page = _safe_spa_file(f"{full_path}.html", dist) if full_path else None
         try:
-            body = await run_in_threadpool(shell.read_bytes)
+            body = await run_in_threadpool((page or shell).read_bytes)
         except FileNotFoundError:                       # dist being rebuilt in place
             return Response("Frontend is being rebuilt", status_code=503,
                             headers={"Retry-After": "5"})

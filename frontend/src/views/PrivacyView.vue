@@ -77,7 +77,7 @@
         <h2>{{ t('privacy.s5.title') }}</h2>
         <i18n-t keypath="privacy.s5.p1" tag="p" scope="global">
           <template #email>
-            <a href="mailto:berkcansuner@gmail.com">berkcansuner@gmail.com</a>
+            <a :href="'mailto:' + PRIVACY_EMAIL">{{ PRIVACY_EMAIL }}</a>
           </template>
         </i18n-t>
 
@@ -98,6 +98,7 @@ import { useI18n } from 'vue-i18n'
 
 import MarketingNav from '../marketing/MarketingNav.vue'
 import MarketingFooter from '../marketing/MarketingFooter.vue'
+import { PRIVACY_EMAIL } from '../contact.js'
 
 const { t, locale } = useI18n()
 </script>
