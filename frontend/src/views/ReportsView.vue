@@ -42,15 +42,21 @@
                   :aria-disabled="generating ? 'true' : undefined"
                   @click="openReport(e.report.id)"
                 >
-                  <span class="saved-name">{{ savedName(e.report) }}</span>
+                  <!-- Country, then the sector in full (none for all sectors), then
+                       the short type and language code, and the period. -->
+                  <span class="saved-name">{{ shownCountry(e.report) }}</span>
+                  <span v-if="shownSector(e.report)" class="saved-sector">{{
+                    shownSector(e.report)
+                  }}</span>
                   <span class="saved-meta">
                     <!-- The report's language as its code, so an English and a Turkish
                          report with the same settings can be told apart. The "·" is
-                         glued to the type by a no-break space, so a long type name
-                         wraps between its words and no line starts with a separator. -->
+                         glued to the type by a no-break space, so no line starts with
+                         a separator. Screen readers hear the full type name. -->
                     <span
-                      >{{ savedType(e.report)
-                      }}<span v-if="reportLanguage(e.report)" class="saved-lang"
+                      ><span aria-hidden="true">{{ savedTypeShort(e.report) }}</span
+                      ><span class="sr-only">{{ savedType(e.report) }}</span
+                      ><span v-if="reportLanguage(e.report)" class="saved-lang"
                         >{{ '\u00a0· '
                         }}<span class="saved-lang-code" aria-hidden="true">{{
                           reportLanguage(e.report).toUpperCase()
@@ -93,12 +99,17 @@
                   @click="toggleSeries(e.key)"
                 >
                   <span class="saved-series-text">
-                    <span class="saved-name">{{ savedName(e.latest) }}</span>
+                    <span class="saved-name">{{ shownCountry(e.latest) }}</span>
+                    <span v-if="shownSector(e.latest)" class="saved-sector">{{
+                      shownSector(e.latest)
+                    }}</span>
                     <!-- Type, then count and language kept together: the line can
                          only break after "Type ·". The period has its own line. -->
                     <span class="saved-meta"
                       ><span
-                        >{{ savedType(e.latest) }}{{ '\u00a0· '
+                        ><span aria-hidden="true">{{ savedTypeShort(e.latest) }}</span
+                        ><span class="sr-only">{{ savedType(e.latest) }}</span
+                        >{{ '\u00a0· '
                         }}<span class="saved-count"
                           >{{ t('reports.saved.count', { n: e.reports.length }, e.reports.length)
                           }}<span v-if="reportLanguage(e.latest)" class="saved-lang"
@@ -732,6 +743,13 @@ function savedName(r) {
 // The type in full ("Situation Report"), as under the open report's title.
 function savedType(r) {
   return reportTypeLabel(r.report_type, t)
+}
+
+// The saved list's short type ("Situation", "Technical"); the full name is read out.
+function savedTypeShort(r) {
+  return reportTypeLabel(r.report_type, (key) =>
+    t(key.replace('reports.types.', 'reports.typesShort.')),
+  )
 }
 
 // A list row's tooltip, the full name of a row that may be cut off: the stored
@@ -1805,41 +1823,48 @@ function onCiteClick(e) {
   background: transparent;
   border: none;
   cursor: pointer;
-  padding: var(--space-2) var(--space-3);
+  padding: 10px var(--space-3);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
+/* Country, then the sector: both whole, wrapping rather than cut off. */
 .saved-name {
   font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.35;
   color: var(--color-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 .saved-item.active .saved-name {
   color: var(--color-accent);
-  font-weight: 600;
+}
+.saved-sector {
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
 }
 .saved-period,
 .saved-count {
   white-space: nowrap;
 }
-/* The report's language code: the meta line's own quiet text, in every row shape
-   (a period row's name is 12px body text; its code steps down to the meta size). */
+/* The report's language code: the meta line's own quiet text, in every row shape. */
 .saved-lang {
-  font-family: var(--font-body);
+  font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 400;
   color: var(--color-text-secondary);
   white-space: nowrap;
 }
-/* Type, then the period on its own line, as under the open report's title. */
+/* Short type and language, then the period on its own line, in Geist Mono. */
 .saved-meta {
   display: flex;
   flex-direction: column;
-  font-family: var(--font-body);
+  margin-top: 3px;
+  font-family: var(--font-mono);
   font-size: 11px;
+  line-height: 1.5;
   font-variant-numeric: tabular-nums;
   color: var(--color-text-secondary);
 }
@@ -1926,7 +1951,7 @@ function onCiteClick(e) {
 }
 .saved-periods {
   list-style: none;
-  margin: 2px 0 var(--space-1) var(--space-4);
+  margin: 2px 0 var(--space-1) var(--space-3);
   padding: 0 0 0 var(--space-1);
   border-left: 1px solid var(--color-border);
   display: flex;
@@ -1934,12 +1959,14 @@ function onCiteClick(e) {
   gap: 2px;
 }
 .saved-periods .saved-open {
-  padding-block: 6px;
+  padding: 6px 10px;
 }
 .saved-period-name {
-  font-family: var(--font-body);
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .report-main {

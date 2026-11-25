@@ -147,7 +147,8 @@ describe('ReportsView in two languages', () => {
     const meta = [...host.querySelectorAll('.report-meta .meta-part')].map((m) => m.textContent)
     expect(meta).toEqual(['Durum raporu', 'Sağlık', '01.08.2026 - 31.10.2026'])
     expect(host.querySelector('.report-content').getAttribute('lang')).toBe('en')
-    expect(text('.saved-name')).toBe('Sudan · Sağlık')
+    expect(text('.saved-name')).toBe('Sudan')
+    expect(text('.saved-sector')).toBe('Sağlık')
   })
 
   it('"Run next period" names the report it continues, in the language shown', async () => {
@@ -326,7 +327,7 @@ describe('ReportsView in two languages', () => {
     })
   })
 
-  describe('the saved list names each type in full', () => {
+  describe('the saved list names each type', () => {
     const q2 = {
       ...SAVED,
       id: 'q2',
@@ -367,25 +368,27 @@ describe('ReportsView in two languages', () => {
       return row.textContent.replace(/\s+/g, ' ').trim()
     }
 
-    it('shows the full type name in single rows and series heads, in both languages', async () => {
+    // What screen readers hear instead: the full type name.
+    const spokenType = (el) => el.querySelector('.saved-meta > span > .sr-only').textContent.trim()
+
+    it('shows a short type in rows and series heads, read out in full, in both languages', async () => {
       vi.mocked(listReports).mockResolvedValue({ reports: [SAVED, yemen, q2, somalia, syria] })
       await mount()
       const head = host.querySelector('.saved-series-head')
       const singles = [...host.querySelectorAll('.saved-list > .saved-item')]
-      expect(typeLine(head)).toBe('Situation Report · 2 reports · EN')
-      expect(singles.map(typeLine)).toEqual([
-        'Indicator Monitoring Report · EN',
-        'Needs Assessment Brief · EN',
-        'Technical Monitoring Report · EN',
+      expect(typeLine(head)).toBe('Situation · 2 reports · EN')
+      expect(singles.map(typeLine)).toEqual(['Indicators · EN', 'Needs · EN', 'Technical · EN'])
+      expect(spokenType(head)).toBe('Situation Report')
+      expect(singles.map(spokenType)).toEqual([
+        'Indicator Monitoring Report',
+        'Needs Assessment Brief',
+        'Technical Monitoring Report',
       ])
       setLocale('tr')
       await flush()
-      expect(typeLine(head)).toBe('Durum raporu · 2 rapor · EN')
-      expect(singles.map(typeLine)).toEqual([
-        'Gösterge izleme raporu · EN',
-        'İhtiyaç değerlendirmesi özeti · EN',
-        'Teknik izleme raporu · EN',
-      ])
+      expect(typeLine(head)).toBe('Durum · 2 rapor · EN')
+      expect(singles.map(typeLine)).toEqual(['Gösterge · EN', 'İhtiyaç · EN', 'Teknik · EN'])
+      expect(spokenType(singles[2])).toBe('Teknik izleme raporu')
       // The delete button names the type in full too.
       expect(singles[0].querySelector('.saved-del').getAttribute('aria-label')).toBe(
         'Raporu sil: Yemen, Gösterge izleme raporu, 01.08.2026 - 31.10.2026',

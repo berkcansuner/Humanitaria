@@ -442,6 +442,12 @@
       "needs_assessment": "Needs Assessment Brief",
       "technical_monitoring": "Technical Monitoring Report"
     },
+    "typesShort": {
+      "situation": "Situation",
+      "indicator_monitoring": "Indicators",
+      "needs_assessment": "Needs",
+      "technical_monitoring": "Technical"
+    },
     "typeDescriptions": {
       "situation": "Summary, key findings and outlook from ReliefWeb reports, with every claim cited.",
       "indicator_monitoring": "A table of key figures with their sources, then data gaps and recent developments.",

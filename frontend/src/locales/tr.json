@@ -442,6 +442,12 @@
       "needs_assessment": "İhtiyaç değerlendirmesi özeti",
       "technical_monitoring": "Teknik izleme raporu"
     },
+    "typesShort": {
+      "situation": "Durum",
+      "indicator_monitoring": "Gösterge",
+      "needs_assessment": "İhtiyaç",
+      "technical_monitoring": "Teknik"
+    },
     "typeDescriptions": {
       "situation": "ReliefWeb raporlarından özet, temel bulgular ve genel görünüm. Her bilgi kaynak gösterilerek yazılır.",
       "indicator_monitoring": "Kaynaklarıyla birlikte temel rakamlar tablosu, ardından veri eksikleri ve son gelişmeler.",
