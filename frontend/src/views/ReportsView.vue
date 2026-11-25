@@ -484,15 +484,19 @@
                   type="submit"
                   class="generate-btn"
                   :disabled="!form.country || generating"
+                  :aria-describedby="optionsError || !form.country ? 'generate-hint' : undefined"
                 >
                   <FileText :size="16" aria-hidden="true" />
                   {{ t('reports.form.generate') }}
                 </button>
-                <p v-if="optionsError" class="form-hint">{{ t('reports.form.optionsError') }}</p>
-                <p v-else-if="!countries.length" class="form-hint">
+                <!-- Why Generate is off, read with the button. -->
+                <p v-if="optionsError" id="generate-hint" class="form-hint">
+                  {{ t('reports.form.optionsError') }}
+                </p>
+                <p v-else-if="!countries.length" id="generate-hint" class="form-hint">
                   {{ t('reports.form.loadingCountries') }}
                 </p>
-                <p v-else-if="!form.country" class="form-hint">
+                <p v-else-if="!form.country" id="generate-hint" class="form-hint">
                   {{ t('reports.form.chooseCountry') }}
                 </p>
               </div>
