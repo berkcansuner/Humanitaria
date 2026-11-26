@@ -38,8 +38,8 @@ function status(source) {
   }
 }
 
-async function mount(source) {
-  vi.mocked(getIngestStatus).mockResolvedValue(status(source))
+async function mount(source, { keepStatus = false } = {}) {
+  if (!keepStatus) vi.mocked(getIngestStatus).mockResolvedValue(status(source))
   vi.mocked(getIngestDocuments).mockResolvedValue({ items: [], total: 0, computing: false })
   const router = createRouter({
     history: createMemoryHistory(),
@@ -108,5 +108,22 @@ describe('AdminIngestionView tabs', () => {
     expect(host.querySelector('.doc-search')).not.toBeNull()
     expect(host.querySelector('.run-meta')).toBeNull()
     expect(tabs[1].getAttribute('aria-current')).toBe('true')
+  })
+})
+
+describe('AdminIngestionView status', () => {
+  afterEach(() => {
+    app.unmount()
+    host.remove()
+  })
+
+  it('shows the last ingest as day.month.year and time, not a raw timestamp', async () => {
+    vi.mocked(getIngestStatus).mockResolvedValue({
+      ...status('cron'),
+      last_ingest: '2026-11-18T22:41:07+00:00',
+    })
+    await mount('cron', { keepStatus: true })
+    const dd = host.querySelector('.grid dd')
+    expect(dd.textContent.trim()).toMatch(/^\d{2}\.\d{2}\.2026 \d{2}:\d{2}$/)
   })
 })

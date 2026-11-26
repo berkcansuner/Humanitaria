@@ -208,20 +208,20 @@ onUnmounted(() => clearTimeout(searchTimer))
   font-size: var(--text-sm);
 }
 
+/* Column names as in the answer and report tables: sentence case on Cloud Ground. */
 .users-table th {
   text-align: left;
-  padding: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   font-family: var(--font-body);
-  font-weight: 500;
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-weight: 600;
+  font-size: var(--text-xs);
   color: var(--color-text-secondary);
-  border-bottom: 1px solid var(--color-outline);
+  background-color: var(--color-surface-container-low);
+  border-bottom: 1px solid var(--color-border-strong);
 }
 
 .users-table td {
-  padding: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--color-border);
   color: var(--color-text);
 }
@@ -231,8 +231,8 @@ onUnmounted(() => clearTimeout(searchTimer))
 }
 
 .cell-date {
-  font-family: var(--font-body);
-  font-size: 12.5px;
+  font-family: var(--font-mono);
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }

@@ -39,14 +39,14 @@
             <dl v-else class="grid">
               <div>
                 <dt>{{ t('admin.status.lastIngest') }}</dt>
-                <dd>{{ status?.last_ingest || '—' }}</dd>
+                <dd class="num">{{ formatDateTime(status?.last_ingest) }}</dd>
               </div>
               <!-- Production runs from GitHub Actions (.github/workflows/nightly-ingest.yml),
                    so the in-app scheduler is off there by design; say how runs happen
                    instead of showing "Inactive" as if something were broken. -->
               <div v-if="status?.scheduler_active">
                 <dt>{{ t('admin.status.nextRun') }}</dt>
-                <dd>{{ formatDateTime(status?.next_scheduled_run) }}</dd>
+                <dd class="num">{{ formatDateTime(status?.next_scheduled_run) }}</dd>
               </div>
               <div v-else>
                 <dt>{{ t('admin.status.schedule') }}</dt>
@@ -112,19 +112,19 @@
                 <thead>
                   <tr>
                     <th>{{ t('admin.run.endpoint') }}</th>
-                    <th>{{ t('admin.run.total') }}</th>
-                    <th>{{ t('admin.run.ok') }}</th>
-                    <th>{{ t('admin.run.failed') }}</th>
-                    <th>{{ t('admin.run.skipped') }}</th>
+                    <th class="num">{{ t('admin.run.total') }}</th>
+                    <th class="num">{{ t('admin.run.ok') }}</th>
+                    <th class="num">{{ t('admin.run.failed') }}</th>
+                    <th class="num">{{ t('admin.run.skipped') }}</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="row in lastStatsRows" :key="row.endpoint">
                     <td>{{ row.endpoint }}</td>
-                    <td>{{ row.total }}</td>
-                    <td>{{ row.succeeded }}</td>
-                    <td>{{ row.failed }}</td>
-                    <td>{{ row.skipped }}</td>
+                    <td class="num">{{ formatNumber(row.total) }}</td>
+                    <td class="num">{{ formatNumber(row.succeeded) }}</td>
+                    <td class="num">{{ formatNumber(row.failed) }}</td>
+                    <td class="num">{{ formatNumber(row.skipped) }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -502,6 +502,16 @@ onUnmounted(() => {
   font-variant-numeric: tabular-nums;
 }
 
+/* Figures and dates in Geist Mono; counts right-aligned so their digits line up. */
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.run-summary .num {
+  text-align: right;
+}
+
 .dd-note {
   display: block;
   margin-top: 2px;
@@ -648,18 +658,19 @@ onUnmounted(() => {
 .run-summary th,
 .run-summary td {
   text-align: left;
-  padding: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--color-border);
   font-variant-numeric: tabular-nums;
 }
 
+/* Column names as in the answer and report tables: sentence case on Cloud Ground. */
 .run-summary th {
   font-family: var(--font-body);
-  font-weight: 500;
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-weight: 600;
+  font-size: var(--text-xs);
   color: var(--color-text-secondary);
+  background-color: var(--color-surface-container-low);
+  border-bottom-color: var(--color-border-strong);
 }
 
 .bd-actions {
@@ -711,22 +722,28 @@ onUnmounted(() => {
 .doc-table th,
 .doc-table td {
   text-align: left;
-  padding: var(--space-2);
+  vertical-align: top;
+  padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--color-border);
+}
+
+/* On a phone the title keeps a readable measure and the table scrolls instead. */
+.doc-title {
+  min-width: 16em;
 }
 
 .doc-table th {
   font-family: var(--font-body);
-  font-weight: 500;
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-weight: 600;
+  font-size: var(--text-xs);
   color: var(--color-text-secondary);
+  background-color: var(--color-surface-container-low);
+  border-bottom-color: var(--color-border-strong);
 }
 
 .doc-date {
-  font-family: var(--font-body);
-  font-size: 12.5px;
+  font-family: var(--font-mono);
+  font-size: 12px;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
   color: var(--color-text-secondary);
