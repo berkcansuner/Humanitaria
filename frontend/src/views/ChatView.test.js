@@ -182,6 +182,16 @@ describe('ChatView keeps the open conversation in the URL', () => {
     expect(getMessages).toHaveBeenLastCalledWith('c1')
   })
 
+  it('opens a new chat for a question asked on the landing page', async () => {
+    await mount('/app?c=c2')
+    expect(text('.message.user')).toContain('Cholera in Yemen?')
+    await router.push('/')
+    await router.push('/app?q=Sudan%20IDPs')
+    await flush()
+    expect(query().c).toBeUndefined()
+    expect(host.querySelector('.message.user')).toBeNull()
+  })
+
   it('keeps the other query keys', async () => {
     await mount('/app?c=c2&lang=en')
     host.querySelector('.new-chat-btn').click()

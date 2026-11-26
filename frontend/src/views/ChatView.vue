@@ -88,12 +88,14 @@ watch(activeId, syncUrl)
 // App.vue keeps this screen alive while another one is open. Coming back with a
 // conversation in the URL (a link, a bookmark) opens it. Coming back without one
 // (the Chat tab, the brand) keeps the open conversation and puts it back in the URL.
+// A question asked on the landing page (?q=) is a new topic, so it opens a new chat.
 watch(
   () => [route.path, route.query.c],
   ([path, c]) => {
     if (path !== ownPath) return
     const id = queryId(c)
-    if (id && id !== activeId.value) activeId.value = id
+    if (!id && route.query.q !== undefined) activeId.value = null
+    else if (id && id !== activeId.value) activeId.value = id
     else if (!id) syncUrl(activeId.value)
   },
 )
