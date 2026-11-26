@@ -187,16 +187,17 @@ function metaParts(src) {
   font-variant-numeric: tabular-nums;
 }
 
+/* Column names as in the answer's tables: sentence case on Cloud Ground, never
+   uppercase-tracked. */
 .ledger-table th {
   text-align: left;
   font-family: var(--font-body);
-  font-weight: 500;
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-weight: 600;
+  font-size: var(--text-xs);
   color: var(--color-text-secondary);
+  background-color: var(--color-surface-container-low);
   padding: 6px var(--space-2);
-  border-bottom: 1px solid var(--color-outline);
+  border-bottom: 1px solid var(--color-border-strong);
 }
 
 .ledger-table td {
