@@ -13,7 +13,7 @@ from rag import db
 
 ALL_COLUMNS = {
     "users": {"id", "email", "name", "ui_language"},
-    "reports": {"id", "report_type", "cover_image", "section_images", "previous_report_id"},
+    "reports": {"id", "report_type", "cover_image", "section_images"},
 }
 
 
@@ -95,8 +95,20 @@ def test_only_missing_columns_are_altered():
     db._pg_migrate_columns(_FakeEngine(conn))
     assert _alters(conn) == [
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS ui_language TEXT",
-        "ALTER TABLE reports ADD COLUMN IF NOT EXISTS previous_report_id TEXT",
     ]
+
+
+def test_a_removed_feature_column_is_dropped_once():
+    """Report series were removed: a database that still has previous_report_id loses
+    it, and one without it is not touched again."""
+    tables = {
+        "users": ALL_COLUMNS["users"],
+        "reports": ALL_COLUMNS["reports"] | {"previous_report_id"},
+    }
+    conn = _FakeConn(tables)
+    db._pg_migrate_columns(_FakeEngine(conn))
+    assert _alters(conn) == ["ALTER TABLE reports DROP COLUMN IF EXISTS previous_report_id"]
+    assert conn.sql[0] == "SET LOCAL lock_timeout = '5s'"
 
 
 def test_new_database_is_left_to_create_all():

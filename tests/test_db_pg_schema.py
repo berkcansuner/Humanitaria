@@ -63,12 +63,25 @@ def test_missing_columns_are_added_then_left_alone(engine):
     db._pg_migrate_columns(engine)
     assert first[0] == "SET LOCAL lock_timeout = '5s'"
     assert "ui_language" in _columns(engine, "users")
-    assert {"report_type", "cover_image", "section_images",
-            "previous_report_id"} <= _columns(engine, "reports")
+    assert {"report_type", "cover_image", "section_images"} <= _columns(engine, "reports")
+    assert "previous_report_id" not in _columns(engine, "reports")
 
     first.clear()
     db._pg_migrate_columns(engine)
     assert first and not [s for s in first if s.lstrip().upper().startswith("ALTER")]
+
+
+def test_the_removed_series_column_is_dropped_keeping_rows(engine):
+    """Report series were removed (2026-11-26): a deployed reports table that still has
+    previous_report_id loses it, and its rows stay."""
+    with engine.begin() as conn:
+        conn.exec_driver_sql("ALTER TABLE reports ADD COLUMN previous_report_id TEXT")
+        conn.exec_driver_sql("INSERT INTO reports (id, title, previous_report_id) "
+                             "VALUES ('r1', 't', 'r0')")
+    db._pg_migrate_columns(engine)
+    assert "previous_report_id" not in _columns(engine, "reports")
+    with engine.connect() as conn:
+        assert [r[0] for r in conn.exec_driver_sql("SELECT id FROM reports")] == ["r1"]
 
 
 def test_lock_timeout_gives_up_and_next_start_retries(engine, caplog):

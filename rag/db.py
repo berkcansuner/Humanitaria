@@ -100,10 +100,6 @@ reports_table = Table(
     Column("doc_count", Integer),
     Column("cover_image", Text),
     Column("section_images", Text),
-    # The report this one continues (same type + country + sector + language, the
-    # next period). NULL = first in its series. Not a FK: deleting the previous
-    # report leaves a dangling id, which the API reports as a broken link.
-    Column("previous_report_id", Text),
     Column("created_at", Text, nullable=False),
 )
 Index("idx_reports_user", reports_table.c.user_id, reports_table.c.created_at)
@@ -201,8 +197,9 @@ def _ensure_schema(engine: Engine) -> None:
                 conn.exec_driver_sql("ALTER TABLE reports ADD COLUMN cover_image TEXT")
             if cols and "section_images" not in cols:
                 conn.exec_driver_sql("ALTER TABLE reports ADD COLUMN section_images TEXT")
-            if cols and "previous_report_id" not in cols:
-                conn.exec_driver_sql("ALTER TABLE reports ADD COLUMN previous_report_id TEXT")
+            # Report series were removed (2026-11-26): drop the link column.
+            if "previous_report_id" in cols:
+                conn.exec_driver_sql("ALTER TABLE reports DROP COLUMN previous_report_id")
     else:
         _pg_migrate_columns(engine)
     metadata.create_all(engine)
@@ -215,7 +212,12 @@ def _ensure_schema(engine: Engine) -> None:
 # an existing table, so an already-deployed Postgres database gains them here.
 _PG_ADDED_COLUMNS = {
     "users": ("ui_language",),
-    "reports": ("report_type", "cover_image", "section_images", "previous_report_id"),
+    "reports": ("report_type", "cover_image", "section_images"),
+}
+# Columns of a removed feature, dropped from an already-deployed database (report
+# series, 2026-11-26).
+_PG_DROPPED_COLUMNS = {
+    "reports": ("previous_report_id",),
 }
 # How long a start waits for a table lock before giving up on the migration.
 _DDL_LOCK_TIMEOUT = "5s"
@@ -223,7 +225,8 @@ _LOCK_NOT_AVAILABLE = "55P03"  # SQLSTATE raised when lock_timeout expires
 
 
 def _pg_migrate_columns(engine: Engine) -> None:
-    """Add the columns in _PG_ADDED_COLUMNS that an existing table lacks.
+    """Add the columns in _PG_ADDED_COLUMNS that an existing table lacks, and drop
+    the ones in _PG_DROPPED_COLUMNS that it still has.
 
     ``ADD COLUMN IF NOT EXISTS`` takes an ACCESS EXCLUSIVE lock before it checks,
     and ``users`` is read on every request, so the ALTER runs only for a column
@@ -255,6 +258,15 @@ def _pg_add_missing_columns(conn: Connection) -> None:
         for column in columns:
             if column not in present:
                 conn.exec_driver_sql(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} TEXT")
+    for table, columns in _PG_DROPPED_COLUMNS.items():
+        if not conn.exec_driver_sql(f"SELECT to_regclass('{table}')").scalar():
+            continue
+        present = {r[0] for r in conn.exec_driver_sql(
+            "SELECT attname FROM pg_attribute "
+            f"WHERE attrelid = to_regclass('{table}') AND attnum > 0 AND NOT attisdropped")}
+        for column in columns:
+            if column in present:
+                conn.exec_driver_sql(f"ALTER TABLE {table} DROP COLUMN IF EXISTS {column}")
 
 
 def _ensure_vector_schema(engine: Engine) -> None:
