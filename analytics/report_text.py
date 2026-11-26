@@ -437,11 +437,13 @@ _GAPS = {
     "tr": {"not_retrieved": "HDX HAPI'den alınamadı",
            "no_data": "dönemde veri yok",
            "too_few": "eğilim testi için gözlem sayısı yetersiz (n={n})",
+           "flat": "değerler {n} gözlem boyunca değişmediği için eğilim testi yapılmadı",
            "not_comparable": "yıllar karşılaştırılabilir olmadığından eğilim testi yapılmadı",
            "analysis_error": "analiz hatası"},
     "en": {"not_retrieved": "could not be retrieved from HDX HAPI",
            "no_data": "no data in the period",
            "too_few": "too few observations for a trend test (n={n})",
+           "flat": "the values do not vary across {n} observations, so no trend was tested",
            "not_comparable": "years not comparable, so no trend was tested",
            "analysis_error": "analysis error"},
 }

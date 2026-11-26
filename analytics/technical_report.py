@@ -192,7 +192,12 @@ def compute_findings(iso3: str, date_from: str | None, date_to: str | None,
             # Trend (gerçek zaman ekseni: ilk dönemden beri yıl → eğim yıl başına)
             times = _years_since_first(t_periods)
             tr = trend(t_values, indicator=name, min_points=min_pts, times=times)
-            if tr.direction == "insufficient_data":
+            if tr.direction == "insufficient_data" and tr.n_points >= min_pts:
+                # Enough observations, all equal: trend() runs no test on zero variation.
+                gaps.append(f"{name}: the values do not vary across {tr.n_points} observations, "
+                            "so no trend was tested")
+                gap_items.append({"name": name, "code": "flat", "n": tr.n_points})
+            elif tr.direction == "insufficient_data":
                 gaps.append(f"{name}: too few observations for a trend test (n={tr.n_points})")
                 gap_items.append({"name": name, "code": "too_few", "n": tr.n_points})
             elif not_comparable:

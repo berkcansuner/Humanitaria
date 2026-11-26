@@ -1312,3 +1312,28 @@ def test_a_look_back_note_only_for_an_indicator_the_look_back_line_lists(_mock):
     for note in f.notes:
         if "(look-back window)" in note:
             assert note.split(" (look-back window)")[0] in listed
+
+
+# --- Codex review 2026-11-27: a series with enough observations whose values never
+# change was listed under Data gaps as "too few observations (n=5)" while its own
+# finding said the values do not vary. ---
+
+def _flat_pin_rows(ep, params):
+    if params.get("sector_code") != "FSC":
+        return []
+    y = _today().year
+    return [{"population": 12_000_000, "category": "", "reference_period_start": f"{y - k}-01-01",
+             "reference_period_end": f"{y - k}-12-31"} for k in range(5)]
+
+
+def test_an_unchanging_series_is_not_called_too_short(monkeypatch):
+    from analytics import report_text
+    monkeypatch.setattr("analytics.technical_report.fetch_rows",
+                        _recording_fetch([], _flat_pin_rows))
+    f = compute_findings("AFG", None, None, language="en", theme="Food and Nutrition")
+    assert [g["code"] for g in f.gap_items if g["code"] in ("too_few", "flat")] == ["flat"]
+    assert not any("too few" in g for g in f.gaps)
+    en, tr = report_text.coverage_text(f, "en"), report_text.coverage_text(f, "tr")
+    assert "the values do not vary across 5 observations, so no trend was tested" in en
+    assert "too few" not in en
+    assert "değerler 5 gözlem boyunca değişmediği için eğilim testi yapılmadı" in tr
