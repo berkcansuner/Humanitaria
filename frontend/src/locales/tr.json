@@ -16,6 +16,10 @@
     "tryAgain": "Yeniden dene",
     "dismiss": "Kapat"
   },
+  "dateField": {
+    "placeholder": "gg.aa.yyyy",
+    "choose": "Takvimden tarih seç"
+  },
   "lang": {
     "buttonLabel": "{code} – Dil: {name}",
     "listLabel": "Dil",

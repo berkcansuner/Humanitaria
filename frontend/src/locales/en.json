@@ -16,6 +16,10 @@
     "tryAgain": "Try again",
     "dismiss": "Dismiss"
   },
+  "dateField": {
+    "placeholder": "dd.mm.yyyy",
+    "choose": "Choose a date from the calendar"
+  },
   "lang": {
     "buttonLabel": "{code} – Language: {name}",
     "listLabel": "Language",

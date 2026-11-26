@@ -421,9 +421,8 @@
               <div class="field-grid field-grid--period">
                 <label class="field">
                   <span class="field-label">{{ t('reports.form.from') }}</span>
-                  <input
+                  <DateField
                     v-model="form.date_from"
-                    type="date"
                     :min="minDate"
                     :max="form.date_to || maxDate"
                     :disabled="generating"
@@ -431,9 +430,8 @@
                 </label>
                 <label class="field">
                   <span class="field-label">{{ t('reports.form.to') }}</span>
-                  <input
+                  <DateField
                     v-model="form.date_to"
-                    type="date"
                     :min="form.date_from || minDate"
                     :max="maxDate"
                     :disabled="generating"
@@ -569,6 +567,7 @@ import SourceList from '../components/SourceList.vue'
 import UndoToast from '../components/UndoToast.vue'
 import CitePreview from '../components/CitePreview.vue'
 import ReportProgress from '../components/ReportProgress.vue'
+import DateField from '../components/DateField.vue'
 import { useUndoableDelete } from '../utils/undoableDelete.js'
 import { renderMarkdown } from '../utils/renderMarkdown.js'
 import { renumberCitations, numberByFirstAppearance } from '../utils/renumberCitations.js'
@@ -1633,8 +1632,7 @@ function onCiteClick(e) {
   gap: 6px;
   min-width: 0;
 }
-.field select,
-.field input {
+.field select {
   width: 100%;
   min-height: 40px;
   padding: 8px 12px;
@@ -1649,11 +1647,7 @@ function onCiteClick(e) {
     border-color 0.15s,
     box-shadow 0.15s;
 }
-.field input[type='date'] {
-  font-variant-numeric: tabular-nums;
-}
-.field select:focus,
-.field input:focus {
+.field select:focus {
   border-color: var(--color-accent);
   box-shadow: var(--focus-ring);
 }

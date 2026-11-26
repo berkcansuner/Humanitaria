@@ -28,3 +28,14 @@ export function isoDateTime(value) {
   if (!d) return '—'
   return `${isoDate(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
+
+/** A typed "25.08.2026" (also "1.9.2026", "25/08/2026", "25-08-2026") as "2026-08-25";
+ * null for anything else, including a day the calendar does not have. */
+export function parseDayMonthYear(text) {
+  const m = /^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/.exec(String(text || '').trim())
+  if (!m) return null
+  const [day, month, year] = [Number(m[1]), Number(m[2]), Number(m[3])]
+  const d = new Date(year, month - 1, day)
+  if (d.getFullYear() !== year || d.getMonth() !== month - 1 || d.getDate() !== day) return null
+  return `${year}-${pad(month)}-${pad(day)}`
+}

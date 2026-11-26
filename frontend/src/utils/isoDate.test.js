@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isoDate, isoDateTime } from './isoDate.js'
+import { isoDate, isoDateTime, parseDayMonthYear } from './isoDate.js'
 
 describe('isoDate', () => {
   it('writes a bare YYYY-MM-DD date as day.month.year, with no time-zone shift', () => {
@@ -26,5 +26,25 @@ describe('isoDateTime', () => {
   it('returns a dash for missing or invalid input', () => {
     expect(isoDateTime(undefined)).toBe('—')
     expect(isoDateTime('nope')).toBe('—')
+  })
+})
+
+describe('parseDayMonthYear', () => {
+  it('reads day.month.year as YYYY-MM-DD, with or without leading zeros', () => {
+    expect(parseDayMonthYear('25.08.2026')).toBe('2026-08-25')
+    expect(parseDayMonthYear(' 1.9.2026 ')).toBe('2026-09-01')
+  })
+
+  it('accepts a slash or a hyphen between the parts', () => {
+    expect(parseDayMonthYear('25/08/2026')).toBe('2026-08-25')
+    expect(parseDayMonthYear('25-08-2026')).toBe('2026-08-25')
+  })
+
+  it('refuses a day that does not exist, a short year and other text', () => {
+    expect(parseDayMonthYear('31.02.2026')).toBeNull()
+    expect(parseDayMonthYear('25.13.2026')).toBeNull()
+    expect(parseDayMonthYear('25.08.26')).toBeNull()
+    expect(parseDayMonthYear('2026-08-25')).toBeNull()
+    expect(parseDayMonthYear('')).toBeNull()
   })
 })
