@@ -36,17 +36,16 @@ const prompts = computed(() => ['p1', 'p2', 'p3', 'p4'].map((k) => t(`chat.empty
 </script>
 
 <style scoped>
+/* Starts at the column's left edge, the edge the composer and answers share. */
 .empty-state {
   flex: 1;
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: var(--space-6) var(--space-4);
+  padding: var(--space-6) 0;
 }
 
 .empty-inner {
   width: 100%;
-  max-width: 560px;
 }
 
 .empty-title {
