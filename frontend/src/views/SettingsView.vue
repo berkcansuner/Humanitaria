@@ -23,7 +23,7 @@
             </dd>
           </div>
         </dl>
-        <form class="form-row" @submit.prevent="saveName">
+        <form class="form-col" @submit.prevent="saveName">
           <label class="field">
             <span>{{ t('settings.profile.name') }}</span>
             <input
@@ -440,12 +440,6 @@ async function confirmDelete() {
   color: var(--color-text);
 }
 
-.form-row {
-  display: flex;
-  align-items: flex-end;
-  gap: var(--space-3);
-}
-
 .form-col {
   display: flex;
   flex-direction: column;
@@ -501,8 +495,10 @@ async function confirmDelete() {
   background-color: var(--color-accent);
 }
 
+/* Nothing to save yet: a neutral fill, not a faded teal that reads as broken. */
 .primary-btn:disabled {
-  opacity: 0.55;
+  color: var(--color-muted);
+  background-color: var(--color-surface-container-high);
   cursor: default;
 }
 
@@ -649,9 +645,6 @@ async function confirmDelete() {
   .card > :not(.card-head) {
     grid-column: 1;
     grid-row: auto;
-  }
-  .form-row {
-    flex-wrap: wrap;
   }
 }
 </style>
