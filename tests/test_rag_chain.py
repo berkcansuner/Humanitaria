@@ -212,14 +212,6 @@ def test_all_report_prompts_forbid_corroboration_piling():
         assert "CORROBORATION IS NOT MULTI-FACT" in prompt, report_type
 
 
-def test_technical_report_type_wired_in_service():
-    """A technical report is written in code: no model prompt is kept for it."""
-    from rag.chain import _REPORT_PROMPTS
-    from rag.report_service import REPORT_TYPES
-    assert "technical_monitoring" in REPORT_TYPES
-    assert "technical_monitoring" not in _REPORT_PROMPTS
-
-
 def test_indicator_table_values_come_from_the_originator_with_their_own_date():
     # Yemen 2026-11-16: "Acutely food insecure 18.3 million" came from a HALO Trust news
     # item and "As of" was that article's publication date.

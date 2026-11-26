@@ -355,11 +355,7 @@ class TestReportService:
 
     def test_report_types_constant(self):
         from rag.report_service import REPORT_TYPES
-        # technical_monitoring is registered in the rag layer in Task 8 (chain + service);
-        # its selectable route branch (HAPI pipeline) lands in Task 9.
-        assert REPORT_TYPES == (
-            "situation", "indicator_monitoring", "needs_assessment", "technical_monitoring",
-        )
+        assert REPORT_TYPES == ("situation", "indicator_monitoring", "needs_assessment")
 
 
 # --- endpoints ---------------------------------------------------------------
@@ -767,7 +763,6 @@ class TestReportPdf:
         assert _type_label("situation") == "M&E Situation Report"
         assert _type_label("indicator_monitoring") == "M&E Indicator Monitoring Report"
         assert _type_label("needs_assessment") == "M&E Needs Assessment Brief"
-        assert _type_label("technical_monitoring") == "Technical Monitoring Report"
         assert _type_label("unknown_type") == "M&E Situation Report"
 
     def test_render_pdf_with_indicator_table(self):
@@ -939,3 +934,18 @@ def test_indicator_report_lists_the_sources_its_table_draws_on(report_type, kept
         })
         rid = next(e for e in _parse_sse_events(resp.text) if e["event"] == "saved")["data"]["report_id"]
         assert len(client.get(f"/reports/{rid}").json()["sources"]) == kept
+
+
+def test_an_impossible_date_is_a_validation_error():
+    from fastapi.testclient import TestClient
+    from api.main import app
+    resp = TestClient(app).post("/reports/stream", json={
+        "country": "Afghanistan", "report_type": "situation", "date_from": "2026-02-30"})
+    assert resp.status_code == 422 and resp.json()["code"] == "validation_failed"
+
+
+def test_the_technical_report_type_is_no_longer_accepted():
+    from api.routes.reports import ReportRequest
+    import pytest
+    with pytest.raises(ValueError):
+        ReportRequest(country="Afghanistan", report_type="technical_monitoring")

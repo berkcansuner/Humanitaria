@@ -43,8 +43,8 @@ class TestPdfLabels:
         assert "Sudan: Access Snapshot" in text and "OCHA" in text
 
     def test_turkish_pdf_names_all_sectors_and_each_report_type_in_turkish(self):
-        text = _pdf_text(_report("tr", theme=None, report_type="technical_monitoring"))
-        assert "Teknik İzleme Raporu" in text and "Tüm sektörler" in text
+        text = _pdf_text(_report("tr", theme=None, report_type="needs_assessment"))
+        assert "İhtiyaç Değerlendirmesi Özeti" in text and "Tüm sektörler" in text
         assert "All sectors" not in text
 
     def test_the_generation_date_is_day_month_year_in_both_languages(self):
@@ -60,8 +60,6 @@ class TestPdfLabels:
                 text = _pdf_text(_report(language))
                 assert "18.11.2026" in text
                 assert "2026-08-01" not in text and "01.08.2026" in text      # the period too
-            technical = _pdf_text({**_report("en"), "report_type": "technical_monitoring"})
-            assert "Generated from HDX HAPI data by Humanitaria" in technical
             assert "Generated from ReliefWeb reports by Humanitaria" in _pdf_text(_report("en"))
 
     def test_english_pdf_keeps_its_english_labels(self):
@@ -162,18 +160,3 @@ class TestTechnicalReportLanguage:
         assert format_value(8.6, "tr", percent=True) == "%8,6"
         assert format_value(2_500_000, "tr") == "2,5 mn"
         assert format_value(2_500_000, "en") == "2.5M"
-
-
-@pytest.mark.parametrize("language,expected,foreign", [
-    ("en", "No HDX HAPI country code (ISO3)", "bulunamadı"),
-    ("tr", "HDX HAPI ülke kodu (ISO3) bulunamadı", "No HDX HAPI"),
-])
-def test_unknown_country_message_of_a_technical_report_follows_its_language(
-        language, expected, foreign):
-    from fastapi.testclient import TestClient
-    from api.main import app
-    from tests.test_reports_route import _parse_sse_events
-    resp = TestClient(app).post("/reports/stream", json={
-        "country": "Atlantis", "report_type": "technical_monitoring", "language": language})
-    content = _parse_sse_events(resp.text)[0]["data"]["content"]
-    assert expected in content and foreign not in content

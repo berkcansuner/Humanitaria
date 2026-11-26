@@ -32,7 +32,6 @@ class ErrorCode(str, Enum):
     model_busy = "model_busy"
     quota_exhausted = "quota_exhausted"
     report_failed = "report_failed"
-    no_sector_data = "no_sector_data"
     chat_failed = "chat_failed"
     body_too_large = "body_too_large"
     validation_failed = "validation_failed"
