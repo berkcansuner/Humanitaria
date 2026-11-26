@@ -525,7 +525,7 @@ function autoGrow() {
   const el = chatInput.value
   if (!el) return
   el.style.height = 'auto'
-  el.style.height = Math.min(el.scrollHeight, 140) + 'px'
+  el.style.height = Math.min(el.scrollHeight, 168) + 'px'
 }
 
 // The landing ask field arrives as /app?q=... (or a sessionStorage copy): fill
@@ -626,6 +626,8 @@ watch(locale, () => decorateCodeBlocks(messagesContainer.value), { flush: 'post'
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
+  /* Text scrolling under the composer fades out instead of being cut off at its edge. */
+  mask-image: linear-gradient(to bottom, #000 calc(100% - var(--space-5)), transparent);
 }
 
 .message {
@@ -972,42 +974,46 @@ watch(locale, () => decorateCodeBlocks(messagesContainer.value), { flush: 'post'
   padding: var(--space-1) 0;
 }
 
+/* The composer is the landing page's ask field: a pill with a hairline border and
+   a solid teal send button inside. It grows upward for a long message, and its
+   corners stay soft at 28px once it is taller than one line. */
 .input-area {
   display: flex;
   align-items: flex-end;
-  gap: 6px;
-  padding: 6px 6px 6px 16px;
-  border: 1px solid var(--color-outline);
-  border-radius: 14px;
+  gap: var(--space-2);
+  padding: 6px 6px 6px 20px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 28px;
   background-color: var(--color-surface);
   transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
+    border-color 0.18s,
+    box-shadow 0.18s;
 }
 
 .input-area:focus-within {
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-accent) 16%, transparent);
+  box-shadow: var(--focus-ring);
 }
 
 .chat-input {
   flex: 1;
   display: block;
-  padding: 8px 4px;
+  min-height: 44px;
+  padding: 10px 0;
   font-family: var(--font-body);
-  font-size: 15px;
-  line-height: 21px;
+  font-size: 16px;
+  line-height: 24px;
   border: none;
   background-color: transparent;
   color: var(--color-text);
   outline: none;
   resize: none;
-  max-height: 140px;
+  max-height: 168px;
   overflow-y: auto;
 }
 
-/* The whole composer bar shows focus (.input-area:focus-within); the global
-   text-field ring (style.css) on the textarea inside it doubled the ring. */
+/* The whole composer shows focus (.input-area:focus-within); the global
+   text-field ring (style.css) on the textarea inside it would double it. */
 .chat-input:focus-visible {
   box-shadow: none;
 }
@@ -1016,21 +1022,21 @@ watch(locale, () => decorateCodeBlocks(messagesContainer.value), { flush: 'post'
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   flex-shrink: 0;
   background-color: var(--color-accent-container);
   color: var(--color-on-accent);
   border: none;
-  border-radius: 10px;
+  border-radius: var(--radius-full);
   cursor: pointer;
   transition:
-    background-color 0.2s,
+    background-color 0.18s,
     transform 0.15s;
 }
 
 .send-btn:hover:not(:disabled) {
-  background-color: var(--color-accent);
+  background-color: color-mix(in srgb, var(--color-accent-container) 86%, black);
   transform: translateY(-1px);
 }
 
@@ -1038,7 +1044,12 @@ watch(locale, () => decorateCodeBlocks(messagesContainer.value), { flush: 'post'
   transform: scale(0.94);
 }
 
-/* Nothing to send yet: a neutral fill, not a faded green that reads as broken. */
+.send-btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Nothing to send yet: a neutral fill, not a faded teal that reads as broken. */
 .send-btn:disabled {
   background-color: var(--color-surface-container-high);
   color: var(--color-muted);
@@ -1048,7 +1059,6 @@ watch(locale, () => decorateCodeBlocks(messagesContainer.value), { flush: 'post'
 .stop-btn {
   background-color: var(--color-tertiary);
   color: var(--color-on-tertiary);
-  border-radius: var(--radius-full);
 }
 
 .stop-btn:hover {
