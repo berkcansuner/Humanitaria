@@ -35,7 +35,7 @@
         :aria-label="msg.role === 'user' ? t('chat.yourMessage') : t('chat.assistantMessage')"
       >
         <div class="message-row">
-          <div class="message-bubble">
+          <div :class="['message-bubble', { editing: editingIndex === idx }]">
             <template
               v-if="msg.role === 'assistant' && !msg.content && !msg.error && !msg.clarification"
             >
@@ -668,11 +668,30 @@ watch(locale, () => decorateCodeBlocks(messagesContainer.value), { flush: 'post'
   }
 }
 
+/* The question: a Deep Ink bubble with white text, its corner toward the asker
+   left tight, as in the landing page's sample answer card. */
 .message.user .message-bubble {
-  padding: 12px 16px;
-  background-color: var(--color-surface-container);
+  padding: 11px 16px;
+  background-color: var(--color-tertiary);
+  color: var(--color-on-tertiary);
+  border-radius: 14px 14px 4px 14px;
+}
+
+/* Markdown typed into a question stays legible on the ink. */
+.message.user .message-content :deep(:is(code, pre)) {
+  background-color: rgb(255 255 255 / 0.12);
+  border-color: transparent;
+}
+.message.user .message-content :deep(a) {
+  color: inherit;
+  text-decoration: underline;
+}
+
+/* Editing a question: the field replaces the bubble. */
+.message.user .message-bubble.editing {
+  padding: 0;
+  background: none;
   color: var(--color-text);
-  border-radius: 12px;
 }
 
 /* The answer: no box, it reads on the page ground like a report. */
