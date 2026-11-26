@@ -293,7 +293,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, onActivated, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
@@ -597,29 +597,56 @@ onMounted(async () => {
   await loadList()
 })
 
+// App.vue keeps this screen alive while another one is open, and a report keeps
+// streaming meanwhile. The URL and the tab title then belong to that other screen:
+// away from this screen's path, it neither reads nor writes them, and on its
+// return it opens the report a link names or puts the open report back in the URL.
+const ownPath = route.path
+const onScreen = () => route.path === ownPath
+let firstActivation = true
+onActivated(() => {
+  if (firstActivation) {
+    firstActivation = false
+    return
+  }
+  const id = route.query.report
+  if (id) followRoute(id)
+  // The router names the tab after each navigation, this restored URL included.
+  const restored = !id && current.value && current.value.id ? syncUrl(current.value.id) : null
+  Promise.resolve(restored).then(applyTitle)
+})
+
 // Back/Forward or an edited URL: open the named report, or return to the library.
 watch(
   () => route.query.report,
   (id) => {
-    if (!id) {
-      if (current.value && !generating.value) current.value = null
-      return
-    }
-    if (id === openingId.value || (current.value && current.value.id === id)) return
-    openReport(id, { fromRoute: true })
+    if (onScreen()) followRoute(id)
   },
   { immediate: true },
 )
 
+function followRoute(id) {
+  if (!id) {
+    if (current.value && !generating.value) current.value = null
+    return
+  }
+  if (id === openingId.value || (current.value && current.value.id === id)) return
+  openReport(id, { fromRoute: true })
+}
+
 // Tab title names the open report ("Afghanistan · Situation Report · Humanitaria").
 // The locale is a source too: on a language switch the router re-applies the
 // route's own title synchronously, and this watcher runs after it.
+function applyTitle() {
+  const heading = reportHeading.value
+  document.title = heading
+    ? t('reports.docTitle', { heading, type: reportTypeLabel(current.value?.report_type, t) })
+    : `${t('titles.reports')} · Humanitaria`
+}
 watch(
   () => [reportHeading.value, current.value && current.value.report_type, locale.value],
-  ([heading, type]) => {
-    document.title = heading
-      ? t('reports.docTitle', { heading, type: reportTypeLabel(type, t) })
-      : `${t('titles.reports')} · Humanitaria`
+  () => {
+    if (onScreen()) applyTitle()
   },
   { immediate: true },
 )
@@ -644,6 +671,7 @@ async function loadList() {
 // Returns the navigation promise (resolved at once when nothing changes), so a
 // caller can wait for the route watcher to settle.
 function syncUrl(id, { push = false } = {}) {
+  if (!onScreen()) return Promise.resolve()
   const want = id || undefined
   if ((route.query.report || undefined) === want) return Promise.resolve()
   const query = { ...route.query }

@@ -3,6 +3,7 @@ import { createApp, nextTick } from 'vue'
 import { i18n } from '../i18n/index.js'
 import { setLocale } from '../i18n/locale.js'
 import { router } from '../router/index.js'
+import App from '../App.vue'
 import { getReportOptions, listReports, getReport } from '../utils/reportsApi.js'
 import en from '../locales/en.json'
 import tr from '../locales/tr.json'
@@ -866,5 +867,122 @@ describe('ReportsView in two languages', () => {
     setLocale('en')
     await flush()
     expect(text('.error-text')).toBe(en.errors.model_busy)
+  })
+})
+
+// App.vue keeps the reports screen alive while another screen is open, so a
+// report being written, or the one open, is still there on the way back.
+describe('ReportsView kept alive across screens', () => {
+  let push
+  beforeEach(() => {
+    localStorage.clear()
+    setLocale('en')
+    vi.mocked(getReportOptions).mockResolvedValue({ countries: ['Sudan'], themes: ['Health'] })
+    vi.mocked(listReports).mockResolvedValue({ reports: [] })
+    vi.mocked(getReport).mockReset()
+  })
+  afterEach(async () => {
+    app.unmount()
+    host.remove()
+    vi.unstubAllGlobals()
+    await router.push('/')
+  })
+
+  async function mountApp(path) {
+    await router.push(path)
+    await router.isReady()
+    host = document.createElement('div')
+    document.body.appendChild(host)
+    app = createApp(App)
+    app.use(router).use(i18n)
+    app.mount(host)
+    await flush()
+  }
+
+  // A report stream the test feeds one SSE event at a time.
+  function stubStream() {
+    const queue = []
+    let wake = null
+    push = (event, data) => {
+      queue.push(new TextEncoder().encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`))
+      wake?.()
+    }
+    const end = () => {
+      queue.push(null)
+      wake?.()
+    }
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        body: {
+          getReader: () => ({
+            read: async () => {
+              while (!queue.length) await new Promise((r) => (wake = r))
+              const value = queue.shift()
+              return value ? { done: false, value } : { done: true }
+            },
+          }),
+        },
+      }),
+    )
+    return end
+  }
+
+  it('keeps a report being written, and saves it without touching the other screen', async () => {
+    const end = stubStream()
+    await mountApp('/reports')
+    const country = host.querySelectorAll('.report-form select')[0]
+    country.value = 'Sudan'
+    country.dispatchEvent(new Event('change'))
+    await flush()
+    host.querySelector('.report-form').dispatchEvent(new Event('submit'))
+    await flush()
+    push('token', { content: '## Summary\n\nDisplacement rose.' })
+    await flush()
+
+    await router.push('/privacy')
+    await flush()
+    vi.mocked(getReport).mockResolvedValue({ ...SAVED, id: 'r9', content: '## Summary\n\nSaved.' })
+    vi.mocked(listReports).mockResolvedValue({ reports: [{ ...SAVED, id: 'r9' }] })
+    push('saved', { report_id: 'r9', title: SAVED.title })
+    end()
+    await flush()
+    expect(router.currentRoute.value.fullPath).toBe('/privacy')
+    expect(document.title).not.toContain('Situation Report')
+
+    await router.push('/reports')
+    await flush()
+    expect(router.currentRoute.value.query.report).toBe('r9')
+    expect(text('.report-content')).toContain('Saved.')
+  })
+
+  it('reopens the report that was open', async () => {
+    vi.mocked(listReports).mockResolvedValue({ reports: [SAVED] })
+    vi.mocked(getReport).mockResolvedValue({ ...SAVED, content: '## Summary\n\nText.' })
+    await mountApp('/reports?report=r1')
+    await router.push('/privacy')
+    await flush()
+    await router.push('/reports')
+    await flush()
+    expect(router.currentRoute.value.query.report).toBe('r1')
+    expect(text('.report-content')).toContain('Text.')
+    expect(document.title).toBe('Sudan · Situation Report · Humanitaria')
+  })
+
+  it('opens the report a link names when coming back', async () => {
+    vi.mocked(listReports).mockResolvedValue({ reports: [SAVED, { ...SAVED, id: 'r2' }] })
+    vi.mocked(getReport).mockImplementation(async (id) => ({
+      ...SAVED,
+      id,
+      content: `## Summary\n\nReport ${id}.`,
+    }))
+    await mountApp('/reports?report=r1')
+    await router.push('/privacy')
+    await flush()
+    await router.push('/reports?report=r2')
+    await flush()
+    expect(text('.report-content')).toContain('Report r2.')
   })
 })
