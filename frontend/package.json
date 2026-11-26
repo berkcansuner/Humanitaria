@@ -13,12 +13,8 @@
     "format:check": "prettier --check \"src/**/*.{js,jsx,vue,css}\" \"*.js\" index.html"
   },
   "dependencies": {
-    "@fontsource-variable/dm-sans": "^5.2.8",
     "@fontsource-variable/geist": "^5.3.0",
     "@fontsource-variable/geist-mono": "^5.3.0",
-    "@fontsource-variable/source-serif-4": "^5.3.1",
-    "@fontsource/ibm-plex-mono": "^5.2.7",
-    "@fontsource/inter": "^5.2.8",
     "dompurify": "^3.4.2",
     "gsap": "^3.15.1",
     "lucide-react": "^1.17.0",
