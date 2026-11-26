@@ -242,7 +242,7 @@ def _pg_migrate_columns(engine: Engine) -> None:
         if getattr(e.orig, "sqlstate", None) != _LOCK_NOT_AVAILABLE:
             raise
         logger.warning("Schema migration skipped: a table lock was not granted within %s; "
-                       "missing columns are added on the next start", _DDL_LOCK_TIMEOUT)
+                       "the column migration is retried on the next start", _DDL_LOCK_TIMEOUT)
 
 
 def _pg_add_missing_columns(conn: Connection) -> None:

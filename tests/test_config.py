@@ -34,7 +34,7 @@ def test_provider_and_ingest_defaults():
     assert s.GEMINI_LLM_MODEL == "gemini-3.5-flash-lite"
     assert s.GEMINI_QUERY_MODEL == "gemini-3.5-flash-lite"
     assert s.REPORT_LLM_MODEL == "gemini-3.8-flash"
-    # 3.8 Flash at medium wrote the comparison report in 108 s (+27 s check).
+    # 3.8 Flash at medium took 108 s for a long report in the 2026-11-16 run.
     assert s.REPORT_LLM_TIMEOUT >= 240
     assert s.ADMIN_EMAILS == ""
     # Rolling-window retention is OFF by default (enabled in prod env at cutover).

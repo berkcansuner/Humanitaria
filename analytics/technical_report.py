@@ -2,8 +2,8 @@
 
 Her indikatör için HAPI verisi çekilir, ulusal/bölgesel seri kurulur, istatistik
 testleri + grafikler üretilir. Boş/hatalı dönen indikatör 'gaps'e eklenir ve atlanır.
-findings_to_context, hesaplanmış sayıları LLM'e 'context' olarak verilecek metne
-çevirir; LLM bunları yalnızca yorumlar, asla yeniden hesaplamaz.
+Raporun metnini analytics.report_text yazar. findings_to_context bulguları düz metin
+olarak okur; artık hiçbir modele gitmez, testler bulguları onunla denetler.
 """
 import logging
 import math

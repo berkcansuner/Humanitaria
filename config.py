@@ -34,15 +34,14 @@ class Settings(BaseSettings):
     # time out and retry (paying twice).
     CHAT_LLM_TIMEOUT: int = 90
     CHAT_LLM_MAX_RETRIES: int = 2
-    # Reports think harder than chat: at "low" the report model did not apply the
-    # "What changed" comparison rules (live checks 2026-11-15). Gemini 2.5 budgets:
+    # Reports think harder than chat: at "low" the report model did not keep its
+    # prompt's dating rules (live checks 2026-11-15). Gemini 2.5 budgets:
     # low 1,024 / medium 8,192 / high 24,576 thinking tokens (billed as output).
     # The first token arrives only after the thinking, hence the longer timeout.
-    # Reports and the "What changed" check run on their own model: few calls,
-    # quality-critical, so they can use a stronger model than chat.
-    # gemini-3.8-flash: in the 2026-11-16 run it compared like with like, dated
-    # new items and kept a full "no longer reported" paragraph; 3.5 Flash-Lite's
-    # "What changed" came out thin and its check dropped a dated 2026 change.
+    # Reports run on their own model: few calls, quality-critical, so they can use a
+    # stronger model than chat. gemini-3.8-flash was chosen in the 2026-11-16
+    # comparison against 3.5 Flash-Lite (it dated and compared figures more reliably).
+    # Technical monitoring reports call no model.
     REPORT_LLM_MODEL: str = "gemini-3.8-flash"
     REPORT_REASONING_EFFORT: str = "medium"
     REPORT_LLM_TIMEOUT: int = 240  # 3.8 Flash at medium: 108 s measured

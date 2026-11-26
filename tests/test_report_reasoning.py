@@ -1,7 +1,7 @@
 """Reports think harder than chat.
 
-Live checks (2026-11-15): at reasoning_effort=low the report model did not apply
-the comparison rules (an August 2025 earthquake kept in "What changed"). Reports
+Live checks (2026-11-15): at reasoning_effort=low the report model did not keep its
+prompt's dating rules (an August 2025 earthquake presented as new). Reports
 get their own effort (default medium = 8,192 thinking tokens on Gemini 2.5) and a
 longer timeout, since the first token arrives only after the thinking; chat keeps
 its fast settings.

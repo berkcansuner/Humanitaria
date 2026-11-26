@@ -4,8 +4,8 @@
  * today] — a user can't pick a window with no indexed reports, or a future date.
  *
  * "Today" is the reader's local calendar day, not UTC: in Türkiye (UTC+3) a UTC
- * date was still yesterday until 03:00, so the form refused today's date and
- * "Run next period" said a period starting today had not started (critique 3).
+ * date was still yesterday until 03:00, so the form refused today's date
+ * (critique 3).
  */
 function pad(n) {
   return String(n).padStart(2, '0')
