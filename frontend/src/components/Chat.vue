@@ -663,6 +663,12 @@ watch(locale, () => decorateCodeBlocks(messagesContainer.value), { flush: 'post'
   align-items: flex-end;
 }
 
+/* A question and its answer read as one pair: closer to each other than to the
+   next question. */
+.message.user + .message.assistant {
+  margin-top: calc(-1 * var(--space-3));
+}
+
 @media (max-width: 640px) {
   .message-row {
     max-width: 92%;
@@ -859,11 +865,16 @@ watch(locale, () => decorateCodeBlocks(messagesContainer.value), { flush: 'post'
   color: var(--color-text-secondary);
 }
 
+/* On a phone a column keeps room for a short phrase, and a last column of
+   citation chips shrinks to them, so a four-column table fits at 390px. */
 @media (max-width: 640px) {
   .message-content :deep(th),
   .message-content :deep(td) {
-    min-width: 7.5em;
+    min-width: 6em;
     padding: 8px 10px;
+  }
+  .message-content :deep(:is(th, td):last-child) {
+    min-width: 0;
   }
 }
 
@@ -998,8 +1009,9 @@ watch(locale, () => decorateCodeBlocks(messagesContainer.value), { flush: 'post'
 .chat-input {
   flex: 1;
   display: block;
-  min-height: 44px;
-  padding: 10px 0;
+  min-height: 24px;
+  margin-block: 10px;
+  padding: 0;
   font-family: var(--font-body);
   font-size: 16px;
   line-height: 24px;
