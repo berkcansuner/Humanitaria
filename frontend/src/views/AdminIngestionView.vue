@@ -503,7 +503,8 @@ onUnmounted(() => {
 }
 
 /* Figures and dates in Geist Mono; counts right-aligned so their digits line up. */
-.num {
+.num,
+.grid dd.num {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
@@ -722,7 +723,7 @@ onUnmounted(() => {
 .doc-table th,
 .doc-table td {
   text-align: left;
-  vertical-align: top;
+  vertical-align: baseline;
   padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--color-border);
 }

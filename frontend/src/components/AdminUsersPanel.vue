@@ -45,7 +45,7 @@
           </thead>
           <tbody>
             <tr v-for="u in items" :key="u.id">
-              <td>{{ u.name || '—' }}</td>
+              <td class="cell-name">{{ u.name || '—' }}</td>
               <td>{{ u.email }}</td>
               <td>
                 {{
@@ -59,7 +59,9 @@
                 <span v-else>—</span>
               </td>
               <td class="cell-date">{{ formatDate(u.created_at) }}</td>
-              <td class="cell-date">{{ u.last_login ? formatDate(u.last_login) : '—' }}</td>
+              <td :class="{ 'cell-date': u.last_login }">
+                {{ u.last_login ? formatDate(u.last_login) : '—' }}
+              </td>
             </tr>
           </tbody>
         </table>
@@ -224,6 +226,11 @@ onUnmounted(() => clearTimeout(searchTimer))
   padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--color-border);
   color: var(--color-text);
+}
+
+/* The table scrolls on a phone, so a name stays on one line instead of wrapping. */
+.cell-name {
+  white-space: nowrap;
 }
 
 .role-admin {

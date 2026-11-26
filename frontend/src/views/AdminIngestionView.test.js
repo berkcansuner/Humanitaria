@@ -125,5 +125,6 @@ describe('AdminIngestionView status', () => {
     await mount('cron', { keepStatus: true })
     const dd = host.querySelector('.grid dd')
     expect(dd.textContent.trim()).toMatch(/^\d{2}\.\d{2}\.2026 \d{2}:\d{2}$/)
+    expect(dd.classList.contains('num')).toBe(true)
   })
 })
