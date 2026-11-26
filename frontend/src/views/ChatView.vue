@@ -53,7 +53,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Menu, X } from 'lucide-vue-next'
 import Chat from '../components/Chat.vue'
@@ -65,7 +66,37 @@ import { useUndoableDelete } from '../utils/undoableDelete.js'
 
 const { t } = useI18n()
 const conversations = ref([])
-const activeId = ref(null)
+// The open conversation lives in the URL (/app?c=<id>), so a reload or a bookmark
+// reopens it. Choosing a conversation replaces the URL rather than adding a
+// history entry, as switching conversations is not a page change.
+const route = useRoute()
+const router = useRouter()
+const ownPath = route.path
+const queryId = (c) => (typeof c === 'string' && c ? c : null)
+const urlId = queryId(route.query.c)
+const activeId = ref(urlId)
+
+function syncUrl(id) {
+  if (route.path !== ownPath || queryId(route.query.c) === id) return
+  const query = { ...route.query }
+  if (id) query.c = id
+  else delete query.c
+  router.replace({ query })
+}
+watch(activeId, syncUrl)
+
+// App.vue keeps this screen alive while another one is open. Coming back with a
+// conversation in the URL (a link, a bookmark) opens it. Coming back without one
+// (the Chat tab, the brand) keeps the open conversation and puts it back in the URL.
+watch(
+  () => [route.path, route.query.c],
+  ([path, c]) => {
+    if (path !== ownPath) return
+    const id = queryId(c)
+    if (id && id !== activeId.value) activeId.value = id
+    else if (!id) syncUrl(activeId.value)
+  },
+)
 const sidebarOpen = ref(false)
 const actionError = ref(null) // a message key, translated on render
 const isLoadingConversations = ref(false)
@@ -86,9 +117,11 @@ async function loadConversations() {
   isLoadingConversations.value = true
   try {
     conversations.value = await listConversations()
+    return true
   } catch (e) {
     console.error('Failed to load conversations:', e)
     showActionError('chat.actionErrors.load')
+    return false
   } finally {
     isLoadingConversations.value = false
   }
@@ -152,7 +185,19 @@ function onDelete(id) {
   removeConversation(id, { wasActive })
 }
 
-onMounted(loadConversations)
+onMounted(async () => {
+  const loaded = await loadConversations()
+  // A conversation the URL names but the account does not have (deleted, another
+  // account's link) gives way to a new chat.
+  if (
+    loaded &&
+    urlId &&
+    activeId.value === urlId &&
+    !conversations.value.some((c) => c.id === urlId)
+  ) {
+    activeId.value = null
+  }
+})
 onBeforeUnmount(flushDelete)
 </script>
 

@@ -4,7 +4,7 @@ import { createRouter, createMemoryHistory } from 'vue-router'
 import ChatView from './ChatView.vue'
 import { i18n } from '../i18n/index.js'
 import { setLocale } from '../i18n/locale.js'
-import { listConversations } from '../utils/api.js'
+import { listConversations, getMessages } from '../utils/api.js'
 import en from '../locales/en.json'
 import tr from '../locales/tr.json'
 
@@ -23,16 +23,17 @@ vi.mock('../utils/authStore.js', () => ({
 
 let app
 let host
+let router
 
-async function mount() {
-  const router = createRouter({
+async function mount(path = '/app') {
+  router = createRouter({
     history: createMemoryHistory(),
     routes: [
       { path: '/app', component: ChatView },
       { path: '/:rest(.*)*', component: { render: () => null } },
     ],
   })
-  router.push('/app')
+  router.push(path)
   await router.isReady()
   host = document.createElement('div')
   document.body.appendChild(host)
@@ -120,5 +121,71 @@ describe('ChatView in two languages', () => {
     expect(host.querySelector('.conv-search input').placeholder).toBe(tr.chat.search)
     const prompts = [...host.querySelectorAll('.prompt-row')].map((b) => b.textContent.trim())
     expect(prompts).toEqual(Object.values(tr.chat.empty.prompts))
+  })
+})
+
+// The open conversation lives in the URL (/app?c=<id>), so a reload reopens it.
+describe('ChatView keeps the open conversation in the URL', () => {
+  const CONVS = [
+    { id: 'c1', title: 'Sudan access', updated_at: new Date().toISOString() },
+    { id: 'c2', title: 'Yemen cholera', updated_at: new Date().toISOString() },
+  ]
+  beforeEach(() => {
+    setLocale('en')
+    vi.mocked(listConversations).mockReset().mockResolvedValue(CONVS)
+    vi.mocked(getMessages)
+      .mockReset()
+      .mockResolvedValue([{ id: 1, role: 'user', content: 'Cholera in Yemen?', sources: null }])
+  })
+  afterEach(() => {
+    app.unmount()
+    host.remove()
+  })
+  const query = () => router.currentRoute.value.query
+
+  it('opens the conversation the URL names, as after a reload', async () => {
+    await mount('/app?c=c2')
+    expect(getMessages).toHaveBeenCalledWith('c2')
+    expect(text('.message.user')).toContain('Cholera in Yemen?')
+  })
+
+  it('names the chosen conversation in the URL, and drops it for a new chat', async () => {
+    await mount()
+    host.querySelectorAll('.conv-select')[0].click()
+    await flush()
+    expect(query().c).toBe('c1')
+    host.querySelector('.new-chat-btn').click()
+    await flush()
+    expect(query().c).toBeUndefined()
+  })
+
+  it('drops a conversation the account does not have', async () => {
+    await mount('/app?c=gone')
+    expect(query().c).toBeUndefined()
+  })
+
+  it('puts the open conversation back in the URL on the way back from another screen', async () => {
+    await mount('/app?c=c2')
+    await router.push('/reports')
+    await flush()
+    expect(query().c).toBeUndefined()
+    await router.push('/app')
+    await flush()
+    expect(query().c).toBe('c2')
+  })
+
+  it('opens the conversation a link names on the way back', async () => {
+    await mount('/app?c=c2')
+    await router.push('/reports')
+    await router.push('/app?c=c1')
+    await flush()
+    expect(getMessages).toHaveBeenLastCalledWith('c1')
+  })
+
+  it('keeps the other query keys', async () => {
+    await mount('/app?c=c2&lang=en')
+    host.querySelector('.new-chat-btn').click()
+    await flush()
+    expect(query()).toEqual({ lang: 'en' })
   })
 })

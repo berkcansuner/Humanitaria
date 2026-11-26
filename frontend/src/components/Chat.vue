@@ -625,6 +625,8 @@ watch(
       isLoadingMessages.value = false
     }
   },
+  // A conversation named in the URL is open from the start.
+  { immediate: true },
 )
 
 // A language switch re-renders answers whose HTML depends on it (citation chip
