@@ -3,9 +3,7 @@
 Every sentence of a technical monitoring report (values, dates, directions, test results,
 verdicts, caveats, data gaps, methods) is built here from the computed findings, in
 English or Turkish: no model writes or rewords any of it, so every statement traces to an
-HDX HAPI dataset in the report's source list. The one exception is the "What changed"
-section a next-period report adds, which a model writes and analytics.narrative_check and
-rag.report_compare check. The Methods say so when it is there.
+HDX HAPI dataset in the report's source list.
 
 No sentence is joined by a semicolon (an owner rule for all visible text, 2026-11-19).
 
@@ -546,9 +544,8 @@ def coverage_text(findings, language: str) -> str:
     return "\n\n".join(out)
 
 
-def methods_text(findings, language: str, comparison_heading: str | None = None) -> str:
-    """The methods this report used (and only those), and who wrote what.
-    *comparison_heading*: the model-written section's heading, when the report has one."""
+def methods_text(findings, language: str) -> str:
+    """The methods this report used (and only those), and who wrote what."""
     lang = _lang(language)
     tr_ = lang == "tr"
     kinds = [s.stat_result["kind"] for s in _tested(findings)]
@@ -589,16 +586,12 @@ def methods_text(findings, language: str, comparison_heading: str | None = None)
         out.append("Veriler HDX HAPI'den (Humanitarian Data Exchange'in veri API'si) alındı, "
                    "kullanılan veri setleri kaynak listesindedir. Bu rapordaki değerler, testler "
                    "ve sonuçlar kodla hesaplandı ve metin koddan üretildi. "
-                   + (f"Yalnızca “{comparison_heading}” bölümünü, bu rapor ile önceki raporu "
-                      f"karşılaştıran bir yapay zekâ modeli yazdı." if comparison_heading
-                      else "Hiçbir bölümü yapay zekâ modeli yazmadı."))
+                   "Hiçbir bölümü yapay zekâ modeli yazmadı.")
     else:
         out.append("The data come from HDX HAPI (the Humanitarian Data Exchange's data API), and "
                    "the datasets used are in the source list. The values, tests and verdicts in "
                    "this report are computed in code, and its text is generated from them in code. "
-                   + (f"Only the section “{comparison_heading}” is written by an AI model, "
-                      f"comparing this report with the previous one." if comparison_heading
-                      else "No part of it is written by an AI model."))
+                   "No part of it is written by an AI model.")
     return " ".join(out)
 
 
@@ -611,20 +604,16 @@ def section_block(section, language: str) -> str:
     return f"## {section.heading}\n\n{section_facts(section.stat_result, language)}"
 
 
-def closing(findings, language: str, comparison_heading: str | None = None) -> str:
+def closing(findings, language: str) -> str:
     """Data Coverage & Limitations and Methods."""
     h = HEADINGS[_lang(language)]
     return (f"## {h['coverage']}\n\n{coverage_text(findings, language)}\n\n"
-            f"## {h['methods']}\n\n{methods_text(findings, language, comparison_heading)}")
+            f"## {h['methods']}\n\n{methods_text(findings, language)}")
 
 
-def assemble(findings, language: str, comparison: tuple[str, str] | None = None) -> str:
-    """The whole report. *comparison*: (heading, text) of a next-period report's "What
-    changed" section, placed right after the Executive Summary."""
-    has_comparison = bool(comparison and comparison[1] and comparison[1].strip())
+def assemble(findings, language: str) -> str:
+    """The whole report."""
     parts = [opening(findings, language)]
-    if has_comparison:
-        parts.append(f"## {comparison[0]}\n\n{comparison[1].strip()}")
     parts += [section_block(s, language) for s in findings.sections]
-    parts.append(closing(findings, language, comparison[0] if has_comparison else None))
+    parts.append(closing(findings, language))
     return "\n\n".join(parts)

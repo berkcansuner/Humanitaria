@@ -59,13 +59,3 @@ def test_query_llms_use_chat_completions():
         _assert_chat_completions(_llm_of(qp._get_llm_planner()))
         qp._llm_extractor = None
         qp._llm_planner = None
-
-
-def test_report_comparison_checker_uses_chat_completions():
-    from rag import report_compare as rc
-    with patch("config.get_settings", return_value=_settings()):
-        rc._checker_llm = None
-        try:
-            _assert_chat_completions(_llm_of(rc._get_checker_llm()))
-        finally:
-            rc._checker_llm = None

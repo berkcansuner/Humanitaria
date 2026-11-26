@@ -340,39 +340,10 @@ _NEEDS_ASSESSMENT_SYSTEM_PROMPT = (
     "or coverage is thin, say so."
 )
 
-# A technical monitoring report is written in code (analytics.report_text). The model is
-# called only for a next-period report, to write its "What changed" section.
-_TECHNICAL_SYSTEM_PROMPT = (
-    "You are a humanitarian monitoring & evaluation (M&E) analyst. A technical monitoring report "
-    "has ALREADY been written in code from the STATISTICAL FINDINGS in the Context: every value, "
-    "date, test result, verdict, caveat and method. You write ONE section of it and nothing else: "
-    "the comparison with the previous report of the same series, under the '## ' heading the "
-    "instruction gives.\n"
-    "Rules:\n"
-    "1. Output only that '## ' heading, copied exactly, and one to three paragraphs of prose "
-    "under it, in the language requested in the instruction. No other heading, no list, no "
-    "preamble.\n"
-    "2. Every current value comes verbatim from the Context findings, with its date; a previous "
-    "value is quoted only from the previous report in the instruction, named by its period. "
-    "Calculate nothing: no difference, percentage, multiple or fraction ('doubled', 'half', "
-    "'a third'), and no total. Write numbers in the requested language's format.\n"
-    "3. Never say that something is or is not statistically significant, never name a "
-    "statistical test, a p-value or a confidence interval, and do not call a change proven, "
-    "robust or certain: the report's own sections state every verdict.\n"
-    "4. When a finding says its values are not comparable across years, do not describe a rise "
-    "or fall for it. Never call a figure the plan's overall or total figure.\n"
-    "5. Keep the report scoped to the country named in the instruction and to the indicators in "
-    "the Context. State no cause, event or background the Context does not state, and name no "
-    "place the Context does not name.\n"
-    "6. Compare only what both reports give. If the previous report did not cover an indicator, "
-    "say it is new to the series; if nothing comparable changed, say so in one sentence."
-)
-
 _REPORT_PROMPTS = {
     "situation": _REPORT_SYSTEM_PROMPT,
     "indicator_monitoring": _INDICATOR_SYSTEM_PROMPT,
     "needs_assessment": _NEEDS_ASSESSMENT_SYSTEM_PROMPT,
-    "technical_monitoring": _TECHNICAL_SYSTEM_PROMPT,
 }
 
 _report_chains: dict[str, Runnable] = {}

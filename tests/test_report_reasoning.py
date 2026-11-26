@@ -86,18 +86,3 @@ def test_report_chain_uses_its_own_model():
     chat, report = _build(_settings())
     assert report.model_name == "report-model-x"
     assert chat.model_name == "gemini-2.5-flash"
-
-
-def test_comparison_checker_uses_the_report_model():
-    from langchain_openai import ChatOpenAI
-    from rag import report_compare as rc
-    with patch("config.get_settings", return_value=_settings()):
-        rc._checker_llm = None
-        try:
-            runnable = rc._get_checker_llm()
-            llm = next(s for s in (getattr(runnable, "first", None), runnable)
-                       if isinstance(getattr(s, "bound", s), ChatOpenAI))
-            llm = getattr(llm, "bound", llm)
-            assert llm.model_name == "report-model-x"
-        finally:
-            rc._checker_llm = None

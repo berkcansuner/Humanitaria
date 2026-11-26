@@ -2,8 +2,8 @@
 
 Kritik sözleşme: technical_monitoring, HAPI+istatistik pipeline'ına (analytics.
 technical_report) dallanır ve DÖNER — asla belge-retrieval yoluna
-(retrieve_for_report / _build_context_and_sources) düşmemelidir; aksi halde
-_TECHNICAL_SYSTEM_PROMPT'un narrate-only sözleşmesi bozulur.
+(retrieve_for_report / _build_context_and_sources) düşmemelidir. Rapor metnini
+analytics.report_text kodla yazar: hiçbir model çağrılmaz.
 """
 import json
 import re

@@ -21,7 +21,6 @@ from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 from analytics import report_text, technical_report
 from analytics.countries import iso3_for
 from analytics.indicators import indicators_for
-from analytics.narrative_check import check_comparison
 from config import get_settings
 from ingestion import analytics
 from rag import report_images
@@ -30,11 +29,7 @@ from rag.chain import build_report_chain
 from rag.rag_context import _build_context_and_sources
 from rag.citations import normalize_citations, normalize_table_delimiters
 from rag.report_pdf import render_report_pdf
-from rag.report_compare import Checked, verify_comparison
-from rag.report_service import (
-    COMPARISON_HEADINGS, build_comparison_block, build_report_directive, report_title,
-    retrieve_for_report,
-)
+from rag.report_service import build_report_directive, report_title, retrieve_for_report
 from api.routes.auth import get_current_user
 from api.routes.chat import (
     _BUSY_MESSAGE, _GENERIC_ERROR_MESSAGE, _astream_with_retry, _is_high_demand,
@@ -121,9 +116,6 @@ class ReportRequest(BaseModel):
     report_type: Literal[
         "situation", "indicator_monitoring", "needs_assessment", "technical_monitoring"
     ] = "situation"
-    # Set by "Run next period": the saved report this one continues. The new
-    # report compares against it ("What changed since the last report").
-    previous_report_id: Optional[str] = Field(default=None, min_length=1, max_length=64)
 
     @field_validator("date_from", "date_to")
     @classmethod
@@ -213,29 +205,6 @@ def _countries() -> list[str]:
     return [c for c in countries if c not in _NOT_A_COUNTRY]
 
 
-def _series_key(row: dict) -> tuple:
-    """A series is implicit: same type + country + sector + language."""
-    return (row.get("report_type") or "situation", row.get("country"),
-            row.get("theme"), row.get("language"))
-
-
-def _previous_in_series(user_id: str, req: ReportRequest) -> dict:
-    """The report ``req`` continues. 404 when it is missing or not the user's
-    (same answer, so ids of other users' reports are not probeable); 422 when it
-    belongs to a different series."""
-    if not report_store.is_owner(user_id, req.previous_report_id):
-        raise api_error(404, ErrorCode.not_found, "Previous report not found")
-    previous = report_store.get_report(req.previous_report_id)
-    if previous is None:
-        raise api_error(404, ErrorCode.not_found, "Previous report not found")
-    if _series_key(previous) != _series_key(req.model_dump()):
-        raise api_error(
-            422, ErrorCode.series_mismatch,
-            "The previous report has a different type, country, sector or language.",
-        )
-    return previous
-
-
 # The waiting client shows what is being read before the first word arrives; a
 # report reads up to a few dozen documents, so the list is capped (the count is not).
 READING_SOURCES_SHOWN = 12
@@ -261,28 +230,6 @@ def _computed_event(findings: technical_report.Findings, req: ReportRequest) -> 
          "date_from": findings.date_from, "date_to": findings.date_to}, ensure_ascii=False))
 
 
-def _checked_event(removed: int) -> ServerSentEvent:
-    """Sent after the check: how many "What changed" sentences it removed."""
-    return ServerSentEvent(event="status",
-                           data=json.dumps({"stage": "comparison_checked", "removed": removed}))
-
-
-def _checking_event() -> ServerSentEvent:
-    """Sent before the check, so the viewer can say the streamed "What changed"
-    text is being checked (sentences may drop out when the saved text replaces it)."""
-    return ServerSentEvent(event="status", data=json.dumps({"stage": "checking_comparison"}))
-
-
-async def _checked(full: str, req: ReportRequest) -> Checked:
-    """A next-period report's "What changed" section after the narrow check
-    (rag.report_compare): sentences that present older or undated material as new
-    are dropped. Never fails: any problem keeps the text as generated."""
-    return await verify_comparison(
-        full, heading=COMPARISON_HEADINGS.get(req.language, COMPARISON_HEADINGS["en"]),
-        date_from=req.date_from, date_to=req.date_to, language=req.language,
-    )
-
-
 @router.get("/reports/options")
 async def report_options(user: dict = Depends(get_current_user)):
     countries = await anyio.to_thread.run_sync(_countries)
@@ -297,10 +244,6 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
     if await anyio.to_thread.run_sync(report_store.count_reports, user["id"]) >= get_settings().MAX_REPORTS_PER_USER:
         raise api_error(409, ErrorCode.report_limit,
                         "Report limit reached; delete old reports to generate a new one.")
-    previous = None
-    if req.previous_report_id:
-        previous = await anyio.to_thread.run_sync(_previous_in_series, user["id"], req)
-    previous_id = previous["id"] if previous else None
 
     async def event_generator():
         try:
@@ -347,55 +290,11 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                 yield _computed_event(findings, req)
                 # The period the analysis used: a requested end in the future is capped.
                 date_to = findings.date_to if req.date_to else req.date_to
-                label = f"{req.country} / {req.theme or 'All sectors'} / {req.report_type}"
-
-                def token(text: str) -> ServerSentEvent:
-                    return ServerSentEvent(
-                        event="token", data=json.dumps({"content": text}, ensure_ascii=False))
-
                 # The report is written in code from the findings (analytics.report_text):
-                # no model writes or rewords it. Only a next-period report calls the model,
-                # for its "What changed" section, which is checked before it is kept.
-                comparison = None
-                yield token(report_text.opening(findings, req.language) + "\n\n")
-                if previous:
-                    heading = COMPARISON_HEADINGS.get(req.language, COMPARISON_HEADINGS["en"])
-                    context = technical_report.findings_to_context(findings)
-                    directive = build_report_directive(
-                        req.country, req.theme, req.date_from, date_to,
-                        len(findings.indicators_covered), req.language,
-                        report_type=req.report_type,
-                    ) + build_comparison_block(
-                        previous, req.language, req.report_type, req.date_from, date_to)
-                    chain = build_report_chain(req.report_type)
-                    written = ""
-                    try:
-                        async for chunk in _astream_with_retry(
-                            chain, {"question": directive, "context": context},
-                            get_settings().CHAT_LLM_MAX_RETRIES,
-                        ):
-                            if chunk:
-                                written += chunk
-                                yield token(chunk)
-                        text = check_comparison(written, findings, f"{context}\n{directive}",
-                                                req.language, heading, label=label).content
-                        comparison = (heading, text) if text else None
-                    except Exception:
-                        # The report does not depend on the model: it is saved without the
-                        # comparison section.
-                        logger.exception("Technical report comparison failed [%s]; the report "
-                                         "is saved without it", label)
-                    yield token("\n\n")
-                full = report_text.assemble(findings, req.language, comparison)
-                yield token("\n\n".join(
-                    [report_text.section_block(sec, req.language) for sec in findings.sections]
-                    + [report_text.closing(findings, req.language,
-                                           comparison[0] if comparison else None)]))
-                if previous:
-                    yield _checking_event()
-                    checked = await _checked(full, req)
-                    full = checked.content
-                    yield _checked_event(checked.removed)
+                # no model writes or rewords it.
+                full = report_text.assemble(findings, req.language)
+                yield ServerSentEvent(
+                    event="token", data=json.dumps({"content": full}, ensure_ascii=False))
                 section_images = technical_report.assemble_section_images(findings)
                 # The HDX HAPI series the report used, listed like a report's sources.
                 try:
@@ -416,7 +315,6 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                         report_type=req.report_type,
                         cover_image=None,
                         section_images=section_images or None,
-                        previous_report_id=previous_id,
                     )
                 )
                 if data_sources:
@@ -448,10 +346,6 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                 req.country, req.theme, req.date_from, req.date_to, len(docs), req.language,
                 report_type=req.report_type,
             )
-            if previous:
-                directive += build_comparison_block(
-                    previous, req.language, req.report_type, req.date_from, req.date_to
-                )
             chain = build_report_chain(req.report_type)
 
             full = ""
@@ -465,14 +359,6 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                         event="token",
                         data=json.dumps({"content": chunk}, ensure_ascii=False),
                     )
-
-            # Next-period reports: drop "What changed" sentences that present older or
-            # undated material as new, before citations are renumbered below.
-            if previous:
-                yield _checking_event()
-                checked = await _checked(full, req)
-                full = checked.content
-                yield _checked_event(checked.removed)
 
             # Expand grouped citations, drop uncited/invalid sources, and renumber the
             # [n] markers + sources to a contiguous 1..N so the stored content, the PDF
@@ -528,7 +414,6 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
                     report_type=req.report_type,
                     cover_image=cover_image,
                     section_images=section_images or None,
-                    previous_report_id=previous_id,
                 )
             )
 

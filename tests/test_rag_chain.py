@@ -209,32 +209,15 @@ def test_all_report_prompts_forbid_corroboration_piling():
     # multi-document citation concerns.
     from rag.chain import _REPORT_PROMPTS
     for report_type, prompt in _REPORT_PROMPTS.items():
-        if report_type == "technical_monitoring":
-            continue
         assert "CORROBORATION IS NOT MULTI-FACT" in prompt, report_type
 
 
-def test_technical_prompt_writes_only_the_comparison_section():
-    """The technical report is written in code (analytics.report_text); the model is called
-    only for a next-period report's "What changed" section."""
-    from rag.chain import _REPORT_PROMPTS
-    p = _REPORT_PROMPTS["technical_monitoring"]
-    assert "ALREADY been written in code" in p and "You write ONE section of it and nothing else" in p
-    assert "Output only that '## ' heading, copied exactly" in p
-    assert "Every current value comes verbatim from the Context findings" in p
-    assert "Calculate nothing" in p and "'doubled', 'half'" in p
-    assert "Never say that something is or is not statistically significant" in p
-    assert "not comparable across years, do not describe a rise" in p
-    assert "Never call a figure the plan's overall or total figure" in p
-    assert "State no cause, event or background the Context does not state" in p
-
-
 def test_technical_report_type_wired_in_service():
-    from rag.report_service import REPORT_TYPES, build_report_directive
+    """A technical report is written in code: no model prompt is kept for it."""
+    from rag.chain import _REPORT_PROMPTS
+    from rag.report_service import REPORT_TYPES
     assert "technical_monitoring" in REPORT_TYPES
-    d = build_report_directive("Afghanistan", None, None, None, 0, "en",
-                               report_type="technical_monitoring")
-    assert "technical monitoring" in d.lower()
+    assert "technical_monitoring" not in _REPORT_PROMPTS
 
 
 def test_indicator_table_values_come_from_the_originator_with_their_own_date():

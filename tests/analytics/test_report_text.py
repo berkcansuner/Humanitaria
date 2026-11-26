@@ -301,16 +301,6 @@ def test_methods_name_only_the_tests_that_ran():
     assert en.endswith("its text is generated from them in code. No part of it is written by an "
                        "AI model.")
     assert tr.endswith("metin koddan üretildi. Hiçbir bölümü yapay zekâ modeli yazmadı.")
-    with_comparison = report_text.methods_text(three, "en", "What changed since the last report")
-    assert with_comparison.endswith(
-        "its text is generated from them in code. Only the section “What changed since the last "
-        "report” is written by an AI model, comparing this report with the previous one.")
-    assert "No part of it" not in with_comparison
-    tr_comparison = report_text.methods_text(three, "tr", "Son rapordan bu yana ne değişti")
-    assert tr_comparison.endswith(
-        "metin koddan üretildi. Yalnızca “Son rapordan bu yana ne değişti” bölümünü, bu rapor ile "
-        "önceki raporu karşılaştıran bir yapay zekâ modeli yazdı.")
-    assert "Hiçbir bölümü" not in tr_comparison
     # The methods are sentences of their own.
     assert one == (
         "Trend: Mann-Kendall test. The slope is Sen's slope per year on the real dates of the "
@@ -416,15 +406,6 @@ def test_the_report_is_assembled_in_a_fixed_order():
         "Data Coverage & Limitations", "Methods")]
     assert order == sorted(order)
     assert bare.endswith("in code. No part of it is written by an AI model.")
-    # A next-period report's "What changed" section sits right after the summary, and the
-    # Methods then name it as the model-written part.
-    full = report_text.assemble(f, "en", ("What changed since the last report", "Needs are new."))
-    assert ("indicative.\n\n## What changed since the last report\n\nNeeds are new.\n\n"
-            f"## {f.sections[0].heading}") in full
-    assert full.endswith("in code. Only the section “What changed since the last report” is "
-                         "written by an AI model, comparing this report with the previous one.")
-    assert "No part of it" not in full
-    assert report_text.assemble(f, "en", ("What changed since the last report", " ")) == bare
     tr = report_text.assemble(f, "tr")
     assert tr.startswith("## Yönetici Özeti\n\nAnaliz edilen dönem:")
     assert "## Veri Kapsamı ve Sınırlılıklar" in tr and "## Yöntem" in tr
@@ -537,15 +518,14 @@ _EVERY_KIND_SAYS = {
 
 def test_no_sentence_of_a_report_is_joined_by_a_semicolon():
     """An owner rule for all visible text: every section kind, gap, note and caveat, in both
-    languages, with and without a "What changed" section."""
+    languages."""
     for language in ("en", "tr"):
         bare = report_text.assemble(_every_kind(), language)
-        full = report_text.assemble(_every_kind(), language, ("What changed", "Needs are new."))
         # The fixture really exercises every branch it is meant to.
         for said in _EVERY_KIND_SAYS[language]:
             assert said in bare, said
-        assert bare.count("\n## ") == 13 and full.count("\n## ") == 14
-        assert ";" not in bare and ";" not in full
+        assert bare.count("\n## ") == 13
+        assert ";" not in bare
         # Every bullet ends with a full stop, except the significant findings' headings.
         bullets = [line for line in bare.split("\n") if line.startswith("- ")]
         headings = [line for line in bullets if not line.endswith(".")]

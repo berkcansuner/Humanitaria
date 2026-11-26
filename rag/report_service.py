@@ -203,7 +203,6 @@ _REPORT_TYPE_DIRECTIVE_VERB = {
     "situation": "Generate the situation report.",
     "indicator_monitoring": "Generate the indicator monitoring report.",
     "needs_assessment": "Generate the needs assessment brief.",
-    "technical_monitoring": "Write the comparison section of the technical monitoring report.",
 }
 
 
@@ -372,103 +371,4 @@ def build_report_directive(country: str, theme: Optional[str], date_from: Option
         f"Period: {date_from or 'unspecified'} to {date_to or 'unspecified'}. "
         f"Source documents available: {doc_count}. "
         f"Write the entire report (including all headings) in {lang_name}."
-    )
-
-
-# --- report series: comparison with the previous period ----------------------
-
-# The section a next-period report adds right after its opening section. The
-# Turkish form is used when the report itself is written in Turkish.
-COMPARISON_HEADINGS = {
-    "en": "What changed since the last report",
-    "tr": "Son rapordan bu yana neler değişti",
-}
-
-# Each type's opening section (as named in its system prompt in rag.chain).
-_OPENING_SECTION = {
-    "situation": "Executive Summary",
-    "indicator_monitoring": "Overview",
-    "needs_assessment": "Context",
-    "technical_monitoring": "Executive Summary",
-}
-
-# Upper bound on the previous report's text sent to the model (chars). A typical
-# report is 5-8K chars; the cap keeps comparative runs' extra tokens bounded.
-PREVIOUS_REPORT_MAX_CHARS = 8000
-
-_CITE_MARKER = re.compile(r"\s*\[\d+\]")
-
-
-def build_comparison_block(previous: dict, language: str,
-                           report_type: str = "situation",
-                           date_from: Optional[str] = None,
-                           date_to: Optional[str] = None) -> str:
-    """Directive addendum for a next-period report: write a "What changed" section
-    against ``previous`` (a stored report row).
-
-    The previous report is comparison material, NOT a source. Its [n] markers are
-    stripped: they index the old report's source list, and a copied marker would be
-    renumbered onto an unrelated current source by normalize_citations.
-
-    ``date_from``/``date_to`` are the NEW report's period. The model needs it to
-    tell a change from an older event that a current document happens to describe
-    (live check 2026-11-15: an annual report for 2025 and an update on a 2025
-    earthquake were set beside the previous report's 2026 figures as changes).
-    """
-    heading = COMPARISON_HEADINGS.get((language or "en").lower(), COMPARISON_HEADINGS["en"])
-    opening = _OPENING_SECTION.get(report_type, _OPENING_SECTION["situation"])
-    period = (f"{previous.get('date_from') or 'unspecified'} to "
-              f"{previous.get('date_to') or 'unspecified'}")
-    new_period = f"{date_from or 'unspecified'} to {date_to or 'unspecified'}"
-    text =_CITE_MARKER.sub("", previous.get("content") or "").strip()
-    if len(text) > PREVIOUS_REPORT_MAX_CHARS:
-        text = text[:PREVIOUS_REPORT_MAX_CHARS] + "\n[… previous report truncated]"
-
-    if report_type == "technical_monitoring":
-        new_values = ("Every current value must come verbatim from the Context findings; "
-                      "a previous value may be quoted only from the previous report below, "
-                      "named by its period.")
-        not_a_source = "never present it as a current finding"
-    else:
-        new_values = ("Every current value must cite its Context document with [n] as usual; "
-                      "a previous value is attributed to the previous report's period (e.g. "
-                      f"'up from 2 million in {period}') and carries no [n] marker.")
-        not_a_source = "never cite it with [n]"
-
-    return (
-        "\n\nCOMPARISON WITH THE PREVIOUS REPORT. This report continues an earlier report "
-        f"in the same series, covering {period}. In addition to the sections your "
-        f"instructions require (this is the one exception to that list), add a level-2 "
-        f"heading ('## ') '{heading}' immediately after the opening '{opening}' section "
-        "(as it is titled in the report's language), using exactly that heading text. "
-        "In 1-3 paragraphs of prose, state what "
-        "rose or fell, which risks or needs are new, and which are no longer reported, "
-        f"comparing the current Context with the previous report. {new_values} Compare "
-        "only what both periods report; if the previous report did not cover something, "
-        "say it is new rather than inferring a change. If nothing material changed, say so.\n"
-        f"LIKE WITH LIKE: this report covers {new_period}. A change is the SAME indicator "
-        "(the same measure, for the same population and place) at a later reference time "
-        "than in the previous report. Use each figure's own reference date or year, not its "
-        "publication date: a document published in this period can describe an earlier year "
-        "(an annual report for a past year) or an earlier event (an update on an old "
-        "disaster). A figure from an earlier year or event is background, not a change: "
-        "leave it out of this section, and never set two figures for different years, or two "
-        "different events, side by side as if one replaced the other. A risk or event counts "
-        f"as new only if it happened or was first reported in {new_period}.\n"
-        "Being absent from the previous report does NOT make it new: when a document from "
-        "this period is the first in this series to mention an older event or figure, it is "
-        f"still old. Before writing this section, check every figure and event in it: drop "
-        f"any that is dated before {date_from or 'this period'} (other sections may still "
-        "use it as background), and do not compare figures with different reference periods "
-        "(e.g. a calendar-year total against a total over several months).\n"
-        "When a figure's source gives no reference date, do not present it as a change or "
-        "as new: leave it out of this section, or state it and say the source gives no "
-        "reference date. A figure for something the previous report described only in words "
-        "is not a change in the situation; do not list it as one.\n"
-        "Always say what is no longer reported: risks, needs or events in the previous "
-        "report that the current Context no longer mentions. If there are none, say so in "
-        "one sentence.\n"
-        f"The previous report below is NOT a source: {not_a_source}, never treat "
-        "its claims as current, and do not copy its wording into other sections.\n"
-        f"--- PREVIOUS REPORT ({period}) ---\n{text}\n--- END OF PREVIOUS REPORT ---"
     )

@@ -9,7 +9,6 @@ from pypdf import PdfReader
 
 from analytics import technical_report
 from analytics.indicators import INDICATORS, by_key
-from rag.report_compare import remove_sentences
 from rag.report_pdf import render_report_pdf
 
 _SOURCES = [{"index": 1, "title": "Sudan: Access Snapshot", "url": "https://reliefweb.int/r/1",
@@ -178,10 +177,3 @@ def test_unknown_country_message_of_a_technical_report_follows_its_language(
         "country": "Atlantis", "report_type": "technical_monitoring", "language": language})
     content = _parse_sse_events(resp.text)[0]["data"]["content"]
     assert expected in content and foreign not in content
-
-
-def test_what_changed_fallback_follows_the_report_language():
-    body = "Cases rose in 2025 [1]."
-    assert remove_sentences(body, {1}, "tr").startswith("Kaynaklardan")
-    assert remove_sentences(body, {1}, "en").startswith("No change")
-    assert remove_sentences(body, {1}, "fr").startswith("No change")
