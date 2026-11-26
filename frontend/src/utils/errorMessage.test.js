@@ -51,7 +51,6 @@ describe('errorMessage', () => {
       'message_too_long',
       'conversation_limit',
       'report_limit',
-      'series_mismatch',
       'model_busy',
       'quota_exhausted',
       'report_failed',

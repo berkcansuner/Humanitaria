@@ -334,19 +334,10 @@
       "chooseCountry": "Rapor oluşturmak için bir ülke seçin.",
       "noData": "Sayısal veri yok"
     },
-    "continues": {
-      "series": "{name} ({period}) raporunun devamı. Yeni rapor o dönemden bu yana değişenlerle başlar.",
-      "endClamped": "Dönem henüz bitmediği için bitiş tarihi bugün.",
-      "startClamped": "Başlangıç tarihi {date} olarak değiştirildi: Daha eski belgeler artık dizinde değil.",
-      "differs": "Bu ayarlar {name} raporundan farklı olduğu için yeni rapor onunla karşılaştırılmayacak.",
-      "clear": "Önceki raporla karşılaştırmayı kaldır"
-    },
     "saved": {
       "title": "Kayıtlı raporlar",
       "waitWhileGenerating": "Kayıtlı raporlar bu rapor tamamlandığında ya da siz durdurduğunuzda açılır.",
-      "count": "{n} rapor | {n} rapor",
       "until": "{date} tarihine kadar",
-      "noPeriod": "Dönem belirtilmemiş",
       "empty": "Henüz kayıtlı rapor yok.",
       "delete": "Raporu sil: {name}, {type}",
       "deleteWithPeriod": "Raporu sil: {name}, {type}, {period}",
@@ -355,15 +346,6 @@
     "viewer": {
       "back": "Tüm raporlar",
       "stopAndBack": "Durdur ve tüm raporları göster",
-      "comparedDeleted": "Daha sonra silinen önceki bir raporla karşılaştırıldı.",
-      "comparedWith": "Karşılaştırıldığı rapor: {link}",
-      "previousReport": "önceki rapor",
-      "notComparedWith": "{link} raporuyla karşılaştırılmadı",
-      "earlierPeriod": "Önceki dönem",
-      "continuedBy": "Devamı: {link}",
-      "laterReport": "sonraki bir rapor",
-      "runNext": "Sonraki dönemi raporla",
-      "nextNoData": "Sonraki dönem raporlanamıyor: HDX HAPI'de bu sektör için sayısal veri olmadığından seri, teknik izleme raporuyla sürdürülemez.",
       "copy": "Kaynaklarıyla kopyala",
       "copied": "Kopyalandı",
       "pdf": "PDF indir",
@@ -377,12 +359,10 @@
     "progress": {
       "elapsed": "Geçen süre: {time}",
       "outline": "Bu raporda şu bölümler yer alacak",
-      "compared": "{period} ile karşılaştırmalı",
       "computing": "İstatistikler HDX HAPI verilerinden hesaplanıyor. Rapor bu hesaplardan yazılır ve genellikle bir dakika içinde hazır olur.",
       "slow": "Bu işlem her zamankinden uzun sürüyor. Rapor hâlâ hazırlanıyor. Bekleyebilir ya da raporu durdurabilirsiniz.",
       "writing": "Rapor yazılıyor.",
       "writingTechnical": "Rapor, hesaplanan istatistiklerden yazılıyor.",
-      "checking": "Değişenler önceki raporla karşılaştırılarak denetleniyor.",
       "readingCount": "{n} kaynak okunuyor. İlk sözcükler genellikle iki dakika içinde görünür. | {n} kaynak okunuyor. İlk sözcükler genellikle iki dakika içinde görünür.",
       "readCaption": "Bu raporun okuma listesindeki kaynaklar",
       "readMore": "ve {n} kaynak daha | ve {n} kaynak daha",
@@ -405,23 +385,10 @@
       "recommendations": "Öneriler",
       "findings": "İncelenen her gösterge için bir bölüm",
       "dataCoverage": "Veri kapsamı ve sınırlılıklar",
-      "methods": "Yöntem",
-      "whatChanged": "Son rapordan bu yana neler değişti"
-    },
-    "compare": {
-      "checking": "Önceki raporla karşılaştırılıyor…",
-      "checkingPeriod": "Önceki raporla karşılaştırılıyor ({period})…",
-      "none": "Önceki raporla karşılaştırıldı: Hiçbir ifade çıkarılmadı.",
-      "removed": "Önceki raporla karşılaştırıldı: Eski ya da tarihsiz bilgiyi yeniymiş gibi sunan {n} ifade çıkarıldı. | Önceki raporla karşılaştırıldı: Eski ya da tarihsiz bilgiyi yeniymiş gibi sunan {n} ifade çıkarıldı."
+      "methods": "Yöntem"
     },
     "empty": {
-      "lede": "Her rapor aynı anda birçok ReliefWeb raporundan yararlanır ve hepsini kaynak olarak gösterir. Böylece raporu doğrulayabilir ve alıntılayabilirsiniz.",
-      "pickSeries": "Bir rapor serisine kaldığı yerden devam edin.",
-      "pickRecent": "Son raporlarınızdan birini açın.",
-      "seriesLabel": "Rapor serileriniz",
-      "recentLabel": "Son raporlar",
-      "nextStarts": "sonraki dönem {date} tarihinde başlıyor",
-      "nextReady": "sonraki dönem {date} tarihinden itibaren hazır"
+      "lede": "Her rapor aynı anda birçok ReliefWeb raporundan yararlanır ve hepsini kaynak olarak gösterir. Böylece raporu doğrulayabilir ve alıntılayabilirsiniz."
     },
     "toast": {
       "deleted": "Rapor silindi.",
@@ -434,8 +401,6 @@
       "delete": "Rapor silinemedi. Listeye geri eklendi."
     },
     "errors": {
-      "previousDeleted": "Bu raporun devamı olduğu rapor silindiği için karşılaştırma yapılamıyor. Raporu karşılaştırma olmadan yeniden oluşturun.",
-      "previousMismatch": "Ayarlar, bu raporun devamı olduğu raporla artık eşleşmiyor. Raporu karşılaştırma olmadan yeniden oluşturun.",
       "generate": "Rapor oluşturulamadı. Lütfen yeniden deneyin.",
       "stream": "Bir sorun oluştu.",
       "connection": "Sunucuya ulaşılamadı. Sunucu uyku modundan çıkıyor olabilir, bu yaklaşık 30 saniye sürer. Raporu yeniden oluşturun."
@@ -495,7 +460,6 @@
     "message_too_long": "Mesaj çok uzun. En fazla 4.000 karakter olmalı.",
     "conversation_limit": "Sohbet sınırına ulaştınız. Yeni bir sohbet açmak için eskilerinden birini silin.",
     "report_limit": "Rapor sınırına ulaştınız. Yeni rapor oluşturmak için eskilerinden birini silin.",
-    "series_mismatch": "Önceki raporun türü, ülkesi, sektörü ya da dili farklı.",
     "model_busy": "Model şu anda yoğun. Biraz sonra yeniden deneyin.",
     "quota_exhausted": "Yapay zekâ hizmetinin kullanım kotası doldu. Lütfen yöneticiyle iletişime geçin.",
     "report_failed": "Rapor oluşturulamadı. Lütfen yeniden deneyin.",

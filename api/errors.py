@@ -29,7 +29,6 @@ class ErrorCode(str, Enum):
     message_too_long = "message_too_long"
     conversation_limit = "conversation_limit"
     report_limit = "report_limit"
-    series_mismatch = "series_mismatch"
     model_busy = "model_busy"
     quota_exhausted = "quota_exhausted"
     report_failed = "report_failed"

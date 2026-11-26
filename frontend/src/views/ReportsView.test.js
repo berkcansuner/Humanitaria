@@ -129,6 +129,16 @@ describe('ReportsView in two languages', () => {
     expect(document.activeElement.classList.contains('form-title')).toBe(true)
   })
 
+  it('offers copy and PDF on an open report, and no series actions', async () => {
+    vi.mocked(listReports).mockResolvedValue({ reports: [SAVED] })
+    vi.mocked(getReport).mockResolvedValue({ ...SAVED, content: '## Summary\n\nText.' })
+    await mount('/reports?report=r1')
+    const actions = [...host.querySelectorAll('.report-actions button')].map((b) =>
+      b.textContent.trim(),
+    )
+    expect(actions).toEqual([en.reports.viewer.copy, en.reports.viewer.pdf])
+  })
+
   it("keeps the open report's tab title through a language switch", async () => {
     vi.mocked(listReports).mockResolvedValue({ reports: [SAVED] })
     vi.mocked(getReport).mockResolvedValue({ ...SAVED, content: '## Summary\n\nText.' })
@@ -149,44 +159,6 @@ describe('ReportsView in two languages', () => {
     expect(host.querySelector('.report-content').getAttribute('lang')).toBe('en')
     expect(text('.saved-name')).toBe('Sudan')
     expect(text('.saved-sector')).toBe('Sağlık')
-  })
-
-  it('"Run next period" names the report it continues, in the language shown', async () => {
-    const q2 = {
-      ...SAVED,
-      id: 'q2',
-      date_from: '2026-05-01',
-      date_to: '2026-07-31',
-      title: 'Sudan · Health · 2026-05-01 – 2026-07-31',
-    }
-    vi.mocked(listReports).mockResolvedValue({ reports: [q2] })
-    vi.mocked(getReport).mockResolvedValue({ ...q2, content: '## Summary\n\nText.' })
-    await mount('/reports?report=q2')
-    // jsdom has neither matchMedia nor scrollIntoView; this is a wide screen.
-    vi.stubGlobal('matchMedia', () => ({ matches: false }))
-    const scrollIntoView = vi.fn()
-    Element.prototype.scrollIntoView = scrollIntoView
-    const run = [...host.querySelectorAll('.pdf-btn')].find(
-      (b) => b.textContent.trim() === en.reports.viewer.runNext,
-    )
-    run.click()
-    await flush()
-    delete Element.prototype.scrollIntoView
-    // The form takes the report's place in the main column, Generate in view.
-    expect(host.querySelector('.report-content')).toBeNull()
-    expect(host.querySelector('.report-form')).toBeTruthy()
-    expect(router.currentRoute.value.query.report).toBeUndefined()
-    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center' })
-    expect(text('.continues p')).toBe(
-      'Continues Sudan · Health, 01.05.2026 - 31.07.2026. The new report opens with what changed since then.',
-    )
-    // The report language follows the series, not the interface.
-    setLocale('tr')
-    await flush()
-    expect(text('.continues p')).toBe(
-      'Sudan · Sağlık (01.05.2026 - 31.07.2026) raporunun devamı. Yeni rapor o dönemden bu yana değişenlerle başlar.',
-    )
-    expect([...host.querySelectorAll('.report-form select')].at(-1).value).toBe('en')
   })
 
   it('names a saved row in full in its tooltip, in the interface language', async () => {
@@ -298,22 +270,6 @@ describe('ReportsView in two languages', () => {
       for (const li of items.slice(1)) expect(li.querySelector('.saved-lang')).toBeNull()
     })
 
-    it('marks the series row and each of its periods', async () => {
-      const q2 = {
-        ...SAVED,
-        id: 'q2',
-        language: 'tr',
-        date_from: '2026-05-01',
-        date_to: '2026-07-31',
-        title: 'Sudan · Health · 2026-05-01 – 2026-07-31',
-      }
-      vi.mocked(listReports).mockResolvedValue({ reports: [{ ...SAVED, language: 'tr' }, q2] })
-      await mount()
-      expect(host.querySelector('.saved-series-head .saved-lang-code').textContent).toBe('TR')
-      const periods = [...host.querySelectorAll('.saved-periods .saved-item')]
-      expect(periods.map((li) => code(li))).toEqual(['TR', 'TR'])
-    })
-
     it('puts the language in the Turkish tooltip, and keeps the English one as stored', async () => {
       vi.mocked(listReports).mockResolvedValue({ reports: twins })
       await mount()
@@ -360,8 +316,8 @@ describe('ReportsView in two languages', () => {
       title:
         'Technical Monitoring Report — Syrian Arab Republic · All sectors · 2026-08-01 – 2026-10-31',
     }
-    // The meta line's first row (the type, and for a series its count), without the
-    // screen-reader-only language name; NBSPs read as spaces.
+    // The meta line's first row (the type and language), without the screen-reader-only
+    // language name; NBSPs read as spaces.
     const typeLine = (el) => {
       const row = el.querySelector('.saved-meta > span').cloneNode(true)
       row.querySelectorAll('.sr-only').forEach((s) => s.remove())
@@ -371,36 +327,53 @@ describe('ReportsView in two languages', () => {
     // What screen readers hear instead: the full type name.
     const spokenType = (el) => el.querySelector('.saved-meta > span > .sr-only').textContent.trim()
 
-    it('shows a short type in rows and series heads, read out in full, in both languages', async () => {
-      vi.mocked(listReports).mockResolvedValue({ reports: [SAVED, yemen, q2, somalia, syria] })
+    it('shows a short type in every row, read out in full, in both languages', async () => {
+      vi.mocked(listReports).mockResolvedValue({ reports: [SAVED, yemen, somalia, syria] })
       await mount()
-      const head = host.querySelector('.saved-series-head')
-      const singles = [...host.querySelectorAll('.saved-list > .saved-item')]
-      expect(typeLine(head)).toBe('Situation · 2 reports · EN')
-      expect(singles.map(typeLine)).toEqual(['Indicators · EN', 'Needs · EN', 'Technical · EN'])
-      expect(spokenType(head)).toBe('Situation Report')
-      expect(singles.map(spokenType)).toEqual([
+      const rows = [...host.querySelectorAll('.saved-list > .saved-item')]
+      expect(rows.map(typeLine)).toEqual([
+        'Situation · EN',
+        'Indicators · EN',
+        'Needs · EN',
+        'Technical · EN',
+      ])
+      expect(rows.map(spokenType)).toEqual([
+        'Situation Report',
         'Indicator Monitoring Report',
         'Needs Assessment Brief',
         'Technical Monitoring Report',
       ])
       setLocale('tr')
       await flush()
-      expect(typeLine(head)).toBe('Durum · 2 rapor · EN')
-      expect(singles.map(typeLine)).toEqual(['Gösterge · EN', 'İhtiyaç · EN', 'Teknik · EN'])
-      expect(spokenType(singles[2])).toBe('Teknik izleme raporu')
+      expect(rows.map(typeLine)).toEqual([
+        'Durum · EN',
+        'Gösterge · EN',
+        'İhtiyaç · EN',
+        'Teknik · EN',
+      ])
+      expect(spokenType(rows[3])).toBe('Teknik izleme raporu')
       // The delete button names the type in full too.
-      expect(singles[0].querySelector('.saved-del').getAttribute('aria-label')).toBe(
+      expect(rows[1].querySelector('.saved-del').getAttribute('aria-label')).toBe(
         'Raporu sil: Yemen, Gösterge izleme raporu, 01.08.2026 - 31.10.2026',
       )
+    })
+
+    it('lists reports with the same settings one by one, newest first', async () => {
+      vi.mocked(listReports).mockResolvedValue({ reports: [SAVED, q2] })
+      await mount()
+      const rows = [...host.querySelectorAll('.saved-list > .saved-item')]
+      expect(rows.map((r) => r.querySelector('.saved-period').textContent.trim())).toEqual([
+        '01.08.2026 - 31.10.2026',
+        '01.05.2026 - 31.07.2026',
+      ])
+      expect(host.querySelector('.saved-series-head')).toBeNull()
     })
 
     it('never starts a line of the meta with a separator', async () => {
       vi.mocked(listReports).mockResolvedValue({ reports: [SAVED, q2, yemen] })
       await mount()
-      const head = host.querySelector('.saved-series-head')
       // The period sits on its own line under the type: no leading "·".
-      expect(head.querySelector('.saved-period').textContent.trim()).toBe('to 31.10.2026')
+      expect(text('.saved-period')).toBe('01.08.2026 - 31.10.2026')
       // A wrap may only fall after a separator, never just before one: each "·" is
       // glued to the word in front of it by a no-break space.
       for (const meta of host.querySelectorAll('.saved-meta')) {
@@ -542,57 +515,6 @@ describe('ReportsView in two languages', () => {
       await chooseType('technical_monitoring')
       expect(selects()[1].value).toBe('Agriculture')
       expect(sectorOptions().every(([, disabled]) => !disabled)).toBe(true)
-    })
-
-    // An older technical report on a sector that has no series now: its next period
-    // would either fail or, with the sector reset, quietly stop being the series.
-    const olderTechnical = (theme) => ({
-      ...SAVED,
-      id: 't-old',
-      report_type: 'technical_monitoring',
-      theme,
-      date_from: '2026-05-01',
-      date_to: '2026-07-31',
-      title: `Technical Monitoring Report — Sudan · ${theme} · 2026-05-01 – 2026-07-31`,
-    })
-    const runNext = () =>
-      [...host.querySelectorAll('.pdf-btn')].find(
-        (b) => b.textContent.trim() === en.reports.viewer.runNext,
-      )
-
-    it('does not run the next period of a series whose sector has no data, and says why', async () => {
-      const old = olderTechnical('Agriculture')
-      vi.mocked(listReports).mockResolvedValue({ reports: [old] })
-      vi.mocked(getReport).mockResolvedValue({ ...old, content: '## Summary\n\nText.' })
-      await mount('/reports?report=t-old')
-      expect(runNext().disabled).toBe(true)
-      expect(text('.next-blocked')).toBe(en.reports.viewer.nextNoData)
-      expect(runNext().getAttribute('aria-describedby')).toBe(
-        host.querySelector('.next-blocked').id,
-      )
-      runNext().click()
-      await flush()
-      // Nothing was set up: no continuation, no sector changed behind the user's back.
-      expect(host.querySelector('.continues')).toBeNull()
-      setLocale('tr')
-      await flush()
-      expect(text('.next-blocked')).toBe(tr.reports.viewer.nextNoData)
-    })
-
-    it('runs the next period of a covered sector, keeping the sector', async () => {
-      const old = olderTechnical('Health')
-      vi.mocked(listReports).mockResolvedValue({ reports: [old] })
-      vi.mocked(getReport).mockResolvedValue({ ...old, content: '## Summary\n\nText.' })
-      await mount('/reports?report=t-old')
-      vi.stubGlobal('matchMedia', () => ({ matches: false }))
-      Element.prototype.scrollIntoView = () => {}
-      expect(runNext().disabled).toBe(false)
-      expect(host.querySelector('.next-blocked')).toBeNull()
-      runNext().click()
-      await flush()
-      delete Element.prototype.scrollIntoView
-      expect(selects()[1].value).toBe('Health')
-      expect(host.querySelector('.continues')).toBeTruthy()
     })
   })
 
@@ -888,36 +810,6 @@ describe('ReportsView in two languages', () => {
         [...host.querySelectorAll('.source-index')].map((el) => el.textContent.trim()),
       ).toEqual(['1', '3'])
       expect(text('.source-meta')).toBe('OCHA HNO · 01.01.2024 – 01.01.2026 · retrieved 18.11.2026')
-    })
-
-    it('outlines "What changed" for the next period of a series', async () => {
-      const q2 = {
-        ...SAVED,
-        id: 'q2',
-        date_from: '2026-05-01',
-        date_to: '2026-07-31',
-        title: 'Sudan · Health · 2026-05-01 – 2026-07-31',
-      }
-      vi.mocked(listReports).mockResolvedValue({ reports: [q2] })
-      vi.mocked(getReport).mockResolvedValue({ ...q2, content: '## Summary\n\nText.' })
-      stubStream()
-      await mount('/reports?report=q2')
-      vi.stubGlobal('matchMedia', () => ({ matches: false }))
-      Element.prototype.scrollIntoView = () => {}
-      ;[...host.querySelectorAll('.pdf-btn')]
-        .find((b) => b.textContent.trim() === en.reports.viewer.runNext)
-        .click()
-      await flush()
-      delete Element.prototype.scrollIntoView
-      host.querySelector('.report-form').dispatchEvent(new Event('submit'))
-      await flush()
-      expect(outline()).toEqual([
-        'Executive Summary',
-        'What changed since the last report',
-        'Key Findings',
-        'Outlook',
-      ])
-      expect(request()).toContain('compared with 01.05.2026 - 31.07.2026')
     })
   })
 

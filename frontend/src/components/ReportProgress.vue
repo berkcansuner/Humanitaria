@@ -81,10 +81,7 @@ const props = defineProps({
   dateFrom: { type: String, default: '' },
   dateTo: { type: String, default: '' },
   language: { type: String, default: '' },
-  // The period of the report this one continues ("Run next period"), already formatted.
-  comparedPeriod: { type: String, default: '' },
   started: { type: Boolean, default: false }, // the first words have arrived
-  checking: { type: Boolean, default: false }, // "What changed" is being checked
   // The server's status before the first word: { count, sources: [{ title, source,
   // date }] } for document reports, { indicators, date_from, date_to } for technical.
   reading: { type: Object, default: null },
@@ -167,7 +164,6 @@ const requestLine = computed(() => {
     sectorLabel(props.theme, t),
     period,
     language,
-    props.comparedPeriod ? t('reports.progress.compared', { period: props.comparedPeriod }) : '',
   ]
     .filter(Boolean)
     .join(' · ')
@@ -177,7 +173,6 @@ const stage = computed(() =>
   progressStage({
     type: props.type,
     started: props.started,
-    checking: props.checking,
     elapsed: elapsed.value,
     reading: props.reading,
     computed: props.stats,
@@ -198,7 +193,7 @@ const stageText = computed(() => {
   return t(`reports.progress.${stage.value}`)
 })
 
-const outline = computed(() => reportOutline(props.type, { comparing: !!props.comparedPeriod }))
+const outline = computed(() => reportOutline(props.type))
 
 // A few lines of text-to-come under each section name, of varied (fixed) lengths.
 const LINES = 3

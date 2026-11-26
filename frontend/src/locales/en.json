@@ -334,19 +334,10 @@
       "chooseCountry": "Choose a country to generate a report.",
       "noData": "No quantitative data"
     },
-    "continues": {
-      "series": "Continues {name}, {period}. The new report opens with what changed since then.",
-      "endClamped": "The period ends today, because it isn't over yet.",
-      "startClamped": "The start moved to {date}: older documents are no longer indexed.",
-      "differs": "These settings differ from {name}, so this report won't be compared with it.",
-      "clear": "Don't compare with the previous report"
-    },
     "saved": {
       "title": "Saved reports",
       "waitWhileGenerating": "Saved reports open when this report finishes, or after you stop it.",
-      "count": "{n} report | {n} reports",
       "until": "to {date}",
-      "noPeriod": "No period set",
       "empty": "No saved reports yet.",
       "delete": "Delete report: {name}, {type}",
       "deleteWithPeriod": "Delete report: {name}, {type}, {period}",
@@ -355,15 +346,6 @@
     "viewer": {
       "back": "All reports",
       "stopAndBack": "Stop and show all reports",
-      "comparedDeleted": "Compared with an earlier report that has since been deleted.",
-      "comparedWith": "Compared with {link}",
-      "previousReport": "the previous report",
-      "notComparedWith": "Not compared with the report for {link}",
-      "earlierPeriod": "the earlier period",
-      "continuedBy": "Continued by {link}",
-      "laterReport": "a later report",
-      "runNext": "Run next period",
-      "nextNoData": "No next period: HDX HAPI has no quantitative data for this sector, so a technical monitoring report cannot continue this series.",
       "copy": "Copy with sources",
       "copied": "Copied",
       "pdf": "Download PDF",
@@ -377,12 +359,10 @@
     "progress": {
       "elapsed": "{time} elapsed",
       "outline": "This report will have these sections",
-      "compared": "compared with {period}",
       "computing": "Computing the statistics from HDX HAPI data. The report is written from them, usually within a minute.",
       "slow": "This is taking longer than usual. The report is still being prepared. You can keep waiting or stop it.",
       "writing": "Writing the report.",
       "writingTechnical": "Writing the report from the computed statistics.",
-      "checking": "Checking what changed against the previous report.",
       "readingCount": "Reading {n} source. The first words usually appear within two minutes. | Reading {n} sources. The first words usually appear within two minutes.",
       "readCaption": "Sources in this report's reading list",
       "readMore": "and {n} more | and {n} more",
@@ -405,23 +385,10 @@
       "recommendations": "Recommendations",
       "findings": "One section for each indicator analysed",
       "dataCoverage": "Data Coverage & Limitations",
-      "methods": "Methods",
-      "whatChanged": "What changed since the last report"
-    },
-    "compare": {
-      "checking": "Checking against the previous report…",
-      "checkingPeriod": "Checking against the previous report ({period})…",
-      "none": "Checked against the previous report: nothing removed.",
-      "removed": "Checked against the previous report: {n} statement removed because it presented older or undated information as new. | Checked against the previous report: {n} statements removed because they presented older or undated information as new."
+      "methods": "Methods"
     },
     "empty": {
-      "lede": "Each report draws on many ReliefWeb reports at once and cites every one, so you can check it and quote it.",
-      "pickSeries": "Pick up a series where it left off.",
-      "pickRecent": "Open a recent report.",
-      "seriesLabel": "Your report series",
-      "recentLabel": "Recent reports",
-      "nextStarts": "next period starts {date}",
-      "nextReady": "next period ready, from {date}"
+      "lede": "Each report draws on many ReliefWeb reports at once and cites every one, so you can check it and quote it."
     },
     "toast": {
       "deleted": "Report deleted.",
@@ -434,8 +401,6 @@
       "delete": "Could not delete the report. It is back in the list."
     },
     "errors": {
-      "previousDeleted": "The report this one continues was deleted, so there is nothing to compare against. Generate again without the comparison.",
-      "previousMismatch": "The settings no longer match the report this one continues. Generate again without the comparison.",
       "generate": "Could not generate the report. Please try again.",
       "stream": "Something went wrong.",
       "connection": "Couldn't reach the server. It may be waking up, which takes about 30 seconds. Generate the report again."
@@ -495,7 +460,6 @@
     "message_too_long": "That message is too long. Keep it to 4,000 characters or fewer.",
     "conversation_limit": "You've reached the conversation limit. Delete an old conversation to start a new one.",
     "report_limit": "You've reached the report limit. Delete an old report to create a new one.",
-    "series_mismatch": "The previous report has a different type, country, sector or language.",
     "model_busy": "The model is busy right now. Try again in a moment.",
     "quota_exhausted": "The AI service has run out of capacity. Please contact the administrator.",
     "report_failed": "The report couldn't be created. Please try again.",

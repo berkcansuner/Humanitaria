@@ -25,19 +25,6 @@ describe('reportOutline', () => {
     ])
   })
 
-  it('puts "What changed" right after the opening section of a next-period report', () => {
-    expect(reportOutline('situation', { comparing: true })).toEqual([
-      'executiveSummary',
-      'whatChanged',
-      'keyFindings',
-      'outlook',
-    ])
-    expect(reportOutline('needs_assessment', { comparing: true }).slice(0, 2)).toEqual([
-      'context',
-      'whatChanged',
-    ])
-  })
-
   it('reads an unknown type as a situation report', () => {
     expect(reportOutline(undefined)).toEqual(reportOutline('situation'))
   })
@@ -71,10 +58,9 @@ describe('progressStage', () => {
     )
   })
 
-  it('follows the stream once words arrive, and the check of a next-period report', () => {
+  it('follows the stream once words arrive', () => {
     expect(progressStage({ type: 'situation', started: true, elapsed: 300 })).toBe('writing')
     expect(progressStage({ type: 'technical_monitoring', started: true })).toBe('writingTechnical')
-    expect(progressStage({ type: 'situation', started: true, checking: true })).toBe('checking')
   })
 })
 

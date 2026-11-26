@@ -19,158 +19,58 @@
           <template v-if="loadingList && !reports.length">
             <span v-for="n in 4" :key="'sk-' + n" class="skeleton saved-skel"></span>
           </template>
-          <ul v-else-if="savedEntries.length" class="saved-list">
-            <template
-              v-for="(e, i) in savedEntries"
-              :key="e.kind === 'single' ? e.report.id : 'series:' + e.key"
+          <ul v-else-if="visibleReports.length" class="saved-list">
+            <li
+              v-for="r in visibleReports"
+              :key="r.id"
+              :class="[
+                'saved-item',
+                {
+                  active: current && current.id === r.id,
+                  opening: openingId === r.id,
+                },
+              ]"
+              :aria-busy="openingId === r.id ? 'true' : undefined"
             >
-              <li
-                v-if="e.kind === 'single'"
-                :class="[
-                  'saved-item',
-                  {
-                    active: current && current.id === e.report.id,
-                    opening: openingId === e.report.id,
-                  },
-                ]"
-                :aria-busy="openingId === e.report.id ? 'true' : undefined"
+              <button
+                type="button"
+                class="saved-open"
+                :title="rowTitle(r)"
+                :aria-disabled="generating ? 'true' : undefined"
+                @click="openReport(r.id)"
               >
-                <button
-                  type="button"
-                  class="saved-open"
-                  :title="rowTitle(e.report)"
-                  :aria-disabled="generating ? 'true' : undefined"
-                  @click="openReport(e.report.id)"
-                >
-                  <!-- Country, then the sector in full (none for all sectors), then
-                       the short type and language code, and the period. -->
-                  <span class="saved-name">{{ shownCountry(e.report) }}</span>
-                  <span v-if="shownSector(e.report)" class="saved-sector">{{
-                    shownSector(e.report)
-                  }}</span>
-                  <span class="saved-meta">
-                    <!-- The report's language as its code, so an English and a Turkish
-                         report with the same settings can be told apart. The "·" is
-                         glued to the type by a no-break space, so no line starts with
-                         a separator. Screen readers hear the full type name. -->
-                    <span
-                      ><span aria-hidden="true">{{ savedTypeShort(e.report) }}</span
-                      ><span class="sr-only">{{ savedType(e.report) }}</span
-                      ><span v-if="reportLanguage(e.report)" class="saved-lang"
-                        >{{ '\u00a0· '
-                        }}<span class="saved-lang-code" aria-hidden="true">{{
-                          reportLanguage(e.report).toUpperCase()
-                        }}</span
-                        ><span class="sr-only">{{ languageLabel(e.report) }}</span></span
-                      ></span
-                    >
-                    <span v-if="savedPeriod(e.report)" class="saved-period">{{
-                      savedPeriod(e.report)
-                    }}</span>
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  class="saved-del"
-                  :aria-label="deleteLabel(e.report)"
-                  @click.stop="onDelete(e.report.id)"
-                >
-                  <Trash2 :size="13" />
-                </button>
-              </li>
-
-              <!-- A series: same type + country + sector + language, one row that
-                   expands to its periods, newest first. -->
-              <li
-                v-else
-                :class="[
-                  'saved-series',
-                  {
-                    expanded: expandedSeries.has(e.key),
-                    'holds-active': current && e.reports.some((r) => r.id === current.id),
-                  },
-                ]"
-              >
-                <button
-                  type="button"
-                  class="saved-series-head"
-                  :aria-expanded="expandedSeries.has(e.key) ? 'true' : 'false'"
-                  :aria-controls="'saved-series-' + i"
-                  @click="toggleSeries(e.key)"
-                >
-                  <span class="saved-series-text">
-                    <span class="saved-name">{{ shownCountry(e.latest) }}</span>
-                    <span v-if="shownSector(e.latest)" class="saved-sector">{{
-                      shownSector(e.latest)
-                    }}</span>
-                    <!-- Type, then count and language kept together: the line can
-                         only break after "Type ·". The period has its own line. -->
-                    <span class="saved-meta"
-                      ><span
-                        ><span aria-hidden="true">{{ savedTypeShort(e.latest) }}</span
-                        ><span class="sr-only">{{ savedType(e.latest) }}</span
-                        >{{ '\u00a0· '
-                        }}<span class="saved-count"
-                          >{{ t('reports.saved.count', { n: e.reports.length }, e.reports.length)
-                          }}<span v-if="reportLanguage(e.latest)" class="saved-lang"
-                            >{{ '\u00a0· '
-                            }}<span class="saved-lang-code" aria-hidden="true">{{
-                              reportLanguage(e.latest).toUpperCase()
-                            }}</span
-                            ><span class="sr-only">{{ languageLabel(e.latest) }}</span></span
-                          ></span
-                        ></span
-                      ><span v-if="e.latest.date_to" class="saved-period">{{
-                        t('reports.saved.until', { date: shownDay(e.latest.date_to) })
-                      }}</span></span
-                    >
-                  </span>
-                  <ChevronRight :size="14" class="saved-series-chevron" aria-hidden="true" />
-                </button>
-                <ul
-                  v-show="expandedSeries.has(e.key)"
-                  :id="'saved-series-' + i"
-                  class="saved-periods"
-                >
-                  <li
-                    v-for="r in e.reports"
-                    :key="r.id"
-                    :class="[
-                      'saved-item',
-                      { active: current && current.id === r.id, opening: openingId === r.id },
-                    ]"
-                    :aria-busy="openingId === r.id ? 'true' : undefined"
+                <!-- Country, then the sector in full (none for all sectors), then
+                     the short type and language code, and the period. -->
+                <span class="saved-name">{{ shownCountry(r) }}</span>
+                <span v-if="shownSector(r)" class="saved-sector">{{ shownSector(r) }}</span>
+                <span class="saved-meta">
+                  <!-- The report's language as its code, so an English and a Turkish
+                       report with the same settings can be told apart. The "·" is
+                       glued to the type by a no-break space, so no line starts with
+                       a separator. Screen readers hear the full type name. -->
+                  <span
+                    ><span aria-hidden="true">{{ savedTypeShort(r) }}</span
+                    ><span class="sr-only">{{ savedType(r) }}</span
+                    ><span v-if="reportLanguage(r)" class="saved-lang"
+                      >{{ '\u00a0· '
+                      }}<span class="saved-lang-code" aria-hidden="true">{{
+                        reportLanguage(r).toUpperCase()
+                      }}</span
+                      ><span class="sr-only">{{ languageLabel(r) }}</span></span
+                    ></span
                   >
-                    <button
-                      type="button"
-                      class="saved-open"
-                      :title="rowTitle(r)"
-                      :aria-disabled="generating ? 'true' : undefined"
-                      @click="openReport(r.id)"
-                    >
-                      <span class="saved-name saved-period-name"
-                        >{{ savedPeriod(r) || t('reports.saved.noPeriod')
-                        }}<span v-if="reportLanguage(r)" class="saved-lang"
-                          >{{ ' · '
-                          }}<span class="saved-lang-code" aria-hidden="true">{{
-                            reportLanguage(r).toUpperCase()
-                          }}</span
-                          ><span class="sr-only">{{ languageLabel(r) }}</span></span
-                        ></span
-                      >
-                    </button>
-                    <button
-                      type="button"
-                      class="saved-del"
-                      :aria-label="deleteLabel(r)"
-                      @click.stop="onDelete(r.id)"
-                    >
-                      <Trash2 :size="13" />
-                    </button>
-                  </li>
-                </ul>
-              </li>
-            </template>
+                  <span v-if="savedPeriod(r)" class="saved-period">{{ savedPeriod(r) }}</span>
+                </span>
+              </button>
+              <button
+                type="button"
+                class="saved-del"
+                :aria-label="deleteLabel(r)"
+                @click.stop="onDelete(r.id)"
+              >
+                <Trash2 :size="13" />
+              </button>
+            </li>
           </ul>
           <p v-else class="form-hint">{{ t('reports.saved.empty') }}</p>
         </div>
@@ -209,89 +109,8 @@
               <p v-if="metaParts.length" class="report-meta">
                 <span v-for="(part, i) in metaParts" :key="i" class="meta-part">{{ part }}</span>
               </p>
-              <template v-if="comparedWith">
-                <p v-if="comparedWith.deleted" class="report-compared">
-                  {{ t('reports.viewer.comparedDeleted') }}
-                </p>
-                <i18n-t
-                  v-else
-                  keypath="reports.viewer.comparedWith"
-                  tag="p"
-                  class="report-compared"
-                  scope="global"
-                >
-                  <template #link>
-                    <button
-                      type="button"
-                      class="report-compared-link"
-                      @click="openReport(comparedWith.id)"
-                    >
-                      {{ comparedWith.period || t('reports.viewer.previousReport') }}
-                    </button>
-                  </template>
-                </i18n-t>
-              </template>
-              <!-- A series is implicit: a report made as a one-off can sit after an
-                   earlier period it was never compared with. Say so. -->
-              <i18n-t
-                v-if="notComparedWith"
-                keypath="reports.viewer.notComparedWith"
-                tag="p"
-                class="report-compared"
-                scope="global"
-              >
-                <template #link>
-                  <button
-                    type="button"
-                    class="report-compared-link"
-                    @click="openReport(notComparedWith.id)"
-                  >
-                    {{ savedPeriod(notComparedWith) || t('reports.viewer.earlierPeriod') }}
-                  </button>
-                </template>
-              </i18n-t>
-              <!-- An older period links forward instead of offering "Run next period",
-                   which would continue a different (newer) report. -->
-              <i18n-t
-                v-if="continuedBy"
-                keypath="reports.viewer.continuedBy"
-                tag="p"
-                class="report-compared"
-                scope="global"
-              >
-                <template #link>
-                  <button
-                    type="button"
-                    class="report-compared-link"
-                    @click="openReport(continuedBy.id)"
-                  >
-                    {{ savedPeriod(continuedBy) || t('reports.viewer.laterReport') }}
-                  </button>
-                </template>
-              </i18n-t>
-              <!-- A technical series on a sector HDX HAPI has no series for (made
-                   before that was refused): its next period cannot be run as part
-                   of the series, so the button is off and says why. -->
-              <p
-                v-if="nextNoData && nextSuggestion && !nextSuggestion.notStarted"
-                id="next-blocked"
-                class="report-compared next-blocked"
-              >
-                {{ t('reports.viewer.nextNoData') }}
-              </p>
             </div>
             <div v-if="current.id" class="report-actions">
-              <button
-                v-if="nextSuggestion && !nextSuggestion.notStarted"
-                type="button"
-                class="pdf-btn"
-                :disabled="generating || nextNoData"
-                :aria-describedby="nextNoData ? 'next-blocked' : undefined"
-                @click="runNextPeriod"
-              >
-                <CalendarPlus :size="15" />
-                {{ t('reports.viewer.runNext') }}
-              </button>
               <button type="button" class="pdf-btn" @click="copyReport">
                 <Check v-if="reportCopied" :size="15" />
                 <Copy v-else :size="15" />
@@ -316,9 +135,7 @@
             :date-from="current.date_from || ''"
             :date-to="current.date_to || ''"
             :language="current.language"
-            :compared-period="current.comparedPeriod || ''"
             :started="!!current.content"
-            :checking="!!current.checking"
             :reading="current.reading"
             :stats="current.computed"
           />
@@ -327,20 +144,9 @@
             class="report-content"
             :lang="reportLang"
             v-html="
-              injectComparisonNote(
-                injectSectionImages(
-                  renderMarkdown(shown.content, shown.sources),
-                  current.section_images,
-                ),
-                comparisonNote(
-                  {
-                    checking: current.checking,
-                    period: current.comparedPeriod,
-                    removed: current.checkRemoved,
-                  },
-                  t,
-                  locale,
-                ),
+              injectSectionImages(
+                renderMarkdown(shown.content, shown.sources),
+                current.section_images,
               )
             "
           ></article>
@@ -447,38 +253,8 @@
                 </label>
               </div>
 
-              <!-- "Run next period": the new report continues a saved one and opens
-                   with what changed since then. -->
-              <div v-if="continuation && !generating" class="continues" role="status">
-                <template v-if="continuesSeries">
-                  <i18n-t keypath="reports.continues.series" tag="p" scope="global">
-                    <template #name>
-                      <strong>{{ savedName(continuation.report) }}</strong>
-                    </template>
-                    <template #period>
-                      <span class="continues-period">{{ savedPeriod(continuation.report) }}</span>
-                    </template>
-                  </i18n-t>
-                  <p v-if="continuationNotes.endClamped" class="form-hint">
-                    {{ t('reports.continues.endClamped') }}
-                  </p>
-                  <p v-if="continuationNotes.startClamped" class="form-hint">
-                    {{ t('reports.continues.startClamped', { date: shownDay(minDate) }) }}
-                  </p>
-                </template>
-                <i18n-t v-else keypath="reports.continues.differs" tag="p" scope="global">
-                  <template #name>
-                    <strong>{{ savedName(continuation.report) }}</strong>
-                  </template>
-                </i18n-t>
-                <button type="button" class="continues-clear" @click="continuation = null">
-                  {{ continuesSeries ? t('reports.continues.clear') : t('common.dismiss') }}
-                </button>
-              </div>
-
               <div class="form-foot">
                 <button
-                  ref="generateBtn"
                   type="submit"
                   class="generate-btn"
                   :disabled="!form.country || generating"
@@ -500,32 +276,6 @@
               </div>
             </div>
           </form>
-
-          <template v-if="emptyRows.length">
-            <p class="empty-pick">
-              {{
-                emptyRows[0].series ? t('reports.empty.pickSeries') : t('reports.empty.pickRecent')
-              }}
-            </p>
-            <ul
-              class="empty-list"
-              :aria-label="
-                emptyRows[0].series
-                  ? t('reports.empty.seriesLabel')
-                  : t('reports.empty.recentLabel')
-              "
-            >
-              <li v-for="row in emptyRows" :key="row.report.id">
-                <button type="button" class="empty-row" @click="openReport(row.report.id)">
-                  <span class="empty-row-text">
-                    <span class="empty-row-name">{{ savedName(row.report) }}</span>
-                    <span class="empty-row-meta">{{ row.meta }}</span>
-                  </span>
-                  <ArrowRight :size="15" class="empty-row-arrow" aria-hidden="true" />
-                </button>
-              </li>
-            </ul>
-          </template>
         </div>
       </main>
     </div>
@@ -555,9 +305,6 @@ import {
   Copy,
   Check,
   ArrowLeft,
-  ArrowRight,
-  ChevronRight,
-  CalendarPlus,
   Square,
   Plus,
   RotateCcw,
@@ -572,14 +319,11 @@ import { useUndoableDelete } from '../utils/undoableDelete.js'
 import { renderMarkdown } from '../utils/renderMarkdown.js'
 import { renumberCitations, numberByFirstAppearance } from '../utils/renumberCitations.js'
 import { injectSectionImages } from '../utils/reportImages.js'
-import { comparisonNote, injectComparisonNote } from '../utils/comparisonNote.js'
 import { revealSource, returnToCite } from '../utils/sources.js'
 import { parseSSE } from '../utils/parseSSE.js'
 import { getReportOptions, listReports, getReport, deleteReport } from '../utils/reportsApi.js'
 import { REPORT_TYPES, reportTypeLabel, sectorLabel } from '../utils/reportTypes.js'
 import { splitReportTitle, formatPeriod } from '../utils/reportTitle.js'
-import { groupSeries, newerInSeries, olderInSeries, seriesKey } from '../utils/reportSeries.js'
-import { nextPeriod } from '../utils/nextPeriod.js'
 import { copyWithSources } from '../utils/citationCopy.js'
 import { localIsoDay, minReportDate, maxReportDate } from '../utils/reportDateBounds.js'
 import { handleSessionExpired } from '../utils/authStore.js'
@@ -610,7 +354,7 @@ const reports = ref([])
 const loadingList = ref(false)
 const openingId = ref(null) // saved report being fetched for the viewer
 const listLoaded = ref(false)
-// The form was asked for (New report, Run next period): phones show it, not the list.
+// The form was asked for (New report): phones show it, not the list.
 const composing = ref(false)
 const route = useRoute()
 const router = useRouter()
@@ -667,8 +411,7 @@ const shown = computed(() => {
   return { content: numberByFirstAppearance(c.content), sources: null }
 })
 
-// The viewer's copy of a saved report. The series fields (type, country, sector,
-// language, period, previous_report_id) drive "Run next period" and "Compared with".
+// The viewer's copy of a saved report.
 function toCurrent(rep) {
   return {
     id: rep.id,
@@ -681,7 +424,6 @@ function toCurrent(rep) {
     language: rep.language,
     date_from: rep.date_from,
     date_to: rep.date_to,
-    previous_report_id: rep.previous_report_id || null,
     cover_image: rep.cover_image,
     section_images: rep.section_images,
   }
@@ -984,110 +726,7 @@ const {
 })
 
 const visibleReports = computed(() => reports.value.filter((r) => !hiddenIds.value.has(r.id)))
-// The saved list with each series folded into one expandable row.
-const savedEntries = computed(() => groupSeries(visibleReports.value))
-
-// Series rows the user opened. The series holding the open report opens with it,
-// so the active period is always visible in the list.
-const expandedSeries = ref(new Set())
-function toggleSeries(key) {
-  const next = new Set(expandedSeries.value)
-  if (next.has(key)) next.delete(key)
-  else next.add(key)
-  expandedSeries.value = next
-}
-// Keyed from the list row, which always carries the series fields (a just-generated
-// report can be open before the list reloads; the watch fires again once it does).
-const activeSeriesKey = computed(() => {
-  const id = current.value && current.value.id
-  const row = id && reports.value.find((r) => r.id === id)
-  return row ? seriesKey(row) : null
-})
-watch(activeSeriesKey, (key) => {
-  if (key && !expandedSeries.value.has(key)) {
-    expandedSeries.value = new Set([...expandedSeries.value, key])
-  }
-})
-// --- Run next period ---------------------------------------------------------
-// The series continues from its latest period, whichever of its reports is open
-// (an older one's "next period" usually exists already). Falls back to the open
-// report until the list carries it.
-const seriesLatest = computed(() => {
-  const id = current.value && current.value.id
-  if (!id) return null
-  for (const e of savedEntries.value) {
-    if (e.kind === 'single' && e.report.id === id) return e.report
-    if (e.kind === 'series' && e.reports.some((r) => r.id === id)) return e.latest
-  }
-  return current.value
-})
-// Starting points in the empty viewer: the user's series (latest report, and
-// whether its next period can be run yet), else their most recent reports.
-const emptyRows = computed(() => {
-  const series = savedEntries.value.filter((e) => e.kind === 'series').slice(0, 4)
-  if (series.length) {
-    return series.map((e) => {
-      const next = nextPeriod(e.latest, new Date())
-      const when = !next
-        ? e.latest.date_to
-          ? t('reports.saved.until', { date: shownDay(e.latest.date_to) })
-          : ''
-        : next.notStarted
-          ? t('reports.empty.nextStarts', { date: shownDay(next.startsOn) })
-          : t('reports.empty.nextReady', { date: shownDay(next.date_from) })
-      return {
-        series: true,
-        report: e.latest,
-        meta: [
-          savedType(e.latest),
-          t('reports.saved.count', { n: e.reports.length }, e.reports.length),
-          when,
-        ]
-          .filter(Boolean)
-          .join(' · '),
-      }
-    })
-  }
-  return savedEntries.value.slice(0, 3).map((e) => ({
-    series: false,
-    report: e.report,
-    meta: [savedType(e.report), savedPeriod(e.report)].filter(Boolean).join(' · '),
-  }))
-})
-
-// The earlier period of the open report's series that it was not compared with
-// (made as a one-off, so no previous_report_id).
-const notComparedWith = computed(() => {
-  const c = current.value
-  if (!c || !c.id || c.previous_report_id) return null
-  return olderInSeries(visibleReports.value, c.id)
-})
-// The open report's next newer period in its series, when it is not the latest.
-const continuedBy = computed(() =>
-  current.value && current.value.id ? newerInSeries(visibleReports.value, current.value.id) : null,
-)
-// The series' next period (nextPeriod.js), offered only on its latest report;
-// null when there is no period to carry or the open report is an older period.
-const nextSuggestion = computed(() =>
-  seriesLatest.value && !continuedBy.value ? nextPeriod(seriesLatest.value, new Date()) : null,
-)
-// Set by "Run next period": the saved report the form's next report continues.
-const continuation = ref(null)
-const generateBtn = ref(null)
 const stopBtn = ref(null)
-// The link holds only while the form keeps the series' type, country, sector and
-// language (the API refuses a mismatch); dates may change.
-const continuesSeries = computed(
-  () =>
-    !!continuation.value &&
-    seriesKey({ ...form.value, theme: form.value.theme || null }) === continuation.value.key,
-)
-// Clamp notes describe the suggested dates; once edited, they no longer apply.
-const continuationNotes = computed(() => {
-  const c = continuation.value
-  const same = c && form.value.date_from === c.date_from && form.value.date_to === c.date_to
-  return { endClamped: same && c.endClamped, startClamped: same && c.startClamped }
-})
 
 // The main column holds the open report, else the new-report form. Phones show one
 // pane: the library, or the main column once a report or the form is asked for (or
@@ -1110,7 +749,6 @@ function backToList() {
 function openForm() {
   if (generating.value) return
   composing.value = true
-  continuation.value = null
   genError.value = null
   form.value.language = locale.value
   // A saved report closes through the URL; an unsaved one (stopped, failed) has none.
@@ -1120,62 +758,6 @@ function openForm() {
   }
   nextTick(() => formTitle.value && formTitle.value.focus())
 }
-
-// The series' sector has no technical monitoring data (technical_themes): its next
-// period would be refused, and resetting the sector would end the series silently.
-const nextNoData = computed(() => {
-  const rep = seriesLatest.value
-  return (
-    !!rep &&
-    rep.report_type === 'technical_monitoring' &&
-    !!rep.theme &&
-    !!technicalThemes.value &&
-    !technicalThemes.value.includes(rep.theme)
-  )
-})
-
-function runNextPeriod() {
-  const rep = seriesLatest.value
-  const s = nextSuggestion.value
-  if (!rep || !s || s.notStarted || generating.value || nextNoData.value) return
-  form.value = {
-    report_type: rep.report_type || 'situation',
-    country: rep.country || '',
-    theme: rep.theme || '',
-    date_from: s.date_from,
-    date_to: s.date_to,
-    language: rep.language || 'en',
-  }
-  // The saved report itself, not its name: the name is translated where it is shown.
-  continuation.value = {
-    id: rep.id,
-    key: seriesKey(rep),
-    report: rep,
-    date_from: s.date_from,
-    date_to: s.date_to,
-    endClamped: s.endClamped,
-    startClamped: s.startClamped,
-  }
-  // The form takes the report's place in the main column.
-  composing.value = true
-  current.value = null
-  closeReport()
-  nextTick(() => {
-    if (generateBtn.value) {
-      generateBtn.value.scrollIntoView({ block: 'center' })
-      generateBtn.value.focus({ preventScroll: true })
-    }
-  })
-}
-
-// "Compared with <period>" under the open report's title, from the saved list.
-const comparedWith = computed(() => {
-  const pid = current.value && current.value.previous_report_id
-  if (!pid) return null
-  const row = reports.value.find((r) => r.id === pid)
-  if (row) return { id: pid, period: savedPeriod(row) }
-  return loadingList.value ? null : { deleted: true }
-})
 
 const toastMessage = computed(() =>
   pendingDelete.value ? t('reports.toast.deleted') : notice.value ? t(notice.value) : '',
@@ -1265,8 +847,6 @@ async function generate() {
     imagesStatus: null,
     reading: null, // { count, sources } once the server says what it reads
     computed: null, // { indicators, date_from, date_to } for technical monitoring
-    // The period this report is compared with, for the note under "What changed".
-    comparedPeriod: continuesSeries.value ? savedPeriod(continuation.value.report) : null,
   }
   // The form gives way to the report; keyboard focus moves to its Stop button.
   nextTick(() => stopBtn.value && stopBtn.value.focus())
@@ -1283,24 +863,12 @@ async function generate() {
         date_from: form.value.date_from || null,
         date_to: form.value.date_to || null,
         language: form.value.language,
-        previous_report_id: continuesSeries.value ? continuation.value.id : null,
       }),
       signal: controller.value.signal,
     })
     if (!res.ok) {
       if (res.status === 401) {
         handleSessionExpired()
-        return
-      }
-      // The report this one continues was deleted, or no longer matches it.
-      if (continuesSeries.value && (res.status === 404 || res.status === 422)) {
-        continuation.value = null
-        genError.value = {
-          key:
-            res.status === 404
-              ? 'reports.errors.previousDeleted'
-              : 'reports.errors.previousMismatch',
-        }
         return
       }
       // 409 = per-user report limit, 429 = rate limit: named by the error's code.
@@ -1347,8 +915,6 @@ async function generate() {
           } catch (e) {}
         } else if (sse.event === 'status') {
           try {
-            // Next-period reports: the streamed "What changed" is checked before it
-            // is saved; the note under its heading says so, then what the check did.
             const d = JSON.parse(sse.data)
             // Before the first word: what the report reads, or which statistics
             // a technical report computed (shown by the waiting state).
@@ -1363,17 +929,10 @@ async function generate() {
                 date_from: d.date_from || null,
                 date_to: d.date_to || null,
               }
-            } else if (d.stage === 'checking_comparison') {
-              current.value.checking = true
-            } else if (d.stage === 'comparison_checked') {
-              current.value.checking = false
-              current.value.checkRemoved = d.removed
             }
           } catch (e) {}
         } else if (sse.event === 'saved') {
-          continuation.value = null
           current.value.imagesStatus = null
-          current.value.checking = false
           let rid = null
           try {
             const d = JSON.parse(sse.data)
@@ -1387,9 +946,7 @@ async function generate() {
           // version so the on-screen report matches the saved PDF exactly.
           if (rid) {
             try {
-              const rep = await getReport(rid)
-              const { checkRemoved, comparedPeriod } = current.value
-              current.value = { ...toCurrent(rep), checkRemoved, comparedPeriod }
+              current.value = toCurrent(await getReport(rid))
             } catch (e) {}
           }
         } else if (sse.event === 'error') {
@@ -1410,7 +967,6 @@ async function generate() {
       genError.value = { key: 'reports.errors.connection' }
     }
   } finally {
-    if (current.value) current.value.checking = false
     generating.value = false
     controller.value = null
   }
@@ -1739,50 +1295,6 @@ function onCiteClick(e) {
   color: var(--color-text-secondary);
 }
 
-/* "Run next period": what the next report continues, above Generate. */
-.continues {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-1);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  background-color: var(--color-surface-container-low);
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  line-height: 1.45;
-  color: var(--color-text);
-}
-.continues p {
-  margin: 0;
-}
-.continues-period {
-  font-family: var(--font-body);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.continues-clear,
-.report-compared-link {
-  padding: 0;
-  border: none;
-  background: none;
-  font: inherit;
-  color: var(--color-accent);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  cursor: pointer;
-}
-.continues-clear {
-  font-size: var(--text-xs);
-}
-.continues-clear:focus-visible,
-.report-compared-link:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-  border-radius: 2px;
-}
-
 .saved {
   display: flex;
   flex-direction: column;
@@ -1843,8 +1355,7 @@ function onCiteClick(e) {
   color: var(--color-text-secondary);
   overflow-wrap: anywhere;
 }
-.saved-period,
-.saved-count {
+.saved-period {
   white-space: nowrap;
 }
 /* The report's language code: the meta line's own quiet text, in every row shape. */
@@ -1904,67 +1415,6 @@ function onCiteClick(e) {
   display: block;
   height: 32px;
   border-radius: var(--radius-md);
-}
-
-/* Series: one row that opens to its periods (newest first). */
-.saved-series-head {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  text-align: left;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  padding: var(--space-2) var(--space-3);
-  transition: background-color 0.15s;
-}
-.saved-series-head:hover {
-  background-color: var(--color-surface-container);
-}
-.saved-series-head:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: -2px;
-}
-.saved-series-text {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.saved-series-chevron {
-  flex-shrink: 0;
-  color: var(--color-muted);
-  transition: transform 0.15s;
-}
-.saved-series.expanded .saved-series-chevron {
-  transform: rotate(90deg);
-}
-/* Folded with the open report inside: the row says where the report lives. */
-.saved-series.holds-active:not(.expanded) .saved-name {
-  color: var(--color-accent);
-  font-weight: 600;
-}
-.saved-periods {
-  list-style: none;
-  margin: 2px 0 var(--space-1) var(--space-3);
-  padding: 0 0 0 var(--space-1);
-  border-left: 1px solid var(--color-border);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.saved-periods .saved-open {
-  padding: 6px 10px;
-}
-.saved-period-name {
-  font-family: var(--font-mono);
-  font-weight: 400;
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
 .report-main {
@@ -2027,26 +1477,7 @@ function onCiteClick(e) {
   margin: 0 0 var(--space-4);
   border-radius: var(--radius-lg);
 }
-/* Under the "What changed" heading of a just-generated next-period report:
-   checking, then what the check removed (utils/comparisonNote.js). */
-.report-content :deep(.compare-note) {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: calc(-1 * var(--space-1)) 0 var(--space-3);
-  font-size: var(--text-sm);
-  line-height: 1.45;
-  color: var(--color-text-secondary);
-}
-.report-content :deep(.compare-note-spin) {
-  flex-shrink: 0;
-  width: 12px;
-  height: 12px;
-  border: 1.5px solid var(--color-border);
-  border-top-color: var(--color-accent);
-  border-radius: 50%;
-  animation: spin 0.9s linear infinite;
-}
+
 .images-status {
   margin: 0 0 var(--space-2);
   font-size: var(--text-sm);
@@ -2067,13 +1498,6 @@ function onCiteClick(e) {
   display: none;
 }
 
-.report-compared {
-  margin: 4px 0 0;
-  font-family: var(--font-body);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-text-secondary);
-}
 /* Three actions no longer fit beside the title, so they sit on their own row
    under the meta line. The row may shrink (min-width: 0) so its buttons wrap on
    a phone instead of pushing the page sideways. */
@@ -2208,69 +1632,6 @@ function onCiteClick(e) {
 }
 .saved-item.opening .saved-name {
   color: var(--color-text-secondary);
-}
-
-/* Under the form: the user's series (or recent reports) to pick up. */
-.empty-pick {
-  margin: var(--space-6) 0 var(--space-2);
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-}
-.empty-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  border-top: 1px solid var(--color-border);
-}
-.empty-list li {
-  border-bottom: 1px solid var(--color-border);
-}
-.empty-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  width: 100%;
-  padding: var(--space-3) var(--space-2);
-  text-align: left;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  transition: background-color 0.15s;
-}
-.empty-row:hover {
-  background-color: var(--color-surface-container-low);
-}
-.empty-row:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
-.empty-row-text {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.empty-row-name {
-  font-size: var(--text-sm);
-  color: var(--color-text);
-}
-.empty-row-meta {
-  font-family: var(--font-body);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-text-secondary);
-}
-.empty-row-arrow {
-  flex-shrink: 0;
-  color: var(--color-muted);
-  transition:
-    color 0.15s,
-    transform 0.15s;
-}
-.empty-row:hover .empty-row-arrow {
-  color: var(--color-accent);
-  transform: translateX(2px);
 }
 
 /* As in Chat: a full hairline tinted from the error color, never a side rule. */

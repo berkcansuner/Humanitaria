@@ -23,11 +23,9 @@ const OUTLINES = {
   technical_monitoring: ['executiveSummary', 'findings', 'dataCoverage', 'methods'],
 }
 
-/** Section keys (`reports.outline.*`) of a report type; a next-period report adds
- * "What changed" right after its opening section (rag/report_service.py). */
-export function reportOutline(type, { comparing = false } = {}) {
-  const sections = OUTLINES[type] || OUTLINES.situation
-  return comparing ? [sections[0], 'whatChanged', ...sections.slice(1)] : [...sections]
+/** Section keys (`reports.outline.*`) of a report type. */
+export function reportOutline(type) {
+  return [...(OUTLINES[type] || OUTLINES.situation)]
 }
 
 // "The first words usually appear within two minutes": past that, say it is slow.
@@ -39,13 +37,11 @@ export const SLOW_AFTER_S = 120
 export function progressStage({
   type,
   started = false,
-  checking = false,
   elapsed = 0,
   reading = null,
   computed = null,
 }) {
   const technical = type === 'technical_monitoring'
-  if (checking) return 'checking'
   if (started) return technical ? 'writingTechnical' : 'writing'
   if (elapsed >= SLOW_AFTER_S) return 'slow'
   if (computed) return 'computed'
