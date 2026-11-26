@@ -30,7 +30,7 @@
               :title="c.title"
               @click="$emit('select', c.id)"
             >
-              {{ c.title }}
+              <span class="conv-title">{{ c.title }}</span>
             </button>
             <div class="conv-actions">
               <button
@@ -161,9 +161,10 @@ function cancelRename() {
 }
 
 .conv-item {
+  position: relative;
   display: flex;
   align-items: center;
-  min-height: 32px;
+  min-height: 36px;
   border-radius: var(--radius-md);
   transition: background-color 0.15s;
 }
@@ -176,21 +177,29 @@ function cancelRename() {
   background-color: var(--color-surface-container-high);
 }
 
+/* The whole title shows, wrapping to a second line before it is cut, so two
+   conversations that start alike can still be told apart. */
 .conv-select {
   flex: 1;
   min-width: 0;
+  padding: 7px 10px;
   text-align: left;
-  padding: 0 10px;
   background: transparent;
   border: none;
   color: var(--color-text);
   font-family: var(--font-body);
   font-size: var(--text-sm);
-  line-height: 32px;
+  line-height: 20px;
   cursor: pointer;
-  white-space: nowrap;
+}
+
+.conv-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 .conv-item.active .conv-select {
@@ -198,25 +207,46 @@ function cancelRename() {
   font-weight: 600;
 }
 
+/* Rename and delete take no room until they are wanted: on hover they lie over the
+   end of the title on the row's own fill. The open conversation, and screens
+   without hover, keep them in view and leave the title room for them. */
 .conv-actions {
+  position: absolute;
+  top: 6px;
+  right: 4px;
   display: flex;
   gap: 2px;
-  padding-right: var(--space-2);
+  padding-left: 14px;
+  background: linear-gradient(to right, transparent, var(--row-fill) 14px);
   opacity: 0;
+  pointer-events: none;
   transition: opacity 0.15s;
+  --row-fill: var(--color-surface-container);
 }
 
-/* Hover reveals the actions; keyboard focus and touch screens (no hover) must
-   see them too, or a focused/tapped button is invisible. */
+.conv-item.active .conv-actions {
+  --row-fill: var(--color-surface-container-high);
+}
+
 .conv-item:hover .conv-actions,
 .conv-item:focus-within .conv-actions,
 .conv-item.active .conv-actions {
   opacity: 1;
+  pointer-events: auto;
+}
+
+.conv-item.active .conv-select {
+  padding-right: 62px;
 }
 
 @media (hover: none) {
   .conv-actions {
     opacity: 1;
+    pointer-events: auto;
+    background: none;
+  }
+  .conv-select {
+    padding-right: 62px;
   }
 }
 
