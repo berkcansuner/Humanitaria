@@ -143,6 +143,13 @@ textarea {
   caret-color: var(--color-accent);
 }
 
+/* renderMarkdown puts every table in this frame: a table wider than the answer or
+   report scrolls inside it instead of widening the page on a phone. */
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
 /* Form controls do not inherit the page font by default (they fall back to the
    UA font, e.g. Arial); size stays per-component. */
 button,

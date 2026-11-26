@@ -216,10 +216,11 @@ onBeforeUnmount(flushDelete)
   cursor: pointer;
 }
 
+/* The reading column of the report screen: 680px of text plus the gutters. */
 .content {
   flex: 1;
   width: 100%;
-  max-width: 820px;
+  max-width: 728px;
   margin: 0 auto;
   padding: var(--space-4) var(--space-5);
   overflow: hidden;

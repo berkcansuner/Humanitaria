@@ -622,10 +622,10 @@ watch(locale, () => decorateCodeBlocks(messagesContainer.value), { flush: 'post'
 .messages {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-3) 0;
+  padding: var(--space-4) 0 var(--space-5);
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-5);
 }
 
 .message {
@@ -649,10 +649,16 @@ watch(locale, () => decorateCodeBlocks(messagesContainer.value), { flush: 'post'
   max-width: 80%;
 }
 
-/* Answers take the whole column, as on Claude: about 736px of text. */
+/* Answers take the whole reading column. */
 .message.assistant .message-row {
   max-width: 100%;
   flex: 1;
+  min-width: 0;
+  align-items: stretch;
+}
+
+.message.user .message-row {
+  align-items: flex-end;
 }
 
 @media (max-width: 640px) {
@@ -662,44 +668,20 @@ watch(locale, () => decorateCodeBlocks(messagesContainer.value), { flush: 'post'
   }
 }
 
-.message.user .message-row {
-  align-items: flex-end;
-}
-
-.message.assistant .message-row {
-  align-items: stretch;
-}
-
-.message-bubble {
-  padding: 12px 16px;
-  border-radius: 12px;
-  line-height: 21px;
-}
-
-@media (max-width: 640px) {
-  .message-bubble {
-    padding: var(--space-3) var(--space-4);
-    border-radius: var(--radius-lg);
-  }
-}
-
-/* Quiet Archive: the question sits on a quiet shelf-gray fill so it never
-   outweighs the answer. The Stop button keeps the charcoal tertiary fill. */
 .message.user .message-bubble {
+  padding: 12px 16px;
   background-color: var(--color-surface-container);
   color: var(--color-text);
   border-radius: 12px;
 }
 
+/* The answer: no box, it reads on the page ground like a report. */
 .message.assistant .message-bubble {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
+  min-width: 0;
 }
 
 /* Message-history skeleton: neutral placeholder bubbles with shimmering lines,
-   alternating sides to echo a real conversation. Override the user side's solid
-   fill (defined above) so the shimmer lines stay legible. */
+   alternating sides to echo a real conversation. */
 .msg-skeleton {
   display: flex;
   flex-direction: column;
@@ -709,9 +691,10 @@ watch(locale, () => decorateCodeBlocks(messagesContainer.value), { flush: 'post'
 
 .message.user .msg-skeleton,
 .message.assistant .msg-skeleton {
+  padding: var(--space-3) var(--space-4);
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
-  box-shadow: none;
+  border-radius: 14px;
 }
 
 .skel-line {
@@ -725,28 +708,54 @@ watch(locale, () => decorateCodeBlocks(messagesContainer.value), { flush: 'post'
   width: 55%;
 }
 
-/* Claude's message type: 15px on a 21px line. Questions in the interface sans,
-   answers in the reading serif. */
 .message-content {
   font-family: var(--font-body);
   font-size: 15px;
-  line-height: 21px;
+  line-height: 1.5;
+  overflow-wrap: break-word;
 }
 
+/* Answer text as in the report reader: Geist 15px / 1.65, headings closer to the
+   text they open than to the text before them. */
 .message.assistant .message-content {
-  font-family: var(--font-serif);
+  line-height: 1.65;
+  color: var(--color-text);
 }
 
 .message-content :deep(p) {
-  margin: 0 0 0.6em 0;
+  margin: 0 0 0.9em;
 }
 
 .message-content :deep(p:last-child) {
   margin-bottom: 0;
 }
 
+.message-content :deep(h1),
+.message-content :deep(h2) {
+  font-family: var(--font-display);
+  font-size: 1.1875rem;
+  font-weight: 650;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+  margin: 1.7em 0 0.45em;
+}
+
+.message-content :deep(h3),
+.message-content :deep(h4) {
+  font-size: var(--text-base);
+  font-weight: 650;
+  line-height: 1.4;
+  text-wrap: balance;
+  margin: 1.5em 0 0.35em;
+}
+
+.message-content :deep(:is(h1, h2, h3, h4):first-child) {
+  margin-top: 0;
+}
+
 .message-content :deep(strong) {
-  font-weight: 700;
+  font-weight: 650;
 }
 
 .message-content :deep(em) {
@@ -755,17 +764,21 @@ watch(locale, () => decorateCodeBlocks(messagesContainer.value), { flush: 'post'
 
 .message-content :deep(ul),
 .message-content :deep(ol) {
-  margin: 0.5em 0;
-  padding-left: 1.5em;
+  margin: 0.3em 0 1em;
+  padding-left: 1.25em;
 }
 
 .message-content :deep(li) {
-  margin-bottom: 0.35em;
+  margin-bottom: 0.4em;
+}
+
+.message-content :deep(li::marker) {
+  color: var(--color-muted);
 }
 
 .message-content :deep(code) {
-  font-family: var(--font-body);
-  font-size: 0.9em;
+  font-family: var(--font-mono);
+  font-size: 0.88em;
   background-color: var(--color-code-bg);
   padding: 0.15em 0.35em;
   border-radius: var(--radius-sm);
@@ -773,10 +786,11 @@ watch(locale, () => decorateCodeBlocks(messagesContainer.value), { flush: 'post'
 
 .message-content :deep(pre) {
   background-color: var(--color-code-bg);
+  border: 1px solid var(--color-border);
   padding: var(--space-4);
   border-radius: var(--radius-lg);
   overflow-x: auto;
-  margin: 0.75em 0;
+  margin: 0.8em 0 1.2em;
 }
 
 .message-content :deep(pre code) {
@@ -784,37 +798,52 @@ watch(locale, () => decorateCodeBlocks(messagesContainer.value), { flush: 'post'
   padding: 0;
 }
 
-/* Quoted report text: set apart by a quiet reading-room fill and Graphite
-   text rather than a thick colored side rule. */
+/* Quoted report text: set apart by a Cloud Ground fill and Slate Ink text rather
+   than a thick colored side rule. */
 .message-content :deep(blockquote) {
-  margin: 0.75em 0;
-  padding: var(--space-2) var(--space-3);
+  margin: 0.8em 0 1.2em;
+  padding: var(--space-3) var(--space-4);
   background-color: var(--color-surface-container-low);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   color: var(--color-text-secondary);
+}
+
+/* Tables as in the report reader: ruled rows on the page ground, the header on
+   Cloud Ground, figures lined up. The .table-scroll frame keeps a wide one inside
+   the column on a phone. */
+.message-content :deep(.table-scroll) {
+  margin: 0.8em 0 1.4em;
 }
 
 .message-content :deep(table) {
   width: 100%;
   border-collapse: collapse;
-  margin: 0.75em 0;
   font-size: var(--text-sm);
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
 }
 
 .message-content :deep(th),
 .message-content :deep(td) {
-  border: 1px solid var(--color-border);
-  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  padding: 8px 12px;
   text-align: left;
+  vertical-align: top;
 }
 
 .message-content :deep(th) {
-  background-color: var(--color-bg);
+  background-color: var(--color-surface-container-low);
+  border-bottom-color: var(--color-border-strong);
   font-weight: 600;
+  color: var(--color-text-secondary);
 }
 
-.message-content :deep(tr:nth-child(even)) {
-  background-color: var(--color-bg);
+@media (max-width: 640px) {
+  .message-content :deep(th),
+  .message-content :deep(td) {
+    min-width: 7.5em;
+    padding: 8px 10px;
+  }
 }
 
 .edit-box {

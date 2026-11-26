@@ -85,6 +85,13 @@ export function renderMarkdown(text, sources = null) {
     parts.append(text.slice(last))
     node.replaceWith(parts)
   }
+  // A wide table scrolls inside its own frame instead of widening the answer on a phone.
+  for (const table of fragment.querySelectorAll('table')) {
+    const frame = document.createElement('div')
+    frame.className = 'table-scroll'
+    table.replaceWith(frame)
+    frame.append(table)
+  }
   const out = document.createElement('div')
   out.append(fragment)
   return out.innerHTML

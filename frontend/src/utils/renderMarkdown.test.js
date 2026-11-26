@@ -254,3 +254,16 @@ describe('a run of chips stays together', () => {
     expect(div.querySelector('.cite-run').textContent).toBe('1 2')
   })
 })
+
+describe('renderMarkdown tables', () => {
+  it('puts each table in a scroll frame so a wide one stays inside the column', () => {
+    const div = document.createElement('div')
+    div.innerHTML = renderMarkdown(
+      '| A | B |\n| --- | --- |\n| 1 | 2 |\n\nText.\n\n| C |\n| --- |\n| 3 |',
+    )
+    const frames = div.querySelectorAll('.table-scroll')
+    expect(frames).toHaveLength(2)
+    for (const frame of frames) expect(frame.firstElementChild.tagName).toBe('TABLE')
+    expect(div.querySelectorAll('table')).toHaveLength(2)
+  })
+})
