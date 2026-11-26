@@ -148,7 +148,16 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick, onMounted, defineAsyncComponent } from 'vue'
+import {
+  ref,
+  computed,
+  watch,
+  nextTick,
+  onMounted,
+  onActivated,
+  onBeforeUnmount,
+  defineAsyncComponent,
+} from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Send, AlertCircle, Square, RotateCcw } from 'lucide-vue-next'
@@ -533,7 +542,7 @@ function autoGrow() {
 // doesn't refill it.
 const route = useRoute()
 const router = useRouter()
-onMounted(() => {
+function applyPrefill() {
   // Signup and Google sign-in drop `q`, so the landing ask also leaves a
   // sessionStorage copy; it is consumed here whether or not it is used.
   const question = prefillFor(input.value, route.query.q, takeStashedQuestion())
@@ -548,7 +557,21 @@ onMounted(() => {
   const rest = { ...route.query }
   delete rest.q
   router.replace({ query: rest })
+}
+onMounted(applyPrefill)
+// The chat screen is kept alive across screens (App.vue), so an ask from the
+// landing page can arrive at a chat that is already mounted. The first
+// activation comes with the mount, which has already filled the composer.
+let firstActivation = true
+onActivated(() => {
+  if (firstActivation) {
+    firstActivation = false
+    return
+  }
+  applyPrefill()
 })
+// Unmounting (signing out drops the kept screen) stops a streaming answer.
+onBeforeUnmount(() => controller.value?.abort())
 
 function onSuggestionApply(msg, values) {
   msg.clarification.resolved = true
