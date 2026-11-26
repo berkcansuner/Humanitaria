@@ -693,3 +693,39 @@ def test_chat_retrieval_uses_the_chat_mmr_lambda():
     with patch("api.routes.chat.build_retriever", return_value=retriever) as build:
         anyio.run(_retrieve_docs, "q", {})
     assert build.call_args.kwargs["lambda_mult"] == get_settings().CHAT_MMR_LAMBDA == 0.7
+
+
+class TestRetrieveRelaxing:
+    """A source or format the planner names but no stored document carries
+    empties the search; it is dropped once before answering "nothing found"."""
+
+    def _run(self, filters, results):
+        import anyio
+        from api.routes import chat
+        calls = []
+
+        async def fake(query, f):
+            calls.append(dict(f))
+            return results.pop(0)
+
+        with patch("api.routes.chat._retrieve_docs", side_effect=fake):
+            docs, used = anyio.run(chat._retrieve_relaxing, "IPC figures", filters)
+        return docs, used, calls
+
+    def test_retries_without_source_and_format(self):
+        docs, used, calls = self._run(
+            {"country": "Sudan", "theme": "Food and Nutrition", "source": "Acme", "format": "Map"},
+            [[], ["doc"]],
+        )
+        assert docs == ["doc"]
+        assert calls[1] == {"country": "Sudan", "theme": "Food and Nutrition"}
+        assert used == {"country": "Sudan", "theme": "Food and Nutrition"}
+
+    def test_keeps_the_filters_when_they_find_documents(self):
+        docs, used, calls = self._run({"country": "Sudan", "source": "World Food Programme"}, [["doc"]])
+        assert docs == ["doc"] and len(calls) == 1
+        assert used == {"country": "Sudan", "source": "World Food Programme"}
+
+    def test_does_not_retry_without_a_relaxable_filter(self):
+        docs, used, calls = self._run({"country": "Sudan", "theme": "Health"}, [[]])
+        assert docs == [] and len(calls) == 1

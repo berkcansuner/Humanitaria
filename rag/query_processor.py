@@ -115,6 +115,53 @@ def _as_known_country(value: str) -> Optional[str]:
             return canon
     return None
 
+# chunks.source holds ReliefWeb's full source name and the filter is an equality
+# match, while people (and the filter model) name a source by its acronym. Keys
+# are lower case; the values are the names as stored.
+_SOURCE_NAMES = {
+    "wfp": "World Food Programme",
+    "ocha": "UN Office for the Coordination of Humanitarian Affairs",
+    "unocha": "UN Office for the Coordination of Humanitarian Affairs",
+    "unhcr": "UN High Commissioner for Refugees",
+    "iom": "International Organization for Migration",
+    "who": "World Health Organization",
+    "unicef": "UN Children's Fund",
+    "ifrc": "International Federation of Red Cross and Red Crescent Societies",
+    "icrc": "International Committee of the Red Cross",
+    "fao": "Food and Agriculture Organization of the United Nations",
+    "fews net": "Famine Early Warning System Network",
+    "fewsnet": "Famine Early Warning System Network",
+    "msf": "Médecins Sans Frontières",
+    "unfpa": "United Nations Population Fund",
+    "echo": "European Commission's Directorate-General for European Civil Protection "
+            "and Humanitarian Aid Operations",
+    "reach": "REACH Initiative",
+    "irc": "International Rescue Committee",
+    "nrc": "Norwegian Refugee Council",
+    "acted": "Agency for Technical Cooperation and Development",
+    "paho": "Pan American Health Organization",
+    "undrr": "UN Office for Disaster Risk Reduction",
+    "imc": "International Medical Corps",
+}
+_SOURCE_NAMES.update({name.lower(): name for name in set(_SOURCE_NAMES.values())})
+
+# Food-insecurity classification systems, not publishers: "IPC figures" are quoted
+# by WFP, FAO, OCHA and others, and the IPC itself publishes few documents, so a
+# source filter would hide most of what the question asks for.
+_NOT_SOURCES = {
+    "ipc", "integrated food security phase classification",
+    "cadre harmonisé", "cadre harmonise",
+}
+
+
+def _stored_source(value: str) -> Optional[str]:
+    """The source name as chunks.source stores it; None when it is not a source."""
+    key = value.strip().lower()
+    if key in _NOT_SOURCES:
+        return None
+    return _SOURCE_NAMES.get(key, value.strip())
+
+
 _FILTER_RULES = """Rules:
 - Map country mentions to canonical ReliefWeb names. Turkish agglutinative suffixes may be attached
   directly (e.g. "Iranda"/"İran'da" = Iran, "Suriyede" = Syria, "Afganistanda" = Afghanistan).
@@ -246,7 +293,9 @@ def _normalize_llm_filters(result: QueryFilters) -> Dict[str, Any]:
         if promoted:
             filters.setdefault("country", promoted)
         else:
-            filters["source"] = result.source
+            source = _stored_source(result.source)
+            if source:
+                filters["source"] = source
     if result.format:
         filters["format"] = result.format
     return filters

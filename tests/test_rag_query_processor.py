@@ -375,12 +375,38 @@ class TestNormalizeLlmFilters:
         assert f.get("country") == "Sudan"
         assert "source" not in f, "a known country must not survive as a source filter"
 
-    def test_real_source_org_is_kept(self):
+    def test_source_acronym_becomes_the_stored_name(self):
+        # chunks.source holds ReliefWeb's full name; an equality filter on the
+        # acronym the model extracts ("WFP") matched no document at all.
         from rag.query_processor import _normalize_llm_filters
-        result = QueryFilters(source="WFP")
-        f = _normalize_llm_filters(result)
-        assert f.get("source") == "WFP"
+        f = _normalize_llm_filters(QueryFilters(source="WFP"))
+        assert f.get("source") == "World Food Programme"
         assert "country" not in f
+
+    @pytest.mark.parametrize("given, stored", [
+        ("OCHA", "UN Office for the Coordination of Humanitarian Affairs"),
+        ("unhcr", "UN High Commissioner for Refugees"),
+        ("FEWS NET", "Famine Early Warning System Network"),
+        ("world food programme", "World Food Programme"),
+        ("MSF", "Médecins Sans Frontières"),
+    ])
+    def test_known_sources_take_the_stored_name(self, given, stored):
+        from rag.query_processor import _normalize_llm_filters
+        assert _normalize_llm_filters(QueryFilters(source=given)).get("source") == stored
+
+    @pytest.mark.parametrize("given", ["IPC", "ipc", "Integrated Food Security Phase Classification",
+                                       "Cadre Harmonisé"])
+    def test_classification_system_is_not_a_source(self, given):
+        # "IPC figures" are quoted by WFP, FAO, OCHA and others; the IPC itself
+        # publishes few documents, so a source filter would hide most of them.
+        from rag.query_processor import _normalize_llm_filters
+        f = _normalize_llm_filters(QueryFilters(country="Sudan", source=given))
+        assert "source" not in f
+        assert f.get("country") == "Sudan"
+
+    def test_unknown_source_is_kept_as_given(self):
+        from rag.query_processor import _normalize_llm_filters
+        assert _normalize_llm_filters(QueryFilters(source="Acme Relief")).get("source") == "Acme Relief"
 
     def test_country_as_source_does_not_override_existing_country(self):
         from rag.query_processor import _normalize_llm_filters

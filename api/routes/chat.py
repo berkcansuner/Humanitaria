@@ -287,6 +287,22 @@ async def _retrieve_docs(query: str, filters: dict):
     return docs
 
 
+# Filters the planner can name with a value no stored document carries (a source
+# or format spelled differently from ReliefWeb's): such a filter empties the
+# search, so it is dropped once before the answer says nothing was found.
+_RELAXABLE_FILTERS = ("source", "format")
+
+
+async def _retrieve_relaxing(query: str, filters: dict) -> tuple[list, dict]:
+    """Documents for the query, and the filters that found them."""
+    docs = await _retrieve_docs(query, filters)
+    if docs or not any(key in filters for key in _RELAXABLE_FILTERS):
+        return docs, filters
+    relaxed = {key: value for key, value in filters.items() if key not in _RELAXABLE_FILTERS}
+    logger.info("No documents under %s; retrying without source and format", describe_filters(filters))
+    return await _retrieve_docs(query, relaxed), relaxed
+
+
 _DOCS_PER_COUNTRY = 3
 
 
@@ -385,7 +401,7 @@ async def chat(request: Request, req: ChatRequest, user: dict = Depends(get_curr
 
     try:
         retrieval_query, filters = await anyio.to_thread.run_sync(_plan_retrieval, session_id, req.message)
-        docs = await _retrieve_docs(retrieval_query, filters)
+        docs, filters = await _retrieve_relaxing(retrieval_query, filters)
 
         if not docs:
             msg = no_docs_message(filters, _reply_lang(req.message, list(get_session_history(session_id).messages)))
@@ -459,7 +475,7 @@ async def chat_stream(request: Request, req: ChatRequest, user: dict = Depends(g
         try:
             retrieval_query, filters = await anyio.to_thread.run_sync(_plan_retrieval, session_id, req.message)
             _filter_ms = (time.perf_counter() - _t0) * 1000
-            docs = await _retrieve_docs(retrieval_query, filters)
+            docs, filters = await _retrieve_relaxing(retrieval_query, filters)
             _retrieval_ms = (time.perf_counter() - _t0) * 1000 - _filter_ms
 
             if not docs:
