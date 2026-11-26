@@ -20,8 +20,7 @@ quiet period can take up to a minute while the server wakes up)
   indicator series from HDX HAPI and runs the trend and comparison tests in Python (Sen's
   slope, Holm correction). The report's text is written by code as well, in English or
   Turkish, so every sentence traces to a dataset in its source list and no model can reword
-  a figure. A model writes only the "What changed" section of a follow-up report, and that
-  section is checked against the numbers it was given.
+  a figure. No model is called for it.
 - **A rolling 12-month index.** A scheduled GitHub Actions workflow triggers an incremental
   ingest of new ReliefWeb reports, and reports older than a year are pruned.
 - **Accounts.** Email and password or Google sign-in. Deleting an account removes its
