@@ -14,20 +14,14 @@
 
         <nav class="tabs" :aria-label="t('admin.tabsLabel')">
           <button
+            v-for="name in TABS"
+            :key="name"
             type="button"
-            :class="['tab-btn', { active: tab === 'ingestion' }]"
-            :aria-current="tab === 'ingestion' ? 'true' : undefined"
-            @click="tab = 'ingestion'"
+            :class="['tab-btn', { active: tab === name }]"
+            :aria-current="tab === name ? 'true' : undefined"
+            @click="tab = name"
           >
-            {{ t('admin.tabs.ingestion') }}
-          </button>
-          <button
-            type="button"
-            :class="['tab-btn', { active: tab === 'users' }]"
-            :aria-current="tab === 'users' ? 'true' : undefined"
-            @click="tab = 'users'"
-          >
-            {{ t('admin.tabs.users') }}
+            {{ t(`admin.tabs.${name}`) }}
           </button>
         </nav>
 
@@ -136,7 +130,9 @@
               </table>
             </div>
           </section>
+        </template>
 
+        <template v-if="tab === 'reports'">
           <section class="card">
             <div class="card-head">
               <h2>{{ t('admin.reports.title') }}</h2>
@@ -240,6 +236,8 @@ import { errorMessage } from '../utils/errorMessage.js'
 
 const { t, n, te } = useI18n()
 
+// Indexed reports have their own tab: a long list under the run controls buried them.
+const TABS = ['ingestion', 'reports', 'users']
 const tab = ref('ingestion')
 const status = ref(null)
 const loading = ref(true)
@@ -415,28 +413,46 @@ onUnmounted(() => {
   gap: var(--space-5);
 }
 
+/* Pill tabs, as Chat and Reports in the top bar: Teal Mist under Brand Teal for
+   the open one. */
 .tabs {
   display: flex;
-  gap: var(--space-1);
-  margin-bottom: var(--space-4);
-  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+  gap: 2px;
 }
 
 .tab-btn {
-  padding: var(--space-2) var(--space-4);
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 16px;
   font-family: var(--font-body);
   font-size: var(--text-sm);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-text-secondary);
   background: transparent;
   border: none;
-  border-bottom: 2px solid transparent;
+  border-radius: var(--radius-full);
   cursor: pointer;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+
+.tab-btn:hover {
+  color: var(--color-text);
+  background-color: var(--color-surface-container);
 }
 
 .tab-btn.active {
   color: var(--color-accent);
-  border-bottom-color: var(--color-accent);
+  font-weight: 600;
+  background-color: var(--color-accent-soft);
+}
+
+.tab-btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 /* Quiet Archive: sections are hairline-separated bands, not shadowed cards. */

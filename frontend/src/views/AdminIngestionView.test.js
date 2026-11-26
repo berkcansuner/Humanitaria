@@ -89,3 +89,24 @@ describe('AdminIngestionView run source', () => {
     expect(meta()).toMatch(/^future-runner · başlangıç: /)
   })
 })
+
+describe('AdminIngestionView tabs', () => {
+  afterEach(() => {
+    app.unmount()
+    host.remove()
+  })
+
+  it('keeps the indexed reports on their own tab', async () => {
+    await mount('cron')
+    const tabs = [...host.querySelectorAll('.tab-btn')]
+    expect(tabs.map((b) => b.textContent.trim())).toEqual(['Ingestion', 'Reports', 'Users'])
+    expect(host.querySelector('.run-meta')).not.toBeNull()
+    expect(host.querySelector('.doc-search')).toBeNull()
+
+    tabs[1].click()
+    await nextTick()
+    expect(host.querySelector('.doc-search')).not.toBeNull()
+    expect(host.querySelector('.run-meta')).toBeNull()
+    expect(tabs[1].getAttribute('aria-current')).toBe('true')
+  })
+})

@@ -618,6 +618,7 @@
     "tabsLabel": "Admin sections",
     "tabs": {
       "ingestion": "Ingestion",
+      "reports": "Reports",
       "users": "Users"
     },
     "status": {

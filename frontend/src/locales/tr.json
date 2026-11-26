@@ -618,6 +618,7 @@
     "tabsLabel": "Yönetim bölümleri",
     "tabs": {
       "ingestion": "Veri alımı",
+      "reports": "Raporlar",
       "users": "Kullanıcılar"
     },
     "status": {
