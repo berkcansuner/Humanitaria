@@ -137,7 +137,6 @@
             :language="current.language"
             :started="!!current.content"
             :reading="current.reading"
-            :stats="current.computed"
           />
           <!-- The report body is in the report's language, whatever the interface's. -->
           <article
@@ -208,18 +207,11 @@
                 </label>
                 <label class="field">
                   <span class="field-label">{{ t('reports.form.sector') }}</span>
-                  <!-- A technical monitoring report needs HDX HAPI series for its sector:
-                       the others stay listed, disabled, under a group that says why. -->
                   <select v-model="form.theme" :disabled="generating">
                     <option value="">{{ t('reports.form.allSectors') }}</option>
-                    <option v-for="th in sectorChoices.open" :key="th" :value="th">
+                    <option v-for="th in themes" :key="th" :value="th">
                       {{ sectorLabel(th, t) }}
                     </option>
-                    <optgroup v-if="sectorChoices.closed.length" :label="t('reports.form.noData')">
-                      <option v-for="th in sectorChoices.closed" :key="th" :value="th" disabled>
-                        {{ sectorLabel(th, t) }}
-                      </option>
-                    </optgroup>
                   </select>
                 </label>
               </div>
@@ -340,14 +332,11 @@ const { t, te, locale } = useI18n()
 
 // Prod retains ~1 year of data; clamp the date pickers to [one year ago, today]
 // so a user can't pick a window with no indexed reports (or a future date).
-const minDate = computed(() => minReportDate(new Date(), form.value.report_type))
+const minDate = computed(() => minReportDate(new Date()))
 const maxDate = computed(() => maxReportDate())
 
 const countries = ref([])
 const themes = ref([])
-// The sectors a technical monitoring report can analyse (/reports/options); null when
-// the server does not say, and then nothing is restricted.
-const technicalThemes = ref(null)
 const optionsError = ref(false)
 
 const reports = ref([])
@@ -369,27 +358,6 @@ const form = ref({
   language: locale.value,
 })
 
-// Sector options: all open, except for a technical monitoring report, which can only
-// analyse the sectors with series; a sector it cannot analyse is cleared when the
-// type changes to it (the server would refuse it with no_sector_data).
-const technicalOnly = computed(
-  () => form.value.report_type === 'technical_monitoring' && !!technicalThemes.value,
-)
-const sectorChoices = computed(() => {
-  if (!technicalOnly.value) return { open: themes.value, closed: [] }
-  const covered = new Set(technicalThemes.value)
-  return {
-    open: themes.value.filter((th) => covered.has(th)),
-    closed: themes.value.filter((th) => !covered.has(th)),
-  }
-})
-watch(
-  () => [technicalOnly.value, form.value.theme],
-  ([only, theme]) => {
-    if (only && theme && !technicalThemes.value.includes(theme)) form.value.theme = ''
-  },
-)
-
 const current = ref(null) // a saved report as toCurrent() shapes it, or the one streaming
 
 // A report still streaming carries the model's retrieval numbers ([15], [16]); the
@@ -402,11 +370,6 @@ const shown = computed(() => {
   const c = current.value
   if (!c) return { content: '', sources: null }
   if (c.id && !generating.value) return { content: c.content, sources: c.sources }
-  // A technical report's sources are its data provenance, cited by no marker: they
-  // show as the server numbered them, the same while streaming as once saved.
-  if (c.sources && c.report_type === 'technical_monitoring') {
-    return { content: c.content, sources: c.sources }
-  }
   if (c.sources) return renumberCitations(c.content, c.sources)
   return { content: numberByFirstAppearance(c.content), sources: null }
 })
@@ -490,7 +453,7 @@ function savedType(r) {
   return reportTypeLabel(r.report_type, t)
 }
 
-// The saved list's short type ("Situation", "Technical"); the full name is read out.
+// The saved list's short type ("Situation", "Needs"); the full name is read out.
 function savedTypeShort(r) {
   return reportTypeLabel(r.report_type, (key) =>
     t(key.replace('reports.types.', 'reports.typesShort.')),
@@ -590,7 +553,6 @@ onMounted(async () => {
     const opts = await getReportOptions()
     countries.value = opts.countries || []
     themes.value = opts.themes || []
-    technicalThemes.value = Array.isArray(opts.technical_themes) ? opts.technical_themes : null
   } catch (e) {
     optionsError.value = true
   }
@@ -874,7 +836,6 @@ async function generate() {
     section_images: null,
     imagesStatus: null,
     reading: null, // { count, sources } once the server says what it reads
-    computed: null, // { indicators, date_from, date_to } for technical monitoring
   }
   // The form gives way to the report; keyboard focus moves to its Stop button.
   nextTick(() => stopBtn.value && stopBtn.value.focus())
@@ -944,18 +905,11 @@ async function generate() {
         } else if (sse.event === 'status') {
           try {
             const d = JSON.parse(sse.data)
-            // Before the first word: what the report reads, or which statistics
-            // a technical report computed (shown by the waiting state).
+            // Before the first word: what the report reads (shown by the waiting state).
             if (d.stage === 'reading') {
               current.value.reading = {
                 count: d.count,
                 sources: Array.isArray(d.sources) ? d.sources : [],
-              }
-            } else if (d.stage === 'computed') {
-              current.value.computed = {
-                indicators: Array.isArray(d.indicators) ? d.indicators : [],
-                date_from: d.date_from || null,
-                date_to: d.date_to || null,
               }
             }
           } catch (e) {}
@@ -1520,11 +1474,6 @@ function onCiteClick(e) {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
 }
-/* Technical-report charts are drawn for each theme; the dark one is hidden here and
-   swapped in by the unscoped dark-theme rules at the end of this file. */
-.report-content :deep(.section-img--dark) {
-  display: none;
-}
 
 /* The actions sit on their own row
    under the meta line. The row may shrink (min-width: 0) so its buttons wrap on
@@ -1758,14 +1707,3 @@ function onCiteClick(e) {
 }
 </style>
 
-<style>
-/* Dark theme: show the dark-drawn technical-report chart instead of the light one.
-   Unscoped because the theme attribute sits on <html>, outside this component; the
-   extra :root[data-theme] specificity outranks the scoped display rules above. */
-:root[data-theme='dark'] .report-content .section-img--light {
-  display: none;
-}
-:root[data-theme='dark'] .report-content .section-img--dark {
-  display: block;
-}
-</style>

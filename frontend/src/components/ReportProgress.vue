@@ -1,7 +1,7 @@
 <template>
   <!-- The wait for a report, said with what is known: what was asked for, what the
-       pipeline is doing, how long it has been, what the server says it is reading
-       (or, for technical monitoring, which indicators it computed), and the sections
+       pipeline is doing, how long it has been, what the server says it is reading,
+       and the sections
        the report type always has. Nothing here pretends to measure progress. -->
   <div class="report-progress">
     <p class="progress-request">{{ requestLine }}</p>
@@ -28,23 +28,6 @@
       </ul>
       <p v-if="moreCount > 0" class="read-more">
         {{ t('reports.progress.readMore', { n: moreCount }, moreCount) }}
-      </p>
-    </section>
-    <section v-else-if="!started && stats" class="progress-read" aria-labelledby="read-caption">
-      <p id="read-caption" class="read-caption">{{ t('reports.progress.computedCaption') }}</p>
-      <!-- Indicator names come in the report's language, from the computed findings. -->
-      <ul class="read-list" :lang="language || undefined">
-        <li
-          v-for="(name, i) in stats.indicators || []"
-          :key="name"
-          class="read-row"
-          :style="{ '--i': i }"
-        >
-          <span class="read-title">{{ name }}</span>
-        </li>
-      </ul>
-      <p v-if="computedPeriod" class="read-period">
-        {{ t('reports.progress.periodAnalysed', { period: computedPeriod }) }}
       </p>
     </section>
     <div v-if="!started" class="progress-outline">
@@ -83,9 +66,8 @@ const props = defineProps({
   language: { type: String, default: '' },
   started: { type: Boolean, default: false }, // the first words have arrived
   // The server's status before the first word: { count, sources: [{ title, source,
-  // date }] } for document reports, { indicators, date_from, date_to } for technical.
+  // date }] }.
   reading: { type: Object, default: null },
-  stats: { type: Object, default: null },
 })
 
 const { t, te, locale } = useI18n()
@@ -125,12 +107,6 @@ watch(
 // the interface's format.
 const sourceMeta = (src) =>
   [src.source, ledgerDate(src.date, locale.value)].filter(Boolean).join(' · ')
-const computedPeriod = computed(() => {
-  const c = props.stats
-  return c && (c.date_from || c.date_to)
-    ? formatPeriod(`${c.date_from || ''} – ${c.date_to || ''}`)
-    : ''
-})
 
 // Counted from when the waiting state appears, which is when the request is sent.
 const startedAt = Date.now()
@@ -171,24 +147,18 @@ const requestLine = computed(() => {
 
 const stage = computed(() =>
   progressStage({
-    type: props.type,
     started: props.started,
     elapsed: elapsed.value,
     reading: props.reading,
-    computed: props.stats,
   }),
 )
 // The document reports keep the viewer's long-standing note for the first wait; the
-// counted stages name what the server said it read or computed.
+// counted stage names what the server said it read.
 const stageText = computed(() => {
   if (stage.value === 'reading') return t('reports.viewer.reading')
   if (stage.value === 'readingCount') {
     const n = props.reading.count || 0
     return t('reports.progress.readingCount', { n }, n)
-  }
-  if (stage.value === 'computed') {
-    const n = (props.stats.indicators || []).length
-    return t('reports.progress.computed', { n }, n)
   }
   return t(`reports.progress.${stage.value}`)
 })
@@ -277,8 +247,7 @@ const widthOf = (section, line) =>
   font-variant-numeric: tabular-nums;
   color: var(--color-text-secondary);
 }
-.read-more,
-.read-period {
+.read-more {
   margin: var(--space-2) 0 0;
   font-size: 12px;
   font-variant-numeric: tabular-nums;

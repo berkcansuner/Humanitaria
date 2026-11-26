@@ -5,25 +5,20 @@ import en from '../locales/en.json'
 import tr from '../locales/tr.json'
 
 describe('reportTypes', () => {
-  it('lists exactly the four backend report types', () => {
+  it('lists exactly the three backend report types', () => {
     expect(REPORT_TYPES.map((t) => t.value)).toEqual([
       'situation',
       'indicator_monitoring',
       'needs_assessment',
-      'technical_monitoring',
     ])
-  })
-
-  it('includes the technical_monitoring type', () => {
-    const values = REPORT_TYPES.map((t) => t.value)
-    expect(values).toContain('technical_monitoring')
   })
 
   it('names each type in full', () => {
     expect(reportTypeLabel('situation')).toBe('Situation Report')
     expect(reportTypeLabel('indicator_monitoring')).toBe('Indicator Monitoring Report')
     expect(reportTypeLabel('needs_assessment')).toBe('Needs Assessment Brief')
-    expect(reportTypeLabel('technical_monitoring')).toBe('Technical Monitoring Report')
+    // A removed type (technical monitoring) reads as a situation report.
+    expect(reportTypeLabel('technical_monitoring')).toBe('Situation Report')
     expect(reportTypeLabel(undefined)).toBe('Situation Report')
   })
 

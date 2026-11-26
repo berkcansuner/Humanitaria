@@ -11,7 +11,6 @@ export const REPORT_TYPES = [
   { value: 'situation' },
   { value: 'indicator_monitoring' },
   { value: 'needs_assessment' },
-  { value: 'technical_monitoring' },
 ]
 
 const KNOWN = new Set(REPORT_TYPES.map((r) => r.value))

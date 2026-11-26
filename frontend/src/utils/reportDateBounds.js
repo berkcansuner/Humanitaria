@@ -16,12 +16,10 @@ export function localIsoDay(d) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-/** Earliest selectable report date. Standart raporlar 1 yıl geriye; teknik izleme
- * raporu trend için daha uzun geçmiş ister (5 yıl). */
-export function minReportDate(today = new Date(), reportType = 'situation') {
+/** Earliest selectable report date: one year back (the index keeps about a year). */
+export function minReportDate(today = new Date()) {
   const d = new Date(today.getTime())
-  const years = reportType === 'technical_monitoring' ? 5 : 1
-  d.setFullYear(d.getFullYear() - years)
+  d.setFullYear(d.getFullYear() - 1)
   return localIsoDay(d)
 }
 

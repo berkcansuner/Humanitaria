@@ -253,8 +253,7 @@
       "date": "Date",
       "back": "Back to text",
       "heading": "Sources",
-      "untitled": "Untitled",
-      "retrieved": "retrieved {date}"
+      "untitled": "Untitled"
     },
     "cite": {
       "number": "Source {n}",
@@ -331,8 +330,7 @@
       "stop": "Stop generating",
       "optionsError": "Could not load options. Try refreshing.",
       "loadingCountries": "Preparing the country list…",
-      "chooseCountry": "Choose a country to generate a report.",
-      "noData": "No quantitative data"
+      "chooseCountry": "Choose a country to generate a report."
     },
     "saved": {
       "title": "Saved reports",
@@ -359,16 +357,11 @@
     "progress": {
       "elapsed": "{time} elapsed",
       "outline": "This report will have these sections",
-      "computing": "Computing the statistics from HDX HAPI data. The report is written from them, usually within a minute.",
       "slow": "This is taking longer than usual. The report is still being prepared. You can keep waiting or stop it.",
       "writing": "Writing the report.",
-      "writingTechnical": "Writing the report from the computed statistics.",
       "readingCount": "Reading {n} source. The first words usually appear within two minutes. | Reading {n} sources. The first words usually appear within two minutes.",
       "readCaption": "Sources in this report's reading list",
-      "readMore": "and {n} more | and {n} more",
-      "computed": "Statistics computed from HDX HAPI data: {n} indicator. The report is being written. | Statistics computed from HDX HAPI data: {n} indicators. The report is being written.",
-      "computedCaption": "Indicators with data",
-      "periodAnalysed": "Period analysed: {period}"
+      "readMore": "and {n} more | and {n} more"
     },
     "outline": {
       "executiveSummary": "Executive Summary",
@@ -382,10 +375,7 @@
       "priorityNeeds": "Priority Needs by Sector",
       "affectedGroups": "Affected Groups",
       "gapsConstraints": "Gaps & Constraints",
-      "recommendations": "Recommendations",
-      "findings": "One section for each indicator analysed",
-      "dataCoverage": "Data Coverage & Limitations",
-      "methods": "Methods"
+      "recommendations": "Recommendations"
     },
     "empty": {
       "lede": "Each report draws on many ReliefWeb reports at once and cites every one, so you can check it and quote it."
@@ -408,20 +398,17 @@
     "types": {
       "situation": "Situation Report",
       "indicator_monitoring": "Indicator Monitoring Report",
-      "needs_assessment": "Needs Assessment Brief",
-      "technical_monitoring": "Technical Monitoring Report"
+      "needs_assessment": "Needs Assessment Brief"
     },
     "typesShort": {
       "situation": "Situation",
       "indicator_monitoring": "Indicators",
-      "needs_assessment": "Needs",
-      "technical_monitoring": "Technical"
+      "needs_assessment": "Needs"
     },
     "typeDescriptions": {
       "situation": "Summary, key findings and outlook from ReliefWeb reports, with every claim cited.",
       "indicator_monitoring": "A table of key figures with their sources, then data gaps and recent developments.",
-      "needs_assessment": "Priority needs by sector, affected groups, gaps and recommended next steps.",
-      "technical_monitoring": "Trends and statistical tests on HDX HAPI data series, with charts."
+      "needs_assessment": "Priority needs by sector, affected groups, gaps and recommended next steps."
     },
     "sectors": {
       "agriculture": "Agriculture",
@@ -463,7 +450,6 @@
     "model_busy": "The model is busy right now. Try again in a moment.",
     "quota_exhausted": "The AI service has run out of capacity. Please contact the administrator.",
     "report_failed": "The report couldn't be created. Please try again.",
-    "no_sector_data": "HDX HAPI has no figures for this sector in this country, so a technical monitoring report can't be made. Choose “All sectors” or another report type.",
     "chat_failed": "Something went wrong while answering. Please try again.",
     "body_too_large": "That request is too large to send.",
     "validation_failed": "Some of the information isn't valid. Check it and try again.",

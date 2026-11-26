@@ -253,8 +253,7 @@
       "date": "Tarih",
       "back": "Metne dön",
       "heading": "Kaynaklar",
-      "untitled": "Başlıksız",
-      "retrieved": "erişim tarihi {date}"
+      "untitled": "Başlıksız"
     },
     "cite": {
       "number": "Kaynak {n}",
@@ -331,8 +330,7 @@
       "stop": "Oluşturmayı durdur",
       "optionsError": "Seçenekler yüklenemedi. Sayfayı yenilemeyi deneyin.",
       "loadingCountries": "Ülke listesi hazırlanıyor…",
-      "chooseCountry": "Rapor oluşturmak için bir ülke seçin.",
-      "noData": "Sayısal veri yok"
+      "chooseCountry": "Rapor oluşturmak için bir ülke seçin."
     },
     "saved": {
       "title": "Kayıtlı raporlar",
@@ -359,16 +357,11 @@
     "progress": {
       "elapsed": "Geçen süre: {time}",
       "outline": "Bu raporda şu bölümler yer alacak",
-      "computing": "İstatistikler HDX HAPI verilerinden hesaplanıyor. Rapor bu hesaplardan yazılır ve genellikle bir dakika içinde hazır olur.",
       "slow": "Bu işlem her zamankinden uzun sürüyor. Rapor hâlâ hazırlanıyor. Bekleyebilir ya da raporu durdurabilirsiniz.",
       "writing": "Rapor yazılıyor.",
-      "writingTechnical": "Rapor, hesaplanan istatistiklerden yazılıyor.",
       "readingCount": "{n} kaynak okunuyor. İlk sözcükler genellikle iki dakika içinde görünür. | {n} kaynak okunuyor. İlk sözcükler genellikle iki dakika içinde görünür.",
       "readCaption": "Bu raporun okuma listesindeki kaynaklar",
-      "readMore": "ve {n} kaynak daha | ve {n} kaynak daha",
-      "computed": "İstatistikler HDX HAPI verilerinden hesaplandı: {n} gösterge. Rapor yazılıyor. | İstatistikler HDX HAPI verilerinden hesaplandı: {n} gösterge. Rapor yazılıyor.",
-      "computedCaption": "Verisi olan göstergeler",
-      "periodAnalysed": "İncelenen dönem: {period}"
+      "readMore": "ve {n} kaynak daha | ve {n} kaynak daha"
     },
     "outline": {
       "executiveSummary": "Yönetici özeti",
@@ -382,10 +375,7 @@
       "priorityNeeds": "Sektörlere göre öncelikli ihtiyaçlar",
       "affectedGroups": "Etkilenen gruplar",
       "gapsConstraints": "Boşluklar ve kısıtlar",
-      "recommendations": "Öneriler",
-      "findings": "İncelenen her gösterge için bir bölüm",
-      "dataCoverage": "Veri kapsamı ve sınırlılıklar",
-      "methods": "Yöntem"
+      "recommendations": "Öneriler"
     },
     "empty": {
       "lede": "Her rapor aynı anda birçok ReliefWeb raporundan yararlanır ve hepsini kaynak olarak gösterir. Böylece raporu doğrulayabilir ve alıntılayabilirsiniz."
@@ -408,20 +398,17 @@
     "types": {
       "situation": "Durum raporu",
       "indicator_monitoring": "Gösterge izleme raporu",
-      "needs_assessment": "İhtiyaç değerlendirmesi özeti",
-      "technical_monitoring": "Teknik izleme raporu"
+      "needs_assessment": "İhtiyaç değerlendirmesi özeti"
     },
     "typesShort": {
       "situation": "Durum",
       "indicator_monitoring": "Gösterge",
-      "needs_assessment": "İhtiyaç",
-      "technical_monitoring": "Teknik"
+      "needs_assessment": "İhtiyaç"
     },
     "typeDescriptions": {
       "situation": "ReliefWeb raporlarından özet, temel bulgular ve genel görünüm. Her bilgi kaynak gösterilerek yazılır.",
       "indicator_monitoring": "Kaynaklarıyla birlikte temel rakamlar tablosu, ardından veri eksikleri ve son gelişmeler.",
-      "needs_assessment": "Sektörlere göre öncelikli ihtiyaçlar, etkilenen gruplar, eksikler ve önerilen sonraki adımlar.",
-      "technical_monitoring": "HDX HAPI veri serileri üzerinde eğilimler ve istatistiksel testler, grafiklerle."
+      "needs_assessment": "Sektörlere göre öncelikli ihtiyaçlar, etkilenen gruplar, eksikler ve önerilen sonraki adımlar."
     },
     "sectors": {
       "agriculture": "Tarım",
@@ -463,7 +450,6 @@
     "model_busy": "Model şu anda yoğun. Biraz sonra yeniden deneyin.",
     "quota_exhausted": "Yapay zekâ hizmetinin kullanım kotası doldu. Lütfen yöneticiyle iletişime geçin.",
     "report_failed": "Rapor oluşturulamadı. Lütfen yeniden deneyin.",
-    "no_sector_data": "HDX HAPI'de bu ülke için bu sektöre ait sayısal veri olmadığından teknik izleme raporu oluşturulamıyor. “Tüm sektörler”i ya da başka bir rapor türünü seçin.",
     "chat_failed": "Yanıt hazırlanırken bir sorun oluştu. Lütfen yeniden deneyin.",
     "body_too_large": "İstek gönderilemeyecek kadar büyük.",
     "validation_failed": "Bazı bilgiler geçerli değil. Kontrol edip yeniden deneyin.",
