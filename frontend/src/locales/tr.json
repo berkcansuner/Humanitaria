@@ -32,7 +32,6 @@
   "nav": {
     "chat": "Sohbet",
     "reports": "Raporlar",
-    "dashboards": "Gösterge panelleri",
     "coverage": "Kapsam",
     "openApp": "Uygulamayı aç",
     "logOut": "Çıkış yap",
@@ -43,7 +42,6 @@
     "tagline": "İnsani yardım kayıtlarından kaynağı belli yanıtlar.",
     "product": "Ürün",
     "chatReports": "Sohbet ve raporlar",
-    "dashboards": "Gösterge panelleri",
     "coverage": "Kapsam",
     "useCases": "Kimler için",
     "meTeams": "İzleme ve Değerlendirme (M&E) ekipleri",
@@ -90,10 +88,6 @@
       "head": "{country} · Gösterge tablosu",
       "panel": "Örnek gösterge tablosu"
     },
-    "trend": {
-      "title": "Yurt dışındaki Suriyeli mülteciler",
-      "summary": "{title}: {last} itibarıyla {value}, {phrase} (zirve: {peak}). Seri {first} ile {last} arasını kapsar."
-    },
     "flows": {
       "title": "Hızlı bir sorudan teslim edeceğiniz rapora kadar.",
       "lede": "Bir krizin son durumunu sohbetten öğrenin, birçok kaynağı tek bir raporda birleştirin. Gösterge tablolarında her rakamın kaynağı ve tarihi yanında durur.",
@@ -115,23 +109,6 @@
         "lede": "Bir ülke ya da sektör için her göstergenin son değeri, tarihi ve kaynağıyla.",
         "panel": "Örnek gösterge tablosu"
       }
-    },
-    "dash": {
-      "title": "Her raporun dayandığı göstergeleri görün.",
-      "lede": "Teknik raporların kullandığı verilerle hazırlanmış bir ülke görünümü. Her rakamın kaynağı yanında yazar.",
-      "label": "Örnek gösterge paneli · veri: HDX HAPI",
-      "returnees": "Geri dönen mülteciler, {year}",
-      "refugees": "Yurt dışındaki Suriyeli mülteciler",
-      "refugeesNote": "{year} yılında",
-      "funding": "OCHA FTS kayıtlarındaki fonlama, {year}",
-      "change": "{year} yılına göre {pct}",
-      "reports": "Suriye hakkındaki raporlar",
-      "reportsNote": "{date} tarihinden bu yana dizinde",
-      "usd": "{amount} $",
-      "chart": "Yurt dışındaki Suriyeli mülteciler, {range}",
-      "bars": "Ev sahibi ülkelere göre Suriyeli mülteciler, ilk 5 · {year}",
-      "source": "İki grafiğin de kaynağı: {credit}",
-      "foot": "Bu önizleme Suriye için HDX HAPI'deki gerçek verilerle hazırlandı. Gösterge paneli özelliği ise henüz planlama aşamasında."
     },
     "coverage": {
       "title": "ReliefWeb'in son bir yılı üzerine kurulu.",
@@ -177,10 +154,6 @@
       "body": "İlk sorunuzu ücretsiz sorun ya da izlediğiniz ülke için bir durum raporu hazırlayın.",
       "startFree": "Ücretsiz başla",
       "logIn": "Giriş yap"
-    },
-    "peak": {
-      "below": "{month} zirvesinin %{pct} altında",
-      "at": "zirvede"
     }
   },
   "chat": {

@@ -14,9 +14,6 @@
           <router-link :to="{ path: '/', hash: '#workflows' }">{{
             t('footer.chatReports')
           }}</router-link>
-          <router-link :to="{ path: '/', hash: '#dashboards' }">{{
-            t('footer.dashboards')
-          }}</router-link>
           <router-link :to="{ path: '/', hash: '#coverage' }">{{
             t('footer.coverage')
           }}</router-link>

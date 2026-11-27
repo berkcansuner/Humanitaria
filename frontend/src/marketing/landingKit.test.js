@@ -1,57 +1,28 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import {
-  formatCompact,
   project,
   pulseRadius,
-  linePath,
   countUp,
   onVisible,
   drawablePoints,
   answerLength,
   revealedParts,
-  peakChange,
   monthsSpan,
-  peakPhrase,
   monthLabel,
   dayLabel,
-  yearChange,
-  signedPct,
-  axisTicks,
-  nearestIndex,
   passage,
   passageSources,
   citedParts,
   mapLabels,
-  periodLabel,
   formatNumber,
   emphasisParts,
   answerBlocks,
   asOfLabel,
 } from './landingKit.js'
 import { sampleAnswer, sampleIndicators, sampleReport, samplePassage } from './samples.js'
-import { i18n } from '../i18n/index.js'
-
-const tIn = (locale) => (key, params) => i18n.global.t(key, params ?? {}, { locale })
 
 afterEach(() => {
   vi.unstubAllGlobals()
-})
-
-describe('formatCompact', () => {
-  it('compacts millions, thousands and billions', () => {
-    expect(formatCompact(8_580_000)).toBe('8.6M')
-    expect(formatCompact(929_250)).toBe('929K')
-    expect(formatCompact(1_780_000_000)).toBe('1.78B')
-  })
-  it('leaves small numbers alone', () => {
-    expect(formatCompact(780)).toBe('780')
-  })
-  it('uses Turkish suffixes and a decimal comma for tr', () => {
-    expect(formatCompact(8_585_611, 'tr')).toBe('8,6 Mn')
-    expect(formatCompact(1_782_902_647, 'tr')).toBe('1,78 Mr')
-    expect(formatCompact(929_250, 'tr')).toBe('929 B')
-    expect(formatCompact(780, 'tr')).toBe('780')
-  })
 })
 
 describe('project', () => {
@@ -76,30 +47,13 @@ describe('pulseRadius', () => {
   })
 })
 
-describe('linePath', () => {
-  it('draws a two-point line from bottom-left to top-right', () => {
-    expect(
-      linePath(
-        [
-          [0, 0],
-          [1, 1],
-        ],
-        100,
-        50,
-        0,
-        1,
-      ),
-    ).toBe('M0,50 L100,0')
-  })
-})
-
 describe('countUp', () => {
   it('finalStateWhenReduced: sets the formatted final text synchronously', () => {
     vi.stubGlobal('matchMedia', () => ({ matches: true }))
     const el = document.createElement('span')
     el.textContent = '0'
-    countUp(el, 8_580_000, { format: formatCompact })
-    expect(el.textContent).toBe('8.6M')
+    countUp(el, 19_147, { format: (v) => formatNumber(Math.round(v), 'en') })
+    expect(el.textContent).toBe('19,147')
   })
 })
 
@@ -153,79 +107,6 @@ describe('revealedParts', () => {
     expect(revealedParts(parts, 0)).toEqual([])
     expect(revealedParts(parts, 9)).toEqual(parts)
     expect(revealedParts(parts, 99)).toEqual(parts)
-  })
-})
-
-describe('peakChange', () => {
-  it('compares the latest value with the series peak', () => {
-    const series = [
-      ['2023-08-31', 7_000_000],
-      ['2025-01-28', 11_600_000],
-      ['2026-09-30', 8_700_000],
-    ]
-    expect(peakChange(series)).toEqual({
-      peak: ['2025-01-28', 11_600_000],
-      latest: ['2026-09-30', 8_700_000],
-      pct: -25,
-    })
-  })
-})
-
-describe('peakPhrase', () => {
-  it('words the latest value against the peak month', () => {
-    const series = [
-      ['2023-08-31', 7_000_000],
-      ['2025-01-28', 11_600_000],
-      ['2026-09-30', 8_700_000],
-    ]
-    expect(peakPhrase(series, tIn('en'))).toBe('25% below the Jan 2025 peak')
-  })
-  it('says "at its peak" when the series ends on its peak', () => {
-    expect(
-      peakPhrase(
-        [
-          ['2025-01-31', 5],
-          ['2025-02-28', 9],
-        ],
-        tIn('en'),
-      ),
-    ).toBe('at its peak')
-  })
-  it('words the Turkish phrase from the tr messages', () => {
-    const series = [
-      ['2025-01-28', 11_600_000],
-      ['2026-09-30', 8_700_000],
-    ]
-    expect(peakPhrase(series, tIn('tr'), 'tr')).toBe('Oca 2025 zirvesinin %25 altında')
-    expect(peakPhrase(series, tIn('en'))).toBe('25% below the Jan 2025 peak')
-    expect(
-      peakPhrase(
-        [
-          ['2025-01-31', 5],
-          ['2025-02-28', 9],
-        ],
-        tIn('tr'),
-        'tr',
-      ),
-    ).toBe('zirvede')
-  })
-  it('names the peak year, not a month, for an annual series', () => {
-    const series = [
-      ['2021-01-01', 6_848_865],
-      ['2025-01-01', 4_865_764],
-    ]
-    expect(peakPhrase(series, tIn('en'), 'en', { annual: true })).toBe('29% below the 2021 peak')
-    expect(peakPhrase(series, tIn('tr'), 'tr', { annual: true })).toBe(
-      '2021 zirvesinin %29 altında',
-    )
-  })
-})
-
-describe('periodLabel', () => {
-  it('is the month for a monthly series and the year for an annual one', () => {
-    expect(periodLabel('2025-02-28', 'en')).toBe('Feb 2025')
-    expect(periodLabel('2025-02-28', 'tr')).toBe('Şub 2025')
-    expect(periodLabel('2021-01-01', 'tr', { annual: true })).toBe('2021')
   })
 })
 
@@ -329,57 +210,6 @@ describe('monthLabel and dayLabel', () => {
     expect(monthLabel('2025-01-28', 'tr')).toBe('Oca 2025')
     expect(dayLabel('2026-11-18', 'tr')).toBe('18.11.2026')
     expect(dayLabel('2026-11-18', 'tr')).toBe(dayLabel('2026-11-18', 'en'))
-  })
-})
-
-describe('yearChange', () => {
-  it('compares the last year with the one before it', () => {
-    const funding = [
-      [2023, 1_500_000_000],
-      [2024, 2_038_731_400],
-      [2025, 1_782_902_647],
-    ]
-    expect(yearChange(funding)).toEqual({
-      year: 2025,
-      value: 1_782_902_647,
-      prevYear: 2024,
-      pct: -13,
-    })
-  })
-  it('has no change for a single year', () => {
-    expect(yearChange([[2025, 10]])).toEqual({ year: 2025, value: 10, prevYear: null, pct: null })
-  })
-})
-
-describe('signedPct', () => {
-  it('signs a whole-number percent with a true minus', () => {
-    expect(signedPct(-13)).toBe('−13%')
-    expect(signedPct(5)).toBe('+5%')
-    expect(signedPct(0)).toBe('0%')
-  })
-  it('puts the percent sign first for tr', () => {
-    expect(signedPct(-13, 'tr')).toBe('−%13')
-    expect(signedPct(5, 'tr')).toBe('+%5')
-    expect(signedPct(0, 'tr')).toBe('%0')
-  })
-})
-
-describe('axisTicks', () => {
-  it('spans the data with whole steps', () => {
-    expect(axisTicks(7_071_674, 11_585_384, 2_000_000)).toEqual([
-      6_000_000, 8_000_000, 10_000_000, 12_000_000,
-    ])
-  })
-  it('keeps a tick that lands exactly on the data', () => {
-    expect(axisTicks(6_000_000, 8_000_000, 2_000_000)).toEqual([6_000_000, 8_000_000])
-  })
-})
-
-describe('nearestIndex', () => {
-  it('finds the closest x', () => {
-    expect(nearestIndex([0, 10, 30], 18)).toBe(1)
-    expect(nearestIndex([0, 10, 30], 25)).toBe(2)
-    expect(nearestIndex([0, 10, 30], -5)).toBe(0)
   })
 })
 

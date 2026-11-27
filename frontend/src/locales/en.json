@@ -32,7 +32,6 @@
   "nav": {
     "chat": "Chat",
     "reports": "Reports",
-    "dashboards": "Dashboards",
     "coverage": "Coverage",
     "openApp": "Open app",
     "logOut": "Log out",
@@ -43,7 +42,6 @@
     "tagline": "Answers from the humanitarian record, with the source attached.",
     "product": "Product",
     "chatReports": "Chat and reports",
-    "dashboards": "Dashboards",
     "coverage": "Coverage",
     "useCases": "Use cases",
     "meTeams": "M&E teams",
@@ -90,10 +88,6 @@
       "head": "{country} · Indicator table",
       "panel": "Sample indicator table"
     },
-    "trend": {
-      "title": "Syrian refugees abroad",
-      "summary": "{title}: {value} in {last}, {phrase} of {peak}. Series from {first} to {last}."
-    },
     "flows": {
       "title": "From a quick question to the brief you hand in.",
       "lede": "Chat for the latest state of a crisis, reports that synthesise many sources at once, and indicator tables with a source and date on every figure.",
@@ -115,23 +109,6 @@
         "lede": "The latest value of each indicator for a country or sector, with its date and source.",
         "panel": "Sample indicator table"
       }
-    },
-    "dash": {
-      "title": "See the indicators behind every report.",
-      "lede": "A country view built from the same data the technical reports use, with its source on every figure.",
-      "label": "Sample dashboard · data: HDX HAPI",
-      "returnees": "Refugee returnees, {year}",
-      "refugees": "Syrian refugees abroad",
-      "refugeesNote": "in {year}",
-      "funding": "Funding reported to OCHA FTS, {year}",
-      "change": "{pct} vs {year}",
-      "reports": "Reports on Syria",
-      "reportsNote": "indexed since {date}",
-      "usd": "${amount}",
-      "chart": "Syrian refugees abroad, {range}",
-      "bars": "Syrian refugees by host country, top 5 · {year}",
-      "source": "Source for both charts: {credit}",
-      "foot": "Preview built from real HDX HAPI figures for Syria. The dashboard feature itself is planned."
     },
     "coverage": {
       "title": "Built on the last year of ReliefWeb.",
@@ -177,10 +154,6 @@
       "body": "Ask your first question free, or generate a situation report for the country you're tracking.",
       "startFree": "Start free",
       "logIn": "Log in"
-    },
-    "peak": {
-      "below": "{pct}% below the {month} peak",
-      "at": "at its peak"
     }
   },
   "chat": {
