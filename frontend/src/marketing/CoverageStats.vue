@@ -6,7 +6,6 @@ import coverage from './data/coverage.json'
 import CoverageMap from './CoverageMap.vue'
 import {
   countUp,
-  dayLabel,
   formatNumber,
   mapCountries,
   mapLabels,
@@ -104,9 +103,6 @@ onBeforeUnmount(() => {
           </div>
         </figure>
       </div>
-      <p class="stats-src">
-        {{ t('landing.coverage.asOf', { date: dayLabel(coverage.generated, locale) }) }}
-      </p>
     </div>
   </section>
 </template>
@@ -164,11 +160,6 @@ onBeforeUnmount(() => {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--color-text-secondary);
-}
-.stats-src {
-  margin-top: 28px;
-  font-size: 12px;
-  color: var(--color-muted);
 }
 @media (max-width: 900px) {
   .cov {
