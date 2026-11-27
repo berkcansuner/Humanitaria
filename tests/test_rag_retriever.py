@@ -3,7 +3,7 @@ from unittest.mock import patch, MagicMock
 from langchain_core.documents import Document
 from rag.retriever import (
     PgVectorRetriever, build_retriever, build_sql_filter,
-    dedupe_by_document, rerank_by_relevance,
+    dedupe_by_document, rerank_by_relevance, rerank_text,
 )
 from config import get_settings
 
@@ -235,6 +235,24 @@ class TestRerankByRelevance:
         assert [d.metadata["doc_id"] for d in out] == ["b", "a"]
         assert out[0].metadata["_relevance_score"] == 0.91
         assert out[1].metadata["_relevance_score"] == 0.42
+
+    def test_scores_the_title_with_the_chunk(self):
+        # A chunk alone often lacks the country, agency or report type a query names;
+        # its document's title carries them. Untitled chunks are sent as they are.
+        s = MagicMock(RERANK_ENABLED=True, RERANK_MODEL="bge-reranker-v2-m3")
+        titled = Document(page_content="Cholera cases rose.", metadata={
+            "doc_id": "a", "title": "Sudan: Cholera Situation Report No. 12"})
+        untitled = Document(page_content="Rains continue.", metadata={"doc_id": "b"})
+        result = MagicMock()
+        result.data = [MagicMock(index=0, score=0.9), MagicMock(index=1, score=0.1)]
+        client = MagicMock()
+        client.inference.rerank.return_value = result
+        with patch("rag.retriever.get_settings", return_value=s), \
+             patch("rag.retriever._get_pinecone_client", return_value=client):
+            rerank_by_relevance("q", [titled, untitled], top_n=2)
+        assert client.inference.rerank.call_args.kwargs["documents"] == [
+            "Sudan: Cholera Situation Report No. 12\n\nCholera cases rose.", "Rains continue."]
+        assert rerank_text(untitled) == "Rains continue."
 
 
 def test_search_skips_mmr_when_every_candidate_is_kept():

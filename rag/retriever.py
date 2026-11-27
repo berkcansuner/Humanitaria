@@ -211,6 +211,14 @@ def dedupe_by_document(docs: List[Document]) -> List[Document]:
     return out
 
 
+def rerank_text(doc: Document) -> str:
+    """The text the reranker scores: the document's title, then the chunk. A chunk alone
+    often lacks the country, agency or report type a query names; the title carries
+    them. The answer and report models still see only the chunk."""
+    title = (doc.metadata.get("title") or "").strip()
+    return f"{title}\n\n{doc.page_content}" if title else doc.page_content
+
+
 def rerank_by_relevance(query: str, docs: List[Document], top_n: int) -> List[Document]:
     """Re-score candidates against the query with Pinecone's hosted reranker.
 
@@ -225,7 +233,7 @@ def rerank_by_relevance(query: str, docs: List[Document], top_n: int) -> List[Do
         result = _get_pinecone_client().inference.rerank(
             model=settings.RERANK_MODEL,
             query=query,
-            documents=[doc.page_content for doc in docs],
+            documents=[rerank_text(doc) for doc in docs],
             top_n=min(top_n, len(docs)),
             return_documents=False,
             # Chunks can exceed bge-reranker-v2-m3's 1024-token query+document limit
