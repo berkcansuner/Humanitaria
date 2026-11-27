@@ -1100,10 +1100,15 @@ function onCiteClick(e) {
   padding: 0;
   margin-bottom: var(--space-2);
 }
+/* One framed list, a row per type: three types read as a list, not a grid with a
+   gap where a fourth card would go. */
 .type-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-2);
+  grid-template-columns: minmax(0, 1fr);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+  overflow: hidden;
 }
 .type-option {
   display: grid;
@@ -1112,24 +1117,22 @@ function onCiteClick(e) {
   row-gap: 3px;
   align-items: start;
   padding: 12px 14px;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-lg);
-  background-color: var(--color-surface);
   cursor: pointer;
-  transition:
-    border-color 0.15s,
-    background-color 0.15s;
+  transition: background-color 0.15s;
+}
+.type-option + .type-option {
+  border-top: 1px solid var(--color-border);
 }
 .type-option:hover {
-  border-color: color-mix(in srgb, var(--color-accent) 55%, var(--color-border-strong));
+  background-color: color-mix(in srgb, var(--color-accent) 5%, var(--color-surface));
 }
 .type-option.selected {
-  border-color: var(--color-accent);
   background-color: var(--color-accent-soft);
 }
+/* Inside the frame, so its rounded clip never cuts the ring. */
 .type-option:has(.type-radio:focus-visible) {
-  border-color: var(--color-accent);
-  box-shadow: var(--focus-ring);
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
 }
 .type-field:disabled .type-option {
   cursor: not-allowed;
@@ -1688,7 +1691,6 @@ function onCiteClick(e) {
   .back-to-list {
     display: inline-flex;
   }
-  .type-grid,
   .field-grid {
     grid-template-columns: minmax(0, 1fr);
   }
