@@ -327,12 +327,12 @@ describe('ReportsView in two languages', () => {
       expect(rows.map(spokenType)).toEqual([
         'Situation Report',
         'Indicator Monitoring Report',
-        'Needs Assessment Brief',
+        'Needs Assessment',
       ])
       setLocale('tr')
       await flush()
       expect(rows.map(typeLine)).toEqual(['Durum · EN', 'Gösterge · EN', 'İhtiyaç · EN'])
-      expect(spokenType(rows[2])).toBe('İhtiyaç değerlendirmesi özeti')
+      expect(spokenType(rows[2])).toBe('İhtiyaç değerlendirmesi')
       // The delete button names the type in full too.
       expect(rows[1].querySelector('.saved-del').getAttribute('aria-label')).toBe(
         'Raporu sil: Yemen, Gösterge izleme raporu, 01.08.2026 - 31.10.2026',

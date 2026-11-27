@@ -53,7 +53,7 @@ _BORDER = "#e3e8ef"
 _REPORT_TYPE_LABELS = {
     "situation": "M&E Situation Report",
     "indicator_monitoring": "M&E Indicator Monitoring Report",
-    "needs_assessment": "M&E Needs Assessment Brief",
+    "needs_assessment": "M&E Needs Assessment",
 }
 
 # The PDF's fixed labels follow the REPORT's language (not the reader's interface);
@@ -73,7 +73,7 @@ _LABELS = {
         "types": {
             "situation": "İzleme ve Değerlendirme (M&E) Durum Raporu",
             "indicator_monitoring": "İzleme ve Değerlendirme (M&E) Gösterge İzleme Raporu",
-            "needs_assessment": "İzleme ve Değerlendirme (M&E) İhtiyaç Değerlendirmesi Özeti",
+            "needs_assessment": "İzleme ve Değerlendirme (M&E) İhtiyaç Değerlendirmesi",
         },
         "all_sectors": "Tüm sektörler",
         "period": "Dönem", "sectors": "Sektörler", "source_reports": "Kaynak raporlar",

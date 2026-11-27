@@ -337,7 +337,7 @@ class TestReportService:
             "Indicator Monitoring Report — Mali · Food and Nutrition · 2026-04-01 – 2026-07-01"
         assert report_title("Mali", None, "2026-04-01", "2026-07-01",
                             report_type="needs_assessment") == \
-            "Needs Assessment Brief — Mali · All sectors · 2026-04-01 – 2026-07-01"
+            "Needs Assessment — Mali · All sectors · 2026-04-01 – 2026-07-01"
         # default (situation) unchanged
         assert report_title("Sudan", None, "2026-01-01", "2026-06-30") == \
             "Sudan · All sectors · 2026-01-01 – 2026-06-30"
@@ -762,7 +762,7 @@ class TestReportPdf:
         assert _type_label(None) == "M&E Situation Report"
         assert _type_label("situation") == "M&E Situation Report"
         assert _type_label("indicator_monitoring") == "M&E Indicator Monitoring Report"
-        assert _type_label("needs_assessment") == "M&E Needs Assessment Brief"
+        assert _type_label("needs_assessment") == "M&E Needs Assessment"
         assert _type_label("unknown_type") == "M&E Situation Report"
 
     def test_render_pdf_with_indicator_table(self):

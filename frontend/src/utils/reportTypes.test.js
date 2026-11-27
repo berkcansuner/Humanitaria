@@ -16,7 +16,7 @@ describe('reportTypes', () => {
   it('names each type in full', () => {
     expect(reportTypeLabel('situation')).toBe('Situation Report')
     expect(reportTypeLabel('indicator_monitoring')).toBe('Indicator Monitoring Report')
-    expect(reportTypeLabel('needs_assessment')).toBe('Needs Assessment Brief')
+    expect(reportTypeLabel('needs_assessment')).toBe('Needs Assessment')
     // A removed type (technical monitoring) reads as a situation report.
     expect(reportTypeLabel('technical_monitoring')).toBe('Situation Report')
     expect(reportTypeLabel(undefined)).toBe('Situation Report')
@@ -31,7 +31,7 @@ describe('reportTypes', () => {
     it('names types and sectors in the interface language, looked up when called', () => {
       setLocale('tr')
       expect(reportTypeLabel('indicator_monitoring')).toBe('Gösterge izleme raporu')
-      expect(reportTypeLabel('needs_assessment')).toBe('İhtiyaç değerlendirmesi özeti')
+      expect(reportTypeLabel('needs_assessment')).toBe('İhtiyaç değerlendirmesi')
       expect(sectorLabel('Water Sanitation Hygiene')).toBe('Su, sanitasyon ve hijyen')
       expect(sectorLabel(null)).toBe('Tüm sektörler')
     })
