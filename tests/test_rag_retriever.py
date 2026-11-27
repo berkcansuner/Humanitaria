@@ -271,3 +271,50 @@ def test_search_skips_mmr_when_every_candidate_is_kept():
         docs = retriever.search("q", None, 3, 3)
     mmr.assert_not_called()
     assert [d.metadata["doc_id"] for d in docs] == ["0", "1", "2"]
+
+
+class TestVoyageRerank:
+    """RERANK_PROVIDER=voyage: Voyage's hosted reranker over plain HTTPS (no SDK)."""
+
+    @staticmethod
+    def _settings(**kw):
+        base = dict(RERANK_ENABLED=True, RERANK_PROVIDER="voyage", VOYAGE_API_KEY="k",
+                    VOYAGE_RERANK_MODEL="rerank-3-lite", RERANK_TIMEOUT=15)
+        base.update(kw)
+        return MagicMock(**base)
+
+    def test_scores_with_voyage_and_attaches_its_relevance(self):
+        docs = [_doc("a", "alpha"), _doc("b", "beta"), _doc("c", "gamma")]
+        resp = MagicMock()
+        resp.json.return_value = {"data": [{"index": 2, "relevance_score": 0.8},
+                                           {"index": 0, "relevance_score": 0.3}]}
+        with patch("rag.retriever.get_settings", return_value=self._settings()), \
+             patch("rag.retriever.requests.post", return_value=resp) as post:
+            out = rerank_by_relevance("q", docs, top_n=2)
+        assert [d.metadata["doc_id"] for d in out] == ["c", "a"]
+        assert [d.metadata["_relevance_score"] for d in out] == [0.8, 0.3]
+        url = post.call_args.args[0]
+        kwargs = post.call_args.kwargs
+        assert url == "https://api.voyageai.com/v1/rerank"
+        assert kwargs["headers"]["Authorization"] == "Bearer k"
+        assert kwargs["json"] == {"query": "q", "documents": ["alpha", "beta", "gamma"],
+                                  "model": "rerank-3-lite", "top_k": 2, "truncation": True}
+        assert kwargs["timeout"] == 15
+
+    def test_falls_back_to_the_original_order_on_an_http_error(self):
+        docs = [_doc("a"), _doc("b"), _doc("c")]
+        resp = MagicMock()
+        resp.raise_for_status.side_effect = RuntimeError("429 Too Many Requests")
+        with patch("rag.retriever.get_settings", return_value=self._settings()), \
+             patch("rag.retriever.requests.post", return_value=resp):
+            out = rerank_by_relevance("q", docs, top_n=2)
+        assert out == docs[:2]
+        assert all("_relevance_score" not in d.metadata for d in out)
+
+    def test_without_a_key_it_keeps_the_original_order_and_calls_nothing(self):
+        docs = [_doc("a"), _doc("b")]
+        with patch("rag.retriever.get_settings", return_value=self._settings(VOYAGE_API_KEY="")), \
+             patch("rag.retriever.requests.post") as post:
+            out = rerank_by_relevance("q", docs, top_n=2)
+        assert out == docs
+        post.assert_not_called()

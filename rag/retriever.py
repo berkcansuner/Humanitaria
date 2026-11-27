@@ -10,6 +10,7 @@ from langchain_core.callbacks import CallbackManagerForRetrieverRun
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
 from langchain_core.vectorstores.utils import maximal_marginal_relevance
+import requests
 from pinecone import Pinecone
 from sqlalchemy import text
 
@@ -219,40 +220,70 @@ def rerank_text(doc: Document) -> str:
     return f"{title}\n\n{doc.page_content}" if title else doc.page_content
 
 
+_VOYAGE_RERANK_URL = "https://api.voyageai.com/v1/rerank"
+
+
+def _pinecone_scores(query: str, texts: List[str], top_n: int, settings) -> List[Tuple[int, float]]:
+    result = _get_pinecone_client().inference.rerank(
+        model=settings.RERANK_MODEL,
+        query=query,
+        documents=texts,
+        top_n=top_n,
+        return_documents=False,
+        # Chunks can exceed bge-reranker-v2-m3's 1024-token query+document limit
+        # (legacy word-count chunks in the default namespace can be ~1700 tokens).
+        # Without this the call 400s and the relevance signal is silently lost
+        # to the fallback below.
+        parameters={"truncate": "END"},
+    )
+    return [(item.index, float(item.score)) for item in result.data]
+
+
+def _voyage_scores(query: str, texts: List[str], top_n: int, settings) -> List[Tuple[int, float]]:
+    """Voyage's rerank endpoint over HTTPS: results come back best first, each with
+    the candidate's index and a relevance score."""
+    resp = requests.post(
+        _VOYAGE_RERANK_URL,
+        headers={"Authorization": f"Bearer {settings.VOYAGE_API_KEY}"},
+        json={"query": query, "documents": texts, "model": settings.VOYAGE_RERANK_MODEL,
+              "top_k": top_n, "truncation": True},
+        timeout=settings.RERANK_TIMEOUT,
+    )
+    resp.raise_for_status()
+    return [(item["index"], float(item["relevance_score"])) for item in resp.json()["data"]]
+
+
 def rerank_by_relevance(query: str, docs: List[Document], top_n: int) -> List[Document]:
-    """Re-score candidates against the query with Pinecone's hosted reranker.
+    """Re-score candidates against the query with a hosted reranker: Pinecone
+    Inference, or Voyage when RERANK_PROVIDER is "voyage".
 
     Adds a true query-relevance signal on top of MMR retrieval. Active only when
-    RERANK_ENABLED and there is more than one doc; otherwise (or on any error)
-    the original order is preserved (truncated to top_n) so a request never fails.
+    RERANK_ENABLED and there is more than one doc; otherwise (or on any error, or
+    without a Voyage key) the original order is preserved (truncated to top_n) so a
+    request never fails.
     """
     settings = get_settings()
     if not settings.RERANK_ENABLED or len(docs) <= 1:
         return docs[:top_n]
+    voyage = settings.RERANK_PROVIDER == "voyage"
+    if voyage and not settings.VOYAGE_API_KEY:
+        logger.warning("RERANK_PROVIDER is voyage but VOYAGE_API_KEY is empty; keeping original order")
+        return docs[:top_n]
+    texts = [rerank_text(doc) for doc in docs]
     try:
-        result = _get_pinecone_client().inference.rerank(
-            model=settings.RERANK_MODEL,
-            query=query,
-            documents=[rerank_text(doc) for doc in docs],
-            top_n=min(top_n, len(docs)),
-            return_documents=False,
-            # Chunks can exceed bge-reranker-v2-m3's 1024-token query+document limit
-            # (legacy word-count chunks in the default namespace can be ~1700 tokens).
-            # Without this the call 400s and the relevance signal is silently lost
-            # to the MMR fallback below.
-            parameters={"truncate": "END"},
-        )
-        reranked = []
-        for item in result.data:
-            doc = docs[item.index]
-            # Attach the (0-1) relevance score so rerank_by_recency can blend it
-            # with recency instead of the steep 1/(1+i) position fallback.
-            doc.metadata["_relevance_score"] = float(item.score)
-            reranked.append(doc)
-        return reranked
+        scores = (_voyage_scores if voyage else _pinecone_scores)(
+            query, texts, min(top_n, len(docs)), settings)
     except Exception as e:
         logger.warning("Relevance rerank failed, keeping original order: %s", e)
         return docs[:top_n]
+    reranked = []
+    for index, score in scores:
+        doc = docs[index]
+        # Attach the (0-1) relevance score so rerank_by_recency can blend it
+        # with recency instead of the steep 1/(1+i) position fallback.
+        doc.metadata["_relevance_score"] = score
+        reranked.append(doc)
+    return reranked
 
 
 def apply_date_filter(docs: List[Document], date_filter: Optional[Dict[str, Any]]) -> List[Document]:

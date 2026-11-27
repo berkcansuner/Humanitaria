@@ -252,18 +252,23 @@ _RERANK_CACHE_PATH = _LABELS_PATH.parent / "rerank_cache.json"
 def _install_rerank_cache() -> dict:
     """Memoise reranker calls on disk across eval runs (Pinecone's monthly rerank
     quota is small): a variant that only changes what happens after the rerank
-    reuses the earlier scores. Keyed by query, top_n and the exact texts the
-    reranker scores (rag.retriever.rerank_text), so a different candidate set or
-    reranker input always calls the reranker. A failed
-    rerank (no scores) is not cached."""
+    reuses the earlier scores. Keyed by the reranker (provider and model), query,
+    top_n and the exact texts it scores (rag.retriever.rerank_text), so another
+    reranker, candidate set or input always calls the reranker. A failed rerank (no
+    scores) is not cached."""
     import hashlib
     import api.routes.chat as chat_route
+    from config import get_settings
     from rag.retriever import rerank_by_relevance, rerank_text
 
     cache = json.loads(_RERANK_CACHE_PATH.read_text(encoding="utf-8")) if _RERANK_CACHE_PATH.exists() else {}
 
     def cached(query, docs, top_n):
-        key = hashlib.sha256(json.dumps([query, top_n, [rerank_text(d) for d in docs]]).encode()).hexdigest()
+        s = get_settings()
+        reranker = ([s.RERANK_PROVIDER, s.VOYAGE_RERANK_MODEL] if s.RERANK_PROVIDER == "voyage"
+                    else [s.RERANK_MODEL])
+        key = hashlib.sha256(json.dumps([*reranker, query, top_n, [rerank_text(d) for d in docs]])
+                             .encode()).hexdigest()
         if key not in cache:
             position = {id(d): i for i, d in enumerate(docs)}
             out = rerank_by_relevance(query, docs, top_n)

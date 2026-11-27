@@ -91,6 +91,12 @@ class Settings(BaseSettings):
     # Two-stage retrieval: hosted reranker (Pinecone Inference) over a larger candidate pool.
     RERANK_ENABLED: bool = True
     RERANK_MODEL: str = "bge-reranker-v2-m3"
+    # "pinecone" (RERANK_MODEL, 500 requests a month on the free plan) or "voyage"
+    # (VOYAGE_RERANK_MODEL, billed per token; needs VOYAGE_API_KEY).
+    RERANK_PROVIDER: str = "pinecone"
+    VOYAGE_API_KEY: str = ""
+    VOYAGE_RERANK_MODEL: str = "rerank-3-lite"
+    RERANK_TIMEOUT: int = 15               # seconds per Voyage rerank request
     RERANK_CANDIDATE_MULTIPLIER: int = 4   # candidate pool = TOP_K_RETRIEVAL * this
     INGEST_SCHEDULE_HOURS: int = 12
     RERANK_BY_DATE: bool = True
