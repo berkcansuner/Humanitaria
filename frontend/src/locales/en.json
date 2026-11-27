@@ -61,7 +61,8 @@
     "skip": "Skip to content",
     "country": "Syria",
     "reportTypes": {
-      "situation": "Situation report"
+      "situation": "Situation report",
+      "indicator_monitoring": "Indicator monitoring report"
     },
     "sectors": {
       "protection": "Protection and Human Rights"
@@ -93,12 +94,9 @@
       "title": "Syrian refugees abroad",
       "summary": "{title}: {value} in {last}, {phrase} of {peak}. Series from {first} to {last}."
     },
-    "window": {
-      "summary": "{label}: {first} in {firstPeriod}, {last} in {lastPeriod}, {n} observations."
-    },
     "flows": {
       "title": "From a quick question to the brief you hand in.",
-      "lede": "Chat for the latest state of a crisis, reports that synthesise many sources at once, and technical monitoring with the statistics done in code.",
+      "lede": "Chat for the latest state of a crisis, reports that synthesise many sources at once, and indicator tables with a source and date on every figure.",
       "chat": {
         "title": "Cited chat",
         "lede": "Answers only from retrieved reports, each claim one click from its source.",
@@ -112,22 +110,10 @@
         "findings": "Key findings",
         "credit": "Sample report · generated {date}"
       },
-      "tech": {
-        "title": "Technical monitoring",
-        "lede": "Indicator trends and regional comparisons, computed and written up in code from the data.",
-        "head": "{country} · Technical monitoring · Refugees",
-        "window": "{start} – {end}, from the {start} peak",
-        "trend": {
-          "decreasing": {
-            "significant": "From its {peak} peak to {end}, the number of Syrian refugees abroad shows a significant decreasing trend (p {p}).",
-            "notSignificant": "From its {peak} peak to {end}, the number of Syrian refugees abroad shows a decreasing trend that is not statistically significant (p {p})."
-          },
-          "increasing": {
-            "significant": "From its {peak} peak to {end}, the number of Syrian refugees abroad shows a significant increasing trend (p {p}).",
-            "notSignificant": "From its {peak} peak to {end}, the number of Syrian refugees abroad shows an increasing trend that is not statistically significant (p {p})."
-          },
-          "none": "From its {peak} peak to {end}, the number of Syrian refugees abroad shows no clear trend (p {p})."
-        }
+      "indicators": {
+        "title": "Indicator monitoring",
+        "lede": "The latest value of each indicator for a country or sector, with its date and source.",
+        "panel": "Sample indicator table"
       }
     },
     "dash": {

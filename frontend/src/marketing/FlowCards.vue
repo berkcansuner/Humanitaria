@@ -3,11 +3,9 @@ import { computed, onBeforeUnmount, onMounted, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import syria from './data/syria.json'
-import { sampleAnswer, samplePassage, sampleReport } from './samples.js'
-import { citedParts, dayLabel, formatNumber, monthLabel, passageSources } from './landingKit.js'
+import { sampleAnswer, sampleIndicators, samplePassage, sampleReport } from './samples.js'
+import { asOfLabel, citedParts, dayLabel, monthLabel, passageSources } from './landingKit.js'
 import { ledgerDate, revealSource } from '../utils/sources.js'
-import WindowChart from './WindowChart.vue'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -25,28 +23,6 @@ const chipLabel = (sources, n) => {
     date: ledgerDate(src.date, locale.value),
   })
 }
-
-// The technical report's trend test on the hero card's refugee series (annual UNHCR
-// figures), from its 2021 peak to the latest year.
-const test = syria.trend
-const testSeries = syria.refugees.series.filter(([d]) => d >= test.period[0] && d <= test.period[1])
-const peakYear = test.period[0].slice(0, 4)
-const endYear = test.period[1].slice(0, 4)
-const trendCredit = `${syria.refugees.credit} · HDX HAPI`
-const trendKey =
-  test.direction === 'decreasing' || test.direction === 'increasing'
-    ? `${test.direction}.${test.significant ? 'significant' : 'notSignificant'}`
-    : 'none'
-const tech = computed(() => {
-  const l = locale.value
-  const p =
-    test.p_value < 0.001
-      ? `< ${formatNumber(0.001, l)}`
-      : formatNumber(test.p_value, l, { maximumSignificantDigits: 3 })
-  return {
-    sentence: t(`landing.flows.tech.trend.${trendKey}`, { peak: peakYear, end: endYear, p }),
-  }
-})
 
 // A passage of the hero's Syria answer, quoted verbatim with its own citations.
 const sample = computed(() => samplePassage(locale.value))
@@ -75,6 +51,26 @@ const report = computed(() => {
     generated: r.generated,
     generatedLabel: dayLabel(r.generated, l),
     findings: r.findings.map(citedParts),
+    sources: r.sources,
+  }
+})
+
+// Four other rows of the hero's indicator report (scripts/generate_landing_report.py
+// --type indicator_monitoring), verbatim, with their dates and cited sources.
+const indicators = computed(() => {
+  const r = sampleIndicators(locale.value, 'flow')
+  const l = locale.value
+  return {
+    head: [t('landing.country'), t('landing.reportTypes.indicator_monitoring')].join(' · '),
+    period: `${monthLabel(r.date_from, l)} – ${monthLabel(r.date_to, l)}`,
+    columns: r.columns,
+    generated: r.generated,
+    generatedLabel: dayLabel(r.generated, l),
+    rows: r.rows.map((row) => ({
+      ...row,
+      parts: citedParts(row.value),
+      asOf: asOfLabel(row.asOf),
+    })),
     sources: r.sources,
   }
 })
@@ -234,19 +230,75 @@ onBeforeUnmount(() => mm?.revert())
         </article>
 
         <article class="flow">
-          <h3>{{ t('landing.flows.tech.title') }}</h3>
-          <p>{{ t('landing.flows.tech.lede') }}</p>
-          <div class="flow-ui">
-            <p class="fu-head">
-              {{ t('landing.flows.tech.head', { country: t('landing.country') }) }}
-            </p>
-            <p class="fu-meta">
-              {{ t('landing.flows.tech.window', { start: peakYear, end: endYear }) }}
-            </p>
-            <p class="fu-finding">{{ tech.sentence }}</p>
-            <WindowChart :series="testSeries" annual :label="t('landing.trend.title')" />
-            <p class="fu-credit">{{ trendCredit }}</p>
-          </div>
+          <h3>{{ t('landing.flows.indicators.title') }}</h3>
+          <p>{{ t('landing.flows.indicators.lede') }}</p>
+          <figure
+            class="flow-ui fu-panel"
+            :aria-label="t('landing.flows.indicators.panel')"
+            @click="onCite"
+          >
+            <p class="fu-head">{{ indicators.head }}</p>
+            <p class="fu-meta">{{ indicators.period }}</p>
+            <dl class="fu-ind">
+              <div v-for="row in indicators.rows" :key="row.indicator" class="fu-ind-row">
+                <dt>{{ row.indicator }}</dt>
+                <dd class="fu-ind-value">
+                  <span
+                    ><template v-for="(part, i) in row.parts" :key="i"
+                      ><button
+                        v-if="part.cite"
+                        class="cite"
+                        type="button"
+                        :data-cite="part.cite"
+                        :aria-label="chipLabel(indicators.sources, part.cite)"
+                      >
+                        {{ part.cite }}</button
+                      ><template v-else>{{ part.text }}</template></template
+                    ></span
+                  >
+                  <span class="fu-asof"
+                    ><span class="sr-only">{{ indicators.columns[2] }}: </span>{{ row.asOf }}</span
+                  >
+                </dd>
+              </div>
+            </dl>
+            <ol class="fu-sources" :aria-label="t('landing.answer.sources')">
+              <li
+                v-for="src in indicators.sources"
+                :key="src.n"
+                class="source-item"
+                :data-srcid="src.n"
+              >
+                <span class="fu-src-n">{{ src.n }}</span>
+                <span class="fu-src-body">
+                  <a
+                    class="source-link"
+                    :href="src.url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    :title="src.title"
+                    >{{ src.title }}</a
+                  >
+                  <span class="fu-src-meta"
+                    >{{ src.publisher }} ·
+                    <time class="fu-date" :datetime="src.date">{{
+                      ledgerDate(src.date, locale)
+                    }}</time></span
+                  >
+                </span>
+              </li>
+            </ol>
+            <i18n-t
+              keypath="landing.flows.report.credit"
+              tag="figcaption"
+              scope="global"
+              class="fu-credit"
+            >
+              <template #date>
+                <time :datetime="indicators.generated">{{ indicators.generatedLabel }}</time>
+              </template>
+            </i18n-t>
+          </figure>
         </article>
       </div>
     </div>
@@ -314,6 +366,39 @@ onBeforeUnmount(() => mm?.revert())
 .fu-panel .cite {
   line-height: 1;
   vertical-align: 1px;
+}
+.fu-ind {
+  margin: 10px 0 0;
+}
+.fu-ind-row {
+  padding: 8px 0;
+  border-top: 1px solid var(--color-border);
+}
+.fu-ind dt {
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+  text-wrap: pretty;
+}
+.fu-ind-value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 12px;
+  margin: 2px 0 0;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+.fu-ind-value .cite {
+  margin-left: 4px;
+}
+.fu-asof {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-muted);
 }
 .fu-sources {
   margin: 12px 0 0;

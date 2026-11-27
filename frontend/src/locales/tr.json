@@ -61,7 +61,8 @@
     "skip": "İçeriğe geç",
     "country": "Suriye",
     "reportTypes": {
-      "situation": "Durum raporu"
+      "situation": "Durum raporu",
+      "indicator_monitoring": "Gösterge izleme raporu"
     },
     "sectors": {
       "protection": "Koruma ve insan hakları"
@@ -93,12 +94,9 @@
       "title": "Yurt dışındaki Suriyeli mülteciler",
       "summary": "{title}: {last} itibarıyla {value}, {phrase} (zirve: {peak}). Seri {first} ile {last} arasını kapsar."
     },
-    "window": {
-      "summary": "{label}. {firstPeriod}: {first}. {lastPeriod}: {last}. {n} gözlem."
-    },
     "flows": {
       "title": "Hızlı bir sorudan teslim edeceğiniz rapora kadar.",
-      "lede": "Bir krizin son durumunu sohbetten öğrenin, birçok kaynağı tek bir raporda birleştirin. Teknik izlemede istatistikler kodla hesaplanır.",
+      "lede": "Bir krizin son durumunu sohbetten öğrenin, birçok kaynağı tek bir raporda birleştirin. Gösterge tablolarında her rakamın kaynağı ve tarihi yanında durur.",
       "chat": {
         "title": "Atıflı sohbet",
         "lede": "Yanıtlar yalnızca bulunan raporlardan gelir. Her bilginin kaynağı bir tık uzakta.",
@@ -112,22 +110,10 @@
         "findings": "Temel bulgular",
         "credit": "Örnek rapor · {date} tarihinde oluşturuldu"
       },
-      "tech": {
-        "title": "Teknik izleme",
-        "lede": "Gösterge eğilimleri ve bölge karşılaştırmaları kodla hesaplanır, rapor metni de aynı veriden kodla yazılır.",
-        "head": "{country} · Teknik izleme · Mülteciler",
-        "window": "{start} – {end}, {start} zirvesinden itibaren",
-        "trend": {
-          "decreasing": {
-            "significant": "{peak} zirvesinden {end} yılına kadar yurt dışındaki Suriyeli mülteci sayısında istatistiksel olarak anlamlı bir azalma eğilimi görülüyor (p {p}).",
-            "notSignificant": "{peak} zirvesinden {end} yılına kadar yurt dışındaki Suriyeli mülteci sayısında bir azalma eğilimi görülüyor, ancak bu eğilim istatistiksel olarak anlamlı değil (p {p})."
-          },
-          "increasing": {
-            "significant": "{peak} zirvesinden {end} yılına kadar yurt dışındaki Suriyeli mülteci sayısında istatistiksel olarak anlamlı bir artış eğilimi görülüyor (p {p}).",
-            "notSignificant": "{peak} zirvesinden {end} yılına kadar yurt dışındaki Suriyeli mülteci sayısında bir artış eğilimi görülüyor, ancak bu eğilim istatistiksel olarak anlamlı değil (p {p})."
-          },
-          "none": "{peak} zirvesinden {end} yılına kadar yurt dışındaki Suriyeli mülteci sayısında belirgin bir eğilim görülmüyor (p {p})."
-        }
+      "indicators": {
+        "title": "Gösterge izleme",
+        "lede": "Bir ülke ya da sektör için her göstergenin son değeri, tarihi ve kaynağıyla.",
+        "panel": "Örnek gösterge tablosu"
       }
     },
     "dash": {

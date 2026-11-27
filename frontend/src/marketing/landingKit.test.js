@@ -26,6 +26,7 @@ import {
   formatNumber,
   emphasisParts,
   answerBlocks,
+  asOfLabel,
 } from './landingKit.js'
 import { sampleAnswer, sampleIndicators, sampleReport, samplePassage } from './samples.js'
 import { i18n } from '../i18n/index.js'
@@ -512,6 +513,20 @@ describe('monthsSpan', () => {
     expect(monthsSpan('2025-11-17', '2026-11-17')).toBe(12)
     expect(monthsSpan('2025-11-18', '2026-11-17')).toBe(11)
     expect(monthsSpan('2026-11-01', '2026-11-17')).toBe(0)
+  })
+})
+
+describe('asOfLabel', () => {
+  it('writes full dates as day.month.year in both languages', () => {
+    expect(asOfLabel('12 October 2026')).toBe('12.10.2026')
+    expect(asOfLabel('2 Kasım 2026 (yayımlandı)')).toBe('02.11.2026 (yayımlandı)')
+    expect(asOfLabel("Aralık 2024'ten itibaren (30 Temmuz 2026 itibarıyla)")).toBe(
+      "Aralık 2024'ten itibaren (30.07.2026 itibarıyla)",
+    )
+  })
+  it('leaves months, years and ranges without a day as they are', () => {
+    for (const text of ['October 2026', 'end-September 2026', 'Ocak – Eylül 2026', '2026'])
+      expect(asOfLabel(text)).toBe(text)
   })
 })
 

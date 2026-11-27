@@ -233,6 +233,42 @@ export function dayLabel(iso) {
   return `${two(d.getUTCDate())}.${two(d.getUTCMonth() + 1)}.${d.getUTCFullYear()}`
 }
 
+const MONTH_NUMBERS = {
+  january: 1,
+  february: 2,
+  march: 3,
+  april: 4,
+  may: 5,
+  june: 6,
+  july: 7,
+  august: 8,
+  september: 9,
+  october: 10,
+  november: 11,
+  december: 12,
+  ocak: 1,
+  şubat: 2,
+  mart: 3,
+  nisan: 4,
+  mayıs: 5,
+  haziran: 6,
+  temmuz: 7,
+  ağustos: 8,
+  eylül: 9,
+  ekim: 10,
+  kasım: 11,
+  aralık: 12,
+}
+
+// A report's 'As of' cell with each full date ('12 October 2026', '12 Ekim 2026')
+// written as '12.10.2026'. Months and years alone ('October 2026') stay as they are.
+export function asOfLabel(text) {
+  return text.replace(/\b(\d{1,2}) ([A-Za-zÇĞİÖŞÜçğıöşü]+) (\d{4})\b/g, (all, d, m, y) => {
+    const month = MONTH_NUMBERS[m.toLocaleLowerCase('tr')]
+    return month ? `${d.padStart(2, '0')}.${String(month).padStart(2, '0')}.${y}` : all
+  })
+}
+
 // A series point's period: 'Feb 2025' for monthly data, '2021' for annual (calendar-year) data.
 export function periodLabel(iso, locale = 'en', { annual = false } = {}) {
   return annual ? String(new Date(iso).getUTCFullYear()) : monthLabel(iso, locale)
