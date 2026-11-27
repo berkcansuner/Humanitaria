@@ -193,32 +193,32 @@ describe('ReportsView in two languages', () => {
     const sudan = {
       ...SAVED,
       id: 't0',
-      report_type: 'technical_monitoring',
+      report_type: 'indicator_monitoring',
       theme: null,
-      date_from: '2021-11-19',
+      date_from: '2025-11-19',
       date_to: '2026-11-19',
-      title: 'Technical Monitoring Report — Sudan · All sectors',
+      title: 'Indicator Monitoring Report — Sudan · All sectors',
     }
     vi.mocked(listReports).mockResolvedValue({ reports: [sudan] })
     vi.mocked(getReport).mockResolvedValue({ ...sudan, content: '## Summary\n\nText.' })
     await mount('/reports?report=t0')
     expect(text('.saved-name')).toBe('Sudan')
-    expect(text('.saved-period')).toBe('19.11.2021 - 19.11.2026')
+    expect(text('.saved-period')).toBe('19.11.2025 - 19.11.2026')
     expect(text('.report-title-h')).toBe('Sudan')
     const meta = [...host.querySelectorAll('.report-meta .meta-part')].map((m) => m.textContent)
-    expect(meta).toEqual(['Technical Monitoring Report', '19.11.2021 - 19.11.2026'])
+    expect(meta).toEqual(['Indicator Monitoring Report', '19.11.2025 - 19.11.2026'])
   })
 
   describe("the saved list shows each report's language", () => {
     const syria = {
       ...SAVED,
-      report_type: 'technical_monitoring',
+      report_type: 'needs_assessment',
       country: 'Syrian Arab Republic',
       theme: null,
-      date_from: '2023-11-18',
+      date_from: '2025-11-18',
       date_to: '2026-11-18',
       title:
-        'Technical Monitoring Report — Syrian Arab Republic · All sectors · 2023-11-18 – 2026-11-18',
+        'Needs Assessment Brief — Syrian Arab Republic · All sectors · 2025-11-18 – 2026-11-18',
     }
     const twins = [
       { ...syria, id: 'syr-en', language: 'en' },
@@ -279,7 +279,7 @@ describe('ReportsView in two languages', () => {
       setLocale('tr')
       await flush()
       expect(tip('syr-tr')).toBe(
-        'Syrian Arab Republic · 18.11.2023 - 18.11.2026 · Rapor dili: Türkçe',
+        'Syrian Arab Republic · 18.11.2025 - 18.11.2026 · Rapor dili: Türkçe',
       )
     })
   })
@@ -308,15 +308,6 @@ describe('ReportsView in two languages', () => {
       theme: null,
       title: 'Needs Assessment Brief — Somalia · All sectors · 2026-08-01 – 2026-10-31',
     }
-    const syria = {
-      ...SAVED,
-      id: 't1',
-      report_type: 'technical_monitoring',
-      country: 'Syrian Arab Republic',
-      theme: null,
-      title:
-        'Technical Monitoring Report — Syrian Arab Republic · All sectors · 2026-08-01 – 2026-10-31',
-    }
     // The meta line's first row (the type and language), without the screen-reader-only
     // language name; NBSPs read as spaces.
     const typeLine = (el) => {
@@ -329,30 +320,19 @@ describe('ReportsView in two languages', () => {
     const spokenType = (el) => el.querySelector('.saved-meta > span > .sr-only').textContent.trim()
 
     it('shows a short type in every row, read out in full, in both languages', async () => {
-      vi.mocked(listReports).mockResolvedValue({ reports: [SAVED, yemen, somalia, syria] })
+      vi.mocked(listReports).mockResolvedValue({ reports: [SAVED, yemen, somalia] })
       await mount()
       const rows = [...host.querySelectorAll('.saved-list > .saved-item')]
-      expect(rows.map(typeLine)).toEqual([
-        'Situation · EN',
-        'Indicators · EN',
-        'Needs · EN',
-        'Technical · EN',
-      ])
+      expect(rows.map(typeLine)).toEqual(['Situation · EN', 'Indicators · EN', 'Needs · EN'])
       expect(rows.map(spokenType)).toEqual([
         'Situation Report',
         'Indicator Monitoring Report',
         'Needs Assessment Brief',
-        'Technical Monitoring Report',
       ])
       setLocale('tr')
       await flush()
-      expect(rows.map(typeLine)).toEqual([
-        'Durum · EN',
-        'Gösterge · EN',
-        'İhtiyaç · EN',
-        'Teknik · EN',
-      ])
-      expect(spokenType(rows[3])).toBe('Teknik izleme raporu')
+      expect(rows.map(typeLine)).toEqual(['Durum · EN', 'Gösterge · EN', 'İhtiyaç · EN'])
+      expect(spokenType(rows[2])).toBe('İhtiyaç değerlendirmesi özeti')
       // The delete button names the type in full too.
       expect(rows[1].querySelector('.saved-del').getAttribute('aria-label')).toBe(
         'Raporu sil: Yemen, Gösterge izleme raporu, 01.08.2026 - 31.10.2026',
@@ -407,116 +387,6 @@ describe('ReportsView in two languages', () => {
     await flush()
     delete Element.prototype.scrollIntoView
     expect(host.querySelector('.source-item.active').getAttribute('data-srcid')).toBe('2')
-  })
-
-  describe('a technical report shows its data sources', () => {
-    const technical = (sources) => ({
-      ...SAVED,
-      report_type: 'technical_monitoring',
-      theme: null,
-      title: 'Technical Monitoring Report — Sudan · All sectors · 2026-08-01 – 2026-10-31',
-      content: '## Executive Summary\n\nNo markers in a technical narrative.',
-      sources,
-    })
-    const DATASET = {
-      index: 1,
-      title: 'Food security: people in need',
-      url: 'https://data.humdata.org/dataset/global-hpc-hno',
-      source: 'OCHA HNO',
-      date: '2026-01-01',
-      doctype: 'dataset',
-      dataset: 'Global Humanitarian Programme Cycle, Humanitarian Needs',
-      period: '2024-01-01 – 2026-01-01',
-      retrieved: '2026-11-18',
-    }
-
-    it('lists the HDX HAPI datasets under the report, with their count', async () => {
-      const report = technical([DATASET])
-      vi.mocked(listReports).mockResolvedValue({ reports: [report] })
-      vi.mocked(getReport).mockResolvedValue(report)
-      await mount('/reports?report=r1')
-      expect(text('.sources-summary')).toMatch(/^1 source/)
-      expect(text('.source-meta')).toBe(
-        'OCHA HNO · Global Humanitarian Programme Cycle, Humanitarian Needs · 01.01.2024 – 01.01.2026 · retrieved 18.11.2026',
-      )
-      setLocale('tr')
-      await flush()
-      expect(text('.sources-summary')).toMatch(/^1 kaynak/)
-      expect(text('.source-link')).toBe('Food security: people in need')
-    })
-
-    it('keeps an older technical report without sources as it was', async () => {
-      const report = technical(null)
-      vi.mocked(listReports).mockResolvedValue({ reports: [report] })
-      vi.mocked(getReport).mockResolvedValue(report)
-      await mount('/reports?report=r1')
-      expect(text('.report-content h2')).toBe('Executive Summary')
-      expect(host.querySelector('.sources')).toBeNull()
-    })
-  })
-
-  describe('technical monitoring offers only sectors that have data', () => {
-    beforeEach(() => {
-      vi.mocked(getReportOptions).mockResolvedValue({
-        countries: ['Sudan'],
-        themes: ['Agriculture', 'Health'],
-        technical_themes: ['Health'],
-      })
-    })
-    const selects = () => host.querySelectorAll('.report-form select')
-    const choose = async (select, value) => {
-      select.value = value
-      select.dispatchEvent(new Event('change'))
-      await flush()
-    }
-    // [label, disabled, optgroup label or null] for each sector option.
-    const sectorOptions = () =>
-      [...selects()[1].options].map((o) => [
-        o.text,
-        o.disabled,
-        o.parentElement.tagName === 'OPTGROUP' ? o.parentElement.label : null,
-      ])
-
-    it('lists every sector, all selectable, for the other report types', async () => {
-      await mount()
-      expect(sectorOptions()).toEqual([
-        ['All sectors', false, null],
-        ['Agriculture', false, null],
-        ['Health', false, null],
-      ])
-    })
-
-    it('disables the sectors without data under a labelled group, and resets one chosen', async () => {
-      await mount()
-      await choose(selects()[1], 'Agriculture')
-      await chooseType('technical_monitoring')
-      expect(selects()[1].value).toBe('')
-      expect(sectorOptions()).toEqual([
-        ['All sectors', false, null],
-        ['Health', false, null],
-        ['Agriculture', true, 'No quantitative data'],
-      ])
-      setLocale('tr')
-      await flush()
-      expect(sectorOptions().at(-1)).toEqual(['Tarım', true, 'Sayısal veri yok'])
-      // A covered sector stays chosen across a type switch.
-      await choose(selects()[1], 'Health')
-      await chooseType('situation')
-      await chooseType('technical_monitoring')
-      expect(selects()[1].value).toBe('Health')
-    })
-
-    it('restricts nothing when the server does not say which sectors have data', async () => {
-      vi.mocked(getReportOptions).mockResolvedValue({
-        countries: ['Sudan'],
-        themes: ['Agriculture', 'Health'],
-      })
-      await mount()
-      await choose(selects()[1], 'Agriculture')
-      await chooseType('technical_monitoring')
-      expect(selects()[1].value).toBe('Agriculture')
-      expect(sectorOptions().every(([, disabled]) => !disabled)).toBe(true)
-    })
   })
 
   describe('while a report is being prepared', () => {
@@ -627,20 +497,6 @@ describe('ReportsView in two languages', () => {
       expect(text('.progress-elapsed')).toBe('Geçen süre: 0:30')
       await seconds(5)
       expect(text('.progress-elapsed')).toBe('Geçen süre: 0:35')
-    })
-
-    it('words the technical monitoring pipeline as it runs', async () => {
-      stubStream()
-      await mount()
-      await start({ type: 'technical_monitoring', theme: '' })
-      expect(request()).toMatch(/^Technical Monitoring Report · Sudan · All sectors/)
-      expect(stage()).toBe(en.reports.progress.computing)
-      expect(outline()).toEqual([
-        'Executive Summary',
-        en.reports.outline.findings,
-        'Data Coverage & Limitations',
-        'Methods',
-      ])
     })
 
     // What the server says it is reading, before the first word (the "status" event).
@@ -757,60 +613,6 @@ describe('ReportsView in two languages', () => {
       expect(rows()[0]).toEqual(['Sudan: Humanitarian Access Snapshot', 'OCHA · 11.10.2026'])
       expect(text('.progress-read .read-more')).toBe('ve 11 kaynak daha')
       expect(text('.progress-elapsed')).toBe('Geçen süre: 0:20')
-    })
-
-    it('names the indicators a technical report computed, then the narrative', async () => {
-      const stream = stubStream()
-      await mount()
-      await start({ type: 'technical_monitoring', theme: '' })
-      stream.push('status', {
-        stage: 'computed',
-        indicators: ['Internally displaced people (IDPs)', 'Refugees', 'Returnees'],
-        date_from: '2021-11-18',
-        date_to: '2026-11-18',
-      })
-      await flush()
-      expect(stage()).toBe(
-        'Statistics computed from HDX HAPI data: 3 indicators. The report is being written.',
-      )
-      expect(text('.progress-read .read-caption')).toBe('Indicators with data')
-      expect(
-        [...host.querySelectorAll('.progress-read li')].map((li) => li.textContent.trim()),
-      ).toEqual(['Internally displaced people (IDPs)', 'Refugees', 'Returnees'])
-      expect(text('.progress-read .read-period')).toBe('Period analysed: 18.11.2021 - 18.11.2026')
-      // The names come in the report's language; the list says so.
-      expect(host.querySelector('.progress-read ul').getAttribute('lang')).toBe('en')
-
-      stream.push('token', { content: '## Executive Summary\n\nText.' })
-      await flush()
-      expect(stage()).toBe(en.reports.progress.writingTechnical)
-    })
-
-    it("lists a technical report's data sources as soon as the stream sends them", async () => {
-      const stream = stubStream()
-      await mount()
-      await start({ type: 'technical_monitoring', theme: '' })
-      stream.push('token', { content: '## Executive Summary\n\nText.' })
-      const dataset = (index, title) => ({
-        index,
-        title,
-        url: `https://data.humdata.org/dataset/${index}`,
-        source: 'OCHA HNO',
-        date: '2026-01-01',
-        doctype: 'dataset',
-        period: '2024-01-01 – 2026-01-01',
-        retrieved: '2026-11-18',
-      })
-      // Indexes as the backend numbered them (no markers in a technical narrative).
-      stream.push('sources', { sources: [dataset(1, 'People in need'), dataset(3, 'IDPs')] })
-      await flush()
-      // Still streaming (nothing saved yet), and the list is already there.
-      expect(host.querySelector('.report-progress')).toBeTruthy()
-      expect(text('.sources-summary')).toMatch(/^2 sources/)
-      expect(
-        [...host.querySelectorAll('.source-index')].map((el) => el.textContent.trim()),
-      ).toEqual(['1', '3'])
-      expect(text('.source-meta')).toBe('OCHA HNO · 01.01.2024 – 01.01.2026 · retrieved 18.11.2026')
     })
   })
 

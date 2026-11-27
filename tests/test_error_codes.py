@@ -183,9 +183,9 @@ def test_report_limit_has_code(client):
     (Exception("Error code: 503 - high demand UNAVAILABLE"), "model_busy"),
 ])
 def test_report_stream_error_event_carries_code(client, exc, code):
-    with patch("api.routes.reports.technical_report.compute_findings", side_effect=exc):
+    with patch("api.routes.reports.retrieve_for_report", side_effect=exc):
         r = client.post("/reports/stream", json={
-            "country": "Afghanistan", "report_type": "technical_monitoring", "language": "en",
+            "country": "Afghanistan", "report_type": "situation", "language": "en",
         })
     event = _error_event(r.text)
     assert event["code"] == code

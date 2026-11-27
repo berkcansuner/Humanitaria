@@ -17,12 +17,6 @@ describe('reportOutline', () => {
       'gapsConstraints',
       'recommendations',
     ])
-    expect(reportOutline('technical_monitoring')).toEqual([
-      'executiveSummary',
-      'findings',
-      'dataCoverage',
-      'methods',
-    ])
   })
 
   it('reads an unknown type as a situation report', () => {
@@ -32,35 +26,23 @@ describe('reportOutline', () => {
 
 describe('progressStage', () => {
   it('names the wait before the first word by what the pipeline does', () => {
-    expect(progressStage({ type: 'situation', elapsed: 5 })).toBe('reading')
-    expect(progressStage({ type: 'needs_assessment', elapsed: 5 })).toBe('reading')
-    // Technical reports compute statistics in code first, then narrate them.
-    expect(progressStage({ type: 'technical_monitoring', elapsed: 5 })).toBe('computing')
+    expect(progressStage({ elapsed: 5 })).toBe('reading')
   })
 
   it('says it is taking longer than usual only once the usual time has passed', () => {
-    expect(progressStage({ type: 'situation', elapsed: SLOW_AFTER_S - 1 })).toBe('reading')
-    expect(progressStage({ type: 'situation', elapsed: SLOW_AFTER_S })).toBe('slow')
-    expect(progressStage({ type: 'technical_monitoring', elapsed: SLOW_AFTER_S })).toBe('slow')
+    expect(progressStage({ elapsed: SLOW_AFTER_S - 1 })).toBe('reading')
+    expect(progressStage({ elapsed: SLOW_AFTER_S })).toBe('slow')
   })
 
-  it('becomes factual once the server says what it read or computed', () => {
-    expect(progressStage({ type: 'situation', reading: { count: 12 }, elapsed: 5 })).toBe(
-      'readingCount',
-    )
-    expect(
-      progressStage({ type: 'technical_monitoring', computed: { indicators: [] }, elapsed: 5 }),
-    ).toBe('computed')
+  it('becomes factual once the server says what it read', () => {
+    expect(progressStage({ reading: { count: 12 }, elapsed: 5 })).toBe('readingCount')
     // A long wait is still said to be long; words still win over both.
-    expect(progressStage({ type: 'situation', reading: { count: 12 }, elapsed: 130 })).toBe('slow')
-    expect(progressStage({ type: 'situation', reading: { count: 12 }, started: true })).toBe(
-      'writing',
-    )
+    expect(progressStage({ reading: { count: 12 }, elapsed: 130 })).toBe('slow')
+    expect(progressStage({ reading: { count: 12 }, started: true })).toBe('writing')
   })
 
   it('follows the stream once words arrive', () => {
-    expect(progressStage({ type: 'situation', started: true, elapsed: 300 })).toBe('writing')
-    expect(progressStage({ type: 'technical_monitoring', started: true })).toBe('writingTechnical')
+    expect(progressStage({ started: true, elapsed: 300 })).toBe('writing')
   })
 })
 

@@ -45,42 +45,6 @@ export function ledgerDate(iso) {
   return day ? `${day.slice(8, 10)}.${day.slice(5, 7)}.${day.slice(0, 4)}` : ''
 }
 
-/** A technical monitoring report's data source (an HDX HAPI dataset), not a document. */
-export function isDataSource(src) {
-  return !!src && src.doctype === 'dataset'
-}
-
-const ISO_DAY = /^\d{4}-\d{2}-\d{2}(?:T[\d:.]+Z?)?$/
-
-/**
- * A dataset's reference period in the ledger's date format for `locale`, both ends
- * joined with an en dash. The backend sends "2024-01-01 – 2026-01-01" or a single
- * date; the older "2024-01-01 to 2026-01-01" and a spaced hyphen read the same. The
- * separator needs spaces round it, so a date's own hyphens never split it. Anything
- * that is not one or two ISO dates is shown exactly as received.
- */
-export function dataPeriod(period, locale = 'en') {
-  if (!period) return ''
-  const text = String(period).trim()
-  const ends = text.split(/\s+(?:to|–|—|-)\s+/)
-  if (ends.length > 2 || !ends.every((day) => ISO_DAY.test(day))) return text
-  return ends.map((day) => ledgerDate(day, locale)).join(' – ')
-}
-
-/**
- * What names a data source after its title: the publisher exactly as given (for
- * IOM DTM, its required credit line), the HDX dataset, the period used and the day
- * the figures were retrieved. `retrieved(date)` words the last part in the wanted
- * language; empty parts are left out.
- */
-export function dataSourceParts(src, locale, retrieved) {
-  return [
-    src.source,
-    src.dataset,
-    dataPeriod(src.period, locale),
-    src.retrieved ? retrieved(ledgerDate(src.retrieved, locale) || src.retrieved) : '',
-  ].filter(Boolean)
-}
 
 // The chip that last opened a source, per container, so "Back to text" can
 // return the reader to the exact place they left.

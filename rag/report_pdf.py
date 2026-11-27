@@ -54,7 +54,6 @@ _REPORT_TYPE_LABELS = {
     "situation": "M&E Situation Report",
     "indicator_monitoring": "M&E Indicator Monitoring Report",
     "needs_assessment": "M&E Needs Assessment Brief",
-    "technical_monitoring": "Technical Monitoring Report",
 }
 
 # The PDF's fixed labels follow the REPORT's language (not the reader's interface);
@@ -68,14 +67,13 @@ _LABELS = {
         "widths": ("32%", "30%", "20%", "18%"),
         "footer": "Generated from {basis} by Humanitaria &middot; {date} &middot; "
                   "Page <pdf:pagenumber> of <pdf:pagecount>",
-        "basis": {"technical_monitoring": "HDX HAPI data", None: "ReliefWeb reports"},
+        "basis": "ReliefWeb reports",
     },
     "tr": {
         "types": {
             "situation": "İzleme ve Değerlendirme (M&E) Durum Raporu",
             "indicator_monitoring": "İzleme ve Değerlendirme (M&E) Gösterge İzleme Raporu",
             "needs_assessment": "İzleme ve Değerlendirme (M&E) İhtiyaç Değerlendirmesi Özeti",
-            "technical_monitoring": "Teknik İzleme Raporu",
         },
         "all_sectors": "Tüm sektörler",
         "period": "Dönem", "sectors": "Sektörler", "source_reports": "Kaynak raporlar",
@@ -84,7 +82,7 @@ _LABELS = {
         "widths": ("31%", "27%", "20%", "22%"),
         "footer": "Humanitaria tarafından {basis} oluşturuldu &middot; {date} "
                   "&middot; Sayfa <pdf:pagenumber> / <pdf:pagecount>",
-        "basis": {"technical_monitoring": "HDX HAPI verilerinden", None: "ReliefWeb raporlarından"},
+        "basis": "ReliefWeb raporlarından",
     },
 }
 
@@ -121,13 +119,6 @@ def _language(report: dict) -> str:
 def _type_label(report_type: str | None, language: str = "en") -> str:
     types = _LABELS[language]["types"]
     return types.get(report_type or "situation", types["situation"])
-
-
-def _cover_count_label(report_type: str | None, language: str) -> str:
-    """The cover's count label: a technical report lists data sources, not reports, so
-    it says "Sources"; the other report types keep "Source reports"."""
-    labels = _LABELS.get(language, _LABELS["en"])
-    return labels["sources"] if report_type == "technical_monitoring" else labels["source_reports"]
 
 
 def _sector(theme: str | None, language: str) -> str:
@@ -235,20 +226,12 @@ def _valid_sources(sources) -> list:
     return [s for s in (sources or []) if s.get("title") and s.get("url")]
 
 
-def _sources_rows(sources, language: str = "en") -> str:
+def _sources_rows(sources) -> str:
     rows = []
     for s in _valid_sources(sources):
         n = s.get("index", "")
         title = html.escape(str(s.get("title", "")))
-        if s.get("doctype") == "dataset":
-            # A technical report's data source: who publishes it, the period it covers,
-            # and when it was read from HDX HAPI.
-            word = "erişim tarihi" if language == "tr" else "retrieved"
-            retrieved = f"{word} {_days(str(s['retrieved']))}" if s.get("retrieved") else None
-            meta_bits = [b for b in (s.get("source"), _days(str(s.get("period") or "")), retrieved)
-                         if b]
-        else:
-            meta_bits = [b for b in (s.get("source"), _days(str(s.get("date") or ""))) if b]
+        meta_bits = [b for b in (s.get("source"), _days(str(s.get("date") or ""))) if b]
         meta = html.escape(" · ".join(str(b) for b in meta_bits))
         url = html.escape(str(s.get("url", "")))
         rows.append(
@@ -302,8 +285,7 @@ def render_report_pdf(report: dict) -> bytes:
     source_count = len(_valid_sources(report.get("sources")))
     generated = _generated_date(datetime.now(timezone.utc), language)
     type_label = _type_label(report.get("report_type"), language)
-    # A technical report is built from HDX HAPI data, not from ReliefWeb reports.
-    basis = labels["basis"].get(report.get("report_type"), labels["basis"][None])
+    basis = labels["basis"]
     cover_image = report.get("cover_image")
     section_images = report.get("section_images")
     cover_html = (
@@ -323,14 +305,14 @@ def render_report_pdf(report: dict) -> bytes:
 <table class="scopebox" width="100%"><tr>
   <td width="{widths[0]}"><span class="lbl">{labels["period"]}</span><br/>{period}</td>
   <td width="{widths[1]}"><span class="lbl">{labels["sectors"]}</span><br/>{sector}</td>
-  <td width="{widths[2]}"><span class="lbl">{_cover_count_label(report.get("report_type"), language)}</span><br/>{source_count}</td>
+  <td width="{widths[2]}"><span class="lbl">{labels["source_reports"]}</span><br/>{source_count}</td>
   <td width="{widths[3]}"><span class="lbl">{labels["generated"]}</span><br/>{html.escape(generated)}</td>
 </tr></table>
 
 <div class="body">{_body_html(report.get("content"), section_images)}</div>
 
 <h2 class="sources-h">{labels["sources"]}</h2>
-<table class="sources" width="100%">{_sources_rows(report.get("sources"), language)}</table>
+<table class="sources" width="100%">{_sources_rows(report.get("sources"))}</table>
 
 <div id="footerContent">{labels["footer"].format(basis=basis, date=html.escape(generated))}</div>
 </body></html>"""

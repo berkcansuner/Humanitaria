@@ -34,20 +34,4 @@ describe('injectSectionImages', () => {
     expect(out).toContain('</h2><img')
     expect(out).toContain('src="data:image/png;base64,AAA"')
   })
-
-  it('adds the dark-theme chart beside the light one when there is one', () => {
-    const html = '<h2>Overview</h2><p>text</p>'
-    const out = injectSectionImages(html, [
-      {
-        heading: 'Overview',
-        image: 'data:image/png;base64,LIGHT',
-        image_dark: 'data:image/png;base64,DARK',
-      },
-    ])
-    expect(out).toContain(
-      'class="section-img section-img--light" src="data:image/png;base64,LIGHT"',
-    )
-    expect(out).toContain('class="section-img section-img--dark" src="data:image/png;base64,DARK"')
-    expect(out.match(/<img/g).length).toBe(2)
-  })
 })

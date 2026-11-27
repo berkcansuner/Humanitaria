@@ -1,37 +1,12 @@
-// Pure helpers for the landing page: number formatting, map projection,
-// sparkline paths and the two motion primitives (count-up, visibility).
+// Pure helpers for the landing page: number and date formatting, map projection,
+// sample-answer parsing and the two motion primitives (count-up, visibility).
 import { gsap } from 'gsap'
 import { orderCitationRuns } from '../utils/citationRuns.js'
 
 const LAT_LIMIT = 70
 
-const round = (n) => Math.round(n * 100) / 100
-
 const INTL_LOCALE = { en: 'en-US', tr: 'tr-TR' }
 const intlLocale = (locale) => INTL_LOCALE[locale] ?? INTL_LOCALE.en
-
-// Intl separates Turkish number and unit with a no-break space; the UI uses plain ones.
-const plainSpaces = (s) => s.replace(/[\u00a0\u202f]/g, ' ')
-
-export function formatCompact(n, locale = 'en') {
-  if (locale === 'tr') {
-    const digits = Math.abs(n) >= 1e9 ? 2 : Math.abs(n) >= 1e6 ? 1 : 0
-    return plainSpaces(
-      new Intl.NumberFormat('tr-TR', { notation: 'compact', maximumFractionDigits: digits }).format(
-        n,
-      ),
-    )
-  }
-  const units = [
-    [1e9, 'B', 2],
-    [1e6, 'M', 1],
-    [1e3, 'K', 0],
-  ]
-  for (const [size, suffix, decimals] of units) {
-    if (Math.abs(n) >= size) return `${Number((n / size).toFixed(decimals))}${suffix}`
-  }
-  return String(Math.round(n))
-}
 
 // Equirectangular projection; latitude is clamped to the drawn ±70° band.
 export function project(lat, lon, w, h) {
@@ -51,22 +26,6 @@ export function pulseRadius(reports, max) {
 // Points the coverage map can draw: finite coordinates and at least one report.
 export function drawablePoints(points) {
   return points.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lon) && p.reports > 0)
-}
-
-// SVG path `d` for [x, y] points; x spans the points' own range over `w`.
-export function linePath(points, w, h, yMin, yMax) {
-  if (!points.length) return ''
-  const xs = points.map((p) => p[0])
-  const xMin = Math.min(...xs)
-  const xSpan = Math.max(...xs) - xMin || 1
-  const ySpan = yMax - yMin || 1
-  return points
-    .map(([x, y], i) => {
-      const px = round(((x - xMin) / xSpan) * w)
-      const py = round(h - ((y - yMin) / ySpan) * h)
-      return `${i === 0 ? 'M' : 'L'}${px},${py}`
-    })
-    .join(' ')
 }
 
 // The points the coverage map draws and names: countries only, so the occupied
@@ -198,13 +157,6 @@ export function answerBlocks(parts) {
   return blocks
 }
 
-// Latest [date, value] against the series peak, as a whole-number percent change.
-export function peakChange(series) {
-  const peak = series.reduce((a, b) => (b[1] > a[1] ? b : a))
-  const latest = series[series.length - 1]
-  return { peak, latest, pct: Math.round((latest[1] / peak[1] - 1) * 100) }
-}
-
 // Whole months from one ISO date to a later one, read in UTC.
 export function monthsSpan(from, to) {
   const a = new Date(from)
@@ -233,59 +185,45 @@ export function dayLabel(iso) {
   return `${two(d.getUTCDate())}.${two(d.getUTCMonth() + 1)}.${d.getUTCFullYear()}`
 }
 
-// A series point's period: 'Feb 2025' for monthly data, '2021' for annual (calendar-year) data.
-export function periodLabel(iso, locale = 'en', { annual = false } = {}) {
-  return annual ? String(new Date(iso).getUTCFullYear()) : monthLabel(iso, locale)
+const MONTH_NUMBERS = {
+  january: 1,
+  february: 2,
+  march: 3,
+  april: 4,
+  may: 5,
+  june: 6,
+  july: 7,
+  august: 8,
+  september: 9,
+  october: 10,
+  november: 11,
+  december: 12,
+  ocak: 1,
+  şubat: 2,
+  mart: 3,
+  nisan: 4,
+  mayıs: 5,
+  haziran: 6,
+  temmuz: 7,
+  ağustos: 8,
+  eylül: 9,
+  ekim: 10,
+  kasım: 11,
+  aralık: 12,
 }
 
-// The latest value worded against the series peak: '26% below the Jan 2025 peak'
-// ('29% below the 2021 peak' for annual data).
-// `t` is the message translator; the wording lives in landing.peak.*.
-export function peakPhrase(series, t, locale = 'en', { annual = false } = {}) {
-  const { peak, latest, pct } = peakChange(series)
-  if (latest[1] >= peak[1]) return t('landing.peak.at')
-  return t('landing.peak.below', {
-    pct: Math.abs(pct),
-    month: periodLabel(peak[0], locale, { annual }),
+// A report's 'As of' cell with each full date ('12 October 2026', '12 Ekim 2026')
+// written as '12.10.2026'. Months and years alone ('October 2026') stay as they are.
+export function asOfLabel(text) {
+  return text.replace(/\b(\d{1,2}) ([A-Za-zÇĞİÖŞÜçğıöşü]+) (\d{4})\b/g, (all, d, m, y) => {
+    const month = MONTH_NUMBERS[m.toLocaleLowerCase('tr')]
+    return month ? `${d.padStart(2, '0')}.${String(month).padStart(2, '0')}.${y}` : all
   })
 }
 
 // A number with the language's digit grouping and decimal mark ('19,147' / '19.147').
 export function formatNumber(n, locale = 'en', options = {}) {
   return new Intl.NumberFormat(intlLocale(locale), options).format(n)
-}
-
-// Last [year, value] against the year before, as a whole-number percent change.
-export function yearChange(series) {
-  const [year, value] = series[series.length - 1]
-  const prev = series[series.length - 2]
-  if (!prev) return { year, value, prevYear: null, pct: null }
-  return { year, value, prevYear: prev[0], pct: Math.round((value / prev[1] - 1) * 100) }
-}
-
-// '−13%' / '+5%' / '0%', with a true minus sign; Turkish writes '−%13'.
-export function signedPct(pct, locale = 'en') {
-  const sign = pct < 0 ? '−' : pct > 0 ? '+' : ''
-  const n = Math.abs(pct)
-  return locale === 'tr' ? `${sign}%${n}` : `${sign}${n}%`
-}
-
-// Axis ticks every `step`, from the step at or below `lo` to the one at or above `hi`.
-export function axisTicks(lo, hi, step) {
-  const ticks = []
-  for (let t = Math.floor(lo / step) * step; t <= Math.ceil(hi / step) * step; t += step) {
-    ticks.push(t)
-  }
-  return ticks
-}
-
-// Index of the value in `xs` closest to `x`.
-export function nearestIndex(xs, x) {
-  let best = 0
-  xs.forEach((v, i) => {
-    if (Math.abs(v - x) < Math.abs(xs[best] - x)) best = i
-  })
-  return best
 }
 
 // The answer parts from the text part containing `from` through the one

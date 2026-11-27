@@ -13,14 +13,9 @@ quiet period can take up to a minute while the server wakes up)
   system retrieves, and each `[n]` opens the original report with its publisher and date. If
   nothing relevant is found, it says so instead of answering from the model's memory. The
   country, sector and dates are picked out of the question and used as search filters.
-- **M&E reports.** Pick a country, sector, period and language, then choose one of four
-  report types: situation, indicator monitoring, needs assessment or technical monitoring.
-  Reports use the same citations, are saved to your account and export to PDF.
-- **Statistics computed in code, not by the model.** The technical monitoring report pulls
-  indicator series from HDX HAPI and runs the trend and comparison tests in Python (Sen's
-  slope, Holm correction). The report's text is written by code as well, in English or
-  Turkish, so every sentence traces to a dataset in its source list and no model can reword
-  a figure. No model is called for it.
+- **M&E reports.** Pick a country, sector, period and language, then choose one of three
+  report types: situation, indicator monitoring or needs assessment. Reports use the same
+  citations, are saved to your account and export to PDF.
 - **A rolling 12-month index.** A scheduled GitHub Actions workflow triggers an incremental
   ingest of new ReliefWeb reports, and reports older than a year are pruned.
 - **Accounts.** Email and password or Google sign-in. Deleting an account removes its

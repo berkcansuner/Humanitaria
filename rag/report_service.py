@@ -191,12 +191,11 @@ def _collapse_near_duplicates(docs: List[Document]) -> List[Document]:
     return [d for i, d in enumerate(docs) if i in keep]
 
 
-REPORT_TYPES = ("situation", "indicator_monitoring", "needs_assessment", "technical_monitoring")
+REPORT_TYPES = ("situation", "indicator_monitoring", "needs_assessment")
 
 _REPORT_TYPE_TITLE_PREFIX = {
     "indicator_monitoring": "Indicator Monitoring Report — ",
     "needs_assessment": "Needs Assessment Brief — ",
-    "technical_monitoring": "Technical Monitoring Report — ",
 }
 
 _REPORT_TYPE_DIRECTIVE_VERB = {

@@ -70,7 +70,6 @@
       </section>
 
       <FlowCards />
-      <DashboardPreview />
 
       <CoverageStats />
 
@@ -140,7 +139,6 @@ import MarketingNav from '../marketing/MarketingNav.vue'
 import MarketingFooter from '../marketing/MarketingFooter.vue'
 import HeroComposite from '../marketing/HeroComposite.vue'
 import FlowCards from '../marketing/FlowCards.vue'
-import DashboardPreview from '../marketing/DashboardPreview.vue'
 import CoverageStats from '../marketing/CoverageStats.vue'
 import coverage from '../marketing/data/coverage.json'
 import { formatNumber, monthsSpan } from '../marketing/landingKit.js'

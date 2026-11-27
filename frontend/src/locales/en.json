@@ -32,7 +32,6 @@
   "nav": {
     "chat": "Chat",
     "reports": "Reports",
-    "dashboards": "Dashboards",
     "coverage": "Coverage",
     "openApp": "Open app",
     "logOut": "Log out",
@@ -43,7 +42,6 @@
     "tagline": "Answers from the humanitarian record, with the source attached.",
     "product": "Product",
     "chatReports": "Chat and reports",
-    "dashboards": "Dashboards",
     "coverage": "Coverage",
     "useCases": "Use cases",
     "meTeams": "M&E teams",
@@ -61,7 +59,8 @@
     "skip": "Skip to content",
     "country": "Syria",
     "reportTypes": {
-      "situation": "Situation report"
+      "situation": "Situation report",
+      "indicator_monitoring": "Indicator monitoring report"
     },
     "sectors": {
       "protection": "Protection and Human Rights"
@@ -70,7 +69,7 @@
     "hero": {
       "titleLead": "The humanitarian record,",
       "titleAccent": "answered and cited.",
-      "lede": "Ask about any crisis, generate M&E situation and technical reports, and see the indicators behind them. Every claim links to the report it came from.",
+      "lede": "Ask about any crisis and generate cited M&E reports, from situation briefs to indicator tables. Every claim links to the report it came from.",
       "askLabel": "Ask about any crisis",
       "askPlaceholder": "How many people have returned to Syria?",
       "ask": "Ask",
@@ -85,16 +84,13 @@
       "region": "Answer",
       "sources": "Sources"
     },
-    "trend": {
-      "title": "Syrian refugees abroad",
-      "summary": "{title}: {value} in {last}, {phrase} of {peak}. Series from {first} to {last}."
-    },
-    "window": {
-      "summary": "{label}: {first} in {firstPeriod}, {last} in {lastPeriod}, {n} observations."
+    "indicators": {
+      "head": "{country} · Indicator table",
+      "panel": "Sample indicator table"
     },
     "flows": {
       "title": "From a quick question to the brief you hand in.",
-      "lede": "Chat for the latest state of a crisis, reports that synthesise many sources at once, and technical monitoring with the statistics done in code.",
+      "lede": "Chat for the latest state of a crisis, reports that synthesise many sources at once, and indicator tables with a source and date on every figure.",
       "chat": {
         "title": "Cited chat",
         "lede": "Answers only from retrieved reports, each claim one click from its source.",
@@ -108,40 +104,11 @@
         "findings": "Key findings",
         "credit": "Sample report · generated {date}"
       },
-      "tech": {
-        "title": "Technical monitoring",
-        "lede": "Indicator trends and regional comparisons, computed and written up in code from the data.",
-        "head": "{country} · Technical monitoring · Refugees",
-        "window": "{start} – {end}, from the {start} peak",
-        "trend": {
-          "decreasing": {
-            "significant": "From its {peak} peak to {end}, the number of Syrian refugees abroad shows a significant decreasing trend (p {p}).",
-            "notSignificant": "From its {peak} peak to {end}, the number of Syrian refugees abroad shows a decreasing trend that is not statistically significant (p {p})."
-          },
-          "increasing": {
-            "significant": "From its {peak} peak to {end}, the number of Syrian refugees abroad shows a significant increasing trend (p {p}).",
-            "notSignificant": "From its {peak} peak to {end}, the number of Syrian refugees abroad shows an increasing trend that is not statistically significant (p {p})."
-          },
-          "none": "From its {peak} peak to {end}, the number of Syrian refugees abroad shows no clear trend (p {p})."
-        }
+      "indicators": {
+        "title": "Indicator monitoring",
+        "lede": "The latest value of each indicator for a country or sector, with its date and source.",
+        "panel": "Sample indicator table"
       }
-    },
-    "dash": {
-      "title": "See the indicators behind every report.",
-      "lede": "A country view built from the same data the technical reports use, with its source on every figure.",
-      "label": "Sample dashboard · data: HDX HAPI",
-      "returnees": "Refugee returnees, {year}",
-      "refugees": "Syrian refugees abroad",
-      "refugeesNote": "in {year}",
-      "funding": "Funding reported to OCHA FTS, {year}",
-      "change": "{pct} vs {year}",
-      "reports": "Reports on Syria",
-      "reportsNote": "indexed since {date}",
-      "usd": "${amount}",
-      "chart": "Syrian refugees abroad, {range}",
-      "bars": "Syrian refugees by host country, top 5 · {year}",
-      "source": "Source for both charts: {credit}",
-      "foot": "Preview built from real HDX HAPI figures for Syria. The dashboard feature itself is planned."
     },
     "coverage": {
       "title": "Built on the last year of ReliefWeb.",
@@ -187,10 +154,6 @@
       "body": "Ask your first question free, or generate a situation report for the country you're tracking.",
       "startFree": "Start free",
       "logIn": "Log in"
-    },
-    "peak": {
-      "below": "{pct}% below the {month} peak",
-      "at": "at its peak"
     }
   },
   "chat": {
@@ -253,8 +216,7 @@
       "date": "Date",
       "back": "Back to text",
       "heading": "Sources",
-      "untitled": "Untitled",
-      "retrieved": "retrieved {date}"
+      "untitled": "Untitled"
     },
     "cite": {
       "number": "Source {n}",
@@ -331,8 +293,7 @@
       "stop": "Stop generating",
       "optionsError": "Could not load options. Try refreshing.",
       "loadingCountries": "Preparing the country list…",
-      "chooseCountry": "Choose a country to generate a report.",
-      "noData": "No quantitative data"
+      "chooseCountry": "Choose a country to generate a report."
     },
     "saved": {
       "title": "Saved reports",
@@ -359,16 +320,11 @@
     "progress": {
       "elapsed": "{time} elapsed",
       "outline": "This report will have these sections",
-      "computing": "Computing the statistics from HDX HAPI data. The report is written from them, usually within a minute.",
       "slow": "This is taking longer than usual. The report is still being prepared. You can keep waiting or stop it.",
       "writing": "Writing the report.",
-      "writingTechnical": "Writing the report from the computed statistics.",
       "readingCount": "Reading {n} source. The first words usually appear within two minutes. | Reading {n} sources. The first words usually appear within two minutes.",
       "readCaption": "Sources in this report's reading list",
-      "readMore": "and {n} more | and {n} more",
-      "computed": "Statistics computed from HDX HAPI data: {n} indicator. The report is being written. | Statistics computed from HDX HAPI data: {n} indicators. The report is being written.",
-      "computedCaption": "Indicators with data",
-      "periodAnalysed": "Period analysed: {period}"
+      "readMore": "and {n} more | and {n} more"
     },
     "outline": {
       "executiveSummary": "Executive Summary",
@@ -382,10 +338,7 @@
       "priorityNeeds": "Priority Needs by Sector",
       "affectedGroups": "Affected Groups",
       "gapsConstraints": "Gaps & Constraints",
-      "recommendations": "Recommendations",
-      "findings": "One section for each indicator analysed",
-      "dataCoverage": "Data Coverage & Limitations",
-      "methods": "Methods"
+      "recommendations": "Recommendations"
     },
     "empty": {
       "lede": "Each report draws on many ReliefWeb reports at once and cites every one, so you can check it and quote it."
@@ -408,20 +361,17 @@
     "types": {
       "situation": "Situation Report",
       "indicator_monitoring": "Indicator Monitoring Report",
-      "needs_assessment": "Needs Assessment Brief",
-      "technical_monitoring": "Technical Monitoring Report"
+      "needs_assessment": "Needs Assessment Brief"
     },
     "typesShort": {
       "situation": "Situation",
       "indicator_monitoring": "Indicators",
-      "needs_assessment": "Needs",
-      "technical_monitoring": "Technical"
+      "needs_assessment": "Needs"
     },
     "typeDescriptions": {
       "situation": "Summary, key findings and outlook from ReliefWeb reports, with every claim cited.",
       "indicator_monitoring": "A table of key figures with their sources, then data gaps and recent developments.",
-      "needs_assessment": "Priority needs by sector, affected groups, gaps and recommended next steps.",
-      "technical_monitoring": "Trends and statistical tests on HDX HAPI data series, with charts."
+      "needs_assessment": "Priority needs by sector, affected groups, gaps and recommended next steps."
     },
     "sectors": {
       "agriculture": "Agriculture",
@@ -463,7 +413,6 @@
     "model_busy": "The model is busy right now. Try again in a moment.",
     "quota_exhausted": "The AI service has run out of capacity. Please contact the administrator.",
     "report_failed": "The report couldn't be created. Please try again.",
-    "no_sector_data": "HDX HAPI has no figures for this sector in this country, so a technical monitoring report can't be made. Choose “All sectors” or another report type.",
     "chat_failed": "Something went wrong while answering. Please try again.",
     "body_too_large": "That request is too large to send.",
     "validation_failed": "Some of the information isn't valid. Check it and try again.",

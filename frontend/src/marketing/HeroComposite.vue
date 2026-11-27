@@ -3,9 +3,8 @@ import { computed, shallowRef, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { gsap } from 'gsap'
 import CoverageMap from './CoverageMap.vue'
-import TrendCard from './TrendCard.vue'
+import IndicatorCard from './IndicatorCard.vue'
 import HandMark from './HandMark.vue'
-import syria from './data/syria.json'
 import { sampleAnswer } from './samples.js'
 import { answerBlocks, answerLength, emphasisParts, revealedParts } from './landingKit.js'
 import { ledgerDate, revealSource } from '../utils/sources.js'
@@ -50,7 +49,6 @@ const chipLabel = (n) => {
     date: ledgerDate(src.date, locale.value),
   })
 }
-const trendCredit = `${syria.refugees.credit} · HDX HAPI`
 
 // Keep the newest line in view while streaming, unless the reader scrolled up.
 let follow = true
@@ -96,7 +94,7 @@ function intro() {
     .timeline({ defaults: { ease: 'expo.out', duration: 1 } })
     .from(q('.hc-map'), { autoAlpha: 0, duration: 1.6, ease: 'power1.out' }, 0)
     .from(q('.hc-chat'), { y: 28, opacity: 0 }, 0)
-    .from(q('.hc-trend'), { y: 36, autoAlpha: 0 }, 0.18)
+    .from(q('.hc-indicators'), { y: 36, autoAlpha: 0 }, 0.18)
     .to(
       stream,
       {
@@ -110,13 +108,7 @@ function intro() {
       streamAt,
     )
     .call(settle, null, streamAt + streamFor + 0.9)
-    .fromTo(
-      q('.tc-svg'),
-      { clipPath: 'inset(-4px 100% -4px 0)' },
-      { clipPath: 'inset(-4px 0% -4px 0)', duration: 1.8, ease: 'power2.inOut' },
-      0.8,
-    )
-    .from(q('.trend-dot'), { scale: 0, autoAlpha: 0, duration: 0.5, ease: 'back.out(2.4)' }, 2.5)
+    .from(q('.ic-row'), { y: 8, opacity: 0, duration: 0.7, stagger: 0.14 }, 0.7)
 }
 
 // Snap to the final state (reduced motion switched on mid-intro, or unmount).
@@ -210,14 +202,8 @@ defineExpose({ intro, finish })
       </figure>
     </div>
 
-    <div class="hc-trend-slot">
-      <TrendCard
-        class="hc-trend"
-        :series="syria.refugees.series"
-        annual
-        :title="t('landing.trend.title')"
-        :credit="trendCredit"
-      />
+    <div class="hc-indicators-slot">
+      <IndicatorCard class="hc-indicators" />
     </div>
   </div>
 </template>
@@ -254,18 +240,18 @@ defineExpose({ intro, finish })
   }
 }
 
-/* The trend card overlaps only the chat card's caption strip, whose text
+/* The indicator card overlaps only the chat card's caption strip, whose text
    sits on the left, so no answer text or source row is ever covered. */
 .hc-chat-slot {
   position: relative;
   height: 480px;
   margin-right: 64px;
 }
-.hc-trend-slot {
+.hc-indicators-slot {
   position: relative;
   align-self: flex-end;
-  width: min(340px, 64%);
-  margin: -44px -16px 0 0;
+  width: min(372px, 68%);
+  margin: -52px -16px 0 0;
 }
 
 .hc-chat {
@@ -468,7 +454,7 @@ defineExpose({ intro, finish })
   }
 }
 
-/* Below the two-column hero the cards stack in flow, the trend card
+/* Below the two-column hero the cards stack in flow, the indicator card
    overlapping the chat card's foot. */
 @media (max-width: 1023px) {
   .hc-map {
@@ -487,7 +473,7 @@ defineExpose({ intro, finish })
     flex: none;
     height: 300px;
   }
-  .hc-trend-slot {
+  .hc-indicators-slot {
     width: min(340px, 92%);
     margin: -14px 0 0;
   }

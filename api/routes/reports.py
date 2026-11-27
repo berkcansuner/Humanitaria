@@ -18,9 +18,6 @@ from pydantic import BaseModel, Field, field_validator
 from typing import Literal, Optional
 from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 
-from analytics import report_text, technical_report
-from analytics.countries import iso3_for
-from analytics.indicators import indicators_for
 from config import get_settings
 from ingestion import analytics
 from rag import report_images
@@ -113,14 +110,12 @@ class ReportRequest(BaseModel):
     date_from: Optional[str] = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
     date_to: Optional[str] = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
     language: Literal["tr", "en"] = "en"
-    report_type: Literal[
-        "situation", "indicator_monitoring", "needs_assessment", "technical_monitoring"
-    ] = "situation"
+    report_type: Literal["situation", "indicator_monitoring", "needs_assessment"] = "situation"
 
     @field_validator("date_from", "date_to")
     @classmethod
     def _real_date(cls, v: Optional[str]) -> Optional[str]:
-        # The pattern lets "2026-02-30" through; it would crash the analysis.
+        # The pattern lets "2026-02-30" through; it would break the date filter.
         if v is not None:
             date.fromisoformat(v)
         return v
@@ -146,45 +141,6 @@ def _no_docs_message(req: ReportRequest) -> str:
         f"No matching documents were found for **{req.country}** · {scope} · {window}.\n\n"
         "Try a different country, theme, or date range."
     )
-
-
-def _no_findings_message(req: ReportRequest) -> str:
-    """technical_monitoring için boş-bulgu mesajı — _no_docs_message'ın "belge bulunamadı"
-    ifadesi yanlış olur, çünkü bu rapor tipi belge-retrieval değil HDX HAPI istatistik
-    pipeline'ı kullanır."""
-    window = f"{req.date_from or '…'}–{req.date_to or '…'}"
-    if req.language == "tr":
-        return (
-            f"**{req.country}** için seçilen dönemde ({window}) HDX HAPI'den istatistiksel "
-            "analiz yapmaya yetecek gösterge verisi bulunamadı."
-        )
-    return (
-        f"No HDX HAPI indicator data sufficient for statistical analysis was found for "
-        f"**{req.country}** in the selected period ({window})."
-    )
-
-
-# A technical report on a sector HDX HAPI has no series for (or none for this country):
-# the interface names it by the code, in its own language.
-_NO_SECTOR_DATA_MESSAGE = (
-    "HDX HAPI has no quantitative series for this sector in this country, so a technical "
-    "monitoring report can't be made for it. Choose \"All sectors\" or another report type."
-)
-
-
-def _no_sector_data_event() -> ServerSentEvent:
-    return ServerSentEvent(event="error", data=json.dumps(
-        {"code": ErrorCode.no_sector_data.value, "message": _NO_SECTOR_DATA_MESSAGE}))
-
-
-def _no_iso3_message(req: ReportRequest) -> str:
-    """technical_monitoring for a country HDX HAPI has no ISO3 code for, in the
-    report's language (it used to be Turkish for every report)."""
-    if req.language == "tr":
-        return (f"**{req.country}** için HDX HAPI ülke kodu (ISO3) bulunamadı; teknik rapor "
-                "bu ülke için oluşturulamıyor.")
-    return (f"No HDX HAPI country code (ISO3) was found for **{req.country}**, so a technical "
-            "report cannot be generated for this country.")
 
 
 # ReliefWeb tags global reports with the country "World". They stay in the index for
@@ -219,23 +175,10 @@ def _reading_event(docs: list, source_dicts: list) -> ServerSentEvent:
         {"stage": "reading", "count": len(docs), "sources": shown}, ensure_ascii=False))
 
 
-def _computed_event(findings: technical_report.Findings, req: ReportRequest) -> ServerSentEvent:
-    """Sent after the HAPI statistics are computed, before the narrative is written:
-    the indicators that have data, in analysis order and the report's language,
-    and the period analysed."""
-    names = [ind.name(req.language) for ind in indicators_for(req.theme)
-             if ind.key in findings.indicators_covered]
-    return ServerSentEvent(event="status", data=json.dumps(
-        {"stage": "computed", "indicators": names,
-         "date_from": findings.date_from, "date_to": findings.date_to}, ensure_ascii=False))
-
-
 @router.get("/reports/options")
 async def report_options(user: dict = Depends(get_current_user)):
     countries = await anyio.to_thread.run_sync(_countries)
-    # technical_themes: the sectors a technical monitoring report can analyse.
-    return {"countries": countries, "themes": THEMES,
-            "technical_themes": [t for t in THEMES if indicators_for(t)]}
+    return {"countries": countries, "themes": THEMES}
 
 
 @router.post("/reports/stream")
@@ -247,88 +190,6 @@ async def report_stream(request: Request, req: ReportRequest, user: dict = Depen
 
     async def event_generator():
         try:
-            # technical_monitoring: HAPI+istatistik pipeline'ı — belge-retrieval yoluna
-            # ASLA düşmemeli (narrate-only prompt sözleşmesi). Bu yüzden erken return.
-            if req.report_type == "technical_monitoring":
-                iso3 = iso3_for(req.country)
-                if iso3 is None:
-                    yield ServerSentEvent(
-                        event="token",
-                        data=json.dumps(
-                            {"content": _no_iso3_message(req)}, ensure_ascii=False),
-                    )
-                    yield ServerSentEvent(event="done", data="{}")
-                    return
-                if req.theme and not indicators_for(req.theme):
-                    yield _no_sector_data_event()
-                    yield ServerSentEvent(event="done", data="{}")
-                    return
-
-                findings = await anyio.to_thread.run_sync(
-                    technical_report.compute_findings, iso3, req.date_from, req.date_to,
-                    req.language, req.theme
-                )
-                if not findings.sections and findings.failed:
-                    # HAPI could not be reached: not a sector or country without data.
-                    yield ServerSentEvent(event="error", data=json.dumps({
-                        "code": ErrorCode.report_failed.value,
-                        "message": "HDX HAPI could not be reached. Please try again."}))
-                    yield ServerSentEvent(event="done", data="{}")
-                    return
-                if not findings.sections and req.theme:
-                    yield _no_sector_data_event()
-                    yield ServerSentEvent(event="done", data="{}")
-                    return
-                if not findings.sections:
-                    yield ServerSentEvent(
-                        event="token",
-                        data=json.dumps({"content": _no_findings_message(req)}, ensure_ascii=False),
-                    )
-                    yield ServerSentEvent(event="done", data="{}")
-                    return
-
-                yield _computed_event(findings, req)
-                # The period the analysis used: a requested end in the future is capped.
-                date_to = findings.date_to if req.date_to else req.date_to
-                # The report is written in code from the findings (analytics.report_text):
-                # no model writes or rewords it.
-                full = report_text.assemble(findings, req.language)
-                yield ServerSentEvent(
-                    event="token", data=json.dumps({"content": full}, ensure_ascii=False))
-                section_images = technical_report.assemble_section_images(findings)
-                # The HDX HAPI series the report used, listed like a report's sources.
-                try:
-                    data_sources = await anyio.to_thread.run_sync(
-                        technical_report.data_sources, findings, req.country)
-                except Exception as exc:   # the list must never block the report
-                    logger.warning("Technical report sources failed: %s", exc)
-                    data_sources = []
-                report_id = str(uuid4())
-                title = report_title(req.country, req.theme, req.date_from, date_to,
-                                     report_type=req.report_type)
-                await anyio.to_thread.run_sync(
-                    lambda: report_store.create_report(
-                        report_id, user["id"], country=req.country, theme=req.theme,
-                        date_from=req.date_from, date_to=date_to, language=req.language,
-                        title=title, content=full, sources=data_sources or None,
-                        doc_count=len(findings.indicators_covered),
-                        report_type=req.report_type,
-                        cover_image=None,
-                        section_images=section_images or None,
-                    )
-                )
-                if data_sources:
-                    yield ServerSentEvent(
-                        event="sources",
-                        data=json.dumps({"sources": data_sources}, ensure_ascii=False),
-                    )
-                yield ServerSentEvent(
-                    event="saved",
-                    data=json.dumps({"report_id": report_id, "title": title}, ensure_ascii=False),
-                )
-                yield ServerSentEvent(event="done", data="{}")
-                return
-
             docs = await retrieve_for_report(
                 req.country, req.theme, req.date_from, req.date_to, report_type=req.report_type
             )

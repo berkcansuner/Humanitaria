@@ -1,5 +1,5 @@
 """Excerpt logic of scripts/generate_landing_report.py (no LLM, no DB)."""
-from scripts.generate_landing_report import key_findings_excerpt
+from scripts.generate_landing_report import indicator_table_excerpt, key_findings_excerpt
 
 REPORT = """## Executive Summary
 Health needs are severe [1].
@@ -111,7 +111,7 @@ def _run_main(monkeypatch, tmp_path, *args, **raw_fields):
     monkeypatch.setattr(sys, "argv", ["generate_landing_report.py", "--raw", str(raw),
                                       "--reuse", *args])
     script.main()
-    return sorted(p.name for p in tmp_path.glob("meReport*.json"))
+    return sorted(p.name for p in tmp_path.glob("me*.json"))
 
 
 def test_default_run_writes_the_english_syria_sample_the_landing_imports(monkeypatch, tmp_path):
@@ -130,3 +130,45 @@ def test_reuse_writes_the_file_of_the_raw_reports_language(monkeypatch, tmp_path
     """Re-excerpting a Turkish raw file without --language must not overwrite the
     English sample with Turkish text."""
     assert _run_main(monkeypatch, tmp_path, language="tr") == ["meReport.tr.json"]
+
+
+INDICATOR_REPORT = """## Overview
+Needs remain high [1].
+
+## Indicator Table
+| Indicator | Latest value | As of |
+| --- | --- | --- |
+| People in need | 16.5 million [1] | 1 January 2026 |
+| Returnees since December 2024 | 1.2 million [2][3] | 30 September 2026 |
+| Functional hospitals | not reported | - |
+| Cholera cases | 4,200 [4] | 2 November 2026 |
+
+## Data Gaps
+No sex-disaggregated data [2].
+"""
+
+
+def test_indicator_excerpt_keeps_cited_rows_verbatim_and_the_column_labels():
+    out = indicator_table_excerpt(INDICATOR_REPORT, SOURCES)
+    assert out["columns"] == ["Indicator", "Latest value", "As of"]
+    assert out["rows"] == [
+        ["People in need", "16.5 million [1]", "1 January 2026"],
+        ["Returnees since December 2024", "1.2 million [2][3]", "30 September 2026"],
+        ["Cholera cases", "4,200 [4]", "2 November 2026"],
+    ]
+    assert [s["n"] for s in out["sources"]] == [1, 2, 3, 4]
+
+
+def test_indicator_excerpt_is_empty_without_a_table():
+    assert indicator_table_excerpt("## Overview\nText [1].\n", SOURCES) == {
+        "columns": [], "rows": [], "sources": []}
+
+
+def test_indicator_run_writes_its_own_file_and_leaves_the_situation_sample(monkeypatch, tmp_path):
+    import json
+    names = _run_main(monkeypatch, tmp_path, content=INDICATOR_REPORT,
+                      report_type="indicator_monitoring", sector=None)
+    assert names == ["meIndicators.en.json"]
+    out = json.loads((tmp_path / "meIndicators.en.json").read_text(encoding="utf-8"))
+    assert out["report_type"] == "indicator_monitoring"
+    assert len(out["rows"]) == 3

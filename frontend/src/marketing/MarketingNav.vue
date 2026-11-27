@@ -8,9 +8,6 @@
       <nav class="nav-links">
         <router-link :to="{ path: '/', hash: '#workflows' }">{{ t('nav.chat') }}</router-link>
         <router-link :to="{ path: '/', hash: '#workflows' }">{{ t('nav.reports') }}</router-link>
-        <router-link :to="{ path: '/', hash: '#dashboards' }">{{
-          t('nav.dashboards')
-        }}</router-link>
         <router-link :to="{ path: '/', hash: '#coverage' }">{{ t('nav.coverage') }}</router-link>
       </nav>
       <div class="nav-right">

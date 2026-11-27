@@ -44,14 +44,9 @@
                 <span class="source-title-text">{{ src.title }}</span>
                 <ExternalLink :size="12" class="source-external-icon" aria-hidden="true" />
               </a>
-              <!-- Dates stay whole on a line; a publisher (a credit line can end in a
-                   URL) or dataset name may wrap anywhere. -->
-              <span v-if="metaParts(src).length" class="source-meta"
-                ><template v-for="(part, i) in metaParts(src)" :key="i"
-                  >{{ i ? ' · ' : ''
-                  }}<span :class="{ 'meta-whole': part.whole }">{{ part.text }}</span></template
-                ></span
-              >
+              <span v-if="metaParts(src).length" class="source-meta">{{
+                metaParts(src).join(' · ')
+              }}</span>
               <!-- Shown on the row a citation opened; the container's click handler
                    returns the reader to that citation (returnToCite). -->
               <button type="button" class="back-to-text">
@@ -76,14 +71,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ExternalLink, CornerUpLeft } from 'lucide-vue-next'
 import { safeUrl } from '../utils/parseSSE.js'
-import {
-  isValidSource,
-  summarizePublishers,
-  ledgerDate,
-  ledgerDay,
-  isDataSource,
-  dataPeriod,
-} from '../utils/sources.js'
+import { isValidSource, summarizePublishers, ledgerDate, ledgerDay } from '../utils/sources.js'
 
 const props = defineProps({
   sources: {
@@ -100,28 +88,11 @@ const open = ref(false)
 
 const validSources = computed(() => (props.sources || []).filter(isValidSource))
 const countLabel = computed(() => t('chat.sources.count', validSources.value.length))
-// A technical report's sources are HDX HAPI datasets: the closed line names where
-// the figures came from, since a publisher can be a long credit line (IOM DTM) that
-// is shown whole, only in its row.
-const publishers = computed(() =>
-  validSources.value.length && validSources.value.every(isDataSource)
-    ? 'HDX HAPI'
-    : summarizePublishers(validSources.value),
-)
+const publishers = computed(() => summarizePublishers(validSources.value))
 
-// A report: publisher · country. A data source (technical monitoring): publisher as
-// given · dataset · period · retrieved <date>; `whole` parts never break inside.
+// A report: publisher · country.
 function metaParts(src) {
-  if (isDataSource(src)) {
-    const retrieved = ledgerDate(src.retrieved, locale.value) || src.retrieved
-    return [
-      { text: src.source },
-      { text: src.dataset },
-      { text: dataPeriod(src.period, locale.value), whole: true },
-      { text: retrieved ? t('chat.sources.retrieved', { date: retrieved }) : '', whole: true },
-    ].filter((part) => part.text)
-  }
-  return [src.source, src.country].filter(Boolean).map((text) => ({ text }))
+  return [src.source, src.country].filter(Boolean)
 }
 </script>
 
@@ -289,12 +260,7 @@ function metaParts(src) {
 .source-meta {
   display: block;
   color: var(--color-text-secondary);
-  /* A credit line can end in a bare URL (IOM DTM): it wraps, never clips. */
   overflow-wrap: anywhere;
-}
-
-.meta-whole {
-  white-space: nowrap;
 }
 
 .back-to-text {
