@@ -6,7 +6,6 @@ import coverage from './data/coverage.json'
 import CoverageMap from './CoverageMap.vue'
 import {
   countUp,
-  dayLabel,
   formatNumber,
   mapCountries,
   mapLabels,
@@ -26,7 +25,13 @@ const STATS = [
 
 // The highest-volume countries named on the map, placed in percent of its box. Short
 // names per language live in landing.coverage.mapNames; others keep the data's name.
-const points = mapLabels(mapCountries(coverage.points), { count: 4 }).map((p) => {
+// DR Congo has no short name that reads clearly in both languages ('KDC'), so it is
+// left unnamed and the next country takes its label; its dot stays on the map. A
+// label runs to the right of its dot, so two labels need 36 degrees of longitude
+// between them (at 30, Afghanistan's label ran into Lebanon's).
+const UNNAMED = new Set(['COD'])
+const named = mapCountries(coverage.points).filter((p) => !UNNAMED.has(p.iso3))
+const points = mapLabels(named, { count: 4, minLon: 36 }).map((p) => {
   const { x, y } = project(p.lat, p.lon, 100, 100)
   return { ...p, style: { left: `${x}%`, top: `${y}%` } }
 })
@@ -96,12 +101,8 @@ onBeforeUnmount(() => {
               >{{ l.name }} <b>{{ l.reports }}</b></span
             >
           </div>
-          <figcaption>{{ t('landing.coverage.caption') }}</figcaption>
         </figure>
       </div>
-      <p class="stats-src">
-        {{ t('landing.coverage.asOf', { date: dayLabel(coverage.generated, locale) }) }}
-      </p>
     </div>
   </section>
 </template>
@@ -159,16 +160,6 @@ onBeforeUnmount(() => {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--color-text-secondary);
-}
-.cov-map figcaption {
-  margin-top: 12px;
-  font-size: 13px;
-  color: var(--color-muted);
-}
-.stats-src {
-  margin-top: 28px;
-  font-size: 12px;
-  color: var(--color-muted);
 }
 @media (max-width: 900px) {
   .cov {

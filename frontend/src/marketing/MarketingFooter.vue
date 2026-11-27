@@ -27,10 +27,10 @@
             t('footer.organizations')
           }}</router-link>
           <router-link :to="{ path: '/', hash: '#audiences' }">{{
-            t('footer.researchers')
+            t('footer.reporting')
           }}</router-link>
           <router-link :to="{ path: '/', hash: '#audiences' }">{{
-            t('footer.journalists')
+            t('footer.researchers')
           }}</router-link>
         </div>
         <div class="foot-col">
