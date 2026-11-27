@@ -41,7 +41,6 @@ class Settings(BaseSettings):
     # Reports run on their own model: few calls, quality-critical, so they can use a
     # stronger model than chat. gemini-3.8-flash was chosen in the 2026-11-16
     # comparison against 3.5 Flash-Lite (it dated and compared figures more reliably).
-    # Technical monitoring reports call no model.
     REPORT_LLM_MODEL: str = "gemini-3.8-flash"
     REPORT_REASONING_EFFORT: str = "medium"
     REPORT_LLM_TIMEOUT: int = 240  # 3.8 Flash at medium: 108 s measured
@@ -73,18 +72,6 @@ class Settings(BaseSettings):
     GEMINI_IMAGE_TIMEOUT: int = 60                        # seconds per image call (Pro is slower than Flash)
     REPORT_IMAGES_ENABLED: bool = False                  # kill-switch; prod flips to True after verification
     REPORT_IMAGE_MAX_SECTIONS: int = 6                   # cap on non-cover section images (cost ceiling)
-
-    # HDX HAPI (Humanitarian API — yapılandırılmış sayısal indikatör verisi;
-    # teknik izleme raporunun veri kaynağı). app_identifier hesap gerektirmez,
-    # encode_app_identifier ile üretilir; boşsa daha düşük rate limit ile çalışır.
-    HDX_HAPI_BASE_URL: str = "https://hapi.humdata.org/api/v1"
-    HDX_APP_IDENTIFIER: str = ""          # base64(appname:email)
-    HDX_HAPI_TIMEOUT: int = 30            # saniye / istek
-    HDX_HAPI_ADMIN_LEVEL: int = 1         # bölgesel analiz için admin-1
-    # Teknik izleme raporu: trend testi için asgari dönem (gözlem) sayısı.
-    # Altındaki serilerde inferential test çalıştırılmaz ("insufficient_data").
-    TECHNICAL_REPORT_MIN_POINTS: int = 4
-    TECHNICAL_REPORT_DEFAULT_YEARS: int = 5   # dönem seçilmezse: son N yıl
 
     # Pinecone — used ONLY for the hosted reranker (Pinecone Inference); the vector
     # index itself lives in Postgres (pgvector).

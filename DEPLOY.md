@@ -16,7 +16,6 @@ origin, so no CORS in the browser). Config lives in `render.yaml` + `Dockerfile`
    - `GEMINI_API_KEY`
    - `PINECONE_API_KEY` (reranker only, optional)
    - `RELIEFWEB_APPNAME`
-   - `HDX_APP_IDENTIFIER` (HDX HAPI, for the technical monitoring report)
    - `GOOGLE_CLIENT_ID`
    - `GOOGLE_CLIENT_SECRET`
    - `INGEST_TRIGGER_TOKEN` (shared secret for `POST /admin/ingest/cron`)

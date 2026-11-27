@@ -1,14 +1,11 @@
-"""A report's fixed labels follow the REPORT's language end to end: the PDF, the
-technical report's headings and chart text, and the "What changed" fallback. English
-stays as it was; a language other than en/tr keeps falling back to English labels."""
+"""A report's fixed labels follow the REPORT's language in its PDF. English stays as it
+was; a language other than en/tr keeps falling back to English labels."""
 import io
 from unittest.mock import patch
 
 import pytest
 from pypdf import PdfReader
 
-from analytics import technical_report
-from analytics.indicators import INDICATORS, by_key
 from rag.report_pdf import render_report_pdf
 
 _SOURCES = [{"index": 1, "title": "Sudan: Access Snapshot", "url": "https://reliefweb.int/r/1",
@@ -90,73 +87,3 @@ class TestPdfLabels:
         tr = json.loads((locales / "tr.json").read_text(encoding="utf-8"))["reports"]["sectors"]
         assert sorted(en.values()) == sorted(THEMES)
         assert {theme: tr[key] for key, theme in en.items()} == _SECTORS_TR
-
-
-def _syr_rows(ep, iso3, **_k):
-    """Two regions of IDPs and an IPC share: trend + regional + correlation sections."""
-    periods = [f"{y}-{m:02d}-01" for y in (2024, 2025) for m in (1, 4, 7, 10)]
-    if ep.endswith("idps"):
-        return [{"population": 1000 + 100 * i + (50 if r == "Aleppo" else 0),
-                 "reference_period_start": p, "admin1_name": r, "admin1_code": r}
-                for r in ("Aleppo", "Idlib") for i, p in enumerate(periods)]
-    if ep.endswith("food-security"):
-        return [{"population_fraction_in_phase": 0.30 + 0.01 * i, "reference_period_start": p,
-                 "admin1_name": "Aleppo", "admin1_code": "Aleppo"}
-                for i, p in enumerate(periods)]
-    return []
-
-
-class TestTechnicalReportLanguage:
-    def _findings(self, language):
-        calls = []
-
-        def spy(name):
-            def draw(*args, **kwargs):
-                calls.append((name, args, kwargs))
-                return "data:image/png;base64,AAA"
-            return draw
-
-        with patch("analytics.technical_report.fetch_rows", side_effect=_syr_rows), \
-             patch("analytics.technical_report.trend_chart", spy("trend")), \
-             patch("analytics.technical_report.comparison_chart", spy("region")), \
-             patch("analytics.technical_report.correlation_chart", spy("correlation")):
-            findings = technical_report.compute_findings("SYR", None, None, language=language)
-        return findings, calls
-
-    def test_turkish_sections_and_chart_text_are_turkish(self):
-        findings, calls = self._findings("tr")
-        headings = [s.heading for s in findings.sections]
-        idps = "Ülke içinde yerinden edilmiş kişiler (IDP)"
-        assert f"{idps} — Eğilim Analizi" in headings
-        assert f"{idps} — Bölgesel Analiz" in headings
-        assert any(h.startswith("Korelasyon — ") for h in headings)
-        assert not any("Analysis" in h or "Correlation" in h for h in headings)
-        trend_units = [kw["unit"] for name, _a, kw in calls if name == "trend"]
-        assert "kişi" in trend_units and "people" not in trend_units
-        assert all(kw["language"] == "tr" for _n, _a, kw in calls)
-        assert all(kw["source"].startswith("Kaynak: ") for _n, _a, kw in calls)
-        corr = next(kw for name, _a, kw in calls if name == "correlation")
-        assert {corr["xlabel"], corr["ylabel"]} == {
-            idps, "Gıda güvensizliği (IPC 3+, analiz edilen nüfusun yüzdesi)"}
-
-    def test_english_sections_and_chart_text_stay_english(self):
-        findings, calls = self._findings("en")
-        headings = [s.heading for s in findings.sections]
-        assert "Internally displaced people (IDPs) — Trend Analysis" in headings
-        trend_units = [kw["unit"] for name, _a, kw in calls if name == "trend"]
-        assert "people" in trend_units
-        assert all(kw["source"].startswith("Source: ") for _n, _a, kw in calls)
-
-    def test_turkish_indicator_names_follow_the_glossary(self):
-        assert by_key("idps").name("tr") == "Ülke içinde yerinden edilmiş kişiler (IDP)"
-        assert by_key("returnees").name("tr") == "Geri dönenler (kişi)"
-        assert by_key("refugees").name("tr") == "Mülteciler (kişi)"
-        assert by_key("funding").name("tr") == "İnsani yardım fonlaması (USD)"
-        assert all(ind.name("en") == ind.label_en for ind in INDICATORS)
-
-    def test_chart_numbers_use_turkish_typography(self):
-        from analytics.charts import format_value
-        assert format_value(45, "tr", percent=True) == "%45"
-        assert format_value(8.6, "tr", percent=True) == "%8,6"
-        assert format_value(2_500_000, "tr") == "2,5 mn"
-        assert format_value(2_500_000, "en") == "2.5M"
