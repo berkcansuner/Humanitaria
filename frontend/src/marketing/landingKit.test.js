@@ -27,7 +27,7 @@ import {
   emphasisParts,
   answerBlocks,
 } from './landingKit.js'
-import { sampleAnswer, sampleReport, samplePassage } from './samples.js'
+import { sampleAnswer, sampleIndicators, sampleReport, samplePassage } from './samples.js'
 import { i18n } from '../i18n/index.js'
 
 const tIn = (locale) => (key, params) => i18n.global.t(key, params ?? {}, { locale })
@@ -513,4 +513,28 @@ describe('monthsSpan', () => {
     expect(monthsSpan('2025-11-18', '2026-11-17')).toBe(11)
     expect(monthsSpan('2026-11-01', '2026-11-17')).toBe(0)
   })
+})
+
+describe('the indicator samples', () => {
+  it('names the Turkish refugee returns as displaced people from outside the country', () => {
+    const names = sampleIndicators('tr', 'hero').rows.map((r) => r.indicator)
+    expect(names).toContain('Ülke dışından geri dönen yerinden edilmiş kişi sayısı')
+    expect(names.join(' ')).not.toMatch(/sığınmacı/)
+  })
+  for (const locale of ['en', 'tr']) {
+    it(`finds every quoted row in the ${locale} report, cited, and no row twice`, () => {
+      const hero = sampleIndicators(locale, 'hero')
+      const flow = sampleIndicators(locale, 'flow')
+      expect(hero.rows).toHaveLength(3)
+      expect(flow.rows).toHaveLength(4)
+      const names = [...hero.rows, ...flow.rows].map((r) => r.indicator)
+      expect(new Set(names).size).toBe(7)
+      for (const { rows, sources } of [hero, flow]) {
+        const cited = rows.flatMap((r) => citedParts(r.value).filter((p) => p.cite))
+        expect(cited.length).toBeGreaterThanOrEqual(rows.length)
+        for (const { cite } of cited) expect(sources.some((s) => s.n === cite)).toBe(true)
+        expect(sources.every((s) => cited.some((c) => c.cite === s.n))).toBe(true)
+      }
+    })
+  }
 })

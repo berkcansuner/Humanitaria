@@ -85,6 +85,10 @@
       "region": "Yanıt",
       "sources": "Kaynaklar"
     },
+    "indicators": {
+      "head": "{country} · Gösterge tablosu",
+      "panel": "Örnek gösterge tablosu"
+    },
     "trend": {
       "title": "Yurt dışındaki Suriyeli mülteciler",
       "summary": "{title}: {last} itibarıyla {value}, {phrase} (zirve: {peak}). Seri {first} ile {last} arasını kapsar."

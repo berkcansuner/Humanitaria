@@ -85,6 +85,10 @@
       "region": "Answer",
       "sources": "Sources"
     },
+    "indicators": {
+      "head": "{country} · Indicator table",
+      "panel": "Sample indicator table"
+    },
     "trend": {
       "title": "Syrian refugees abroad",
       "summary": "{title}: {value} in {last}, {phrase} of {peak}. Series from {first} to {last}."
