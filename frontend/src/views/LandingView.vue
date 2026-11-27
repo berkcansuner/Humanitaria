@@ -89,12 +89,12 @@
               <p>{{ t('landing.audiences.orgs.body') }}</p>
             </div>
             <div class="use">
-              <h3>{{ t('landing.audiences.research.title') }}</h3>
-              <p>{{ t('landing.audiences.research.body') }}</p>
+              <h3>{{ t('landing.audiences.reporting.title') }}</h3>
+              <p>{{ t('landing.audiences.reporting.body') }}</p>
             </div>
             <div class="use">
-              <h3>{{ t('landing.audiences.press.title') }}</h3>
-              <p>{{ t('landing.audiences.press.body') }}</p>
+              <h3>{{ t('landing.audiences.research.title') }}</h3>
+              <p>{{ t('landing.audiences.research.body') }}</p>
             </div>
           </div>
         </div>

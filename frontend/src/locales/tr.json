@@ -46,8 +46,8 @@
     "useCases": "Kimler için",
     "meTeams": "İzleme ve Değerlendirme (M&E) ekipleri",
     "organizations": "Kuruluşlar",
+    "reporting": "Proje ve donör raporlama",
     "researchers": "Araştırmacılar",
-    "journalists": "Gazeteciler",
     "account": "Hesap",
     "openApp": "Uygulamayı aç",
     "logIn": "Giriş yap",
@@ -137,13 +137,13 @@
         "title": "İnsani yardım kuruluşları",
         "body": "Koordinasyon toplantısından önce, her PDF'yi tek tek açmadan krizin genel durumunu kaynaklarıyla görün."
       },
+      "reporting": {
+        "title": "Proje yazımı ve donör raporlama ekipleri",
+        "body": "Bir proje teklifinin ihtiyaç analizini ya da donör raporunu kuruluşların bildirdiği rakamlara dayandırın, her kaynağa tek tıkla ulaşın."
+      },
       "research": {
         "title": "Araştırmacılar ve analistler",
         "body": "Ülkeler ve dönemler arasındaki eğilimleri izleyin, atıfları olduğu gibi kendi analizinize taşıyın."
-      },
-      "press": {
-        "title": "Gazeteciler",
-        "body": "Sahadaki kuruluşların gerçekte ne bildirdiğini kontrol edin, özgün rapora tek tıkla ulaşın."
       }
     },
     "closing": {

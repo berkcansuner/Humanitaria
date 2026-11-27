@@ -46,8 +46,8 @@
     "useCases": "Use cases",
     "meTeams": "M&E teams",
     "organizations": "Organizations",
+    "reporting": "Proposals and donor reports",
     "researchers": "Researchers",
-    "journalists": "Journalists",
     "account": "Account",
     "openApp": "Open app",
     "logIn": "Log in",
@@ -137,13 +137,13 @@
         "title": "Humanitarian organizations",
         "body": "Get a sourced picture of a crisis before the coordination meeting, without opening every PDF first."
       },
+      "reporting": {
+        "title": "Proposal and donor reporting teams",
+        "body": "Ground a proposal's needs analysis or a donor report in the figures agencies reported, with every source one click away."
+      },
       "research": {
         "title": "Researchers & analysts",
         "body": "Trace trends across countries and time, with citations ready to drop into your own analysis."
-      },
-      "press": {
-        "title": "Journalists",
-        "body": "Check what agencies on the ground actually reported, and open the original report in one click."
       }
     },
     "closing": {
