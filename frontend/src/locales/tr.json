@@ -358,11 +358,6 @@
       "indicator_monitoring": "Gösterge izleme raporu",
       "needs_assessment": "İhtiyaç değerlendirmesi"
     },
-    "typesShort": {
-      "situation": "Durum",
-      "indicator_monitoring": "Gösterge",
-      "needs_assessment": "İhtiyaç"
-    },
     "typeDescriptions": {
       "situation": "ReliefWeb raporlarından özet, temel bulgular ve genel görünüm. Her bilgi kaynak gösterilerek yazılır.",
       "indicator_monitoring": "Kaynaklarıyla birlikte temel rakamlar tablosu, ardından veri eksikleri ve son gelişmeler.",
