@@ -38,7 +38,6 @@ User → Vue 3 frontend → FastAPI → retrieval (pgvector + MMR + rerank) → 
 | Embeddings | Google Gemini `gemini-embedding-001`, truncated to 768 dimensions |
 | Vector search | Postgres + pgvector on Supabase (`halfvec(768)`, HNSW index) |
 | Reranking | Pinecone Inference `bge-reranker-v2-m3` (rerank API only, no data stored) |
-| Indicator data | HDX HAPI |
 | Backend | Python 3.12, FastAPI, LangChain (LCEL), server-sent events for streaming |
 | Frontend | Vue 3, Vite |
 | Hosting and CI | Render (Docker), GitHub Actions |
@@ -128,7 +127,6 @@ A 20-pass security review was part of the work. The summary is in
 api/          FastAPI app and routes (auth, chat, conversations, reports, admin)
 rag/          embeddings, retrieval, chains, query processing, report generation
 ingestion/    ReliefWeb client, parsing, chunking, storage, scheduling, retention
-analytics/    HDX HAPI client and statistics for the technical monitoring report
 frontend/     Vue 3 app (src/), built into dist/
 scripts/      CLI tools: ingest.py, eval_rag.py, build_eval_labels.py
 tests/        pytest suite

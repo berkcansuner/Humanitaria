@@ -51,7 +51,7 @@ def test_session_id_charset_enforced(client):
 
 def test_report_theme_must_be_known(client):
     r = client.post("/reports/stream", json={"country": "Sudan", "theme": "x" * 10000,
-                                             "report_type": "technical_monitoring"})
+                                             "report_type": "situation"})
     assert r.status_code == 422
 
 

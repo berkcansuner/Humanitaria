@@ -671,8 +671,8 @@ class TestReportEndpoints:
         from rag.report_service import REPORT_TYPES
         from api.routes.reports import ReportRequest
         literal_values = ReportRequest.model_fields["report_type"].annotation.__args__
-        # Every registered report type is now user-facing (technical_monitoring's route
-        # branch landed in Task 9), so the registry and the route Literal must match exactly.
+        # Every registered report type is user-facing, so the registry and the route
+        # Literal must match exactly.
         assert set(literal_values) == set(REPORT_TYPES)
 
 

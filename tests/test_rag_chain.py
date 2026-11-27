@@ -168,11 +168,8 @@ def test_all_report_prompts_require_precision():
     # Figures verbatim (unit + qualifier, no rounding/vague quantifiers), dates at the
     # source's precision (day when given, never rounded to a bare year), and every value
     # traceable to a single Context document (no cross-document combining/estimating).
-    # Narrate-only prompts (technical_monitoring) handle precision differently.
     from rag.chain import _REPORT_PROMPTS
     for report_type, prompt in _REPORT_PROMPTS.items():
-        if report_type == "technical_monitoring":
-            continue
         low = prompt.lower()
         assert "precision:" in low, report_type
         assert "exactly as the source states it" in low, report_type
@@ -184,15 +181,13 @@ def test_all_report_prompts_scope_to_report_country():
     # Country-scoping guard: figures measuring another country's own internal
     # situation (e.g. an Iran report picking up Afghanistan's country-wide caseload
     # mentioned as background) must be excluded, while refugees the country hosts stay.
-    # Narrate-only prompts (technical_monitoring) don't synthesize documents but still scope to country.
     from rag.chain import _REPORT_PROMPTS
     for report_type, prompt in _REPORT_PROMPTS.items():
         low = prompt.lower()
         assert "scoped to the country named in" in low, report_type
-        if report_type != "technical_monitoring":
-            assert "the refugees it hosts" in low, report_type
-            # the restriction is on FIGURES only; qualitative causal context stays allowed
-            assert "qualitative causal context" in low, report_type
+        assert "the refugees it hosts" in low, report_type
+        # the restriction is on FIGURES only; qualitative causal context stays allowed
+        assert "qualitative causal context" in low, report_type
 
 
 def test_situation_prompt_unchanged():
@@ -205,8 +200,6 @@ def test_situation_prompt_unchanged():
 
 
 def test_all_report_prompts_forbid_corroboration_piling():
-    # Narrate-only prompts (technical_monitoring) don't synthesize documents and don't have
-    # multi-document citation concerns.
     from rag.chain import _REPORT_PROMPTS
     for report_type, prompt in _REPORT_PROMPTS.items():
         assert "CORROBORATION IS NOT MULTI-FACT" in prompt, report_type

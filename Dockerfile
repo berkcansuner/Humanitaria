@@ -13,8 +13,7 @@ FROM python:3.12-slim
 WORKDIR /app
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    MPLCONFIGDIR=/tmp/matplotlib
+    PYTHONDONTWRITEBYTECODE=1
 
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
@@ -24,7 +23,6 @@ COPY config.py ./
 COPY api/ ./api/
 COPY rag/ ./rag/
 COPY ingestion/ ./ingestion/
-COPY analytics/ ./analytics/
 
 # Built SPA from stage 1 → served by FastAPI's history-mode fallback (api/main.py
 # resolves <repo>/frontend/dist relative to api/main.py).
