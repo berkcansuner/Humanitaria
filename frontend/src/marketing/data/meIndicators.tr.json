@@ -1,0 +1,166 @@
+{
+ "title": "Indicator Monitoring Report — Syrian Arab Republic · All sectors · 2025-11-27 – 2026-11-27",
+ "country": "Syrian Arab Republic",
+ "sector": null,
+ "type": "Indicator monitoring report",
+ "report_type": "indicator_monitoring",
+ "language": "tr",
+ "date_from": "2025-11-27",
+ "date_to": "2026-11-27",
+ "generated": "2026-11-27",
+ "columns": [
+  "Gösterge",
+  "Son değer",
+  "Tarih itibarıyla"
+ ],
+ "rows": [
+  [
+   "İnsani yardıma muhtaç nüfus",
+   "15,6 milyon [1]",
+   "2026"
+  ],
+  [
+   "Koruma hizmetlerine ihtiyaç duyan nüfus",
+   "14,7 milyon [1]",
+   "2026"
+  ],
+  [
+   "Akut gıda güvensizliği yaşayan nüfus",
+   "7,2 milyon [4]",
+   "25 Kasım 2026 (yayımlandı)"
+  ],
+  [
+   "Şiddetli gıda güvensizliği yaşayan nüfus",
+   "700.000 [5]",
+   "2 Kasım 2026 (yayımlandı)"
+  ],
+  [
+   "Entegre Gıda Güvenliği Aşama Sınıflandırması (Kuzeydoğu ve Kuzeybatı Suriye)",
+   "IPC Aşama 3 (Kriz) [2]",
+   "Ekim 2026"
+  ],
+  [
+   "Aşırı Ölüm Riski Olası (Plausible RoEM) sınıfındaki alt ilçeler",
+   "9 [6]",
+   "14 Ekim 2026 (yayımlandı)"
+  ],
+  [
+   "Akut İhtiyaç (AN) sınıfındaki alt ilçeler",
+   "261 [6]",
+   "14 Ekim 2026 (yayımlandı)"
+  ],
+  [
+   "Geri dönen sığınmacı sayısı",
+   "1,8 milyondan fazla [1]",
+   "2 Kasım 2026 (yayımlandı)"
+  ],
+  [
+   "Geri dönen ülke içinde yerinden edilmiş kişi sayısı",
+   "2 milyon [1]",
+   "2 Kasım 2026 (yayımlandı)"
+  ],
+  [
+   "Toplam geri dönüş sayısı",
+   "3,8 milyon [4]",
+   "2026"
+  ],
+  [
+   "Lübnan'dan gelen nüfus",
+   "336.000'den fazla [7]",
+   "2 Mart 2026'dan itibaren (30 Temmuz 2026 itibarıyla)"
+  ],
+  [
+   "İnsani İhtiyaçlar ve Müdahale Planı (HNRP) fonlanma oranı",
+   "Yüzde 32 [8]",
+   "12 Ekim 2026 (yayımlandı)"
+  ],
+  [
+   "UNICEF İnsani Eylem Çağrısı (HAC) fonlanma oranı",
+   "Yüzde 27 [7]",
+   "30 Temmuz 2026 (yayımlandı)"
+  ],
+  [
+   "İnsani yardımla aylık ortalama ulaşılan kişi sayısı",
+   "2,48 milyon [3]",
+   "Ocak – Eylül 2026"
+  ],
+  [
+   "WFP tarafından gıda yardımı ulaştırılan kişi sayısı",
+   "624.283 [4]",
+   "Ekim 2026"
+  ],
+  [
+   "Acil tarım yardımı yıllık hedefine ulaşma oranı",
+   "Yüzde 12 [3]",
+   "Eylül 2026 sonu itibarıyla"
+  ],
+  [
+   "Patlayıcı mühimmat kaynaklı çocuk ölümleri",
+   "219 çocuk [7]",
+   "Aralık 2024'ten itibaren (30 Temmuz 2026 itibarıyla)"
+  ],
+  [
+   "Patlayıcı mühimmat kaynaklı çocuk yaralanmaları",
+   "601 çocuk [7]",
+   "Aralık 2024'ten itibaren (30 Temmuz 2026 itibarıyla)"
+  ]
+ ],
+ "sources": [
+  {
+   "n": 1,
+   "publisher": "UN High Commissioner for Refugees",
+   "title": "UNHCR Syria Protection Factsheet Q3 2026",
+   "date": "2026-11-02",
+   "url": "https://reliefweb.int/report/syrian-arab-republic/unhcr-syria-protection-factsheet-q3-2026"
+  },
+  {
+   "n": 4,
+   "publisher": "World Food Programme",
+   "title": "WFP Syria Country Brief, November 2026",
+   "date": "2026-11-25",
+   "url": "https://reliefweb.int/report/syrian-arab-republic/wfp-syria-country-brief-november-2026"
+  },
+  {
+   "n": 5,
+   "publisher": "World Food Programme",
+   "title": "WFP Syria Country Brief, October 2026",
+   "date": "2026-11-02",
+   "url": "https://reliefweb.int/report/syrian-arab-republic/wfp-syria-country-brief-october-2026"
+  },
+  {
+   "n": 2,
+   "publisher": "Famine Early Warning System Network",
+   "title": "Syria Key Message Update: Fuel price increase erodes purchasing power as winter costs and lean season approach, September 2026 - January 2027",
+   "date": "2026-10-09",
+   "url": "https://reliefweb.int/report/syrian-arab-republic/syria-key-message-update-fuel-price-increase-erodes-purchasing-power-winter-costs-and-lean-season-approach-september-2026-january-2027"
+  },
+  {
+   "n": 6,
+   "publisher": "REACH Initiative",
+   "title": "Syria: Acute Needs Analysis | November 2025 - March 2026",
+   "date": "2026-10-14",
+   "url": "https://reliefweb.int/report/syrian-arab-republic/syria-acute-needs-analysis-november-2025-march-2026"
+  },
+  {
+   "n": 7,
+   "publisher": "UN Children's Fund",
+   "title": "UNICEF Syrian Arab Republic Humanitarian Situation Report No. 2 (Mid -Year), 30 June 2026",
+   "date": "2026-07-30",
+   "url": "https://reliefweb.int/report/syrian-arab-republic/unicef-syrian-arab-republic-humanitarian-situation-report-no-2-mid-year-30-june-2026"
+  },
+  {
+   "n": 8,
+   "publisher": "UN Office for the Coordination of Humanitarian Affairs",
+   "title": "Mr. Mohamed Yahya, ASG for Humanitarian Affairs, on behalf of Mr. Tom Fletcher, USG for Humanitarian Affairs and Emergency Relief Coordinator – Briefing to the Security Council on the humanitarian situation in Syria, 12 October 2026",
+   "date": "2026-10-12",
+   "url": "https://reliefweb.int/report/syrian-arab-republic/mr-mohamed-yahya-asg-humanitarian-affairs-behalf-mr-tom-fletcher-usg-humanitarian-affairs-and-emergency-relief-coordinator-briefing-security-council-humanitarian-situation-syria-12-october-2026"
+  },
+  {
+   "n": 3,
+   "publisher": "UN Office for the Coordination of Humanitarian Affairs",
+   "title": "Syrian Arab Republic: Humanitarian Update No. 8 | September - October 2026 [EN/AR]",
+   "date": "2026-11-23",
+   "url": "https://reliefweb.int/report/syrian-arab-republic/syrian-arab-republic-humanitarian-update-no-8-september-october-2026-enar"
+  }
+ ]
+}

@@ -5,7 +5,9 @@ report chain, rag.citations) for one situation report and writes an excerpt to
 frontend/src/marketing/data/meReport.<language>.json (by default Syria · Protection and
 Human Rights · English, so meReport.en.json): title, type, sector, period, generated
 date, two Key Findings sentences verbatim with their [n] markers, and the sources
-those sentences cite.
+those sentences cite. With --type indicator_monitoring it writes
+meIndicators.<language>.json instead: the Indicator Table's column labels and its
+cited rows verbatim, and the sources those rows cite.
 
 Safety: the database is only read. rag.db.get_engine() would run its schema setup
 (ALTER/CREATE/REVOKE) on first use, so the read-only engine of
@@ -25,6 +27,7 @@ Usage:
     python scripts/generate_landing_report.py --raw <path.json>          # generate (en)
     python scripts/generate_landing_report.py --raw <path.json> --reuse  # re-excerpt only
     python scripts/generate_landing_report.py --language tr --raw <path.json>
+    python scripts/generate_landing_report.py --type indicator_monitoring --sector "" --raw <path.json>
 """
 import argparse
 import asyncio
@@ -44,7 +47,9 @@ logger = logging.getLogger(__name__)
 
 DATA_DIR = ROOT / "frontend" / "src" / "marketing" / "data"
 COUNTRY, THEME, LANGUAGE = "Syrian Arab Republic", "Protection and Human Rights", "en"
-REPORT_TYPE = "situation"
+# Each report type's output file stem and its label in the written excerpt.
+REPORT_TYPES = {"situation": ("meReport", "Situation report"),
+                "indicator_monitoring": ("meIndicators", "Indicator monitoring report")}
 MAX_CALLS = 2
 
 _SECTION = re.compile(r"^## +Key Findings\s*$", re.IGNORECASE | re.MULTILINE)
@@ -86,21 +91,48 @@ def key_findings_excerpt(content: str, sources: list[dict], n: int = 2) -> dict:
         findings.append(candidates[pick])
         candidates = candidates[pick + 1:]
 
+    return {"findings": findings, "sources": _cited_sources(findings, sources)}
+
+
+def _cited_sources(texts: list[str], sources: list[dict]) -> list[dict]:
+    """The sources `texts` cite, in citation order."""
     by_index = {s["index"]: s for s in sources}
     cited = []
-    for sentence in findings:
-        for num in map(int, _MARKER.findall(sentence)):
+    for text in texts:
+        for num in map(int, _MARKER.findall(text)):
             if num not in cited and num in by_index:
                 cited.append(num)
-    return {
-        "findings": findings,
-        "sources": [{"n": i, "publisher": by_index[i].get("source"), "title": by_index[i]["title"],
-                     "date": by_index[i].get("date"), "url": by_index[i]["url"]} for i in cited],
-    }
+    return [{"n": i, "publisher": by_index[i].get("source"), "title": by_index[i]["title"],
+             "date": by_index[i].get("date"), "url": by_index[i]["url"]} for i in cited]
 
 
-async def _generate(country: str, theme: str, language: str, date_from: str, date_to: str,
-                    max_calls: int = MAX_CALLS, dry_run: bool = False) -> dict | None:
+def _cells(line: str) -> list[str]:
+    return [cell.strip() for cell in line.strip().strip("|").split("|")]
+
+
+def indicator_table_excerpt(content: str, sources: list[dict]) -> dict:
+    """The report's first Markdown table (the prompt allows only the Indicator Table):
+    its column labels and every row whose value cell cites a source, verbatim and in
+    report order, with the sources those rows cite (in citation order)."""
+    lines = content.splitlines()
+    start = next((i for i, line in enumerate(lines) if line.strip().startswith("|")), None)
+    if start is None:
+        return {"columns": [], "rows": [], "sources": []}
+    block = []
+    for line in lines[start:]:
+        if not line.strip().startswith("|"):
+            break
+        block.append(_cells(line))
+    columns = block[0]
+    rows = [r for r in block[1:]
+            if len(r) == len(columns) and len(r) > 1 and _MARKER.search(r[1])]
+    return {"columns": columns, "rows": rows,
+            "sources": _cited_sources([" ".join(r) for r in rows], sources)}
+
+
+async def _generate(country: str, theme: str | None, language: str, date_from: str,
+                    date_to: str, report_type: str, max_calls: int = MAX_CALLS,
+                    dry_run: bool = False) -> dict | None:
     os.environ["RERANK_ENABLED"] = "false"
     from config import get_settings
     get_settings.cache_clear()
@@ -111,7 +143,7 @@ async def _generate(country: str, theme: str, language: str, date_from: str, dat
     from rag.rag_context import _build_context_and_sources
     from rag.report_service import build_report_directive, retrieve_for_report
 
-    docs = await retrieve_for_report(country, theme, date_from, date_to, report_type=REPORT_TYPE)
+    docs = await retrieve_for_report(country, theme, date_from, date_to, report_type=report_type)
     if not docs:
         raise SystemExit("No documents retrieved; nothing generated.")
     context, source_dicts = _build_context_and_sources(docs)
@@ -120,8 +152,8 @@ async def _generate(country: str, theme: str, language: str, date_from: str, dat
     if dry_run:
         return None
     directive = build_report_directive(country, theme, date_from, date_to, len(docs), language,
-                                       report_type=REPORT_TYPE)
-    chain = build_report_chain(REPORT_TYPE)  # max_retries=0: one call per ainvoke
+                                       report_type=report_type)
+    chain = build_report_chain(report_type)  # max_retries=0: one call per ainvoke
 
     calls, full = 0, None
     while full is None and calls < max_calls:
@@ -134,6 +166,7 @@ async def _generate(country: str, theme: str, language: str, date_from: str, dat
         raise SystemExit(f"Generation failed after {calls} calls.")
     content, sources = normalize_citations(full, source_dicts)
     return {"generated": date.today().isoformat(), "country": country, "sector": theme,
+            "report_type": report_type,
             "language": language, "date_from": date_from, "date_to": date_to, "calls": calls, "doc_count": len(docs), "content": content, "sources": sources}
 
 
@@ -144,9 +177,12 @@ def main() -> None:
     parser.add_argument("--reuse", action="store_true",
                         help="re-excerpt an existing --raw file without calling the model")
     parser.add_argument("--country", default=COUNTRY, help=f"report country (default {COUNTRY})")
-    parser.add_argument("--sector", default=THEME, help=f"report sector/theme (default {THEME})")
+    parser.add_argument("--sector", default=THEME,
+                        help=f"report sector/theme, empty for all sectors (default {THEME})")
+    parser.add_argument("--type", choices=tuple(REPORT_TYPES), default="situation",
+                        help="report type (default situation; with --reuse, the raw file's type)")
     parser.add_argument("--language", choices=("en", "tr"), default=LANGUAGE,
-                        help=f"report language; writes meReport.<language>.json (default {LANGUAGE}; "
+                        help=f"report language; names the output file (default {LANGUAGE}; "
                              "with --reuse, the raw file's language)")
     parser.add_argument("--max-calls", type=int, choices=(1, 2), default=MAX_CALLS,
                         help="model calls allowed: 2 = one retry if the first call fails")
@@ -154,38 +190,47 @@ def main() -> None:
                         help="stop after retrieval (no report generated, nothing written)")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
-    language = args.language
+    language, report_type = args.language, args.type
 
     if args.reuse:
         raw = json.loads(args.raw.read_text(encoding="utf-8"))
         # The excerpt is in the raw report's language, so that names the output file.
         language = raw.get("language", language)
+        report_type = raw.get("report_type", report_type)
     else:
         today = date.today()
-        raw = asyncio.run(_generate(args.country, args.sector, language,
+        raw = asyncio.run(_generate(args.country, args.sector or None, language,
                                     (today - timedelta(days=365)).isoformat(), today.isoformat(),
-                                    max_calls=args.max_calls, dry_run=args.dry_run))
+                                    report_type, max_calls=args.max_calls, dry_run=args.dry_run))
         if raw is None:
             return
         args.raw.write_text(json.dumps(raw, ensure_ascii=False, indent=1), encoding="utf-8")
         logger.info("Generated with %d model call(s); full report at %s", raw["calls"], args.raw)
 
     from rag.report_service import report_title
-    excerpt = key_findings_excerpt(raw["content"], raw["sources"])
-    if len(excerpt["findings"]) < 2:
-        raise SystemExit("Key Findings has fewer than two cited sentences; excerpt not written.")
+    if report_type == "indicator_monitoring":
+        excerpt = indicator_table_excerpt(raw["content"], raw["sources"])
+        if len(excerpt["rows"]) < 3:
+            raise SystemExit("The Indicator Table has fewer than three cited rows; "
+                             "excerpt not written.")
+    else:
+        excerpt = key_findings_excerpt(raw["content"], raw["sources"])
+        if len(excerpt["findings"]) < 2:
+            raise SystemExit("Key Findings has fewer than two cited sentences; "
+                             "excerpt not written.")
     # A raw file from before --country/--sector/--language carries none of them.
     country = raw.get("country", args.country)
     sector = raw.get("sector", args.sector)
+    stem, type_label = REPORT_TYPES[report_type]
     out = {
-        "title": report_title(country, sector, raw["date_from"], raw["date_to"], REPORT_TYPE),
-        "country": country, "sector": sector, "type": "Situation report",
-        "report_type": REPORT_TYPE,   # the product's key (the page labels it per language)
+        "title": report_title(country, sector, raw["date_from"], raw["date_to"], report_type),
+        "country": country, "sector": sector, "type": type_label,
+        "report_type": report_type,   # the product's key (the page labels it per language)
         "language": language,
         "date_from": raw["date_from"], "date_to": raw["date_to"], "generated": raw["generated"],
         **excerpt,
     }
-    out_path = DATA_DIR / f"meReport.{language}.json"
+    out_path = DATA_DIR / f"{stem}.{language}.json"
     out_path.write_text(json.dumps(out, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     logger.info("Wrote %s", out_path)
 
