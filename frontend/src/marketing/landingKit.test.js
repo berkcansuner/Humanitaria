@@ -9,7 +9,6 @@ import {
   revealedParts,
   monthsSpan,
   monthLabel,
-  dayLabel,
   passage,
   passageSources,
   citedParts,
@@ -199,17 +198,13 @@ describe('the Syria samples', () => {
   })
 })
 
-describe('monthLabel and dayLabel', () => {
+describe('monthLabel', () => {
   it('formats ISO dates in UTC, whatever the local zone', () => {
     expect(monthLabel('2026-09-30')).toBe('Sep 2026')
     expect(monthLabel('2026-02-01')).toBe('Feb 2026')
-    expect(dayLabel('2026-01-27')).toBe('27.01.2026')
-    expect(dayLabel('2026-09-01')).toBe('01.09.2026')
   })
-  it('formats Turkish month names for tr; a full date is the same day.month.year', () => {
+  it('formats Turkish month names for tr', () => {
     expect(monthLabel('2025-01-28', 'tr')).toBe('Oca 2025')
-    expect(dayLabel('2026-11-18', 'tr')).toBe('18.11.2026')
-    expect(dayLabel('2026-11-18', 'tr')).toBe(dayLabel('2026-11-18', 'en'))
   })
 })
 

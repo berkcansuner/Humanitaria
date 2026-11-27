@@ -94,15 +94,13 @@
       "chat": {
         "title": "Atıflı sohbet",
         "lede": "Yanıtlar yalnızca bulunan raporlardan gelir. Her bilginin kaynağı bir tık uzakta.",
-        "panel": "Örnek yanıttan bir bölüm",
-        "credit": "Yukarıdaki Suriye yanıtından"
+        "panel": "Örnek yanıttan bir bölüm"
       },
       "report": {
         "title": "M&E raporları",
         "lede": "Ülke, sektör, dönem ve dil seçin, bölümlere ayrılmış ve atıflı bir rapor alın.",
         "panel": "Örnek rapor",
-        "findings": "Temel bulgular",
-        "credit": "Örnek rapor · {date} tarihinde oluşturuldu"
+        "findings": "Temel bulgular"
       },
       "indicators": {
         "title": "Gösterge izleme",

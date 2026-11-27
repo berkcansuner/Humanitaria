@@ -94,15 +94,13 @@
       "chat": {
         "title": "Cited chat",
         "lede": "Answers only from retrieved reports, each claim one click from its source.",
-        "panel": "Sample answer passage",
-        "credit": "From the Syria answer above"
+        "panel": "Sample answer passage"
       },
       "report": {
         "title": "M&E reports",
         "lede": "Pick a country, sector, period and language, and get a structured, cited brief.",
         "panel": "Sample report",
-        "findings": "Key findings",
-        "credit": "Sample report · generated {date}"
+        "findings": "Key findings"
       },
       "indicators": {
         "title": "Indicator monitoring",
