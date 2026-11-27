@@ -1706,4 +1706,3 @@ function onCiteClick(e) {
   }
 }
 </style>
-

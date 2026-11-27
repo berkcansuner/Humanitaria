@@ -45,7 +45,6 @@ export function ledgerDate(iso) {
   return day ? `${day.slice(8, 10)}.${day.slice(5, 7)}.${day.slice(0, 4)}` : ''
 }
 
-
 // The chip that last opened a source, per container, so "Back to text" can
 // return the reader to the exact place they left.
 const lastCite = new WeakMap()
