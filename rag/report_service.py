@@ -296,11 +296,18 @@ def _rank_for_report(docs: List[Document], date_from: Optional[str], date_to: Op
     start = date.fromisoformat(date_from) if date_from else (min(known) if known else date.today())
     end = date.fromisoformat(date_to) if date_to else date.today()
     span = max((end - start).days, 1)
+    # Without a rerank score on every document (reranker off, failed or out of quota),
+    # the dense order stands in for relevance as 1/(1+i), the chat fallback's curve
+    # (rag.retriever.rerank_by_recency). Reading the missing scores as 0 let recency and
+    # origin alone pick the context, so the best dense match could fall out.
+    scores = [d.metadata.get("_relevance_score") for d in docs]
+    if any(s is None for s in scores):
+        scores = [1.0 / (1 + i) for i in range(len(docs))]
 
     def score(i: int) -> float:
         d = docs[i]
         recency = min(1.0, max(0.0, (dates[i] - start).days / span)) if dates[i] else 0.0
-        return (_W_RELEVANCE * d.metadata.get("_relevance_score", 0.0) + _W_RECENCY * recency
+        return (_W_RELEVANCE * scores[i] + _W_RECENCY * recency
                 + _W_ORIGINATOR * (d.metadata.get("source") in ORIGINATORS))
 
     order = sorted(range(len(docs)), key=score, reverse=True)

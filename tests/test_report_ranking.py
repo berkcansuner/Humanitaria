@@ -8,7 +8,7 @@ originator 0.2, at most 2 documents per organisation: 27%, originator share
 54% -> 79%, mean relevance 0.833 -> 0.844."""
 from langchain_core.documents import Document
 
-from rag.report_service import _cap_keeping_newest_originators, _rank_for_report
+from rag.report_service import ORIGINATORS, _cap_keeping_newest_originators, _rank_for_report
 
 OCHA = "UN Office for the Coordination of Humanitarian Affairs"
 
@@ -65,3 +65,23 @@ def test_cap_reserves_nothing_for_non_originators_or_when_the_pool_fits():
             _d(3, "Other NGO", "2026-11-16", 0)]
     assert _ids(_cap_keeping_newest_originators(docs, 2)) == ["1", "2"]
     assert _ids(_cap_keeping_newest_originators(docs, 5)) == ["1", "2", "3"]
+
+
+def test_without_rerank_scores_the_dense_order_still_counts_as_relevance():
+    # Pinecone quota spent (2026-11-27): no document carries a rerank score. Relevance
+    # used to read 0 for all, so recency and origin alone chose the context and the
+    # dense search's best match fell behind every recent originator document.
+    best = Document(page_content="best", metadata={"doc_id": "1", "source": "Some NGO",
+                                                   "date": "2026-08-01"})
+    orgs = sorted(ORIGINATORS)
+    rest = [Document(page_content=f"c{i}", metadata={"doc_id": str(i), "source": orgs[i],
+                                                     "date": "2026-11-10"})
+            for i in range(2, 11)]
+    out = _ids(_rank_for_report([best, *rest], "2026-05-01", "2026-11-16", 3))
+    assert "1" in out
+
+
+def test_partial_scores_fall_back_to_the_dense_order_for_all():
+    docs = [_d(1, "Some NGO", "2026-08-01", None), _d(2, "Other NGO", "2026-11-10", 0.4)]
+    docs[0].metadata.pop("_relevance_score")
+    assert _ids(_rank_for_report(docs, "2026-05-01", "2026-11-16", 1)) == ["1"]
