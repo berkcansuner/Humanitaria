@@ -41,7 +41,8 @@ class TestPdfLabels:
 
     def test_turkish_pdf_names_all_sectors_and_each_report_type_in_turkish(self):
         text = _pdf_text(_report("tr", theme=None, report_type="needs_assessment"))
-        assert "İhtiyaç Değerlendirmesi Özeti" in text and "Tüm sektörler" in text
+        assert "İhtiyaç Değerlendirmesi" in text and "Özeti" not in text
+        assert "Tüm sektörler" in text
         assert "All sectors" not in text
 
     def test_the_generation_date_is_day_month_year_in_both_languages(self):

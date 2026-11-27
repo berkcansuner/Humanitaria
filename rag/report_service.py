@@ -195,7 +195,7 @@ REPORT_TYPES = ("situation", "indicator_monitoring", "needs_assessment")
 
 _REPORT_TYPE_TITLE_PREFIX = {
     "indicator_monitoring": "Indicator Monitoring Report — ",
-    "needs_assessment": "Needs Assessment Brief — ",
+    "needs_assessment": "Needs Assessment — ",
 }
 
 _REPORT_TYPE_DIRECTIVE_VERB = {

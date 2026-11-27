@@ -316,23 +316,22 @@ describe('ReportsView in two languages', () => {
       return row.textContent.replace(/\s+/g, ' ').trim()
     }
 
-    // What screen readers hear instead: the full type name.
-    const spokenType = (el) => el.querySelector('.saved-meta > span > .sr-only').textContent.trim()
-
-    it('shows a short type in every row, read out in full, in both languages', async () => {
+    it('shows the full type in every row, in both languages', async () => {
       vi.mocked(listReports).mockResolvedValue({ reports: [SAVED, yemen, somalia] })
       await mount()
       const rows = [...host.querySelectorAll('.saved-list > .saved-item')]
-      expect(rows.map(typeLine)).toEqual(['Situation · EN', 'Indicators · EN', 'Needs · EN'])
-      expect(rows.map(spokenType)).toEqual([
-        'Situation Report',
-        'Indicator Monitoring Report',
-        'Needs Assessment Brief',
+      expect(rows.map(typeLine)).toEqual([
+        'Situation Report · EN',
+        'Indicator Monitoring Report · EN',
+        'Needs Assessment · EN',
       ])
       setLocale('tr')
       await flush()
-      expect(rows.map(typeLine)).toEqual(['Durum · EN', 'Gösterge · EN', 'İhtiyaç · EN'])
-      expect(spokenType(rows[2])).toBe('İhtiyaç değerlendirmesi özeti')
+      expect(rows.map(typeLine)).toEqual([
+        'Durum raporu · EN',
+        'Gösterge izleme raporu · EN',
+        'İhtiyaç değerlendirmesi · EN',
+      ])
       // The delete button names the type in full too.
       expect(rows[1].querySelector('.saved-del').getAttribute('aria-label')).toBe(
         'Raporu sil: Yemen, Gösterge izleme raporu, 01.08.2026 - 31.10.2026',

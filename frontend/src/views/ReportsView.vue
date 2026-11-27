@@ -44,13 +44,12 @@
                 <span class="saved-name">{{ shownCountry(r) }}</span>
                 <span v-if="shownSector(r)" class="saved-sector">{{ shownSector(r) }}</span>
                 <span class="saved-meta">
-                  <!-- The report's language as its code, so an English and a Turkish
-                       report with the same settings can be told apart. The "·" is
-                       glued to the type by a no-break space, so no line starts with
-                       a separator. Screen readers hear the full type name. -->
+                  <!-- The type in full, then the report's language as its code, so an
+                       English and a Turkish report with the same settings can be told
+                       apart. The "·" is glued to the type by a no-break space, so no
+                       line starts with a separator. -->
                   <span
-                    ><span aria-hidden="true">{{ savedTypeShort(r) }}</span
-                    ><span class="sr-only">{{ savedType(r) }}</span
+                    ><span class="saved-type">{{ savedType(r) }}</span
                     ><span v-if="reportLanguage(r)" class="saved-lang"
                       >{{ '\u00a0· '
                       }}<span class="saved-lang-code" aria-hidden="true">{{
@@ -451,13 +450,6 @@ function savedName(r) {
 // The type in full ("Situation Report"), as under the open report's title.
 function savedType(r) {
   return reportTypeLabel(r.report_type, t)
-}
-
-// The saved list's short type ("Situation", "Needs"); the full name is read out.
-function savedTypeShort(r) {
-  return reportTypeLabel(r.report_type, (key) =>
-    t(key.replace('reports.types.', 'reports.typesShort.')),
-  )
 }
 
 // A list row's tooltip, the full name of a row that may be cut off: the stored
@@ -1100,10 +1092,15 @@ function onCiteClick(e) {
   padding: 0;
   margin-bottom: var(--space-2);
 }
+/* One framed list, a row per type: three types read as a list, not a grid with a
+   gap where a fourth card would go. */
 .type-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-2);
+  grid-template-columns: minmax(0, 1fr);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+  overflow: hidden;
 }
 .type-option {
   display: grid;
@@ -1112,24 +1109,22 @@ function onCiteClick(e) {
   row-gap: 3px;
   align-items: start;
   padding: 12px 14px;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-lg);
-  background-color: var(--color-surface);
   cursor: pointer;
-  transition:
-    border-color 0.15s,
-    background-color 0.15s;
+  transition: background-color 0.15s;
+}
+.type-option + .type-option {
+  border-top: 1px solid var(--color-border);
 }
 .type-option:hover {
-  border-color: color-mix(in srgb, var(--color-accent) 55%, var(--color-border-strong));
+  background-color: color-mix(in srgb, var(--color-accent) 5%, var(--color-surface));
 }
 .type-option.selected {
-  border-color: var(--color-accent);
   background-color: var(--color-accent-soft);
 }
+/* Inside the frame, so its rounded clip never cuts the ring. */
 .type-option:has(.type-radio:focus-visible) {
-  border-color: var(--color-accent);
-  box-shadow: var(--focus-ring);
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
 }
 .type-field:disabled .type-option {
   cursor: not-allowed;
@@ -1340,6 +1335,11 @@ function onCiteClick(e) {
 .saved-period {
   white-space: nowrap;
 }
+/* The type is a name, not a figure: the interface face, a step larger. */
+.saved-type {
+  font-family: var(--font-body);
+  font-size: 12px;
+}
 /* The report's language code: the meta line's own quiet text, in every row shape. */
 .saved-lang {
   font-family: var(--font-mono);
@@ -1348,7 +1348,7 @@ function onCiteClick(e) {
   color: var(--color-text-secondary);
   white-space: nowrap;
 }
-/* Short type and language, then the period on its own line, in Geist Mono. */
+/* Type and language, then the period on its own line, in Geist Mono. */
 .saved-meta {
   display: flex;
   flex-direction: column;
@@ -1688,7 +1688,6 @@ function onCiteClick(e) {
   .back-to-list {
     display: inline-flex;
   }
-  .type-grid,
   .field-grid {
     grid-template-columns: minmax(0, 1fr);
   }

@@ -356,12 +356,7 @@
     "types": {
       "situation": "Situation Report",
       "indicator_monitoring": "Indicator Monitoring Report",
-      "needs_assessment": "Needs Assessment Brief"
-    },
-    "typesShort": {
-      "situation": "Situation",
-      "indicator_monitoring": "Indicators",
-      "needs_assessment": "Needs"
+      "needs_assessment": "Needs Assessment"
     },
     "typeDescriptions": {
       "situation": "Summary, key findings and outlook from ReliefWeb reports, with every claim cited.",
