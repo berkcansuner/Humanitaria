@@ -102,7 +102,6 @@ onBeforeUnmount(() => {
               >{{ l.name }} <b>{{ l.reports }}</b></span
             >
           </div>
-          <figcaption>{{ t('landing.coverage.caption') }}</figcaption>
         </figure>
       </div>
       <p class="stats-src">
@@ -165,11 +164,6 @@ onBeforeUnmount(() => {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--color-text-secondary);
-}
-.cov-map figcaption {
-  margin-top: 12px;
-  font-size: 13px;
-  color: var(--color-muted);
 }
 .stats-src {
   margin-top: 28px;
