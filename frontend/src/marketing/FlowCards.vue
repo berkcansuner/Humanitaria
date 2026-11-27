@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { sampleAnswer, sampleIndicators, samplePassage, sampleReport } from './samples.js'
-import { asOfLabel, citedParts, dayLabel, monthLabel, passageSources } from './landingKit.js'
+import { asOfLabel, citedParts, monthLabel, passageSources } from './landingKit.js'
 import { ledgerDate, revealSource } from '../utils/sources.js'
 
 gsap.registerPlugin(ScrollTrigger)
@@ -48,8 +48,6 @@ const report = computed(() => {
       sectorKey ? t(sectorKey) : r.sector,
     ].join(' · '),
     period: `${monthLabel(r.date_from, l)} – ${monthLabel(r.date_to, l)}`,
-    generated: r.generated,
-    generatedLabel: dayLabel(r.generated, l),
     findings: r.findings.map(citedParts),
     sources: r.sources,
   }
@@ -64,8 +62,6 @@ const indicators = computed(() => {
     head: [t('landing.country'), t('landing.reportTypes.indicator_monitoring')].join(' · '),
     period: `${monthLabel(r.date_from, l)} – ${monthLabel(r.date_to, l)}`,
     columns: r.columns,
-    generated: r.generated,
-    generatedLabel: dayLabel(r.generated, l),
     rows: r.rows.map((row) => ({
       ...row,
       parts: citedParts(row.value),
@@ -162,7 +158,6 @@ onBeforeUnmount(() => mm?.revert())
                 </span>
               </li>
             </ol>
-            <figcaption class="fu-credit">{{ t('landing.flows.chat.credit') }}</figcaption>
           </figure>
         </article>
 
@@ -216,16 +211,6 @@ onBeforeUnmount(() => mm?.revert())
                 </span>
               </li>
             </ol>
-            <i18n-t
-              keypath="landing.flows.report.credit"
-              tag="figcaption"
-              scope="global"
-              class="fu-credit"
-            >
-              <template #date>
-                <time :datetime="report.generated">{{ report.generatedLabel }}</time>
-              </template>
-            </i18n-t>
           </figure>
         </article>
 
@@ -288,16 +273,6 @@ onBeforeUnmount(() => mm?.revert())
                 </span>
               </li>
             </ol>
-            <i18n-t
-              keypath="landing.flows.report.credit"
-              tag="figcaption"
-              scope="global"
-              class="fu-credit"
-            >
-              <template #date>
-                <time :datetime="indicators.generated">{{ indicators.generatedLabel }}</time>
-              </template>
-            </i18n-t>
           </figure>
         </article>
       </div>
@@ -461,15 +436,6 @@ onBeforeUnmount(() => mm?.revert())
 }
 .fu-date {
   white-space: nowrap;
-}
-.fu-credit {
-  margin-top: auto;
-  padding-top: 10px;
-  border-top: 1px solid var(--color-border);
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--color-muted);
-  overflow-wrap: anywhere;
 }
 
 @media (max-width: 900px) {
