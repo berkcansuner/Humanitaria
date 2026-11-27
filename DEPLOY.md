@@ -14,7 +14,10 @@ origin, so no CORS in the browser). Config lives in `render.yaml` + `Dockerfile`
    - `DATABASE_URL` (Supabase Postgres session pooler URI; holds the app tables
      and the pgvector index)
    - `GEMINI_API_KEY`
-   - `PINECONE_API_KEY` (reranker only, optional)
+   - `VOYAGE_API_KEY` (reranker, with `RERANK_PROVIDER=voyage` from `render.yaml`; the
+     Voyage account needs a billing method, as the trial's 10K tokens a minute is
+     less than one report's rerank)
+   - `PINECONE_API_KEY` (only if `RERANK_PROVIDER` is switched back to `pinecone`)
    - `RELIEFWEB_APPNAME`
    - `GOOGLE_CLIENT_ID`
    - `GOOGLE_CLIENT_SECRET`

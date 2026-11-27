@@ -33,6 +33,10 @@ services:
       # → real client IP = 3rd entry from the right. 1 keyed every user on 10.x.
       - key: RATE_LIMIT_TRUSTED_HOPS
         value: "3"
+      # Reranker: Voyage rerank-3-lite (per token, no monthly cap). "pinecone" switches
+      # back to Pinecone Inference (500 requests a month on the free plan).
+      - key: RERANK_PROVIDER
+        value: voyage
       # URLs assume the predicted host below. If Render appends a suffix to the
       # name, update these three + the Google redirect URI (see DEPLOY.md).
       - key: FRONTEND_URL
@@ -52,6 +56,8 @@ services:
       - key: GEMINI_API_KEY
         sync: false
       - key: PINECONE_API_KEY       # hosted reranker only (Pinecone Inference)
+        sync: false
+      - key: VOYAGE_API_KEY         # hosted reranker (Voyage rerank-3-lite); needs a billing method
         sync: false
       - key: RELIEFWEB_APPNAME
         sync: false

@@ -37,7 +37,7 @@ User → Vue 3 frontend → FastAPI → retrieval (pgvector + MMR + rerank) → 
 | Reports | Google Gemini `gemini-3.8-flash` |
 | Embeddings | Google Gemini `gemini-embedding-001`, truncated to 768 dimensions |
 | Vector search | Postgres + pgvector on Supabase (`halfvec(768)`, HNSW index) |
-| Reranking | Pinecone Inference `bge-reranker-v2-m3` (rerank API only, no data stored) |
+| Reranking | Voyage `rerank-3-lite`, scoring each chunk with its document's title (Pinecone Inference `bge-reranker-v2-m3` as a switchable alternative; rerank API only, no data stored) |
 | Backend | Python 3.12, FastAPI, LangChain (LCEL), server-sent events for streaming |
 | Frontend | Vue 3, Vite |
 | Hosting and CI | Render (Docker), GitHub Actions |
@@ -58,7 +58,8 @@ Requirements: Python 3.12, Node.js, and a Postgres database with the `vector` ex
    - `DATABASE_URL` for Postgres with pgvector
    - `RELIEFWEB_APPNAME` for the ReliefWeb API
 
-   `PINECONE_API_KEY` is optional. Without it, results keep their retrieval order.
+   `VOYAGE_API_KEY` with `RERANK_PROVIDER=voyage`, or `PINECONE_API_KEY` (the default
+   provider), is optional. Without a reranker key, results keep their retrieval order.
    `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are only needed for Google sign-in. For
    production, set a long random `AUTH_SESSION_SECRET` and `SESSION_COOKIE_SECURE=True`.
 3. Enable the `vector` extension in the database (Supabase: Database → Extensions →
@@ -107,10 +108,11 @@ A 20-pass security review was part of the work. The summary is in
 
 ## Known limitations
 
-- **Reranker quota.** Pinecone's free plan allows 500 rerank requests a month, shared by
-  the live app and evaluation runs. When the quota is used up, results fall back to
-  retrieval order. The app keeps working, but ranking quality drops until the monthly
-  reset.
+- **Reranker.** The live app reranks with Voyage, billed per token, after Pinecone's free
+  plan (500 requests a month) kept running out. If a rerank call fails, results keep their
+  retrieval order, and reports then rank by that order with recency and source. On the
+  30-query set, Voyage, title-aware Voyage and no reranking scored within noise of each
+  other (nDCG@5 0.835-0.842); the set is too easy to separate them.
 - **Free-tier hosting.** The Render instance sleeps when idle, so the first request can be
   slow. The Supabase database is capped at 500 MB, which is why the index keeps only 12
   months of reports and caps how many it keeps per country.
